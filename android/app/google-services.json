@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "21618668503",
+    "project_id": "tracka-expense",
+    "storage_bucket": "tracka-expense.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:21618668503:android:b6ec2bb230276a13319192",
+        "android_client_info": {
+          "package_name": "com.trackaexpense"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "21618668503-f900pfrkdprccs1jgnlpj80npchh5gqu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.trackaexpense",
+            "certificate_hash": "57b93aa6ee5205eddcd40343d70f208a005fc59d"
+          }
+        },
+        {
+          "client_id": "21618668503-qntj7n290oopjgi8vn4ob3a8eph5pskh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.trackaexpense",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "21618668503-qap59b2q7okiivbbe9vhr4vvh708q9l9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDdUaFi2E0W5fG0w0a71EkPyvCpOJXLLNI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "21618668503-qap59b2q7okiivbbe9vhr4vvh708q9l9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
