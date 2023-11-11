@@ -5,10 +5,15 @@ import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import FeatherIcons from 'react-native-vector-icons/Feather';
 
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
+import SavingScreen from '../screens/SavingScreen';
+import AddOrRemoveExpense from '../screens/AddOrRemoveExpense';
+import StatisticScreen from '../screens/StatisticScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -90,6 +95,78 @@ const ProfileStack = ({navigation}) => (
   </Stack.Navigator>
 );
 
+const SavingStack = ({navigation}) => (
+  <Stack.Navigator>
+    <Stack.Screen
+      name="Saving"
+      component={SavingScreen}
+      options={{
+        headerShown: true,
+        title: 'Your Savings',
+        headerStyle: {
+          backgroundColor: '#F5F5F5', // Light gray background (a shade of white)
+          elevation: 0, // Remove shadow on Android
+        },
+        headerTintColor: '#333', // Dark gray text color (a shade of black)
+        headerTitleAlign: 'center',
+        headerTitleStyle: {
+          fontFamily: 'Kufam-SemiBoldItalic',
+          fontSize: 18,
+          color: '#333', // Dark gray title color (a shade of black)
+        },
+      }}
+    />
+  </Stack.Navigator>
+);
+
+const StatisticStack = ({navigation}) => (
+  <Stack.Navigator>
+    <Stack.Screen
+      name="Statistic"
+      component={StatisticScreen}
+      options={{
+        headerShown: true,
+        title: 'Statistic',
+        headerStyle: {
+          backgroundColor: '#F5F5F5', // Light gray background (a shade of white)
+          elevation: 0, // Remove shadow on Android
+        },
+        headerTintColor: '#333', // Dark gray text color (a shade of black)
+        headerTitleAlign: 'center',
+        headerTitleStyle: {
+          fontFamily: 'Kufam-SemiBoldItalic',
+          fontSize: 18,
+          color: '#333', // Dark gray title color (a shade of black)
+        },
+      }}
+    />
+  </Stack.Navigator>
+);
+
+const AddOrRemoveExpenseStack = ({navigation}) => (
+  <Stack.Navigator>
+    <Stack.Screen
+      name="AddOrRemoveExpense"
+      component={AddOrRemoveExpense}
+      options={{
+        headerShown: true,
+        title: 'Add or Remove Expense',
+        headerStyle: {
+          backgroundColor: '#F5F5F5', // Light gray background (a shade of white)
+          elevation: 0, // Remove shadow on Android
+        },
+        headerTintColor: '#333', // Dark gray text color (a shade of black)
+        headerTitleAlign: 'center',
+        headerTitleStyle: {
+          fontFamily: 'Kufam-SemiBoldItalic',
+          fontSize: 18,
+          color: '#333', // Dark gray title color (a shade of black)
+        },
+      }}
+    />
+  </Stack.Navigator>
+);
+
 const AppStack = ({ navigation }) => {
   return (
     <Tab.Navigator
@@ -102,7 +179,7 @@ const AppStack = ({ navigation }) => {
         options={({route, navigation}) => ({
           headerShown: false,
           headerStyle: {
-            backgroundColor: '#F5F5F5', // Light gray background (a shade of white)
+            backgroundColor: '#FAFAFA', // Light gray background (a shade of white)
             elevation: 0, // Remove shadow on Android
           },
           headerTintColor: '#333', // Dark gray text color (a shade of black)
@@ -113,14 +190,46 @@ const AppStack = ({ navigation }) => {
             color: '#333', // Dark gray title color (a shade of black)
           },
           tabBarShowLabel: false,
-          tabBarIcon: ({color, size}) => (
-            <MaterialCommunityIcons
-              name="home-outline"
-              color={color}
-              size={size}
-            />
+          tabBarIcon: ({color, size, focused}) => (
+            <MaterialCommunityIcons name="home" color={focused ? '#677CD2' : color} size={size} />
           ),
         })}
+      />
+      <Tab.Screen
+        name="Statistic"
+        component={StatisticStack}
+        options={{
+          headerShown: false,
+          tabBarLabel: 'Statistic',
+          tabBarShowLabel: false,
+          tabBarIcon: ({color, size, focused}) => (
+            <FeatherIcons name="bar-chart-2" color={focused ? '#677CD2' : color} size={size} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="AddOrRemoveExpense"
+        component={AddOrRemoveExpenseStack}
+        options={{
+          headerShown: false,
+          tabBarLabel: 'AddOrRemoveExpense',
+          tabBarShowLabel: false,
+          tabBarIcon: ({color, size, focused}) => (
+            <FontAwesome5 name="plus-circle" color={focused ? '#677CD2' : color} size={size}  />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Saving"
+        component={SavingStack}
+        options={{
+          headerShown: false,
+          tabBarLabel: 'Saving',
+          tabBarShowLabel: false,
+          tabBarIcon: ({color, size, focused}) => (
+            <MaterialIcons name="savings" color={focused ? '#677CD2' : color} size={size} />
+          ),
+        }}
       />
       <Tab.Screen
         name="Profile"
@@ -129,8 +238,8 @@ const AppStack = ({ navigation }) => {
           headerShown: false,
           // tabBarLabel: 'Home',
           tabBarShowLabel: false,
-          tabBarIcon: ({color, size}) => (
-            <Ionicons name="person-outline" color={color} size={size} />
+          tabBarIcon: ({color, size, focused}) => (
+            <Ionicons name="person-outline" color={focused ? '#677CD2' : color} size={size} />
           ),
         }}
       />

@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "21618668503-f900pfrkdprccs1jgnlpj80npchh5gqu.apps.googleusercontent.com",
+          "client_id": "21618668503-hprrrokg5vii8b5terqg5be5ja4ktrmg.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.trackaexpense",
-            "certificate_hash": "57b93aa6ee5205eddcd40343d70f208a005fc59d"
+            "certificate_hash": "51273e6e3c2132f3f29876b9995c4915d4491f2f"
           }
         },
         {

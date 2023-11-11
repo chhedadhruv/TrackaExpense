@@ -5,7 +5,7 @@ import FormButton from '../components/FormButton';
 import SocialButton from '../components/SocialButton';
 import {AuthContext} from '../navigation/AuthProvider';
 import DropDownPicker from 'react-native-dropdown-picker';
-// import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 const SignupScreen = ({navigation, labelValue, placeholderText, iconType, ...rest}) => {
   const [email, setEmail] = useState();
@@ -87,8 +87,97 @@ const SignupScreen = ({navigation, labelValue, placeholderText, iconType, ...res
   }
 
   return (
-    <View style={styles.container}>
-      {/* <ScrollView contentContainerStyle={styles.container}> */}
+    // <View style={styles.container}>
+    //     <Text style={styles.text}>Create an account</Text>
+    //     {errorMessage && <Text style={{color: 'red', marginBottom: 10}}>{errorMessage}</Text>}
+    //     <FormInput
+    //       labelValue={name}
+    //       onChangeText={(userName) => setName(userName)}
+    //       placeholderText="Name"
+    //       iconType="user"
+    //       autoCapitalize="words"
+    //       autoCorrect={false}
+    //     />
+    //     <FormInput
+    //       labelValue={email}
+    //       onChangeText={(userEmail) => setEmail(userEmail)}
+    //       placeholderText="Email"
+    //       iconType="mail"
+    //       keyboardType="email-address"
+    //       autoCapitalize="none"
+    //       autoCorrect={false}
+    //     />
+    //     <FormInput
+    //       labelValue={age}
+    //       onChangeText={(userAge) => setAge(userAge)}
+    //       placeholderText="Age"
+    //       iconType="calendar"
+    //       keyboardType="numeric"
+    //       autoCapitalize="none"
+    //       autoCorrect={false}
+    //     />
+    //     <DropDownPicker
+    //       open={open}
+    //       value={value}
+    //       items={items}
+    //       setOpen={setOpen}
+    //       setValue={setValue}
+    //       setItems={setItems}
+    //       placeholder={'Select Gender'}
+    //       onChangeValue={(value) => setGender(value)}
+    //     />
+    //     <FormInput
+    //       labelValue={password}
+    //       onChangeText={(userPassword) => setPassword(userPassword)}
+    //       placeholderText="Password"
+    //       iconType="lock"
+    //       secureTextEntry={true}
+    //     />
+    //     <FormInput
+    //       labelValue={confirmPassword}
+    //       onChangeText={(userConfirmPassword) => setConfirmPassword(userConfirmPassword)}
+    //       placeholderText="Confirm Password"
+    //       iconType="lock"
+    //       secureTextEntry={true}
+    //     />
+    //     <FormButton
+    //       buttonTitle="Sign Up"
+    //       onPress={() => {
+    //         handleSignup();
+    //       }}
+    //     />
+    //     <View style={styles.textPrivate}>
+    //     <Text style={styles.color_textPrivate}>
+    //       By registering, you confirm that you accept our{' '}
+    //     </Text>
+    //     <TouchableOpacity onPress={() => alert('Terms Clicked!')}>
+    //       <Text style={[styles.color_textPrivate, {color: '#e88832'}]}>
+    //         Terms of service
+    //       </Text>
+    //     </TouchableOpacity>
+    //     <Text style={styles.color_textPrivate}> and </Text>
+    //     <Text style={[styles.color_textPrivate, {color: '#e88832'}]}>
+    //       Privacy Policy
+    //     </Text>
+    //   </View>
+    //     <TouchableOpacity
+    //       style={styles.forgotButton}
+    //       onPress={() => navigation.navigate('Login')}>
+    //       <Text style={styles.navButtonText}>
+    //         Already have an account? Login here
+    //       </Text>
+    //     </TouchableOpacity>
+    //     <SocialButton
+    //       buttonTitle="Sign Up with Google"
+    //       btnType="google"
+    //       color="#fff"
+    //       backgroundColor="#5CB85C"
+    //       onPress={() => googleLogin()}
+    //     />
+    // </View>
+
+    <KeyboardAwareScrollView style={{flex: 1, width: '100%'}} keyboardShouldPersistTaps="always">
+      <View style={styles.container}>
         <Text style={styles.text}>Create an account</Text>
         {errorMessage && <Text style={{color: 'red', marginBottom: 10}}>{errorMessage}</Text>}
         <FormInput
@@ -124,7 +213,7 @@ const SignupScreen = ({navigation, labelValue, placeholderText, iconType, ...res
           setOpen={setOpen}
           setValue={setValue}
           setItems={setItems}
-          placeholder={'Select Gender'}
+          placeholder='Select Gender'
           onChangeValue={(value) => setGender(value)}
         />
         <FormInput
@@ -175,8 +264,8 @@ const SignupScreen = ({navigation, labelValue, placeholderText, iconType, ...res
           backgroundColor="#5CB85C"
           onPress={() => googleLogin()}
         />
-      {/* </ScrollView> */}
     </View>
+    </KeyboardAwareScrollView>
   );
 };
 
