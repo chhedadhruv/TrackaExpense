@@ -1,11 +1,11 @@
-import {View, Text, ScrollView, StyleSheet, Image} from 'react-native';
+import {View, Text, ScrollView, StyleSheet } from 'react-native';
 import React, {useState, useEffect} from 'react';
 import {Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const HomeScreen = () => {
   return (
-    <ScrollView style={{flex: 1, backgroundColor: '#FAFAFA'}}>
+    <ScrollView>
       <View style={styles.container}>
         {/* balance card which will contain total balance, income and expense such that all of them are in 1 column and balance is below total balance text and income and expense are in one row with their icon and their values below their text */}
         <Card style={styles.myCard}>
@@ -60,7 +60,6 @@ const HomeScreen = () => {
                     color="#CBD3EE"
                   />
                 </View>
-                {/* <View style={styles.transactionsCardDetails}> */}
                 <View style={{flexDirection: 'column', marginLeft: 5}}>
                   <Text style={styles.transactionsCardTitle}>
                     Food and Drink
@@ -170,8 +169,8 @@ export default HomeScreen;
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#FAFAFA',
+    // flex: 1,
+    // backgroundColor: '#FAFAFA',
     // paddingVertical: 50,
     paddingHorizontal: 10,
   },
