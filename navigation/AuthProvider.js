@@ -133,8 +133,9 @@ const AuthProvider = ({children, navigation}) => {
               .set({
                 name: auth().currentUser.displayName,
                 email: auth().currentUser.email,
-                age: '',
-                gender: '',
+                balance: '',
+                transactions: [],
+                verified: true,
                 createdAt: firestore.Timestamp.fromDate(new Date()),
                 userImg: auth().currentUser.photoURL,
               })
@@ -154,7 +155,7 @@ const AuthProvider = ({children, navigation}) => {
             console.log({error});
           }
         },
-        register: async (email, password, name, age, gender) => {
+        register: async (email, password, name, balance) => {
           if (!email) {
             alert('Please enter an email address');
             return;
@@ -176,9 +177,10 @@ const AuthProvider = ({children, navigation}) => {
                   .doc(auth().currentUser.uid)
                   .set({
                     name: name,
-                    age: age,
-                    gender: gender,
                     email: email,
+                    balance: balance,
+                    transactions: [],
+                    verified: false,
                     createdAt: firestore.Timestamp.fromDate(new Date()),
                     userImg: null,
                   })

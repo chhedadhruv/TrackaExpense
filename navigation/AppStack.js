@@ -14,6 +14,8 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 import SavingScreen from '../screens/SavingScreen';
 import AddOrRemoveExpense from '../screens/AddOrRemoveExpense';
 import StatisticScreen from '../screens/StatisticScreen';
+import AddIncome from '../screens/AddIncome';
+import AddExpense from '../screens/AddExpense';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -37,23 +39,6 @@ const HomeStack = ({navigation}) => (
           color: '#333', // Dark gray title color (a shade of black)
         },
       })}
-    />
-
-    <Stack.Screen
-      name="Profile"
-      component={ProfileScreen}
-      options={{
-        headerTitleAlign: 'center',
-        headerTitleStyle: {
-          color: '#2e64e5',
-          fontFamily: 'Kufam-SemiBoldItalic',
-          fontSize: 18,
-        },
-        headerStyle: {
-          shadowColor: '#fff',
-          elevation: 0,
-        },
-      }}
     />
   </Stack.Navigator>
 );
@@ -161,6 +146,34 @@ const AddOrRemoveExpenseStack = ({navigation}) => (
           fontFamily: 'Kufam-SemiBoldItalic',
           fontSize: 18,
           color: '#333', // Dark gray title color (a shade of black)
+        },
+      }}
+    />
+    <Stack.Screen
+      name="AddIncome"
+      component={AddIncome}
+      options={{
+        headerTitle: 'Add Income',
+        headerBackTitleVisible: false,
+        headerTitleAlign: 'center',
+        headerStyle: {
+          backgroundColor: '#fff',
+          shadowColor: '#fff',
+          elevation: 0,
+        },
+      }}
+    />
+    <Stack.Screen
+      name="AddExpense"
+      component={AddExpense}
+      options={{
+        headerTitle: 'Add Expense',
+        headerBackTitleVisible: false,
+        headerTitleAlign: 'center',
+        headerStyle: {
+          backgroundColor: '#fff',
+          shadowColor: '#fff',
+          elevation: 0,
         },
       }}
     />

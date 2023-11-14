@@ -1,17 +1,125 @@
-import {View, Text, ScrollView, StyleSheet } from 'react-native';
-import React, {useState, useEffect} from 'react';
-import {Card} from 'react-native-paper';
+import {View, Text, ScrollView, StyleSheet} from 'react-native';
+import React, {useState, useEffect, useCallback} from 'react';
+import {ActivityIndicator, Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+import {useFocusEffect} from '@react-navigation/native';
 
 const HomeScreen = () => {
+  const [userData, setUserData] = useState(null);
+  const [date, setDate] = useState();
+  const [income, setIncome] = useState([]);
+  const [expense, setExpense] = useState([]);
+  const [totalExpense, setTotalExpense] = useState(0);
+  const [totalIncome, setTotalIncome] = useState(0);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
+
+  const getUser = async () => {
+    const currentUser = await firestore()
+      .collection('users')
+      .doc(auth().currentUser.uid)
+      .get()
+      .then(documentSnapshot => {
+        if (documentSnapshot.exists) {
+          setUserData(documentSnapshot.data());
+          console.log('User Data', documentSnapshot.data());
+          setLoading(false);
+        }
+      });
+  };
+
+  useEffect(() => {
+    getUser();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      getUser();
+    }, []),
+  );
+
+  const handleIncome = () => {
+    if (userData && userData.transactions.length > 0) {
+      let totalIncome = 0;
+
+      userData.transactions.forEach(transaction => {
+        if (transaction.type === 'income') {
+          totalIncome += parseFloat(transaction.amount) || 0;
+        }
+      });
+
+      setTotalIncome(totalIncome);
+    } else {
+      console.log('No transactions');
+    }
+  };
+
+  // const handleExpense = () => {
+  //   if (userData && userData.transactions.length > 0) {
+  //     const expense = userData.transactions.filter((item) => {
+  //       return item.type === 'expense';
+  //     });
+  //     setExpense(expense);
+  //   }
+  // }
+
+  // get expense from transactions array by querying the database
+  const handleExpense = () => {
+    if (userData && userData.transactions.length > 0) {
+      let totalExpense = 0;
+
+      userData.transactions.forEach(transaction => {
+        if (transaction.type === 'expense') {
+          totalExpense += parseFloat(transaction.amount) || 0;
+        }
+      });
+
+      setTotalExpense(totalExpense);
+    } else {
+      console.log('No transactions');
+    }
+  };
+
+  const handleTransactions = () => {
+    if (userData && userData.transactions.length > 0) {
+      const transactions = userData.transactions.sort((a, b) => {
+        return new Date(b.createdAt.toDate()) - new Date(a.createdAt.toDate());
+      });
+      setTransactions(transactions);
+    }
+  };
+
+  useEffect(() => {
+    handleIncome();
+    handleExpense();
+    handleTransactions();
+  }, [userData]);
+
+  const toggleShowAll = () => {
+    setShowAll(!showAll);
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#677CD2" />
+      </View>
+    );
+  }
+
   return (
     <ScrollView>
       <View style={styles.container}>
-        {/* balance card which will contain total balance, income and expense such that all of them are in 1 column and balance is below total balance text and income and expense are in one row with their icon and their values below their text */}
         <Card style={styles.myCard}>
           <View style={styles.cardContent}>
             <Text style={styles.TitleText}>Total Balance</Text>
-            <Text style={styles.BalanceText}>$ 4,000.00</Text>
+            {/* <Text style={styles.BalanceText}>₹ {userData.balance}</Text> */}
+            <Text style={styles.BalanceText}>
+              ₹ {userData.balance ? userData.balance.toLocaleString() : 0}
+            </Text>
           </View>
           <View style={styles.dataCard}>
             <View style={styles.cardContentWithIcon}>
@@ -24,7 +132,11 @@ const HomeScreen = () => {
               </View>
               <View style={styles.cardContent}>
                 <Text style={styles.TitleText}>Income</Text>
-                <Text style={styles.ValueText}>$ 2,000.00</Text>
+                {/* <Text style={styles.ValueText}>₹ {userData.income.length > 0 ? userData.income.reduce((a, b) => a + b) : 0}</Text> */}
+                {/* <Text style={styles.ValueText}>₹ {income.length > 0 ? income.reduce((a, b) => a + b.amount, 0) : 0}</Text> */}
+                <Text style={styles.ValueText}>
+                  ₹ {totalIncome.toLocaleString()}
+                </Text>
               </View>
             </View>
             <View style={styles.cardContentWithIcon}>
@@ -37,19 +149,26 @@ const HomeScreen = () => {
               </View>
               <View style={styles.cardContent}>
                 <Text style={styles.TitleText}>Expense</Text>
-                <Text style={styles.ValueText}>$ 1,000.00</Text>
+                {/* <Text style={styles.ValueText}>₹ {userData.expense.length > 0 ? userData.expense.reduce((a, b) => a + b) : 0}</Text> */}
+                <Text style={styles.ValueText}>
+                  ₹ {totalExpense.toLocaleString()}
+                </Text>
+                {/* <Text style={styles.ValueText}>₹ 0</Text> */}
               </View>
             </View>
           </View>
         </Card>
-        {/* end of balance card */}
-        {/* start of transactions list which will contain all transactions in a list with a see all button */}
         <View style={styles.transactions}>
           <View style={styles.transactionsHeader}>
             <Text style={styles.transactionsHeaderText}>Transactions</Text>
-            <Text style={styles.transactionsHeaderSeeAll}>See All</Text>
+            {/* <Text style={styles.transactionsHeaderSeeAll}>See All</Text> */}
+            <Text
+              style={styles.transactionsHeaderSeeAll}
+              onPress={toggleShowAll}>
+              {showAll ? 'Hide' : 'See All'}
+            </Text>
           </View>
-          <View style={styles.transactionsList}>
+          {/* <View style={styles.transactionsList}>
             <Card style={styles.transactionsCard}>
               <View style={styles.transactionsCardContent}>
               <View style={styles.transactionsCardDetails}>
@@ -158,7 +277,162 @@ const HomeScreen = () => {
                 </View>
               </View>
             </Card>
-          </View>
+          </View> */}
+          <ScrollView>
+            <View style={styles.transactionsList}>
+              {transactions.length > 0 ? (
+                transactions
+                  .slice(0, showAll ? transactions.length : 4)
+                  .map(transaction => {
+                    return (
+                      <Card
+                        style={styles.transactionsCard}
+                        key={transaction.id}>
+                        <View style={styles.transactionsCardContent}>
+                          <View style={styles.transactionsCardDetails}>
+                            <View style={styles.transactionsCardIcon}>
+                              {/* <MaterialCommunityIcons
+                          name={transaction.category.icon}
+                          size={25}
+                          color="#CBD3EE"
+                        /> */}
+                              {/* <MaterialCommunityIcons
+                          name={transaction.category.icon}
+                          size={25}
+                          color="#CBD3EE"
+                        /> */}
+                              {/* Add a condition to add the icon according to the category */}
+                              {transaction.category === 'Bills' ? (
+                                <MaterialCommunityIcons
+                                  name="receipt"
+                                  size={25}
+                                  color="#CBD3EE"
+                                  style={{
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                  }}
+                                />
+                              ) : null}
+                              {transaction.category === 'Education' ? (
+                                <MaterialCommunityIcons
+                                  name="school"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Entertainment' ? (
+                                <MaterialCommunityIcons
+                                  name="movie"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Food' ? (
+                                <MaterialCommunityIcons
+                                  name="food"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Health' ? (
+                                <MaterialCommunityIcons
+                                  name="hospital"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Shopping' ? (
+                                <MaterialCommunityIcons
+                                  name="cart"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Travel' ? (
+                                <MaterialCommunityIcons
+                                  name="bus"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.type === 'expense' && transaction.category === 'Others' ? (
+                                <MaterialCommunityIcons
+                                  name="cash-remove"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Salary' ? (
+                                <MaterialCommunityIcons
+                                  name="cash"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Bonus' ? (
+                                <MaterialCommunityIcons
+                                  name="cash"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Gift' ? (
+                                <MaterialCommunityIcons
+                                  name="cash"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.type === 'income' && transaction.category === 'Others' ? (
+                                <MaterialCommunityIcons
+                                  name="cash"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                            </View>
+                            <View
+                              style={{flexDirection: 'column', marginLeft: 5}}>
+                              <Text style={styles.transactionsCardTitle}>
+                                {transaction.category}
+                              </Text>
+                              <View style={styles.transactionsCardDateAndTime}>
+                                <Text style={styles.transactionsCardDate}>
+                                  {transaction.date}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                          <View style={styles.transactionsCardAmount}>
+                            <Text
+                              style={
+                                transaction.type === 'income'
+                                  ? styles.transactionsCardAmountIncomeText
+                                  : styles.transactionsCardAmountExpenseText
+                              }>
+                              {transaction.type === 'income' ? '+ ₹' : '- ₹'}
+                              {parseInt(
+                                transaction.amount,
+                                10,
+                              ).toLocaleString()}
+                            </Text>
+                          </View>
+                        </View>
+                      </Card>
+                    );
+                  })
+              ) : (
+                <View
+                  style={{
+                    flex: 1,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}>
+                  <Text>No transactions</Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
         </View>
       </View>
     </ScrollView>
@@ -168,6 +442,12 @@ const HomeScreen = () => {
 export default HomeScreen;
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
   container: {
     // flex: 1,
     // backgroundColor: '#FAFAFA',

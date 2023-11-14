@@ -14,6 +14,7 @@ const SignupScreen = ({navigation, labelValue, placeholderText, iconType, ...res
   const [age, setAge] = useState();
   const [gender, setGender] = useState();
   const [name, setName] = useState();
+  const [balance, setBalance] = useState(0);
   const [errorMessage, setErrorMessage] = useState(null);
   const {register, googleLogin } = useContext(AuthContext);
   const [open, setOpen] = useState(false);
@@ -44,6 +45,11 @@ const SignupScreen = ({navigation, labelValue, placeholderText, iconType, ...res
     return re.test(password);
   }
 
+  const isValidBalance = (balance) => {
+    const re = /^\d{1,}$/;
+    return re.test(balance);
+  }
+
   const handleSignup = () => {
     if (!email) {
       setErrorMessage('Please enter an email address');
@@ -60,17 +66,17 @@ const SignupScreen = ({navigation, labelValue, placeholderText, iconType, ...res
     else if (!confirmPassword) {
       setErrorMessage('Please confirm your password');
     }
-    else if (!age) {
-      setErrorMessage('Please enter your age');
-    }
     else if (!isValidAge(age)) {
       setErrorMessage('Please enter a valid age');
     }
-    else if (!gender) {
-      setErrorMessage('Please select your gender');
-    }
     else if (!name) {
       setErrorMessage('Please enter your name');
+    }
+    else if (!balance) {
+      setErrorMessage('Please enter your balance');
+    }
+    else if (!isValidBalance(balance)) {
+      setErrorMessage('Please enter a valid balance');
     }
     else if (!isValidName(name)) {
       setErrorMessage('Please enter a valid name');
@@ -82,7 +88,7 @@ const SignupScreen = ({navigation, labelValue, placeholderText, iconType, ...res
       setErrorMessage('Password must be at least 6 characters');
     }
     else {
-      register(email, password, name, age, gender);
+      register(email, password, name, balance);
     }
   }
 
@@ -198,23 +204,13 @@ const SignupScreen = ({navigation, labelValue, placeholderText, iconType, ...res
           autoCorrect={false}
         />
         <FormInput
-          labelValue={age}
-          onChangeText={(userAge) => setAge(userAge)}
-          placeholderText="Age"
-          iconType="calendar"
+          labelValue={balance}
+          onChangeText={(userBalance) => setBalance(userBalance)}
+          placeholderText="Balance"
+          iconType="wallet"
           keyboardType="numeric"
           autoCapitalize="none"
           autoCorrect={false}
-        />
-        <DropDownPicker
-          open={open}
-          value={value}
-          items={items}
-          setOpen={setOpen}
-          setValue={setValue}
-          setItems={setItems}
-          placeholder='Select Gender'
-          onChangeValue={(value) => setGender(value)}
         />
         <FormInput
           labelValue={password}
@@ -273,7 +269,7 @@ export default SignupScreen;
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    // backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,

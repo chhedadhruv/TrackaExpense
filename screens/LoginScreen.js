@@ -12,6 +12,7 @@ import FormInput from '../components/FormInput';
 import FormButton from '../components/FormButton';
 import SocialButton from '../components/SocialButton';
 import {AuthContext} from '../navigation/AuthProvider';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 const LoginScreen = ({navigation}) => {
   const [email, setEmail] = useState();
@@ -53,58 +54,115 @@ const LoginScreen = ({navigation}) => {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Image source={require('../assets/Tracka.png')} style={styles.logo} />
-      {/* <Text style={styles.text}>Vritti</Text> */}
-      {errorMessage && <Text style={{color: 'red', marginBottom: 10}}>{errorMessage}</Text>}
+    // <ScrollView contentContainerStyle={styles.container}>
+    //   <Image source={require('../assets/Tracka.png')} style={styles.logo} />
+    //   {/* <Text style={styles.text}>Vritti</Text> */}
+    //   {errorMessage && <Text style={{color: 'red', marginBottom: 10}}>{errorMessage}</Text>}
 
-      <FormInput
-        labelValue={email}
-        onChangeText={userEmail => setEmail(userEmail)}
-        placeholderText="Email"
-        iconType="user"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
+    //   <FormInput
+    //     labelValue={email}
+    //     onChangeText={userEmail => setEmail(userEmail)}
+    //     placeholderText="Email"
+    //     iconType="user"
+    //     keyboardType="email-address"
+    //     autoCapitalize="none"
+    //     autoCorrect={false}
+    //   />
 
-      <FormInput
-        labelValue={password}
-        onChangeText={userPassword => setPassword(userPassword)}
-        placeholderText="Password"
-        iconType="lock"
-        secureTextEntry={true}
-      />
+    //   <FormInput
+    //     labelValue={password}
+    //     onChangeText={userPassword => setPassword(userPassword)}
+    //     placeholderText="Password"
+    //     iconType="lock"
+    //     secureTextEntry={true}
+    //   />
 
-      <FormButton
-        buttonTitle="Sign In"
-        onPress={() => {
-          handleSignIn();
-        }}
-      />
+    //   <FormButton
+    //     buttonTitle="Sign In"
+    //     onPress={() => {
+    //       handleSignIn();
+    //     }}
+    //   />
 
-      <TouchableOpacity
-        style={styles.forgotButton}
-        onPress={() => navigation.navigate('ForgotPassword')}>
-        <Text style={styles.navButtonText}>Forgot Password?</Text>
-      </TouchableOpacity>
+    //   <TouchableOpacity
+    //     style={styles.forgotButton}
+    //     onPress={() => navigation.navigate('ForgotPassword')}>
+    //     <Text style={styles.navButtonText}>Forgot Password?</Text>
+    //   </TouchableOpacity>
 
-      <SocialButton
-            buttonTitle="Sign In with Google"
-            btnType="google"
-            color="#fff"
-            backgroundColor="#5CB85C"
-            onPress={() => googleLogin()}
-          />
+    //   <SocialButton
+    //         buttonTitle="Sign In with Google"
+    //         btnType="google"
+    //         color="#fff"
+    //         backgroundColor="#5CB85C"
+    //         onPress={() => googleLogin()}
+    //       />
 
-      <TouchableOpacity
-        style={styles.forgotButton}
-        onPress={() => navigation.navigate('Signup')}>
-        <Text style={styles.navButtonText}>
-          Don't have an acount? Create here
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+    //   <TouchableOpacity
+    //     style={styles.forgotButton}
+    //     onPress={() => navigation.navigate('Signup')}>
+    //     <Text style={styles.navButtonText}>
+    //       Don't have an acount? Create here
+    //     </Text>
+    //   </TouchableOpacity>
+    // </ScrollView>
+
+    <KeyboardAwareScrollView
+      style={{flex: 1, width: '100%'}}
+      keyboardShouldPersistTaps="always">
+      <View style={styles.container}>
+        <Image source={require('../assets/Tracka.png')} style={styles.logo} />
+        {/* <Text style={styles.text}>Vritti</Text> */}
+        {errorMessage && <Text style={{color: 'red', marginBottom: 10}}>{errorMessage}</Text>}
+
+        <FormInput
+          labelValue={email}
+          onChangeText={userEmail => setEmail(userEmail)}
+          placeholderText="Email"
+          iconType="user"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+
+        <FormInput
+          labelValue={password}
+          onChangeText={userPassword => setPassword(userPassword)}
+          placeholderText="Password"
+          iconType="lock"
+          secureTextEntry={true}
+        />
+
+        <FormButton
+          buttonTitle="Sign In"
+          onPress={() => {
+            handleSignIn();
+          }}
+        />
+
+        <TouchableOpacity
+          style={styles.forgotButton}
+          onPress={() => navigation.navigate('ForgotPassword')}>
+          <Text style={styles.navButtonText}>Forgot Password?</Text>
+        </TouchableOpacity>
+
+        <SocialButton
+              buttonTitle="Sign In with Google"
+              btnType="google"
+              color="#fff"
+              backgroundColor="#5CB85C"
+              onPress={() => googleLogin()}
+            />
+
+        <TouchableOpacity
+          style={styles.forgotButton}
+          onPress={() => navigation.navigate('Signup')}>
+          <Text style={styles.navButtonText}>
+            Don't have an acount? Create here
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAwareScrollView>
   );
 };
 
@@ -112,20 +170,20 @@ export default LoginScreen;
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    // backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    paddingTop: 0,
+    // paddingTop: 0,
     // paddingBottom: 130,
-    flex: 1,
+    // flex: 1,
   },
   logo: {
     height: 250,
     width: 250,
     resizeMode: 'cover',
     marginBottom: 10,
-    // marginTop: 20,
+    marginTop: 20,
   },
   text: {
     fontFamily: 'Kufam-SemiBoldItalic',

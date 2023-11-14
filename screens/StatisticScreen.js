@@ -4,59 +4,230 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  LayoutAnimation
 } from 'react-native';
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {Card, Button} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {BarChart} from 'react-native-gifted-charts';
+import {useFocusEffect} from '@react-navigation/native';
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+import DropDownPicker from 'react-native-dropdown-picker';
 
 const StatisticScreen = () => {
   const [selectedBar, setSelectedBar] = useState(null);
+  const [isAnimated, setIsAnimated] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [totalIncome, setTotalIncome] = useState(0);
+  const [totalExpense, setTotalExpense] = useState(0);
+  const [selectedRange, setSelectedRange] = useState('Daily');
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(null);
+  const [items, setItems] = useState([
+    {label: 'Daily', value: 'Daily'},
+    {label: 'Monthly', value: 'Monthly'},
+    {label: 'Yearly', value: 'Yearly'},
+  ]);
+  const [barData, setBarData] = useState([]);
+  const [selectedBtn, setSelectedBtn] = useState('Income');
 
-  const barData = [
-    {
-      value: 40,
-      label: 'W1',
-      spacing: 2,
-      labelWidth: 30,
-      labelTextStyle: {color: 'gray'},
-      frontColor: '#677CD2',
-    },
-    {value: 20, frontColor: '#E98852'},
-    {
-      value: 50,
-      label: 'W2',
-      spacing: 2,
-      labelWidth: 30,
-      labelTextStyle: {color: 'gray'},
-      frontColor: '#677CD2',
-    },
-    {value: 40, frontColor: '#E98852'},
-    {
-      value: 75,
-      label: 'W3',
-      spacing: 2,
-      labelWidth: 30,
-      labelTextStyle: {color: 'gray'},
-      frontColor: '#677CD2',
-    },
-    {value: 25, frontColor: '#E98852'},
-    {
-      value: 30,
-      label: 'W4',
-      spacing: 2,
-      labelWidth: 30,
-      labelTextStyle: {color: 'gray'},
-      frontColor: '#677CD2',
-    },
-    {value: 20, frontColor: '#E98852'},
-  ];
+  const getUser = async () => {
+    const currentUser = await firestore()
+      .collection('users')
+      .doc(auth().currentUser.uid)
+      .get()
+      .then(documentSnapshot => {
+        if (documentSnapshot.exists) {
+          setUserData(documentSnapshot.data());
+          console.log('User Data', documentSnapshot.data());
+          setLoading(false);
+        }
+      });
+  };
+
+  useEffect(() => {
+    getUser();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      getUser();
+    }, []),
+  );
+
+  const handleIncome = () => {
+    if (userData && userData.transactions.length > 0) {
+      let totalIncome = 0;
+
+      userData.transactions.forEach(transaction => {
+        if (transaction.type === 'income') {
+          totalIncome += parseFloat(transaction.amount) || 0;
+        }
+      });
+
+      setTotalIncome(totalIncome);
+    } else {
+      console.log('No transactions');
+    }
+  };
+
+  const handleExpense = () => {
+    if (userData && userData.transactions.length > 0) {
+      let totalExpense = 0;
+
+      userData.transactions.forEach(transaction => {
+        if (transaction.type === 'expense') {
+          totalExpense += parseFloat(transaction.amount) || 0;
+        }
+      });
+
+      setTotalExpense(totalExpense);
+    } else {
+      console.log('No transactions');
+    }
+  };
+
+  useEffect(() => {
+    handleIncome();
+    handleExpense();
+  }, [userData]);
+
+  const handleRangeChange = item => {
+    setSelectedRange(item);
+    setOpen(false);
+    setValue(item);
+    console.log('Selected Range', item);
+  };
+
+  const handleBarData = () => {
+    if (userData && userData.transactions.length > 0) {
+      let totalIncome = 0;
+      let totalExpense = 0;
+      let aggregatedData = {};
+  
+      const formatDate = date => {
+        const formattedDate = new Date(date);
+        if (selectedRange === 'Daily') {
+          return formattedDate.getDate().toString();
+        } else if (selectedRange === 'Monthly') {
+          return formattedDate.toLocaleString('default', { month: 'short' });
+        } else if (selectedRange === 'Yearly') {
+          return formattedDate.getFullYear().toString();
+        }
+      };
+  
+      userData.transactions.forEach(transaction => {
+        const formattedDate = formatDate(transaction.date);
+        const value = parseFloat(transaction.amount) || 0;
+  
+        if (transaction.type === 'income') {
+          totalIncome += value;
+        } else {
+          totalExpense += value;
+        }
+  
+        if (!aggregatedData[formattedDate]) {
+          aggregatedData[formattedDate] = { income: 0, expense: 0 };
+        }
+  
+        aggregatedData[formattedDate][transaction.type === 'income' ? 'income' : 'expense'] += value;
+      });
+  
+      // Convert aggregatedData to an array of objects
+      const barData = Object.entries(aggregatedData).map(([label, values]) => {
+        return {
+          value: values.income,
+          label,
+          spacing: 20,
+          frontColor: '#677CD2',
+        };
+      }).concat(Object.entries(aggregatedData).map(([label, values]) => {
+        return {
+          value: values.expense,
+          label,
+          spacing: 20,
+          frontColor: '#E98852',
+        };
+      }));
+  
+      // Sort the barData based on date
+      barData.sort((a, b) => {
+        if (selectedRange === 'Daily') {
+          return a.label - b.label;
+        } else if (selectedRange === 'Monthly') {
+          const months = [
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+          ];
+          
+          return months.indexOf(a.label) - months.indexOf(b.label);
+        } else if (selectedRange === 'Yearly') {
+          return a.label - b.label;
+        }
+      });
+  
+      setBarData(barData);
+      setTotalIncome(totalIncome);
+      setTotalExpense(totalExpense);
+    } else {
+      setBarData([]);
+      setTotalIncome(0);
+      setTotalExpense(0);
+    }
+  };
+  
+  
+  useEffect(() => {
+    handleBarData();
+  }, [userData, selectedRange]);
+  // const barData = [
+  //   {
+  //     value: 40,
+  //     label: 'W1',
+  //     spacing: 2,
+  //     labelWidth: 50,
+  //     labelTextStyle: {color: 'gray'},
+  //     frontColor: '#677CD2',
+  //   },
+  //   {value: 20, frontColor: '#E98852'},
+  //   {
+  //     value: 50,
+  //     label: 'W2',
+  //     spacing: 2,
+  //     labelWidth: 50,
+  //     labelTextStyle: {color: 'gray'},
+  //     frontColor: '#677CD2',
+  //   },
+  //   {value: 40, frontColor: '#E98852'},
+  //   {
+  //     value: 75,
+  //     label: 'W3',
+  //     spacing: 2,
+  //     labelWidth: 50,
+  //     labelTextStyle: {color: 'gray'},
+  //     frontColor: '#677CD2',
+  //   },
+  //   {value: 25, frontColor: '#E98852'},
+  //   {
+  //     value: 30,
+  //     label: 'W4',
+  //     spacing: 2,
+  //     labelWidth: 50,
+  //     labelTextStyle: {color: 'gray'},
+  //     frontColor: '#677CD2',
+  //   },
+  //   {value: 20, frontColor: '#E98852'},
+  // ];
 
   const handleBarPress = data => {
-    // Update the state to show the selected bar value
     setSelectedBar(data);
-    console.log(data);
   };
+
+  const handleBtnPress = btn => {
+    setSelectedBtn(btn);
+  }
 
   return (
     <ScrollView>
@@ -66,7 +237,8 @@ const StatisticScreen = () => {
             <Card.Content>
               <View style={styles.cardContent}>
                 <Text style={styles.cardText}>Total Income</Text>
-                <Text style={styles.cardIncomeText}>$ 1000</Text>
+                {/* <Text style={styles.cardIncomeText}>$ 1000</Text> */}
+                <Text style={styles.cardIncomeText}>₹ {totalIncome}</Text>
               </View>
             </Card.Content>
           </Card>
@@ -74,49 +246,84 @@ const StatisticScreen = () => {
             <Card.Content>
               <View style={styles.cardContent}>
                 <Text style={styles.cardText}>Total Expense</Text>
-                <Text style={styles.cardExpenseText}>$ 500</Text>
+                {/* <Text style={styles.cardExpenseText}>$ 500</Text> */}
+                <Text style={styles.cardExpenseText}>₹ {totalExpense}</Text>
               </View>
             </Card.Content>
           </Card>
         </View>
         <View style={styles.statisticSection}>
           <View style={styles.statisticHeader}>
-            <Text style={styles.statisticHeaderText}>Statistics</Text>
-            <Text style={styles.statisticHeaderSubText}>Oct 01 - Oct 31</Text>
+            <Text style={styles.statisticHeaderText}>Statistic</Text>
+            <Text style={styles.statisticHeaderSubText}>
+              {selectedRange} Statistic
+            </Text>
           </View>
-          <View style={styles.statisticChart}>
-            {/* Make a bar chart with data which will contain the total income and expense of each week, also give different color for income and expense */}
-            <BarChart
-              data={barData}
-              height={220}
-              barWidth={20}
-              spacing={30}
-              roundedTop
-              xAxisThickness={0}
-              yAxisThickness={0}
-              yAxisTextStyle={{color: 'gray'}}
-              noOfSections={3}
-              isAnimated
-              onPress={handleBarPress}
+          <View style={{marginTop: 20}}>
+            <DropDownPicker
+              open={open}
+              value={value}
+              items={items}
+              setOpen={setOpen}
+              setValue={setValue}
+              setItems={setItems}
+              onChangeValue={handleRangeChange}
+              style={{borderRadius: 12}}
+              textStyle={{fontSize: 12, fontWeight: '500', color: '#959698'}}
+              placeholder="Daily"
+              placeholderStyle={{color: '#959698'}}
+              dropDownContainerStyle={{borderRadius: 12}}
+              dropDownDirection="BOTTOM"
             />
+          </View>
+            <BarChart
+            data={barData}
+            height={220}
+            barWidth={20}
+            spacing={30}
+            roundedTop
+            xAxisThickness={0}
+            yAxisThickness={0}
+            yAxisTextStyle={{ color: 'gray' }}
+            xAxisLabelTextStyle={{ color: 'gray' }}
+            noOfSections={3}
+            isAnimated
+            onPress={handleBarPress}
+            yAxisLabelFormatter={value => `₹${value}`} // Add a prefix to the value
+            yAxisLabelWidth={50}
+            yAxisLabelPrefix={'₹'}
+          />
+
             {selectedBar && (
               <View style={styles.selectedBarContainer}>
                 <Text style={styles.selectedBarText}>
-                  $ {selectedBar.value}
+                ₹ {selectedBar.value}
                 </Text>
               </View>
             )}
-          </View>
+          {/* </View> */}
         </View>
+        {/* <View style={styles.buttonSection}>
+          <TouchableOpacity style={styles.Btn}>
+            <Text style={styles.BtnText}>Income</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.Btn}>
+            <Text style={styles.BtnText}>Expense</Text>
+          </TouchableOpacity>
+        </View> */}
         <View style={styles.buttonSection}>
-          <TouchableOpacity style={styles.incomeBtn}>
-            <Text style={styles.incomeBtnText}>Income</Text>
+          <TouchableOpacity
+            style={selectedBtn === 'Income' ? styles.selectedBtn : styles.notSelectedBtn}
+            onPress={() => handleBtnPress('Income')}>
+            <Text style={selectedBtn === 'Income' ? styles.selectedBtnText : styles.notSelectedBtnText}>Income</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.expenseBtn}>
-            <Text style={styles.expenseBtnText}>Expense</Text>
+          <TouchableOpacity
+            style={selectedBtn === 'Expense' ? styles.selectedBtn : styles.notSelectedBtn}
+            onPress={() => handleBtnPress('Expense')}>
+            <Text style={selectedBtn === 'Expense' ? styles.selectedBtnText : styles.notSelectedBtnText}>Expense</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.transactionsList}>
+        {/* <View style={styles.transactionsList}>
           <Card style={styles.transactionsCard}>
             <View style={styles.transactionsCardContent}>
               <View style={styles.transactionsCardDetails}>
@@ -167,33 +374,6 @@ const StatisticScreen = () => {
               <View style={styles.transactionsCardAmount}>
                 <Text style={styles.transactionsCardAmountExpenseText}>
                   -$ 100.00
-                </Text>
-              </View>
-            </View>
-          </Card>
-          <Card style={styles.transactionsCard}>
-            <View style={styles.transactionsCardContent}>
-              <View style={styles.transactionsCardDetails}>
-                <View style={styles.transactionsCardIcon}>
-                  <MaterialCommunityIcons
-                    name="cash"
-                    size={25}
-                    color="#CBD3EE"
-                  />
-                </View>
-                <View style={{flexDirection: 'column', marginLeft: 5}}>
-                  <Text style={styles.transactionsCardTitle}>
-                    Transfer and Refund
-                  </Text>
-                  <View style={styles.transactionsCardDateAndTime}>
-                    <Text style={styles.transactionsCardDate}>Today</Text>
-                    <Text style={styles.transactionsCardTime}>12:00 PM</Text>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.transactionsCardAmount}>
-                <Text style={styles.transactionsCardAmountIncomeText}>
-                  +$ 100.00
                 </Text>
               </View>
             </View>
@@ -223,7 +403,100 @@ const StatisticScreen = () => {
               </View>
             </View>
           </Card>
-        </View>
+        </View> */}
+        {/* if selectedBtn is Income then show income transactions else show expense transactions */}
+        <View style={styles.transactionsList}>
+          {userData && userData.transactions.length > 0 ? (
+            userData.transactions.map(transaction => {
+              if (selectedBtn === 'Income') {
+                if (transaction.type === 'income') {
+                  return (
+                    <Card style={styles.transactionsCard} key={transaction.id}>
+                      <View style={styles.transactionsCardContent}>
+                        <View style={styles.transactionsCardDetails}>
+                          <View style={styles.transactionsCardIcon}>
+                            <MaterialCommunityIcons
+                              name="food"
+                              size={25}
+                              color="#CBD3EE"
+                            />
+                          </View>
+                          <View
+                            style={{
+                              flexDirection: 'column',
+                              marginLeft: 5,
+                            }}>
+                            <Text style={styles.transactionsCardTitle}>
+                              {transaction.category}
+                            </Text>
+                            <View style={styles.transactionsCardDateAndTime}>
+                              <Text style={styles.transactionsCardDate}>
+                                {transaction.date}
+                              </Text>
+                              <Text style={styles.transactionsCardTime}>
+                                {transaction.time}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                        <View style={styles.transactionsCardAmount}>
+                          <Text style={styles.transactionsCardAmountIncomeText}>
+                            ₹ {transaction.amount}
+                          </Text>
+                        </View>
+                      </View>
+                    </Card>
+                  );
+                }
+              } else {
+                if (transaction.type === 'expense') {
+                  return (
+                    <Card style={styles.transactionsCard} key={transaction.id}>
+                      <View style={styles.transactionsCardContent}>
+                        <View style={styles.transactionsCardDetails}>
+                          <View style={styles.transactionsCardIcon}>
+                            <MaterialCommunityIcons
+                              name="food"
+                              size={25}
+                              color="#CBD3EE"
+                            />
+                          </View>
+                          <View
+                            style={{
+                              flexDirection: 'column',
+                              marginLeft: 5,
+                            }}>
+                            <Text style={styles.transactionsCardTitle}>
+                              {transaction.category
+                                ? transaction.category
+                                : 'Others'}
+                            </Text>
+                            <View style={styles.transactionsCardDateAndTime}>
+                              <Text style={styles.transactionsCardDate}>
+                                {transaction.date}
+                              </Text>
+                              <Text style={styles.transactionsCardTime}>
+                                {transaction.time}
+                              </Text>
+                              </View>
+                              </View>
+                              </View>
+                              <View style={styles.transactionsCardAmount}>
+                                <Text style={styles.transactionsCardAmountExpenseText}>
+                                  ₹ {transaction.amount}
+                                </Text>
+                                </View>
+                                </View>
+                                </Card>
+                                );
+                              }
+                            }
+                          }
+                        )) : (
+                          <Text>No Transactions</Text>
+                        )}
+                        </View>
+          
       </View>
     </ScrollView>
   );
@@ -312,7 +585,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  incomeBtn: {
+  notSelectedBtn: {
     width: '48%',
     height: 40,
     borderRadius: 12,
@@ -320,12 +593,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  incomeBtnText: {
+  notSelectedBtnText: {
     fontSize: 12,
     fontWeight: '500',
     color: '#959698',
   },
-  expenseBtn: {
+  selectedBtn: {
     width: '48%',
     height: 40,
     borderRadius: 12,
@@ -333,7 +606,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  expenseBtnText: {
+  selectedBtnText: {
     fontSize: 12,
     fontWeight: '500',
     color: '#fff',
