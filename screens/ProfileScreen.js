@@ -118,13 +118,13 @@ const ProfileScreen = ({navigation, route}) => {
           </Card.Content>
         </Card>
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={styles.btn}>
             <Icon name="receipt" size={20} color="#677CD2" />
             <Text style={styles.btnText}>Split Bill</Text>
             <Icon name="angle-right" size={20} color="#8F8F8F" />
             </TouchableOpacity>
-            <Divider />
+            <Divider /> */}
           <TouchableOpacity
             style={styles.btn}
             onPress={() => navigation.navigate('AddExpense')}>

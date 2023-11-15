@@ -4,7 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  LayoutAnimation
+  LayoutAnimation,
 } from 'react-native';
 import React, {useState, useEffect, useCallback} from 'react';
 import {Card, Button} from 'react-native-paper';
@@ -15,7 +15,7 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import DropDownPicker from 'react-native-dropdown-picker';
 
-const StatisticScreen = () => {
+const StatisticScreen = ({navigation}) => {
   const [selectedBar, setSelectedBar] = useState(null);
   const [isAnimated, setIsAnimated] = useState(false);
   const [userData, setUserData] = useState(null);
@@ -106,68 +106,178 @@ const StatisticScreen = () => {
       let totalIncome = 0;
       let totalExpense = 0;
       let aggregatedData = {};
-  
+
       const formatDate = date => {
         const formattedDate = new Date(date);
         if (selectedRange === 'Daily') {
           return formattedDate.getDate().toString();
         } else if (selectedRange === 'Monthly') {
-          return formattedDate.toLocaleString('default', { month: 'short' });
+          return formattedDate.toLocaleString('default', {month: 'short'});
         } else if (selectedRange === 'Yearly') {
           return formattedDate.getFullYear().toString();
         }
       };
-  
+
       userData.transactions.forEach(transaction => {
         const formattedDate = formatDate(transaction.date);
         const value = parseFloat(transaction.amount) || 0;
-  
+
         if (transaction.type === 'income') {
           totalIncome += value;
         } else {
           totalExpense += value;
         }
-  
+
         if (!aggregatedData[formattedDate]) {
-          aggregatedData[formattedDate] = { income: 0, expense: 0 };
+          aggregatedData[formattedDate] = {income: 0, expense: 0};
         }
-  
-        aggregatedData[formattedDate][transaction.type === 'income' ? 'income' : 'expense'] += value;
+
+        aggregatedData[formattedDate][
+          transaction.type === 'income' ? 'income' : 'expense'
+        ] += value;
       });
-  
+
       // Convert aggregatedData to an array of objects
-      const barData = Object.entries(aggregatedData).map(([label, values]) => {
-        return {
-          value: values.income,
-          label,
-          spacing: 20,
-          frontColor: '#677CD2',
-        };
-      }).concat(Object.entries(aggregatedData).map(([label, values]) => {
-        return {
-          value: values.expense,
-          label,
-          spacing: 20,
-          frontColor: '#E98852',
-        };
-      }));
-  
+      // const barData = Object.entries(aggregatedData).map(([label, values]) => {
+      //   return {
+      //     value: values.income,
+      //     label,
+      //     spacing: 20,
+      //     frontColor: '#677CD2',
+      //   };
+      // }).concat(Object.entries(aggregatedData).map(([label, values]) => {
+      //   return {
+      //     value: values.expense,
+      //     label,
+      //     spacing: 20,
+      //     frontColor: '#E98852',
+      //   };
+      // }));
+
+      const barData = [];
+
+      // if(selectedRange === 'Daily' || selectedRange === 'Yearly'){
+      Object.entries(aggregatedData).forEach(([label, values]) => {
+      //   if (values.income > 0 && values.expense > 0) {
+      //     barData.push({
+      //       value: values.income,
+      //       label,
+      //       spacing: 2,
+      //       labelWidth: 50,
+      //       labelTextStyle: {color: 'gray'},
+      //       frontColor: '#677CD2',
+      //     });
+      //     barData.push({
+      //       value: values.expense,
+      //       frontColor: '#E98852',
+      //     });
+      //   } else if (values.income > 0) {
+      //     barData.push({
+      //       value: values.income,
+      //       label,
+      //       spacing: 20,
+      //       frontColor: '#677CD2',
+      //     });
+      //   } else if (values.expense > 0) {
+      //     barData.push({
+      //       value: values.expense,
+      //       label,
+      //       spacing: 20,
+      //       frontColor: '#E98852',
+      //     });
+      //   }
+      // });
+        if (values.income > 0 && values.expense > 0) {
+          barData.push({
+            value: values.income,
+            label,
+            labelWidth: 50,
+            spacing: 2,
+            frontColor: '#677CD2',
+          });
+          barData.push({
+            value: values.expense,
+            label,
+            labelTextStyle: {display: 'none'},
+            spacing: 15,
+            frontColor: '#E98852',
+          });
+        } else if (values.income > 0) {
+          barData.push({
+            value: values.income,
+            label,
+            spacing: 15,
+            frontColor: '#677CD2',
+          });
+        } else if (values.expense > 0) {
+          barData.push({
+            value: values.expense,
+            label,
+            spacing: 15,
+            frontColor: '#E98852',
+          });
+        }
+      });
+      // }else{
+      //   Object.entries(aggregatedData).forEach(([label, values]) => {
+      //     if (values.income > 0 && values.expense > 0) {
+      //       barData.push({
+      //         value: values.income,
+      //         label,
+      //         labelWidth: 50,
+      //         spacing: 2,
+      //         frontColor: '#677CD2',
+      //       });
+      //       barData.push({
+      //         value: values.expense,
+      //         label,
+      //         labelTextStyle: {display: 'none'},
+      //         spacing: 20,
+      //         frontColor: '#E98852',
+      //       });
+      //     } else if (values.income > 0) {
+      //       barData.push({
+      //         value: values.income,
+      //         label,
+      //         spacing: 20,
+      //         frontColor: '#677CD2',
+      //       });
+      //     } else if (values.expense > 0) {
+      //       barData.push({
+      //         value: values.expense,
+      //         label,
+      //         spacing: 20,
+      //         frontColor: '#E98852',
+      //       });
+      //     }
+      //   });
+      // }
+
       // Sort the barData based on date
       barData.sort((a, b) => {
         if (selectedRange === 'Daily') {
           return a.label - b.label;
         } else if (selectedRange === 'Monthly') {
           const months = [
-            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+            'Jan',
+            'Feb',
+            'Mar',
+            'Apr',
+            'May',
+            'Jun',
+            'Jul',
+            'Aug',
+            'Sep',
+            'Oct',
+            'Nov',
+            'Dec',
           ];
-          
+
           return months.indexOf(a.label) - months.indexOf(b.label);
         } else if (selectedRange === 'Yearly') {
           return a.label - b.label;
         }
       });
-  
       setBarData(barData);
       setTotalIncome(totalIncome);
       setTotalExpense(totalExpense);
@@ -177,49 +287,10 @@ const StatisticScreen = () => {
       setTotalExpense(0);
     }
   };
-  
-  
+
   useEffect(() => {
     handleBarData();
   }, [userData, selectedRange]);
-  // const barData = [
-  //   {
-  //     value: 40,
-  //     label: 'W1',
-  //     spacing: 2,
-  //     labelWidth: 50,
-  //     labelTextStyle: {color: 'gray'},
-  //     frontColor: '#677CD2',
-  //   },
-  //   {value: 20, frontColor: '#E98852'},
-  //   {
-  //     value: 50,
-  //     label: 'W2',
-  //     spacing: 2,
-  //     labelWidth: 50,
-  //     labelTextStyle: {color: 'gray'},
-  //     frontColor: '#677CD2',
-  //   },
-  //   {value: 40, frontColor: '#E98852'},
-  //   {
-  //     value: 75,
-  //     label: 'W3',
-  //     spacing: 2,
-  //     labelWidth: 50,
-  //     labelTextStyle: {color: 'gray'},
-  //     frontColor: '#677CD2',
-  //   },
-  //   {value: 25, frontColor: '#E98852'},
-  //   {
-  //     value: 30,
-  //     label: 'W4',
-  //     spacing: 2,
-  //     labelWidth: 50,
-  //     labelTextStyle: {color: 'gray'},
-  //     frontColor: '#677CD2',
-  //   },
-  //   {value: 20, frontColor: '#E98852'},
-  // ];
 
   const handleBarPress = data => {
     setSelectedBar(data);
@@ -227,7 +298,7 @@ const StatisticScreen = () => {
 
   const handleBtnPress = btn => {
     setSelectedBtn(btn);
-  }
+  };
 
   return (
     <ScrollView>
@@ -276,7 +347,7 @@ const StatisticScreen = () => {
               dropDownDirection="BOTTOM"
             />
           </View>
-            <BarChart
+          <BarChart
             data={barData}
             height={220}
             barWidth={20}
@@ -284,8 +355,8 @@ const StatisticScreen = () => {
             roundedTop
             xAxisThickness={0}
             yAxisThickness={0}
-            yAxisTextStyle={{ color: 'gray' }}
-            xAxisLabelTextStyle={{ color: 'gray' }}
+            yAxisTextStyle={{color: 'gray'}}
+            xAxisLabelTextStyle={{color: 'gray'}}
             noOfSections={3}
             isAnimated
             onPress={handleBarPress}
@@ -293,133 +364,151 @@ const StatisticScreen = () => {
             yAxisLabelWidth={50}
             yAxisLabelPrefix={'₹'}
           />
-
-            {selectedBar && (
-              <View style={styles.selectedBarContainer}>
-                <Text style={styles.selectedBarText}>
+          {selectedBar && (
+            <View style={styles.selectedBarContainer}>
+              <Text style={styles.selectedBarText}>
+                {selectedBar.frontColor === '#677CD2' ? 'Income' : 'Expense'}:{' '}
                 ₹ {selectedBar.value}
-                </Text>
-              </View>
-            )}
-          {/* </View> */}
+              </Text>
+            </View>
+          )}
         </View>
-        {/* <View style={styles.buttonSection}>
-          <TouchableOpacity style={styles.Btn}>
-            <Text style={styles.BtnText}>Income</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.Btn}>
-            <Text style={styles.BtnText}>Expense</Text>
-          </TouchableOpacity>
-        </View> */}
         <View style={styles.buttonSection}>
           <TouchableOpacity
-            style={selectedBtn === 'Income' ? styles.selectedBtn : styles.notSelectedBtn}
+            style={
+              selectedBtn === 'Income'
+                ? styles.selectedBtn
+                : styles.notSelectedBtn
+            }
             onPress={() => handleBtnPress('Income')}>
-            <Text style={selectedBtn === 'Income' ? styles.selectedBtnText : styles.notSelectedBtnText}>Income</Text>
+            <Text
+              style={
+                selectedBtn === 'Income'
+                  ? styles.selectedBtnText
+                  : styles.notSelectedBtnText
+              }>
+              Income
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={selectedBtn === 'Expense' ? styles.selectedBtn : styles.notSelectedBtn}
+            style={
+              selectedBtn === 'Expense'
+                ? styles.selectedBtn
+                : styles.notSelectedBtn
+            }
             onPress={() => handleBtnPress('Expense')}>
-            <Text style={selectedBtn === 'Expense' ? styles.selectedBtnText : styles.notSelectedBtnText}>Expense</Text>
+            <Text
+              style={
+                selectedBtn === 'Expense'
+                  ? styles.selectedBtnText
+                  : styles.notSelectedBtnText
+              }>
+              Expense
+            </Text>
           </TouchableOpacity>
         </View>
-        {/* <View style={styles.transactionsList}>
-          <Card style={styles.transactionsCard}>
-            <View style={styles.transactionsCardContent}>
-              <View style={styles.transactionsCardDetails}>
-                <View style={styles.transactionsCardIcon}>
-                  <MaterialCommunityIcons
-                    name="food"
-                    size={25}
-                    color="#CBD3EE"
-                  />
-                </View>
-                <View style={{flexDirection: 'column', marginLeft: 5}}>
-                  <Text style={styles.transactionsCardTitle}>
-                    Food and Drink
-                  </Text>
-                  <View style={styles.transactionsCardDateAndTime}>
-                    <Text style={styles.transactionsCardDate}>Today</Text>
-                    <Text style={styles.transactionsCardTime}>12:00 PM</Text>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.transactionsCardAmount}>
-                <Text style={styles.transactionsCardAmountExpenseText}>
-                  -$ 100.00
-                </Text>
-              </View>
-            </View>
-          </Card>
-          <Card style={styles.transactionsCard}>
-            <View style={styles.transactionsCardContent}>
-              <View style={styles.transactionsCardDetails}>
-                <View style={styles.transactionsCardIcon}>
-                  <MaterialCommunityIcons
-                    name="food"
-                    size={25}
-                    color="#CBD3EE"
-                  />
-                </View>
-                <View style={{flexDirection: 'column', marginLeft: 5}}>
-                  <Text style={styles.transactionsCardTitle}>
-                    Food and Drink
-                  </Text>
-                  <View style={styles.transactionsCardDateAndTime}>
-                    <Text style={styles.transactionsCardDate}>Today</Text>
-                    <Text style={styles.transactionsCardTime}>12:00 PM</Text>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.transactionsCardAmount}>
-                <Text style={styles.transactionsCardAmountExpenseText}>
-                  -$ 100.00
-                </Text>
-              </View>
-            </View>
-          </Card>
-          <Card style={styles.transactionsCard}>
-            <View style={styles.transactionsCardContent}>
-              <View style={styles.transactionsCardDetails}>
-                <View style={styles.transactionsCardIcon}>
-                  <MaterialCommunityIcons
-                    name="cart"
-                    size={25}
-                    color="#CBD3EE"
-                  />
-                </View>
-                <View style={{flexDirection: 'column', marginLeft: 5}}>
-                  <Text style={styles.transactionsCardTitle}>Shopping</Text>
-                  <View style={styles.transactionsCardDateAndTime}>
-                    <Text style={styles.transactionsCardDate}>Today</Text>
-                    <Text style={styles.transactionsCardTime}>12:00 PM</Text>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.transactionsCardAmount}>
-                <Text style={styles.transactionsCardAmountExpenseText}>
-                  -$ 100.00
-                </Text>
-              </View>
-            </View>
-          </Card>
-        </View> */}
-        {/* if selectedBtn is Income then show income transactions else show expense transactions */}
         <View style={styles.transactionsList}>
           {userData && userData.transactions.length > 0 ? (
             userData.transactions.map(transaction => {
               if (selectedBtn === 'Income') {
                 if (transaction.type === 'income') {
                   return (
-                    <Card style={styles.transactionsCard} key={transaction.id}>
+                    <Card style={styles.transactionsCard} key={transaction.id} onPress={() =>
+                      navigation.navigate('TransactionDetail', {
+                        transaction,
+                      })
+                    }>
                       <View style={styles.transactionsCardContent}>
                         <View style={styles.transactionsCardDetails}>
                           <View style={styles.transactionsCardIcon}>
-                            <MaterialCommunityIcons
-                              name="food"
-                              size={25}
-                              color="#CBD3EE"
-                            />
+                          {transaction.category === 'Bills' ? (
+                                <MaterialCommunityIcons
+                                  name="receipt"
+                                  size={25}
+                                  color="#CBD3EE"
+                                  style={{
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                  }}
+                                />
+                              ) : null}
+                              {transaction.category === 'Education' ? (
+                                <MaterialCommunityIcons
+                                  name="school"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Entertainment' ? (
+                                <MaterialCommunityIcons
+                                  name="movie"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Food' ? (
+                                <MaterialCommunityIcons
+                                  name="food"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Health' ? (
+                                <MaterialCommunityIcons
+                                  name="hospital"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Shopping' ? (
+                                <MaterialCommunityIcons
+                                  name="cart"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Travel' ? (
+                                <MaterialCommunityIcons
+                                  name="bus"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.type === 'expense' && transaction.category === 'Others' ? (
+                                <MaterialCommunityIcons
+                                  name="cash-remove"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Salary' ? (
+                                <MaterialCommunityIcons
+                                  name="cash"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Bonus' ? (
+                                <MaterialCommunityIcons
+                                  name="cash"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Gift' ? (
+                                <MaterialCommunityIcons
+                                  name="cash"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.type === 'income' && transaction.category === 'Others' ? (
+                                <MaterialCommunityIcons
+                                  name="cash"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
                           </View>
                           <View
                             style={{
@@ -427,7 +516,7 @@ const StatisticScreen = () => {
                               marginLeft: 5,
                             }}>
                             <Text style={styles.transactionsCardTitle}>
-                              {transaction.category}
+                              {transaction.title}
                             </Text>
                             <View style={styles.transactionsCardDateAndTime}>
                               <Text style={styles.transactionsCardDate}>
@@ -451,15 +540,102 @@ const StatisticScreen = () => {
               } else {
                 if (transaction.type === 'expense') {
                   return (
-                    <Card style={styles.transactionsCard} key={transaction.id}>
+                    <Card style={styles.transactionsCard} key={transaction.id} onPress={() =>
+                      navigation.navigate('TransactionDetail', {
+                        transaction,
+                      })
+                    }>
                       <View style={styles.transactionsCardContent}>
                         <View style={styles.transactionsCardDetails}>
                           <View style={styles.transactionsCardIcon}>
-                            <MaterialCommunityIcons
-                              name="food"
-                              size={25}
-                              color="#CBD3EE"
-                            />
+                          {transaction.category === 'Bills' ? (
+                                <MaterialCommunityIcons
+                                  name="receipt"
+                                  size={25}
+                                  color="#CBD3EE"
+                                  style={{
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                  }}
+                                />
+                              ) : null}
+                              {transaction.category === 'Education' ? (
+                                <MaterialCommunityIcons
+                                  name="school"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Entertainment' ? (
+                                <MaterialCommunityIcons
+                                  name="movie"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Food' ? (
+                                <MaterialCommunityIcons
+                                  name="food"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Health' ? (
+                                <MaterialCommunityIcons
+                                  name="hospital"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Shopping' ? (
+                                <MaterialCommunityIcons
+                                  name="cart"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Travel' ? (
+                                <MaterialCommunityIcons
+                                  name="bus"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.type === 'expense' && transaction.category === 'Others' ? (
+                                <MaterialCommunityIcons
+                                  name="cash-remove"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Salary' ? (
+                                <MaterialCommunityIcons
+                                  name="cash"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Bonus' ? (
+                                <MaterialCommunityIcons
+                                  name="cash"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.category === 'Gift' ? (
+                                <MaterialCommunityIcons
+                                  name="cash"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {transaction.type === 'income' && transaction.category === 'Others' ? (
+                                <MaterialCommunityIcons
+                                  name="cash"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
                           </View>
                           <View
                             style={{
@@ -467,9 +643,7 @@ const StatisticScreen = () => {
                               marginLeft: 5,
                             }}>
                             <Text style={styles.transactionsCardTitle}>
-                              {transaction.category
-                                ? transaction.category
-                                : 'Others'}
+                              {transaction.title}
                             </Text>
                             <View style={styles.transactionsCardDateAndTime}>
                               <Text style={styles.transactionsCardDate}>
@@ -478,25 +652,25 @@ const StatisticScreen = () => {
                               <Text style={styles.transactionsCardTime}>
                                 {transaction.time}
                               </Text>
-                              </View>
-                              </View>
-                              </View>
-                              <View style={styles.transactionsCardAmount}>
-                                <Text style={styles.transactionsCardAmountExpenseText}>
-                                  ₹ {transaction.amount}
-                                </Text>
-                                </View>
-                                </View>
-                                </Card>
-                                );
-                              }
-                            }
-                          }
-                        )) : (
-                          <Text>No Transactions</Text>
-                        )}
+                            </View>
+                          </View>
                         </View>
-          
+                        <View style={styles.transactionsCardAmount}>
+                          <Text
+                            style={styles.transactionsCardAmountExpenseText}>
+                            ₹ {transaction.amount}
+                          </Text>
+                        </View>
+                      </View>
+                    </Card>
+                  );
+                }
+              }
+            })
+          ) : (
+            <Text>No Transactions</Text>
+          )}
+        </View>
       </View>
     </ScrollView>
   );
@@ -505,7 +679,6 @@ const StatisticScreen = () => {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    // backgroundColor: '#FAFAFA',
   },
   cardSection: {
     flexDirection: 'row',
@@ -549,8 +722,6 @@ const styles = StyleSheet.create({
   },
   statisticHeader: {
     flexDirection: 'column',
-    // justifyContent: 'center',
-    // alignItems: 'center',
   },
   statisticHeaderText: {
     fontSize: 16,
@@ -573,7 +744,6 @@ const styles = StyleSheet.create({
     right: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    // backgroundColor: 'rgba(255, 255, 255, 0.8)',
     padding: 10,
   },
   selectedBarText: {
@@ -617,7 +787,6 @@ const styles = StyleSheet.create({
   transactionsCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    // justifyContent: 'space-between',
     padding: 15,
     marginVertical: 5,
     backgroundColor: '#fff',
@@ -645,7 +814,6 @@ const styles = StyleSheet.create({
   },
   transactionsCardDetails: {
     flexDirection: 'row',
-    // alignItems: 'flex-start',
     alignItems: 'center',
     justifyContent: 'center',
   },

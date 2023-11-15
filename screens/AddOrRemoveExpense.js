@@ -6,15 +6,47 @@ import {
   TouchableOpacity,
   LayoutAnimation
 } from 'react-native';
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+import { useFocusEffect } from '@react-navigation/native';
 
 const AddOrRemoveExpense = ({navigation}) => {
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
+  const [formattedDate, setFormattedDate] = useState('');
+
+  const getUser = async () => {
+    const currentUser = await firestore()
+      .collection('users')
+      .doc(auth().currentUser.uid)
+      .get()
+      .then(documentSnapshot => {
+        if (documentSnapshot.exists) {
+          setUserData(documentSnapshot.data());
+          console.log('User Data', documentSnapshot.data());
+          setLoading(false);
+        }
+      });
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      getUser();
+    }, []),
+  );
+
+  const toggleShowAll = () => {
+    setShowAll(!showAll);
+  };
+
   return (
     <>
-    <ScrollView>
-      <View style={styles.container}>
+    {/* <ScrollView style={{flex: 1}}> */}
+      {/* <View style={styles.container}>
         <View style={styles.lastAdded}>
           <Text style={styles.lastAddedText}>Last Added</Text>
           <TouchableOpacity>
@@ -131,8 +163,160 @@ const AddOrRemoveExpense = ({navigation}) => {
               </View>
             </Card>
           </View>
+      </View> */}
+      <View style={styles.container}>
+        <View style={styles.lastAdded}>
+          <Text style={styles.lastAddedText}>Last Added</Text>
+          <TouchableOpacity onPress={toggleShowAll}>
+            <Text style={styles.seeAllText}>{showAll ? 'See Less' : 'See All'}</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView
+            style={styles.transactionsList}
+            showsVerticalScrollIndicator={false} // Hide vertical scrollbar
+          >
+          {userData ? (
+            <>
+            {userData.transactions.length > 0 ? (
+              <>
+              {/* {userData.transactions.slice(0, showAll ? userData.transactions.length : 3).map((item, index) => ( */}
+              {userData.transactions
+              .sort((a, b) => b.createdAt - a.createdAt)
+              .slice(0, showAll ? userData.transactions.length : 5)
+              .map((item, index) => (
+                <Card style={styles.transactionsCard} key={index} onPress={() =>
+                  navigation.navigate('TransactionDetail', {
+                    transaction: item,
+                  })
+                }>
+                  <View style={styles.transactionsCardContent}>
+                  <View style={styles.transactionsCardDetails}>
+                    <View style={styles.transactionsCardIcon}>
+                    {item.category === 'Bills' ? (
+                                <MaterialCommunityIcons
+                                  name="receipt"
+                                  size={25}
+                                  color="#CBD3EE"
+                                  style={{
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                  }}
+                                />
+                              ) : null}
+                              {item.category === 'Education' ? (
+                                <MaterialCommunityIcons
+                                  name="school"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {item.category === 'Entertainment' ? (
+                                <MaterialCommunityIcons
+                                  name="movie"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {item.category === 'Food' ? (
+                                <MaterialCommunityIcons
+                                  name="food"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {item.category === 'Health' ? (
+                                <MaterialCommunityIcons
+                                  name="hospital"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {item.category === 'Shopping' ? (
+                                <MaterialCommunityIcons
+                                  name="cart"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {item.category === 'Travel' ? (
+                                <MaterialCommunityIcons
+                                  name="bus"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {item.type === 'expense' && item.category === 'Others' ? (
+                                <MaterialCommunityIcons
+                                  name="cash-remove"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {item.category === 'Salary' ? (
+                                <MaterialCommunityIcons
+                                  name="cash"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {item.category === 'Bonus' ? (
+                                <MaterialCommunityIcons
+                                  name="cash"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {item.category === 'Gift' ? (
+                                <MaterialCommunityIcons
+                                  name="cash"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                              {item.type === 'income' && item.category === 'Others' ? (
+                                <MaterialCommunityIcons
+                                  name="cash"
+                                  size={25}
+                                  color="#CBD3EE"
+                                />
+                              ) : null}
+                    </View>
+                    <View style={{flexDirection: 'column', marginLeft: 5}}>
+                      <Text style={styles.transactionsCardTitle}>
+                        {item.title}
+                      </Text>
+                      <View style={styles.transactionsCardDateAndTime}>
+                        <Text style={styles.transactionsCardDate}>{item.date}</Text>
+                        <Text style={styles.transactionsCardTime}>{item.time}</Text>
+                      </View>
+                    </View>
+                    </View>
+                    <View style={styles.transactionsCardAmount}>
+                      {/* <Text style={item.type === 'Income' ? styles.transactionsCardAmountIncomeText : styles.transactionsCardAmountExpenseText}>
+                        {item.type === 'Income' ? '+$ ' : '-$ '}{item.amount}
+                      </Text> */}
+                      <Text style={item.type === 'income' ? styles.transactionsCardAmountIncomeText : styles.transactionsCardAmountExpenseText}>
+                        {item.type === 'income' ? '+ ₹' : '- ₹'}{item.amount}
+                      </Text>
+                    </View>
+                  </View>
+                </Card>
+              ))}
+              </>
+            ) : (
+              <View style={{alignItems: 'center', justifyContent: 'center', marginTop: 20}}>
+                <Text style={{fontSize: 16, fontWeight: '500', color: '#3A3B3E'}}>No Transactions</Text>
+              </View>
+            )}
+            </>
+          ) : (
+            <View style={{alignItems: 'center', justifyContent: 'center', marginTop: 20}}>
+              <Text style={{fontSize: 16, fontWeight: '500', color: '#3A3B3E'}}>No Transactions</Text>
+            </View>
+          )}
+          </ScrollView>
       </View>
-    </ScrollView>
+    {/* </ScrollView> */}
      <View style={styles.buttonContainer}>
      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('AddIncome')}>
        <Text style={styles.buttonText}>Add Income</Text>
@@ -171,6 +355,7 @@ const styles = StyleSheet.create({
   },
   transactionsList: {
     marginTop: 10,
+    marginBottom: 100,
   },
   transactionsCard: {
     flexDirection: 'row',

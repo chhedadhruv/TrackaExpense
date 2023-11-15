@@ -6,7 +6,7 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {useFocusEffect} from '@react-navigation/native';
 
-const HomeScreen = () => {
+const HomeScreen = ({ navigation }) => {
   const [userData, setUserData] = useState(null);
   const [date, setDate] = useState();
   const [income, setIncome] = useState([]);
@@ -111,12 +111,11 @@ const HomeScreen = () => {
   }
 
   return (
-    <ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false}>
       <View style={styles.container}>
         <Card style={styles.myCard}>
           <View style={styles.cardContent}>
             <Text style={styles.TitleText}>Total Balance</Text>
-            {/* <Text style={styles.BalanceText}>₹ {userData.balance}</Text> */}
             <Text style={styles.BalanceText}>
               ₹ {userData.balance ? userData.balance.toLocaleString() : 0}
             </Text>
@@ -132,8 +131,6 @@ const HomeScreen = () => {
               </View>
               <View style={styles.cardContent}>
                 <Text style={styles.TitleText}>Income</Text>
-                {/* <Text style={styles.ValueText}>₹ {userData.income.length > 0 ? userData.income.reduce((a, b) => a + b) : 0}</Text> */}
-                {/* <Text style={styles.ValueText}>₹ {income.length > 0 ? income.reduce((a, b) => a + b.amount, 0) : 0}</Text> */}
                 <Text style={styles.ValueText}>
                   ₹ {totalIncome.toLocaleString()}
                 </Text>
@@ -161,147 +158,32 @@ const HomeScreen = () => {
         <View style={styles.transactions}>
           <View style={styles.transactionsHeader}>
             <Text style={styles.transactionsHeaderText}>Transactions</Text>
-            {/* <Text style={styles.transactionsHeaderSeeAll}>See All</Text> */}
             <Text
               style={styles.transactionsHeaderSeeAll}
               onPress={toggleShowAll}>
               {showAll ? 'Hide' : 'See All'}
             </Text>
           </View>
-          {/* <View style={styles.transactionsList}>
-            <Card style={styles.transactionsCard}>
-              <View style={styles.transactionsCardContent}>
-              <View style={styles.transactionsCardDetails}>
-                <View style={styles.transactionsCardIcon}>
-                  <MaterialCommunityIcons
-                    name="food"
-                    size={25}
-                    color="#CBD3EE"
-                  />
-                </View>
-                <View style={{flexDirection: 'column', marginLeft: 5}}>
-                  <Text style={styles.transactionsCardTitle}>
-                    Food and Drink
-                  </Text>
-                  <View style={styles.transactionsCardDateAndTime}>
-                    <Text style={styles.transactionsCardDate}>Today</Text>
-                    <Text style={styles.transactionsCardTime}>12:00 PM</Text>
-                  </View>
-                </View>
-                </View>
-                <View style={styles.transactionsCardAmount}>
-                  <Text style={styles.transactionsCardAmountExpenseText}>
-                    -$ 100.00
-                  </Text>
-                </View>
-              </View>
-            </Card>
-            <Card style={styles.transactionsCard}>
-              <View style={styles.transactionsCardContent}>
-              <View style={styles.transactionsCardDetails}>
-                <View style={styles.transactionsCardIcon}>
-                  <MaterialCommunityIcons
-                    name="food"
-                    size={25}
-                    color="#CBD3EE"
-                  />
-                </View>
-                <View style={{flexDirection: 'column', marginLeft: 5}}>
-                  <Text style={styles.transactionsCardTitle}>
-                    Food and Drink
-                  </Text>
-                  <View style={styles.transactionsCardDateAndTime}>
-                    <Text style={styles.transactionsCardDate}>Today</Text>
-                    <Text style={styles.transactionsCardTime}>12:00 PM</Text>
-                  </View>
-                </View>
-                </View>
-                <View style={styles.transactionsCardAmount}>
-                  <Text style={styles.transactionsCardAmountExpenseText}>
-                    -$ 100.00
-                  </Text>
-                </View>
-              </View>
-            </Card>
-            <Card style={styles.transactionsCard}>
-              <View style={styles.transactionsCardContent}>
-              <View style={styles.transactionsCardDetails}>
-                <View style={styles.transactionsCardIcon}>
-                  <MaterialCommunityIcons
-                    name="cash"
-                    size={25}
-                    color="#CBD3EE"
-                  />
-                </View>
-                <View style={{flexDirection: 'column', marginLeft: 5}}>
-                  <Text style={styles.transactionsCardTitle}>
-                    Transfer and Refund
-                  </Text>
-                  <View style={styles.transactionsCardDateAndTime}>
-                    <Text style={styles.transactionsCardDate}>Today</Text>
-                    <Text style={styles.transactionsCardTime}>12:00 PM</Text>
-                  </View>
-                </View>
-                </View>
-                <View style={styles.transactionsCardAmount}>
-                  <Text style={styles.transactionsCardAmountIncomeText}>
-                    +$ 100.00
-                  </Text>
-                </View>
-              </View>
-            </Card>
-            <Card style={styles.transactionsCard}>
-              <View style={styles.transactionsCardContent}>
-              <View style={styles.transactionsCardDetails}>
-                <View style={styles.transactionsCardIcon}>
-                  <MaterialCommunityIcons
-                    name="cart"
-                    size={25}
-                    color="#CBD3EE"
-                  />
-                </View>
-                <View style={{flexDirection: 'column', marginLeft: 5}}>
-                  <Text style={styles.transactionsCardTitle}>
-                    Shopping
-                  </Text>
-                  <View style={styles.transactionsCardDateAndTime}>
-                    <Text style={styles.transactionsCardDate}>Today</Text>
-                    <Text style={styles.transactionsCardTime}>12:00 PM</Text>
-                  </View>
-                </View>
-                </View>
-                <View style={styles.transactionsCardAmount}>
-                  <Text style={styles.transactionsCardAmountExpenseText}>
-                    -$ 100.00
-                  </Text>
-                </View>
-              </View>
-            </Card>
-          </View> */}
-          <ScrollView>
-            <View style={styles.transactionsList}>
+            <View
+            style={styles.transactionsList}
+          >
               {transactions.length > 0 ? (
                 transactions
+                  .sort((a, b) => b.createdAt - a.createdAt)
                   .slice(0, showAll ? transactions.length : 4)
                   .map(transaction => {
                     return (
                       <Card
                         style={styles.transactionsCard}
-                        key={transaction.id}>
+                        key={transaction.id}
+                        onPress={() =>
+                          navigation.navigate('TransactionDetail', {
+                            transaction,
+                          })
+                        }>
                         <View style={styles.transactionsCardContent}>
                           <View style={styles.transactionsCardDetails}>
                             <View style={styles.transactionsCardIcon}>
-                              {/* <MaterialCommunityIcons
-                          name={transaction.category.icon}
-                          size={25}
-                          color="#CBD3EE"
-                        /> */}
-                              {/* <MaterialCommunityIcons
-                          name={transaction.category.icon}
-                          size={25}
-                          color="#CBD3EE"
-                        /> */}
-                              {/* Add a condition to add the icon according to the category */}
                               {transaction.category === 'Bills' ? (
                                 <MaterialCommunityIcons
                                   name="receipt"
@@ -394,7 +276,7 @@ const HomeScreen = () => {
                             <View
                               style={{flexDirection: 'column', marginLeft: 5}}>
                               <Text style={styles.transactionsCardTitle}>
-                                {transaction.category}
+                                {transaction.title}
                               </Text>
                               <View style={styles.transactionsCardDateAndTime}>
                                 <Text style={styles.transactionsCardDate}>
@@ -432,7 +314,6 @@ const HomeScreen = () => {
                 </View>
               )}
             </View>
-          </ScrollView>
         </View>
       </View>
     </ScrollView>
@@ -521,6 +402,7 @@ const styles = StyleSheet.create({
   },
   transactionsList: {
     marginTop: 10,
+    marginBottom: 30,
   },
   transactionsCard: {
     flexDirection: 'row',

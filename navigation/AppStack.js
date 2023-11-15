@@ -16,6 +16,8 @@ import AddOrRemoveExpense from '../screens/AddOrRemoveExpense';
 import StatisticScreen from '../screens/StatisticScreen';
 import AddIncome from '../screens/AddIncome';
 import AddExpense from '../screens/AddExpense';
+import TransactionDetailScreen from '../screens/TransactionDetailScreen';
+import ImageScreen from '../screens/ImageScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -39,6 +41,34 @@ const HomeStack = ({navigation}) => (
           color: '#333', // Dark gray title color (a shade of black)
         },
       })}
+    />
+    <Stack.Screen
+      name="TransactionDetail"
+      component={TransactionDetailScreen}
+      options={{
+        headerTitle: 'Transaction Detail',
+        headerBackTitleVisible: false,
+        headerTitleAlign: 'center',
+        headerStyle: {
+          backgroundColor: '#fff',
+          shadowColor: '#fff',
+          elevation: 0,
+        },
+      }}
+    />
+    <Stack.Screen
+      name="Image"
+      component={ImageScreen}
+      options={{
+        headerTitle: '',
+        headerBackTitleVisible: false,
+        headerTitleAlign: 'center',
+        headerStyle: {
+          backgroundColor: '#fff',
+          shadowColor: '#fff',
+          elevation: 0,
+        },
+      }}
     />
   </Stack.Navigator>
 );
@@ -125,6 +155,34 @@ const StatisticStack = ({navigation}) => (
         },
       }}
     />
+    <Stack.Screen
+      name="TransactionDetail"
+      component={TransactionDetailScreen}
+      options={{
+        headerTitle: 'Transaction Detail',
+        headerBackTitleVisible: false,
+        headerTitleAlign: 'center',
+        headerStyle: {
+          backgroundColor: '#fff',
+          shadowColor: '#fff',
+          elevation: 0,
+        },
+      }}
+    />
+    <Stack.Screen
+      name="Image"
+      component={ImageScreen}
+      options={{
+        headerTitle: '',
+        headerBackTitleVisible: false,
+        headerTitleAlign: 'center',
+        headerStyle: {
+          backgroundColor: '#fff',
+          shadowColor: '#fff',
+          elevation: 0,
+        },
+      }}
+    />
   </Stack.Navigator>
 );
 
@@ -135,7 +193,7 @@ const AddOrRemoveExpenseStack = ({navigation}) => (
       component={AddOrRemoveExpense}
       options={{
         headerShown: true,
-        title: 'Add or Remove Expense',
+        title: 'Handle Transaction',
         headerStyle: {
           backgroundColor: '#F5F5F5', // Light gray background (a shade of white)
           elevation: 0, // Remove shadow on Android
@@ -168,6 +226,34 @@ const AddOrRemoveExpenseStack = ({navigation}) => (
       component={AddExpense}
       options={{
         headerTitle: 'Add Expense',
+        headerBackTitleVisible: false,
+        headerTitleAlign: 'center',
+        headerStyle: {
+          backgroundColor: '#fff',
+          shadowColor: '#fff',
+          elevation: 0,
+        },
+      }}
+    />
+    <Stack.Screen
+      name="TransactionDetail"
+      component={TransactionDetailScreen}
+      options={{
+        headerTitle: 'Transaction Detail',
+        headerBackTitleVisible: false,
+        headerTitleAlign: 'center',
+        headerStyle: {
+          backgroundColor: '#fff',
+          shadowColor: '#fff',
+          elevation: 0,
+        },
+      }}
+    />
+    <Stack.Screen
+      name="Image"
+      component={ImageScreen}
+      options={{
+        headerTitle: '',
         headerBackTitleVisible: false,
         headerTitleAlign: 'center',
         headerStyle: {

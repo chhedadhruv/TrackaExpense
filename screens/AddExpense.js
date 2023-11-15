@@ -183,6 +183,8 @@ const AddExpense = ({navigation}) => {
             transaction.update(userDocRef, {
               transactions: firestore.FieldValue.arrayUnion(expenseData)
             });
+            alert('Expense added successfully');
+            navigation.goBack();
           }
         });
   
@@ -193,8 +195,6 @@ const AddExpense = ({navigation}) => {
         setDate('');
         setImage(null);
         setUploading(false);
-        alert('Expense added successfully');
-        navigation.goBack();
       } catch (error) {
         console.error('Error adding expense:', error);
         alert('An error occurred while adding the expense. Please try again.');
