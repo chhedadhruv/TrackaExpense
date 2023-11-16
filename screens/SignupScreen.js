@@ -11,38 +11,19 @@ const SignupScreen = ({navigation, labelValue, placeholderText, iconType, ...res
   const [email, setEmail] = useState();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState();
-  const [age, setAge] = useState();
-  const [gender, setGender] = useState();
   const [name, setName] = useState();
   const [balance, setBalance] = useState(0);
   const [errorMessage, setErrorMessage] = useState(null);
   const {register, googleLogin } = useContext(AuthContext);
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState(null);
-  const [items, setItems] = useState([
-    {label: 'Male', value: 'male'},
-    {label: 'Female', value: 'female'},
-    {label: 'Other', value: 'other'}
-  ]);
 
   const isValidEmail = (email) => {
     const re = /\S+@\S+\.\S+/;
     return re.test(email);
   }
 
-  const isValidAge = (age) => {
-    const re = /^\d{1,2}$/;
-    return re.test(age);
-  }
-
   const isValidName = (name) => {
     const re = /^[a-zA-Z]+(?:[\s-][a-zA-Z]+)*$/;
     return re.test(name);
-  }
-
-  const isValidPassword = (password) => {
-    const re = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])[0-9a-zA-Z]{6,}$/;
-    return re.test(password);
   }
 
   const isValidBalance = (balance) => {
@@ -65,9 +46,6 @@ const SignupScreen = ({navigation, labelValue, placeholderText, iconType, ...res
     // }
     else if (!confirmPassword) {
       setErrorMessage('Please confirm your password');
-    }
-    else if (!isValidAge(age)) {
-      setErrorMessage('Please enter a valid age');
     }
     else if (!name) {
       setErrorMessage('Please enter your name');
@@ -93,95 +71,6 @@ const SignupScreen = ({navigation, labelValue, placeholderText, iconType, ...res
   }
 
   return (
-    // <View style={styles.container}>
-    //     <Text style={styles.text}>Create an account</Text>
-    //     {errorMessage && <Text style={{color: 'red', marginBottom: 10}}>{errorMessage}</Text>}
-    //     <FormInput
-    //       labelValue={name}
-    //       onChangeText={(userName) => setName(userName)}
-    //       placeholderText="Name"
-    //       iconType="user"
-    //       autoCapitalize="words"
-    //       autoCorrect={false}
-    //     />
-    //     <FormInput
-    //       labelValue={email}
-    //       onChangeText={(userEmail) => setEmail(userEmail)}
-    //       placeholderText="Email"
-    //       iconType="mail"
-    //       keyboardType="email-address"
-    //       autoCapitalize="none"
-    //       autoCorrect={false}
-    //     />
-    //     <FormInput
-    //       labelValue={age}
-    //       onChangeText={(userAge) => setAge(userAge)}
-    //       placeholderText="Age"
-    //       iconType="calendar"
-    //       keyboardType="numeric"
-    //       autoCapitalize="none"
-    //       autoCorrect={false}
-    //     />
-    //     <DropDownPicker
-    //       open={open}
-    //       value={value}
-    //       items={items}
-    //       setOpen={setOpen}
-    //       setValue={setValue}
-    //       setItems={setItems}
-    //       placeholder={'Select Gender'}
-    //       onChangeValue={(value) => setGender(value)}
-    //     />
-    //     <FormInput
-    //       labelValue={password}
-    //       onChangeText={(userPassword) => setPassword(userPassword)}
-    //       placeholderText="Password"
-    //       iconType="lock"
-    //       secureTextEntry={true}
-    //     />
-    //     <FormInput
-    //       labelValue={confirmPassword}
-    //       onChangeText={(userConfirmPassword) => setConfirmPassword(userConfirmPassword)}
-    //       placeholderText="Confirm Password"
-    //       iconType="lock"
-    //       secureTextEntry={true}
-    //     />
-    //     <FormButton
-    //       buttonTitle="Sign Up"
-    //       onPress={() => {
-    //         handleSignup();
-    //       }}
-    //     />
-    //     <View style={styles.textPrivate}>
-    //     <Text style={styles.color_textPrivate}>
-    //       By registering, you confirm that you accept our{' '}
-    //     </Text>
-    //     <TouchableOpacity onPress={() => alert('Terms Clicked!')}>
-    //       <Text style={[styles.color_textPrivate, {color: '#e88832'}]}>
-    //         Terms of service
-    //       </Text>
-    //     </TouchableOpacity>
-    //     <Text style={styles.color_textPrivate}> and </Text>
-    //     <Text style={[styles.color_textPrivate, {color: '#e88832'}]}>
-    //       Privacy Policy
-    //     </Text>
-    //   </View>
-    //     <TouchableOpacity
-    //       style={styles.forgotButton}
-    //       onPress={() => navigation.navigate('Login')}>
-    //       <Text style={styles.navButtonText}>
-    //         Already have an account? Login here
-    //       </Text>
-    //     </TouchableOpacity>
-    //     <SocialButton
-    //       buttonTitle="Sign Up with Google"
-    //       btnType="google"
-    //       color="#fff"
-    //       backgroundColor="#5CB85C"
-    //       onPress={() => googleLogin()}
-    //     />
-    // </View>
-
     <KeyboardAwareScrollView style={{flex: 1, width: '100%'}} keyboardShouldPersistTaps="always">
       <View style={styles.container}>
         <Text style={styles.text}>Create an account</Text>
