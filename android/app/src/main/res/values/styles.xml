@@ -5,5 +5,73 @@
         <!-- Customize your theme here. -->
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
     </style>
+    <style name="Widget.TrackaExpense.AppWidget.Container" parent="android:Widget">
+        <item name="android:id">@android:id/background</item>
+        <item name="android:background">?android:attr/colorBackground</item>
+    </style>
+
+    <style name="Widget.TrackaExpense.AppWidget.InnerView" parent="android:Widget">
+        <item name="android:background">?android:attr/colorBackground</item>
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+    </style>
+
+        <!-- Card Styles -->
+    <style name="MyCard">
+        <item name="android:layout_margin">5dp</item>
+        <item name="android:padding">20dp</item>
+        <item name="android:background">#677CD2</item>
+    </style>
+
+    <style name="DataCard">
+        <item name="android:layout_marginTop">20dp</item>
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <!-- Card Content Styles -->
+    <style name="CardContent">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="CardContentWithIcon">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <!-- Icon Styles -->
+    <style name="Icon">
+        <item name="android:layout_width">43dp</item>
+        <item name="android:layout_height">43dp</item>
+        <item name="android:layout_marginRight">10dp</item>
+        <item name="android:background">#7A8EE0</item>
+    </style>
+
+    <!-- Text Styles -->
+    <style name="TitleText">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">#CED6EC</item>
+        <item name="android:layout_marginBottom">5dp</item>
+    </style>
+
+    <style name="BalanceText">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">26sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">#fff</item>
+    </style>
+
+    <style name="ValueText">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">#fff</item>
+    </style>
+
 
 </resources>
