@@ -190,6 +190,7 @@ const AddExpense = ({navigation}) => {
           style={styles.textInput}
           value={title}
           onChangeText={setTitle}
+          placeholderTextColor={'#666'}
         />
       </View>
       <View style={styles.action}>
@@ -199,6 +200,7 @@ const AddExpense = ({navigation}) => {
           style={styles.textInput}
           value={description}
           onChangeText={setDescription}
+          placeholderTextColor={'#666'}
         />
       </View>
       <View style={styles.action}>
@@ -222,6 +224,7 @@ const AddExpense = ({navigation}) => {
           style={styles.textInput}
           value={amount}
           onChangeText={setAmount}
+          placeholderTextColor={'#666'}
         />
       </View>
       <View style={styles.action}>
@@ -231,6 +234,7 @@ const AddExpense = ({navigation}) => {
           style={styles.textInput}
           value={date}
           onFocus={() => setOpenDate(true)}
+          placeholderTextColor={'#666'}
         />
         <DatePickerModal
           mode="single"
