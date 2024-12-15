@@ -1,79 +1,64 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# TrackaExpense
 
-# Getting Started
+TrackaExpense is a comprehensive, ad-free personal finance app built using **React Native** and **Firebase**. The app helps you manage your expenses, track income, set savings goals, and split bills with an intuitive, easy-to-use interface.
 
->**Note**: Make sure you have completed the [React Native - Environment Setup](https://reactnative.dev/docs/environment-setup) instructions till "Creating a new application" step, before proceeding.
+## Features
+- **Home Screen**: Displays your Total Expenses, Total Income, and a list of Recent Transactions for easy tracking.
+- **Statistics**: View graphs of your expenses and income for any selected period to analyze your financial patterns.
+- **Transactions**: Add new expenses or income quickly with a simple input form.
+- **Savings Goals**: Set and track progress toward your savings goals using a progress bar.
+- **Bill Splitting**: Split bills between friends equally or by percentage to simplify group expenses.
+- **Profile**: Manage your profile, provide feedback, view the privacy policy, and log out securely.
 
-## Step 1: Start the Metro Server
+## Installation
 
-First, you will need to start **Metro**, the JavaScript _bundler_ that ships _with_ React Native.
+To run this project locally:
 
-To start Metro, run the following command from the _root_ of your React Native project:
-
+### 1. Clone the repository:
 ```bash
-# using npm
+git clone https://github.com/chhedadhruv/TrackaExpense.git
+```
+
+### 2. Navigate to the project directory:
+```bash
+cd TrackaExpense
+```
+
+### 3. Install dependencies:
+```bash
+npm install
+```
+
+### 4. Start the development server:
+```bash
 npm start
-
-# OR using Yarn
-yarn start
 ```
 
-## Step 2: Start your Application
-
-Let Metro Bundler run in its _own_ terminal. Open a _new_ terminal from the _root_ of your React Native project. Run the following command to start your _Android_ or _iOS_ app:
-
-### For Android
-
+### 5. Open the React Native CLI on Android Emulator:
 ```bash
-# using npm
 npm run android
-
-# OR using Yarn
-yarn android
 ```
 
-### For iOS
+## Technologies Used
+- **React Native**: A JavaScript framework for building native mobile applications.
+- **Firebase**: A platform developed by Google for creating mobile and web applications.
+- **React Navigation**: A library for routing and navigation in React Native.
+- **React Native Paper**: A cross-platform material design library for React Native.
+- **React Native Vector Icons**: A library for using custom icons in React Native.
+- **React Native Chart Kit**: A library for creating customizable charts in React Native.
 
-```bash
-# using npm
-npm run ios
+## APK Download
+You can download the APK for the app from the following link: [TrackaExpense APK](https://trackaexpense.dhruvchheda.com)
 
-# OR using Yarn
-yarn ios
-```
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-If everything is set up _correctly_, you should see your new app running in your _Android Emulator_ or _iOS Simulator_ shortly provided you have set up your emulator/simulator correctly.
+## Acknowledgements
+- [React Native](https://reactnative.dev/)
+- [Firebase](https://firebase.google.com/)
+- [React Navigation](https://reactnavigation.org/)
+- [React Native Paper](https://callstack.github.io/react-native-paper/)
 
-This is one way to run your app — you can also run it directly from within Android Studio and Xcode respectively.
-
-## Step 3: Modifying your App
-
-Now that you have successfully run the app, let's modify it.
-
-1. Open `App.tsx` in your text editor of choice and edit some lines.
-2. For **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Developer Menu** (<kbd>Ctrl</kbd> + <kbd>M</kbd> (on Window and Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (on macOS)) to see your changes!
-
-   For **iOS**: Hit <kbd>Cmd ⌘</kbd> + <kbd>R</kbd> in your iOS Simulator to reload the app and see your changes!
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [Introduction to React Native](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you can't get this to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+## Contact
+- **Dhruv Chheda**: [dhruvchheda.com](https://dhruvchheda.com)
+- **Email**: me@dhruvchheda.com
