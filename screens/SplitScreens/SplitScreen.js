@@ -257,7 +257,6 @@ const SplitScreen = ({navigation}) => {
   const renderUserCard = (user, withCheckbox = false) => (
     <View style={styles.userCard} key={user.email}>
       <UserAvatar
-        bgColor="#677CD2"
         size={50}
         name={user.name || user.email}
       />
@@ -336,7 +335,6 @@ const SplitScreen = ({navigation}) => {
                   <UserAvatar
                     size={30}
                     name={member.name || member.email}
-                    bgColor="#677CD2"
                   />
                   <Text style={styles.memberPreviewName} numberOfLines={1}>
                     {member.name || member.email}
