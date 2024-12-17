@@ -12,6 +12,7 @@ import {Text, Provider, Checkbox} from 'react-native-paper';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import AntDesign from 'react-native-vector-icons/AntDesign';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
 import UserAvatar from 'react-native-user-avatar';
 import DropDownPicker from 'react-native-dropdown-picker';
 
@@ -223,13 +224,42 @@ const SplitScreen = ({navigation}) => {
     }
   };
 
+  const deleteGroup = async (groupId) => {
+    try {
+      Alert.alert(
+        'Delete Group',
+        'Are you sure you want to delete this group? This action cannot be undone.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              await firestore().collection('groups').doc(groupId).delete();
+
+              setGroups(prev => prev.filter(group => group.id !== groupId));
+
+              Alert.alert('Success', 'Group deleted successfully');
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      Alert.alert('Error', 'Failed to delete group');
+    }
+  };
+
   // Render user card
   const renderUserCard = (user, withCheckbox = false) => (
     <View style={styles.userCard} key={user.email}>
       <UserAvatar
+        bgColor="#677CD2"
         size={50}
         name={user.name || user.email}
-        src={user.userImg || ''}
       />
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{user.name || user.email}</Text>
@@ -265,9 +295,24 @@ const SplitScreen = ({navigation}) => {
             <Text style={styles.categoryIcon}>{categoryItem?.icon()}</Text>
             <Text style={styles.groupName}>{group.name}</Text>
           </View>
-          <Text style={styles.groupMembers}>
-            {group.members.length} Members
-          </Text>
+          <View style={styles.cardHeaderRight}>
+            <Text style={styles.groupMembers}>
+              {group.members.length} Members
+            </Text>
+            <TouchableOpacity 
+              style={styles.deleteButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                deleteGroup(group.id);
+              }}
+            >
+              <MaterialCommunityIcons 
+                name="trash-can-outline" 
+                size={20} 
+                color="#fff" 
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {isExpanded && (
@@ -291,7 +336,7 @@ const SplitScreen = ({navigation}) => {
                   <UserAvatar
                     size={30}
                     name={member.name || member.email}
-                    src={member.userImg || ''}
+                    bgColor="#677CD2"
                   />
                   <Text style={styles.memberPreviewName} numberOfLines={1}>
                     {member.name || member.email}
@@ -539,6 +584,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  cardHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  deleteButton: {
+    marginLeft: 10,
+    padding: 5,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   groupName: {
     fontSize: 18,

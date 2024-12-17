@@ -146,7 +146,7 @@ const HomeScreen = ({navigation}) => {
           <View style={styles.cardContent}>
             <Text style={styles.TitleText}>Total Balance</Text>
             <Text style={styles.BalanceText}>
-              ₹ {userData.balance ? userData.balance.toLocaleString() : 0}
+              ₹ {userData?.balance ? userData.balance.toLocaleString() : '0'}
             </Text>
           </View>
           <View style={styles.dataCard}>
