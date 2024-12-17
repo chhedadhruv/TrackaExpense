@@ -148,6 +148,7 @@ const AddIncome = ({ navigation }) => {
             onFocus={() => setOpenDate(true)}
           />
           <DatePickerModal
+            locale='en'
             mode="single"
             visible={openDate}
             onDismiss={onDismissSingle}

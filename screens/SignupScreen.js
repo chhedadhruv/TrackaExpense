@@ -152,13 +152,14 @@ const SignupScreen = ({navigation}) => {
           iconType="lock"
           secureTextEntry={true}
         />
-        <FormButton buttonTitle="Sign Up" onPress={handleSignup} />
-        {loading && (
+        {loading ? (
           <ActivityIndicator
             size="large"
             color="#677CD2"
             style={styles.loader}
           />
+        ) : (
+          <FormButton buttonTitle="Sign Up" onPress={handleSignup} />
         )}
         <View style={styles.textPrivate}>
           <Text style={styles.color_textPrivate}>
