@@ -1,12 +1,13 @@
 import { View, StyleSheet, TextInput, Image } from 'react-native'
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import DropDownPicker from 'react-native-dropdown-picker'
 import auth from '@react-native-firebase/auth'
 import firestore from '@react-native-firebase/firestore'
 import storage from '@react-native-firebase/storage'
 import { ActivityIndicator, Button, Modal, Portal, Provider } from 'react-native-paper'
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker'
-import { DatePickerModal } from 'react-native-paper-dates'
+import { DatePickerInput } from 'react-native-paper-dates'
+import { SafeAreaProvider } from "react-native-safe-area-context"
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import FormButton from '../components/FormButton';
 
@@ -16,12 +17,11 @@ const AddExpense = ({navigation}) => {
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
-  const [date, setDate] = useState('')
+  const [date, setDate] = useState(undefined)
   const [image, setImage] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [transferred, setTransferred] = useState(0)
   const [open, setOpen] = useState(false)
-  const [openDate, setOpenDate] = useState(false)
   const [value, setValue] = useState(null)
   const [items, setItems] = useState([
     { label: 'Bills', value: 'Bills' },
@@ -38,21 +38,6 @@ const AddExpense = ({navigation}) => {
   const toggleModal = () => {
     setModalVisible(!modalVisible)
   }
-
-  const onDismissSingle = useCallback(() => {
-    setOpenDate(false)
-  }, [setOpenDate])
-
-  const onConfirmSingle = useCallback(
-    (params) => {
-      setOpenDate(false);
-      const formattedDate = `${params.date.getFullYear()}-${
-        params.date.getMonth() + 1
-      }-${params.date.getDate()}`;
-      setDate(formattedDate);
-    },
-    [setOpenDate, setDate]
-  );
 
   const getUser = () => {
     const user = auth().currentUser
@@ -74,13 +59,15 @@ const AddExpense = ({navigation}) => {
 
   useEffect(() => {
     fetchUserData()
-  }
-  , [])
+  }, [])
 
   const handleSubmit = async () => {
     let imageUrl = await uploadImage();
   
-    if (title === '' || description === '' || amount === '' || category === '' || date === '') {
+    // Convert date to formatted string if it's a Date object
+    const formattedDate = date ? `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}` : '';
+  
+    if (title === '' || description === '' || amount === '' || category === '' || !formattedDate) {
       alert('Please fill in all fields');
     } else {
       setUploading(true);
@@ -92,7 +79,7 @@ const AddExpense = ({navigation}) => {
           const userDoc = await transaction.get(userDocRef);
           const userData = userDoc.data();
   
-          const newBalance = userData.balance - amount;
+          const newBalance = userData.balance - parseFloat(amount);
           transaction.update(userDocRef, { balance: newBalance });
   
           const transactionsCollectionRef = userDocRef.collection('transactions');
@@ -103,10 +90,10 @@ const AddExpense = ({navigation}) => {
             description: description,
             amount: amount,
             category: category,
-            date: date,
+            date: formattedDate,
             createdAt: firestore.Timestamp.fromDate(new Date()),
             type: 'expense',
-            imageUrl: imageUrl, // Assuming imageUrl is already defined
+            imageUrl: imageUrl,
           };
   
           const expenseDocRef = await transactionsCollectionRef.add(expenseData);
@@ -119,7 +106,7 @@ const AddExpense = ({navigation}) => {
         setTitle('');
         setDescription('');
         setCategory('');
-        setDate('');
+        setDate(undefined);
         setImage(null);
         alert('Expense added successfully');
         navigation.goBack();
@@ -129,7 +116,7 @@ const AddExpense = ({navigation}) => {
         setUploading(false);
       }
     }
-  };  
+  };
   
   const uploadImage = async () => {
     if (image == null) {
@@ -233,6 +220,7 @@ const AddExpense = ({navigation}) => {
   }
 
   return (
+  <SafeAreaProvider>
     <View style={styles.container}>
     <View style={styles.action}>
       <FontAwesome name="font" color="#333333" size={20} />
@@ -283,28 +271,16 @@ const AddExpense = ({navigation}) => {
       />
     </View>
     <View style={styles.action}>
-      <FontAwesome name="calendar" color="#333333" size={20} />
-      <TextInput
-        placeholder="Date"
-        placeholderTextColor="#666666"
-        autoCorrect={false}
-        value={date}
-        onChangeText={(text) => setDate(text)}
-        style={styles.textInput}
-        onFocus={() => setOpenDate(true)}
-      />
-      <DatePickerModal
-        locale='en'
-        mode="single"
-        visible={openDate}
-        onDismiss={onDismissSingle}
-        date={date}
-        onConfirm={onConfirmSingle}
-        saveLabel="Confirm"
-        label="Select date"
-        animationType="fade"
-      />
-    </View>
+          <FontAwesome name="calendar" color="#333333" size={20} />
+          <DatePickerInput
+            locale="en"
+            label="Date"
+            value={date}
+            onChange={(d) => setDate(d)}
+            inputMode="start"
+            style={styles.datePicker}
+          />
+        </View>
     {image != null ? (
       <Image source={{ uri: image }} style={{ width: 200, height: 200, alignSelf: 'center', marginBottom: 10 }} />
     ) : (
@@ -326,6 +302,7 @@ const AddExpense = ({navigation}) => {
       </Portal>
     </Provider>
   </View>
+  </SafeAreaProvider>
   )
 }
 
@@ -368,5 +345,9 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: '#677CD2',
     marginTop: 10,
+  },
+  datePicker: {
+    flex: 1,
+    marginLeft: 10,
   },
 });

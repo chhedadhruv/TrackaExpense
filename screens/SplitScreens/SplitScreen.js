@@ -32,6 +32,11 @@ const GROUP_CATEGORIES = [
     icon: () => <Text style={styles.categoryIcon}>👪</Text>,
   },
   {
+    label: 'Couple',
+    value: 'Couple',
+    icon: () => <Text style={styles.categoryIcon}>🫶</Text>,
+  },
+  {
     label: 'Friends',
     value: 'Friends',
     icon: () => <Text style={styles.categoryIcon}>👥</Text>,

@@ -451,7 +451,7 @@ const StatisticScreen = ({navigation}) => {
                         </View>
                         <View style={styles.transactionsCardAmount}>
                           <Text style={styles.transactionsCardAmountIncomeText}>
-                            ₹ {transaction.amount}
+                           + ₹{transaction.amount}
                           </Text>
                         </View>
                       </View>
@@ -584,7 +584,7 @@ const StatisticScreen = ({navigation}) => {
                         <View style={styles.transactionsCardAmount}>
                           <Text
                             style={styles.transactionsCardAmountExpenseText}>
-                            ₹ {transaction.amount}
+                            - ₹{transaction.amount}
                           </Text>
                         </View>
                       </View>
