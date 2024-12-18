@@ -152,7 +152,6 @@ const TransactionDetailScreen = ({route, navigation}) => {
               </TouchableOpacity>
             )}
 
-            {/* Buttons for edit and delete */}
             <View style={styles.buttonContainer}>
               <TouchableOpacity style={styles.button} onPress={handleEdit}>
                 <Text style={styles.buttonText}>Edit</Text>
@@ -166,7 +165,6 @@ const TransactionDetailScreen = ({route, navigation}) => {
           </>
         )}
 
-        {/* Display error message if any */}
         {error && <Text style={styles.errorText}>{error}</Text>}
       </View>
     </ScrollView>
@@ -182,6 +180,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
     marginVertical: 5,
     elevation: 2,
+    backgroundColor: '#CED6EC',
   },
   amountContainer: {
     justifyContent: 'center',

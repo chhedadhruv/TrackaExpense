@@ -313,43 +313,43 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
     </Card>
   );
 
-  const renderUserBalance = (userEmail, userData) => {
-    const balance = userData.paid - userData.owed;
-    const isPositive = balance >= 0;
+  // const renderUserBalance = (userEmail, userData) => {
+  //   const balance = userData.paid - userData.owed;
+  //   const isPositive = balance >= 0;
 
-    // Find the corresponding user's lending info
-    const userLendingInfo = detailedLendingInfo.filter(
-      detail => detail.lender.email === userEmail,
-    );
+  //   // Find the corresponding user's lending info
+  //   const userLendingInfo = detailedLendingInfo.filter(
+  //     detail => detail.lender.email === userEmail,
+  //   );
 
-    return (
-      <Card style={styles.userBalanceCard} key={userEmail}>
-        <View style={styles.userBalanceContent}>
-          <View style={styles.userBalanceLeft}>
-            <UserAvatar size={40} name={userData.name} />
-            <View>
-              <Text style={styles.userBalanceName}>{userData.name}</Text>
-              {balance !== 0 && (
-                <Text style={styles.balanceDetails}>
-                  {isPositive
-                    ? `Lent ₹${Math.abs(balance).toLocaleString()}`
-                    : `Owes ₹${Math.abs(balance).toLocaleString()}`}
-                </Text>
-              )}
-            </View>
-          </View>
-          <Text
-            style={[
-              styles.userBalanceAmount,
-              isPositive ? styles.positiveBalance : styles.negativeBalance,
-            ]}>
-            {isPositive ? '+ ₹' : '- ₹'}
-            {Math.abs(balance).toLocaleString()}
-          </Text>
-        </View>
-      </Card>
-    );
-  };
+  //   return (
+  //     <Card style={styles.userBalanceCard} key={userEmail}>
+  //       <View style={styles.userBalanceContent}>
+  //         <View style={styles.userBalanceLeft}>
+  //           <UserAvatar size={40} name={userData.name} />
+  //           <View>
+  //             <Text style={styles.userBalanceName}>{userData.name}</Text>
+  //             {balance !== 0 && (
+  //               <Text style={styles.balanceDetails}>
+  //                 {isPositive
+  //                   ? `Lent ₹${Math.abs(balance).toLocaleString()}`
+  //                   : `Owes ₹${Math.abs(balance).toLocaleString()}`}
+  //               </Text>
+  //             )}
+  //           </View>
+  //         </View>
+  //         <Text
+  //           style={[
+  //             styles.userBalanceAmount,
+  //             isPositive ? styles.positiveBalance : styles.negativeBalance,
+  //           ]}>
+  //           {isPositive ? '+ ₹' : '- ₹'}
+  //           {Math.abs(balance).toLocaleString()}
+  //         </Text>
+  //       </View>
+  //     </Card>
+  //   );
+  // };
 
   const renderSplitsList = () => (
     <View style={styles.splitsList}>
@@ -369,7 +369,7 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
               </View>
               <View style={styles.splitCardRight}>
                 <Text style={styles.splitAmount}>
-                  ₹ {parseFloat(split.amount).toLocaleString()}
+                  ₹{parseFloat(split.amount).toLocaleString()}
                 </Text>
                 <Menu
                   visible={menuVisibleForSplit === split.id}
@@ -421,18 +421,17 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
           <Card key={index} style={styles.lendingSummaryCard}>
             <View style={styles.lendingSummaryContent}>
               <View style={styles.lendingUserContainer}>
-                <UserAvatar size={40} name={detail.lender.name} />
+                <UserAvatar size={40} name={detail.borrower.name} />
                 <MaterialCommunityIcons
                   name="arrow-right"
                   size={20}
                   color="#959698"
                   style={styles.arrowIcon}
                 />
-                <UserAvatar size={40} name={detail.borrower.name} />
+                <UserAvatar size={40} name={detail.lender.name} />
               </View>
               <Text style={styles.lendingDetailText}>
-                {detail.lender.name} should receive ₹
-                {detail.amount.toLocaleString()} from {detail.borrower.name}
+                {detail.borrower.name} should pay ₹{detail.amount.toLocaleString()} to {detail.lender.name}
               </Text>
             </View>
           </Card>
@@ -454,22 +453,12 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
       {renderGroupSummaryCard()}
 
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionHeaderText}>Group Balance</Text>
+        <Text style={styles.sectionHeaderText}>Recent Splits</Text>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => navigation.navigate('CreateSplit', {group})}>
           <MaterialCommunityIcons name="plus" size={20} color="#fff" />
         </TouchableOpacity>
-      </View>
-
-      <View style={styles.userBalanceContainer}>
-        {Object.entries(userSplits).map(([userEmail, userData]) =>
-          renderUserBalance(userEmail, userData),
-        )}
-      </View>
-
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionHeaderText}>Recent Splits</Text>
       </View>
 
       {renderSplitsList()}

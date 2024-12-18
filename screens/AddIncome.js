@@ -1,9 +1,10 @@
 import { View, StyleSheet, TextInput } from 'react-native'
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import DropDownPicker from 'react-native-dropdown-picker'
 import auth from '@react-native-firebase/auth'
 import firestore from '@react-native-firebase/firestore'
-import { DatePickerModal } from 'react-native-paper-dates'
+import { DatePickerInput } from 'react-native-paper-dates'
+import { SafeAreaProvider } from "react-native-safe-area-context"
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import FormButton from '../components/FormButton';
 
@@ -12,9 +13,8 @@ const AddIncome = ({ navigation }) => {
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
-  const [date, setDate] = useState('')
+  const [date, setDate] = useState(undefined)
   const [open, setOpen] = useState(false)
-  const [openDate, setOpenDate] = useState(false)
   const [value, setValue] = useState(null)
   const [items, setItems] = useState([
     { label: 'Salary', value: 'Salary' },
@@ -22,21 +22,6 @@ const AddIncome = ({ navigation }) => {
     { label: 'Gift', value: 'Gift' },
     { label: 'Others', value: 'Others' },
   ])
-
-  const onDismissSingle = useCallback(() => {
-    setOpenDate(false)
-  }, [setOpenDate])
-
-  const onConfirmSingle = useCallback(
-    (params) => {
-      setOpenDate(false);
-      const formattedDate = `${params.date.getFullYear()}-${
-        params.date.getMonth() + 1
-      }-${params.date.getDate()}`;
-      setDate(formattedDate);
-    },
-    [setOpenDate, setDate]
-  );
 
   const getUser = () => {
     const user = auth().currentUser
@@ -48,7 +33,10 @@ const AddIncome = ({ navigation }) => {
   } , [])
 
   const handleSubmit = async () => {
-    if (title === '' || description === '' || amount === '' || category === '' || date === '') {
+    // Convert date to formatted string if it's a Date object
+    const formattedDate = date ? `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}` : '';
+
+    if (title === '' || description === '' || amount === '' || category === '' || !formattedDate) {
       alert('Please fill in all fields')
     } else {
       const userDocRef = firestore().collection('users').doc(getUser())
@@ -66,7 +54,7 @@ const AddIncome = ({ navigation }) => {
           description: description,
           amount: amount,
           category: category,
-          date: date,
+          date: formattedDate,
           createdAt: firestore.Timestamp.fromDate(new Date()),
           type: 'income'
         }
@@ -80,14 +68,15 @@ const AddIncome = ({ navigation }) => {
       setTitle('')
       setDescription('')
       setCategory('')
-      setDate('')
+      setDate(undefined)
       alert('Income added successfully')
       navigation.goBack()
     }
   }  
   
   return (
-    <View style={styles.container}>
+    <SafeAreaProvider>
+      <View style={styles.container}>
         <View style={styles.action}>
           <FontAwesome name="font" color="#333333" size={20} />
           <TextInput
@@ -110,7 +99,8 @@ const AddIncome = ({ navigation }) => {
             style={styles.textInput}
           />
         </View>
-        <DropDownPicker
+        <View style={styles.action}>
+          <DropDownPicker
             placeholder="Category"
             placeholderStyle={{
               color: '#666666'
@@ -124,6 +114,7 @@ const AddIncome = ({ navigation }) => {
             style={styles.dropdown}
             onChangeValue={(text) => setCategory(text)}
           />
+        </View>
         <View style={styles.action}>
           <FontAwesome name="money" color="#333333" size={20} />
           <TextInput
@@ -138,29 +129,18 @@ const AddIncome = ({ navigation }) => {
         </View>
         <View style={styles.action}>
           <FontAwesome name="calendar" color="#333333" size={20} />
-          <TextInput
-            placeholder="Date"
-            placeholderTextColor="#666666"
-            autoCorrect={false}
+          <DatePickerInput
+            locale="en"
+            label="Date"
             value={date}
-            onChangeText={(text) => setDate(text)}
-            style={styles.textInput}
-            onFocus={() => setOpenDate(true)}
+            onChange={(d) => setDate(d)}
+            inputMode="start"
+            style={styles.datePicker}
           />
-          <DatePickerModal
-            locale='en'
-            mode="single"
-            visible={openDate}
-            onDismiss={onDismissSingle}
-            date={date}
-            onConfirm={onConfirmSingle}
-            saveLabel="Confirm"
-            label="Select date"
-            animationType="fade"
-            />
         </View>
         <FormButton buttonTitle="Submit" onPress={() => handleSubmit()} />
-    </View>
+      </View>
+    </SafeAreaProvider>
   )
 }
 
@@ -169,32 +149,27 @@ export default AddIncome
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    margin: 20,
+    padding: 20,
   },
   action: {
     flexDirection: 'row',
-    marginTop: 10,
-    marginBottom: 10,
-    paddingBottom: 5,
-  },
-  actionError: {
-    flexDirection: 'row',
-    marginTop: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#FF0000',
-    paddingBottom: 5,
+    alignItems: 'center',
+    marginBottom: 20,
   },
   textInput: {
     flex: 1,
-    marginTop: Platform.OS === 'ios' ? 0 : -12,
-    paddingLeft: 10,
-    color: '#333333',
+    marginLeft: 10,
+    height: 40,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    color: '#333',
   },
   dropdown: {
-    // flex: 1,
-    marginTop: 0,
-    // paddingLeft: 10,
-    marginBottom: 10,
-    // color: '#333333',
+    flex: 1,
+    marginVertical: 20,
+  },
+  datePicker: {
+    flex: 1,
+    marginLeft: 10,
   },
 });

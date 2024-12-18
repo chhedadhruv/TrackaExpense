@@ -48,10 +48,15 @@ const HomeScreen = ({navigation}) => {
 
       const transactionsArray = transactionsSnapshot.docs.map(document => {
         const data = document.data();
-        const createdAt = data.createdAt?.toDate
-          ? data.createdAt.toDate()
-          : new Date();
-        return {id: document.id, ...data, createdAt};
+        // const createdAt = data.createdAt 
+        //   ? (data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt))
+        //   : null;
+        // const createdAt = data.createdAt.toDate();
+        return {
+          id: document.id,
+          ...data,
+          // createdAt,
+        };
       });
 
       const sortedTransactions = transactionsArray.sort(
@@ -119,9 +124,9 @@ const HomeScreen = ({navigation}) => {
     setShowAll(!showAll);
   };
 
-  const renderTransactionDate = date => {
-    return date instanceof Date ? date.toLocaleDateString() : '';
-  };
+  // const renderTransactionDate = date => {
+  //   return date instanceof Date ? date.toLocaleDateString() : '';
+  // };
 
   if (loading) {
     return (
@@ -286,7 +291,7 @@ const HomeScreen = ({navigation}) => {
                           </Text>
                           <View style={styles.transactionsCardDateAndTime}>
                             <Text style={styles.transactionsCardDate}>
-                              {renderTransactionDate(transaction.createdAt)}
+                              {transaction.date}
                             </Text>
                           </View>
                         </View>
