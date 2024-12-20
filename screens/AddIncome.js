@@ -1,79 +1,95 @@
-import { View, StyleSheet, TextInput } from 'react-native'
-import React, { useState, useEffect } from 'react'
-import DropDownPicker from 'react-native-dropdown-picker'
-import auth from '@react-native-firebase/auth'
-import firestore from '@react-native-firebase/firestore'
-import { DatePickerInput } from 'react-native-paper-dates'
-import { SafeAreaProvider } from "react-native-safe-area-context"
+import {View, StyleSheet, TextInput} from 'react-native';
+import React, {useState, useEffect} from 'react';
+import DropDownPicker from 'react-native-dropdown-picker';
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+import {DatePickerModal} from 'react-native-paper-dates';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import FormButton from '../components/FormButton';
 
-const AddIncome = ({ navigation }) => {
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [amount, setAmount] = useState('')
-  const [category, setCategory] = useState('')
-  const [date, setDate] = useState(undefined)
-  const [open, setOpen] = useState(false)
-  const [value, setValue] = useState(null)
+const AddIncome = ({navigation}) => {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [amount, setAmount] = useState('');
+  const [category, setCategory] = useState('');
+  const [date, setDate] = useState(undefined);
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(null);
   const [items, setItems] = useState([
-    { label: 'Salary', value: 'Salary' },
-    { label: 'Bonus', value: 'Bonus' },
-    { label: 'Gift', value: 'Gift' },
-    { label: 'Others', value: 'Others' },
-  ])
+    {label: 'Salary', value: 'Salary'},
+    {label: 'Bonus', value: 'Bonus'},
+    {label: 'Gift', value: 'Gift'},
+    {label: 'Others', value: 'Others'},
+  ]);
+  const [openDate, setOpenDate] = useState(false);
+
+  const onDismissSingle = () => {
+    setOpenDate(false);
+  };
+
+  const onConfirmSingle = params => {
+    setOpenDate(false);
+    const formattedDate = `${params.date.getFullYear()}-${
+      params.date.getMonth() + 1
+    }-${params.date.getDate()}`;
+    setDate(formattedDate);
+  };
 
   const getUser = () => {
-    const user = auth().currentUser
-    return user.uid
-  }
+    const user = auth().currentUser;
+    return user.uid;
+  };
 
   useEffect(() => {
-    getUser()
-  } , [])
+    getUser();
+  }, []);
 
   const handleSubmit = async () => {
-    // Convert date to formatted string if it's a Date object
-    const formattedDate = date ? `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}` : '';
-
-    if (title === '' || description === '' || amount === '' || category === '' || !formattedDate) {
-      alert('Please fill in all fields')
+    if (
+      title === '' ||
+      description === '' ||
+      amount === '' ||
+      category === '' ||
+      !date
+    ) {
+      alert('Please fill in all fields');
     } else {
-      const userDocRef = firestore().collection('users').doc(getUser())
-  
-      await firestore().runTransaction(async (transaction) => {
-        const userDoc = await transaction.get(userDocRef)
-        const userData = userDoc.data()
-        const newBalance = userData.balance + parseInt(amount)
-        transaction.update(userDocRef, { balance: newBalance })
-  
-        const transactionRef = userDocRef.collection('transactions')
+      const userDocRef = firestore().collection('users').doc(getUser());
+
+      await firestore().runTransaction(async transaction => {
+        const userDoc = await transaction.get(userDocRef);
+        const userData = userDoc.data();
+        const newBalance = userData.balance + parseInt(amount);
+        transaction.update(userDocRef, {balance: newBalance});
+
+        const transactionRef = userDocRef.collection('transactions');
         const incomeData = {
           userId: getUser(),
           title: title,
           description: description,
           amount: amount,
           category: category,
-          date: formattedDate,
+          date: date,
           createdAt: firestore.Timestamp.fromDate(new Date()),
-          type: 'income'
-        }
-  
-        const incomeDocRef = await transactionRef.add(incomeData)
-        incomeData.documentId = incomeDocRef.id // Save the document ID along with the data
-        transaction.update(incomeDocRef, { documentId: incomeDocRef.id }) // Update the document with the document ID
-      })
-  
-      setAmount('')
-      setTitle('')
-      setDescription('')
-      setCategory('')
-      setDate(undefined)
-      alert('Income added successfully')
-      navigation.goBack()
+          type: 'income',
+        };
+
+        const incomeDocRef = await transactionRef.add(incomeData);
+        incomeData.documentId = incomeDocRef.id; // Save the document ID along with the data
+        transaction.update(incomeDocRef, {documentId: incomeDocRef.id}); // Update the document with the document ID
+      });
+
+      setAmount('');
+      setTitle('');
+      setDescription('');
+      setCategory('');
+      setDate(undefined);
+      alert('Income added successfully');
+      navigation.goBack();
     }
-  }  
-  
+  };
+
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
@@ -84,7 +100,7 @@ const AddIncome = ({ navigation }) => {
             placeholderTextColor="#666666"
             autoCorrect={false}
             value={title}
-            onChangeText={(text) => setTitle(text)}
+            onChangeText={text => setTitle(text)}
             style={styles.textInput}
           />
         </View>
@@ -95,7 +111,7 @@ const AddIncome = ({ navigation }) => {
             placeholderTextColor="#666666"
             autoCorrect={false}
             value={description}
-            onChangeText={(text) => setDescription(text)}
+            onChangeText={text => setDescription(text)}
             style={styles.textInput}
           />
         </View>
@@ -103,7 +119,7 @@ const AddIncome = ({ navigation }) => {
           <DropDownPicker
             placeholder="Category"
             placeholderStyle={{
-              color: '#666666'
+              color: '#666666',
             }}
             open={open}
             value={value}
@@ -112,7 +128,7 @@ const AddIncome = ({ navigation }) => {
             setValue={setValue}
             setItems={setItems}
             style={styles.dropdown}
-            onChangeValue={(text) => setCategory(text)}
+            onChangeValue={text => setCategory(text)}
           />
         </View>
         <View style={styles.action}>
@@ -123,28 +139,39 @@ const AddIncome = ({ navigation }) => {
             keyboardType="numeric"
             autoCorrect={false}
             value={amount}
-            onChangeText={(text) => setAmount(text)}
+            onChangeText={text => setAmount(text)}
             style={styles.textInput}
           />
         </View>
         <View style={styles.action}>
           <FontAwesome name="calendar" color="#333333" size={20} />
-          <DatePickerInput
-            locale="en"
-            label="Date"
+          <TextInput
+            placeholder="Date"
+            placeholderTextColor="#666666"
+            autoCorrect={false}
             value={date}
-            onChange={(d) => setDate(d)}
-            inputMode="start"
-            style={styles.datePicker}
+            onChangeText={setDate}
+            style={styles.textInput}
+            onFocus={() => setOpenDate(true)}
+          />
+          <DatePickerModal
+            mode="single"
+            visible={openDate}
+            onDismiss={onDismissSingle}
+            date={date ? new Date(date) : new Date()}
+            onConfirm={onConfirmSingle}
+            saveLabel="Confirm"
+            label="Select date"
+            animationType="fade"
           />
         </View>
         <FormButton buttonTitle="Submit" onPress={() => handleSubmit()} />
       </View>
     </SafeAreaProvider>
-  )
-}
+  );
+};
 
-export default AddIncome
+export default AddIncome;
 
 const styles = StyleSheet.create({
   container: {
