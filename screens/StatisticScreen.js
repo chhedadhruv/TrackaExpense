@@ -30,6 +30,79 @@ const StatisticScreen = ({navigation}) => {
   ]);
   const [barData, setBarData] = useState([]);
   const [selectedBtn, setSelectedBtn] = useState('Income');
+  const [timeRange, setTimeRange] = useState('7days'); // New state for time range
+  const [timeRangeOpen, setTimeRangeOpen] = useState(false);
+  const [timeRangeItems, setTimeRangeItems] = useState([
+    {label: 'Last 7 Days', value: '7days'},
+    {label: 'Last 30 Days', value: '30days'},
+    {label: 'Last 3 Months', value: '3months'},
+    {label: 'Last 6 Months', value: '6months'},
+    {label: 'Last Year', value: 'year'},
+    {label: 'All Time', value: 'all'},
+  ]);
+
+  const filterTransactionsByTimeRange = (transactions, range) => {
+    const now = new Date();
+    const cutoffDate = new Date();
+
+    switch (range) {
+      case '7days':
+        cutoffDate.setDate(now.getDate() - 7);
+        break;
+      case '30days':
+        cutoffDate.setDate(now.getDate() - 30);
+        break;
+      case '3months':
+        cutoffDate.setMonth(now.getMonth() - 3);
+        break;
+      case '6months':
+        cutoffDate.setMonth(now.getMonth() - 6);
+        break;
+      case 'year':
+        cutoffDate.setFullYear(now.getFullYear() - 1);
+        break;
+      case 'all':
+        return transactions;
+      default:
+        cutoffDate.setDate(now.getDate() - 7);
+    }
+
+    return transactions.filter(t => new Date(t.date) >= cutoffDate);
+  };
+
+  const getGroupingInterval = (range) => {
+    switch (range) {
+      case '7days':
+        return 'daily';
+      case '30days':
+        return 'daily';
+      case '3months':
+        return 'weekly';
+      case '6months':
+        return 'monthly';
+      case 'year':
+        return 'monthly';
+      case 'all':
+        return 'monthly';
+      default:
+        return 'daily';
+    }
+  };
+
+  const formatDateForGrouping = (date, interval) => {
+    const d = new Date(date);
+    switch (interval) {
+      case 'daily':
+        return d.toLocaleDateString();
+      case 'weekly':
+        const week = Math.ceil(d.getDate() / 7);
+        return `Week ${week}, ${d.toLocaleString('default', {month: 'short'})}`;
+      case 'monthly':
+        return d.toLocaleString('default', {month: 'short', year: 'numeric'});
+      default:
+        return d.toLocaleDateString();
+    }
+  };
 
   const getUser = async () => {
     const currentUser = await firestore()
@@ -103,112 +176,57 @@ const StatisticScreen = ({navigation}) => {
 
   const handleBarData = () => {
     if (userData && userData.transactions.length > 0) {
-      let totalIncome = 0;
-      let totalExpense = 0;
+      const filteredTransactions = filterTransactionsByTimeRange(
+        userData.transactions,
+        timeRange
+      );
+      const interval = getGroupingInterval(timeRange);
       let aggregatedData = {};
 
-      const formatDate = date => {
-        const formattedDate = new Date(date);
-        if (selectedRange === 'Daily') {
-          return formattedDate.getDate().toString();
-        } else if (selectedRange === 'Monthly') {
-          return formattedDate.toLocaleString('default', {month: 'short'});
-        } else if (selectedRange === 'Yearly') {
-          return formattedDate.getFullYear().toString();
-        }
-      };
-
-      userData.transactions.forEach(transaction => {
-        const formattedDate = formatDate(transaction.date);
+      filteredTransactions.forEach(transaction => {
+        const groupKey = formatDateForGrouping(transaction.date, interval);
         const value = parseFloat(transaction.amount) || 0;
 
+        if (!aggregatedData[groupKey]) {
+          aggregatedData[groupKey] = {income: 0, expense: 0};
+        }
+
         if (transaction.type === 'income') {
-          totalIncome += value;
+          aggregatedData[groupKey].income += value;
         } else {
-          totalExpense += value;
+          aggregatedData[groupKey].expense += value;
         }
-
-        if (!aggregatedData[formattedDate]) {
-          aggregatedData[formattedDate] = {income: 0, expense: 0};
-        }
-
-        aggregatedData[formattedDate][
-          transaction.type === 'income' ? 'income' : 'expense'
-        ] += value;
       });
 
       const barData = [];
-
       Object.entries(aggregatedData).forEach(([label, values]) => {
-        if (values.income > 0 && values.expense > 0) {
+        if (values.income > 0) {
           barData.push({
             value: values.income,
             label,
-            labelWidth: 50,
+            frontColor: '#677CD2',
             spacing: 2,
-            frontColor: '#677CD2',
           });
+        }
+        if (values.expense > 0) {
           barData.push({
             value: values.expense,
-            label,
-            labelTextStyle: {display: 'none'},
-            spacing: 15,
+            label: values.income > 0 ? '' : label,
             frontColor: '#E98852',
-          });
-        } else if (values.income > 0) {
-          barData.push({
-            value: values.income,
-            label,
             spacing: 15,
-            frontColor: '#677CD2',
-          });
-        } else if (values.expense > 0) {
-          barData.push({
-            value: values.expense,
-            label,
-            spacing: 15,
-            frontColor: '#E98852',
           });
         }
       });
 
-      barData.sort((a, b) => {
-        if (selectedRange === 'Daily') {
-          return a.label - b.label;
-        } else if (selectedRange === 'Monthly') {
-          const months = [
-            'Jan',
-            'Feb',
-            'Mar',
-            'Apr',
-            'May',
-            'Jun',
-            'Jul',
-            'Aug',
-            'Sep',
-            'Oct',
-            'Nov',
-            'Dec',
-          ];
-
-          return months.indexOf(a.label) - months.indexOf(b.label);
-        } else if (selectedRange === 'Yearly') {
-          return a.label - b.label;
-        }
-      });
+      // Sort data chronologically
+      barData.sort((a, b) => new Date(a.label) - new Date(b.label));
       setBarData(barData);
-      setTotalIncome(totalIncome);
-      setTotalExpense(totalExpense);
-    } else {
-      setBarData([]);
-      setTotalIncome(0);
-      setTotalExpense(0);
     }
   };
 
   useEffect(() => {
     handleBarData();
-  }, [userData, selectedRange]);
+  }, [userData, timeRange]);
 
   const handleBarPress = data => {
     setSelectedBar(data);
@@ -246,6 +264,20 @@ const StatisticScreen = ({navigation}) => {
               {selectedRange} Statistic
             </Text>
           </View>
+          <View style={styles.filterSection}>
+          <DropDownPicker
+            open={timeRangeOpen}
+            value={timeRange}
+            items={timeRangeItems}
+            setOpen={setTimeRangeOpen}
+            setValue={setTimeRange}
+            setItems={setTimeRangeItems}
+            style={styles.timeRangePicker}
+            textStyle={styles.timeRangePickerText}
+            placeholder="Select Time Range"
+            containerStyle={styles.timeRangePickerContainer}
+          />
+        </View>
           <View style={{marginTop: 20}}>
             <DropDownPicker
               open={open}
@@ -255,7 +287,7 @@ const StatisticScreen = ({navigation}) => {
               setValue={setValue}
               setItems={setItems}
               onChangeValue={handleRangeChange}
-              style={{borderRadius: 12}}
+              style={{borderRadius: 12, zIndex: 1, marginBottom: 20}}
               textStyle={{fontSize: 12, fontWeight: '500', color: '#959698'}}
               placeholder="Daily"
               placeholderStyle={{color: '#959698'}}
@@ -777,6 +809,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '500',
     color: '#F64E4E',
+  },
+  filterSection: {
+    marginTop: 20,
+    zIndex: 1000,
+  },
+  timeRangePicker: {
+    borderRadius: 12,
+    borderColor: '#E5E5E5',
+  },
+  timeRangePickerText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#959698',
+  },
+  timeRangePickerContainer: {
+    marginBottom: 10,
   },
 });
 
