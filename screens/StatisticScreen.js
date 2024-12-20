@@ -261,7 +261,7 @@ const StatisticScreen = ({navigation}) => {
           <View style={styles.statisticHeader}>
             <Text style={styles.statisticHeaderText}>Statistic</Text>
             <Text style={styles.statisticHeaderSubText}>
-              {selectedRange} Statistic
+              {timeRange} statistics
             </Text>
           </View>
           <View style={styles.filterSection}>
@@ -278,23 +278,6 @@ const StatisticScreen = ({navigation}) => {
             containerStyle={styles.timeRangePickerContainer}
           />
         </View>
-          <View style={{marginTop: 20}}>
-            <DropDownPicker
-              open={open}
-              value={value}
-              items={items}
-              setOpen={setOpen}
-              setValue={setValue}
-              setItems={setItems}
-              onChangeValue={handleRangeChange}
-              style={{borderRadius: 12, zIndex: 1, marginBottom: 20}}
-              textStyle={{fontSize: 12, fontWeight: '500', color: '#959698'}}
-              placeholder="Daily"
-              placeholderStyle={{color: '#959698'}}
-              dropDownContainerStyle={{borderRadius: 12}}
-              dropDownDirection="BOTTOM"
-            />
-          </View>
           <BarChart
             data={barData}
             height={220}
