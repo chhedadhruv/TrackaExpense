@@ -8,7 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import {Card, Title, Paragraph, Text} from 'react-native-paper';
+import {Text} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
@@ -18,7 +18,7 @@ const TransactionDetailScreen = ({route, navigation}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const onCardPress = () => {
+  const onImagePress = () => {
     if (transaction.imageUrl) {
       navigation.navigate('Image', {imageUrl: transaction.imageUrl});
     }
@@ -52,16 +52,13 @@ const TransactionDetailScreen = ({route, navigation}) => {
     const {userId, id, imageUrl, amount, type} = transaction;
 
     try {
-      // Delete the transaction from Firestore
       await firestore()
         .collection('users')
         .doc(userId)
         .collection('transactions')
         .doc(id)
         .delete();
-      console.log('Transaction deleted from Firestore!');
 
-      // Update the balance in the user document
       const balanceIncrement = type === 'expense' ? +amount : -amount;
       await firestore()
         .collection('users')
@@ -69,16 +66,14 @@ const TransactionDetailScreen = ({route, navigation}) => {
         .update({
           balance: firestore.FieldValue.increment(balanceIncrement),
         });
-      console.log('Balance updated in Firestore!');
-      Alert.alert('Transaction deleted successfully!');
-      navigation.goBack();
 
-      // If the transaction has an imageUrl, delete the image from Firebase Storage
       if (imageUrl) {
         const imageRef = storage().refFromURL(imageUrl);
         await imageRef.delete();
-        console.log('Image deleted from Firebase Storage!');
       }
+
+      Alert.alert('Transaction deleted successfully!');
+      navigation.goBack();
     } catch (error) {
       console.error('Error deleting transaction or image: ', error);
       setError('An error occurred while deleting the transaction.');
@@ -88,119 +83,174 @@ const TransactionDetailScreen = ({route, navigation}) => {
     }
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#677CD2" />
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.container}>
-        {loading ? (
-          <ActivityIndicator size="large" color="#0000ff" />
-        ) : (
-          <>
-            <Card style={styles.card}>
-              <Card.Content>
-                <Title>{transaction.title}</Title>
-                <Paragraph>{transaction.description}</Paragraph>
-                <View style={styles.amountContainer}>
-                  <Title style={styles.amountText}>
-                    ₹{parseInt(transaction.amount).toLocaleString()}
-                  </Title>
-                </View>
-              </Card.Content>
-            </Card>
+      <View style={styles.myCard}>
+        <View style={styles.cardContentWithIcon}>
+          <View style={styles.Icon}>
+            <MaterialCommunityIcons name="wallet" color="#fff" size={24} />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={styles.TitleText}>{transaction.title}</Text>
+            <Text style={styles.BalanceText}>
+              ₹{parseInt(transaction.amount).toLocaleString()}
+            </Text>
+          </View>
+        </View>
 
-            <Card style={styles.card}>
-              <Card.Content>
-                <View style={styles.infoContainer}>
-                  <MaterialCommunityIcons
-                    name="calendar"
-                    color="#333"
-                    size={20}
-                  />
-                  <Paragraph style={styles.infoText}>
-                    {transaction.date}
-                  </Paragraph>
-                </View>
-                <View style={styles.infoContainer}>
-                  <MaterialCommunityIcons name="tag" color="#333" size={20} />
-                  <Paragraph style={styles.infoText}>
-                    {transaction.category}
-                  </Paragraph>
-                </View>
-                <View style={styles.infoContainer}>
-                  <MaterialCommunityIcons
-                    name="account"
-                    color="#333"
-                    size={20}
-                  />
-                  <Paragraph style={styles.infoText}>
-                    {transaction.type.charAt(0).toUpperCase() +
-                      transaction.type.slice(1)}
-                  </Paragraph>
-                </View>
-              </Card.Content>
-            </Card>
+        <View style={styles.dataCard}>
+          <View style={styles.cardContent}>
+            <Text style={styles.TitleText}>Date</Text>
+            <Text style={styles.ValueText}>{transaction.date}</Text>
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={styles.TitleText}>Category</Text>
+            <Text style={styles.ValueText}>{transaction.category}</Text>
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={styles.TitleText}>Type</Text>
+            <Text style={styles.ValueText}>
+              {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
+            </Text>
+          </View>
+        </View>
 
-            {transaction.imageUrl && (
-              <TouchableOpacity onPress={onCardPress}>
-                <Card style={styles.card}>
-                  <Card.Content>
-                    <Image
-                      source={{uri: transaction.imageUrl}}
-                      style={{width: '100%', height: 300}}
-                    />
-                  </Card.Content>
-                </Card>
-              </TouchableOpacity>
-            )}
-
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.button} onPress={handleEdit}>
-                <Text style={styles.buttonText}>Edit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={handleDelete}>
-                <Text style={styles.buttonText}>Delete</Text>
-              </TouchableOpacity>
+        {transaction.description && (
+          <View style={[styles.dataCard, {marginTop: 10}]}>
+            <View style={styles.cardContent}>
+              <Text style={styles.TitleText}>Description</Text>
+              <Text style={styles.ValueText}>{transaction.description}</Text>
             </View>
-          </>
+          </View>
         )}
-
-        {error && <Text style={styles.errorText}>{error}</Text>}
       </View>
+
+      {transaction.imageUrl && (
+        <TouchableOpacity onPress={onImagePress}>
+          <View style={styles.transactionsCard}>
+            <Image
+              source={{uri: transaction.imageUrl}}
+              style={styles.transactionsCardImage}
+            />
+            <View style={styles.transactionsCardContent}>
+              <Text style={styles.transactionsCardTitle}>Receipt Image</Text>
+              <MaterialCommunityIcons name="chevron-right" size={24} color="#959698" />
+            </View>
+          </View>
+        </TouchableOpacity>
+      )}
+
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={styles.button} onPress={handleEdit}>
+          <Text style={styles.buttonText}>Edit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+          <Text style={styles.buttonText}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+
+      {error && <Text style={styles.errorText}>{error}</Text>}
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
+    paddingHorizontal: 10,
   },
-  card: {
-    marginHorizontal: 10,
-    marginVertical: 5,
-    elevation: 2,
-    backgroundColor: '#CED6EC',
+  myCard: {
+    margin: 5,
+    padding: 20,
+    backgroundColor: '#677CD2',
+    borderRadius: 12,
   },
-  amountContainer: {
+  dataCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  cardContent: {
+    flexDirection: 'column',
     justifyContent: 'center',
-    marginVertical: 10,
   },
-  amountText: {
-    fontSize: 30,
-    fontFamily: 'Kufam-SemiBoldItalic',
-    color: '#333',
-  },
-  infoContainer: {
+  cardContentWithIcon: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 5,
   },
-  infoText: {
-    fontSize: 16,
-    fontFamily: 'Lato-Regular',
-    color: '#333',
+  Icon: {
+    width: 43,
+    height: 43,
+    borderRadius: 12,
+    backgroundColor: '#7A8EE0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  TitleText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#CED6EC',
+    marginBottom: 5,
+  },
+  BalanceText: {
+    fontSize: 26,
+    fontWeight: '500',
+    color: '#fff',
+  },
+  ValueText: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#fff',
+  },
+  transactionsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    marginVertical: 5,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  transactionsCardImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 10,
+  },
+  transactionsCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flex: 1,
     marginLeft: 10,
+  },
+  transactionsCardTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#3A3B3E',
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -226,12 +276,12 @@ const styles = StyleSheet.create({
     width: '48%',
     height: 45,
     borderRadius: 24,
-    backgroundColor: '#B71C1C',
+    backgroundColor: '#F64E4E',
     alignItems: 'center',
     justifyContent: 'center',
   },
   errorText: {
-    color: 'red',
+    color: '#F64E4E',
     marginTop: 20,
     textAlign: 'center',
   },
