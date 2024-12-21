@@ -14,6 +14,8 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import FormButton from '../../components/FormButton';
+import { DatePickerModal } from 'react-native-paper-dates';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const {width} = Dimensions.get('window');
 const PRIMARY_COLOR = '#677CD2';
@@ -90,6 +92,9 @@ const CreateSplitScreen = ({route, navigation}) => {
   // New state for split type
   const [isSplitByPercentage, setIsSplitByPercentage] = useState(false);
 
+  const [date, setDate] = useState(new Date());
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
+
   const isEditMode = !!split;
 
   useEffect(() => {
@@ -108,6 +113,7 @@ const CreateSplitScreen = ({route, navigation}) => {
       setTitle(split.title);
       setAmount(split.amount.toString());
       setCategory(split.category);
+      setDate(split.date?.toDate() || split.createdAt.toDate());
 
       // Set paid by
       const paidByMember = groupMembers.find(
@@ -214,6 +220,15 @@ const CreateSplitScreen = ({route, navigation}) => {
     }));
   };
 
+  const onDismissDatePicker = () => {
+    setDatePickerVisible(false);
+  };
+
+  const onConfirmDate = (params) => {
+    setDatePickerVisible(false);
+    setDate(params.date);
+  };
+
   const handleSubmit = async () => {
     // Validate inputs
     if (!title) {
@@ -289,6 +304,7 @@ const CreateSplitScreen = ({route, navigation}) => {
             }))
           : selectedUsersList,
         category,
+        date: firestore.Timestamp.fromDate(date),
         createdAt: isEditMode
           ? split.createdAt
           : firestore.Timestamp.fromDate(new Date()),
@@ -395,6 +411,24 @@ const CreateSplitScreen = ({route, navigation}) => {
           keyboardType="numeric"
           value={amount}
           onChangeText={setAmount}
+        />
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Date</Text>
+        <TouchableOpacity
+          style={styles.dateInput}
+          onPress={() => setDatePickerVisible(true)}>
+          <Text>{date.toLocaleDateString()}</Text>
+          <MaterialCommunityIcons name="calendar" size={24} color={PRIMARY_COLOR} />
+        </TouchableOpacity>
+        <DatePickerModal
+          locale="en"
+          mode="single"
+          visible={datePickerVisible}
+          onDismiss={onDismissDatePicker}
+          date={date}
+          onConfirm={onConfirmDate}
         />
       </View>
 
@@ -575,6 +609,17 @@ const styles = StyleSheet.create({
     padding: 5,
     marginLeft: 10,
     textAlign: 'center',
+  },
+  dateInput: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
 });
 

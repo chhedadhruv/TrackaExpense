@@ -26,6 +26,8 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
   const [detailedLendingInfo, setDetailedLendingInfo] = useState([]);
   const [menuVisibleForSplit, setMenuVisibleForSplit] = useState(null);
   const [groupMembers, setGroupMembers] = useState([]);
+  const [showAllSplits, setShowAllSplits] = useState(false);
+  const RECENT_SPLITS_LIMIT = 3;
 
   if (!group || !group.id) {
     return (
@@ -39,8 +41,6 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
       </View>
     );
   }
-
-  const currentUser = auth().currentUser;
 
   useFocusEffect(
     React.useCallback(() => {
@@ -95,6 +95,7 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
         .collection('groups')
         .doc(group.id)
         .collection('splits')
+        .orderBy('createdAt', 'desc')
         .get();
 
       const fetchedSplits = splitsSnapshot.docs.map(doc => ({
@@ -171,10 +172,6 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
     });
 
     return userSplitMap;
-  };
-
-  const navigateToCreateSplit = () => {
-    navigation.navigate('CreateSplit', {group});
   };
 
   const calculateNetLendingBalances = splits => {
@@ -306,107 +303,86 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
             </View>
           )}
         </View>
-        {/* <Text style={styles.balanceText}>
-          ₹ {totalSplitAmount.toLocaleString()}
-        </Text> */}
       </View>
     </Card>
   );
 
-  // const renderUserBalance = (userEmail, userData) => {
-  //   const balance = userData.paid - userData.owed;
-  //   const isPositive = balance >= 0;
+  const renderSplitsList = () => {
+    const splitsToShow = showAllSplits ? splits : splits.slice(0, RECENT_SPLITS_LIMIT);
 
-  //   // Find the corresponding user's lending info
-  //   const userLendingInfo = detailedLendingInfo.filter(
-  //     detail => detail.lender.email === userEmail,
-  //   );
-
-  //   return (
-  //     <Card style={styles.userBalanceCard} key={userEmail}>
-  //       <View style={styles.userBalanceContent}>
-  //         <View style={styles.userBalanceLeft}>
-  //           <UserAvatar size={40} name={userData.name} />
-  //           <View>
-  //             <Text style={styles.userBalanceName}>{userData.name}</Text>
-  //             {balance !== 0 && (
-  //               <Text style={styles.balanceDetails}>
-  //                 {isPositive
-  //                   ? `Lent ₹${Math.abs(balance).toLocaleString()}`
-  //                   : `Owes ₹${Math.abs(balance).toLocaleString()}`}
-  //               </Text>
-  //             )}
-  //           </View>
-  //         </View>
-  //         <Text
-  //           style={[
-  //             styles.userBalanceAmount,
-  //             isPositive ? styles.positiveBalance : styles.negativeBalance,
-  //           ]}>
-  //           {isPositive ? '+ ₹' : '- ₹'}
-  //           {Math.abs(balance).toLocaleString()}
-  //         </Text>
-  //       </View>
-  //     </Card>
-  //   );
-  // };
-
-  const renderSplitsList = () => (
-    <View style={styles.splitsList}>
-      {splits.length > 0 ? (
-        splits.map(split => (
-          <Card key={split.id} style={styles.splitCard}>
-            <TouchableOpacity
-              style={styles.splitCardContent}
-              onPress={() =>
-                navigation.navigate('SplitDetail', {group, split})
-              }>
-              <View style={styles.splitCardDetails}>
-                <Text style={styles.splitTitle}>{split.title}</Text>
-                <Text style={styles.splitSubtitle}>
-                  Paid by {split.paidBy.name || split.paidBy.email}
-                </Text>
-              </View>
-              <View style={styles.splitCardRight}>
-                <Text style={styles.splitAmount}>
-                  ₹{parseFloat(split.amount).toLocaleString()}
-                </Text>
-                <Menu
-                  visible={menuVisibleForSplit === split.id}
-                  onDismiss={() => setMenuVisibleForSplit(null)}
-                  anchor={
-                    <TouchableOpacity
-                      onPress={() => setMenuVisibleForSplit(split.id)}
-                      style={styles.menuAnchor}>
-                      <MaterialCommunityIcons
-                        name="dots-vertical"
-                        size={20}
-                        color="#959698"
-                      />
-                    </TouchableOpacity>
+    return (
+      <View style={styles.splitsList}>
+        {splits.length > 0 ? (
+          <>
+            {splitsToShow.map(split => (
+              <Card key={split.id} style={styles.splitCard}>
+                <TouchableOpacity
+                  style={styles.splitCardContent}
+                  onPress={() =>
+                    navigation.navigate('SplitDetail', {group, split})
                   }>
-                  <Menu.Item
-                    onPress={() => handleEditSplit(split)}
-                    title="Edit"
-                    icon="pencil"
-                  />
-                  <Divider />
-                  <Menu.Item
-                    onPress={() => handleDeleteSplit(split)}
-                    title="Delete"
-                    icon="delete"
-                    titleStyle={{color: 'red'}}
-                  />
-                </Menu>
-              </View>
-            </TouchableOpacity>
-          </Card>
-        ))
-      ) : (
-        <Text style={styles.noSplitsText}>No splits yet</Text>
-      )}
-    </View>
-  );
+                  <View style={styles.splitCardDetails}>
+                    <Text style={styles.splitTitle}>{split.title}</Text>
+                    <Text style={styles.splitSubtitle}>
+                      Paid by {split.paidBy.name || split.paidBy.email}
+                    </Text>
+                  </View>
+                  <View style={styles.splitCardRight}>
+                    <Text style={styles.splitAmount}>
+                      ₹{parseFloat(split.amount).toLocaleString()}
+                    </Text>
+                    <Menu
+                      visible={menuVisibleForSplit === split.id}
+                      onDismiss={() => setMenuVisibleForSplit(null)}
+                      anchor={
+                        <TouchableOpacity
+                          onPress={() => setMenuVisibleForSplit(split.id)}
+                          style={styles.menuAnchor}>
+                          <MaterialCommunityIcons
+                            name="dots-vertical"
+                            size={20}
+                            color="#959698"
+                          />
+                        </TouchableOpacity>
+                      }>
+                      <Menu.Item
+                        onPress={() => handleEditSplit(split)}
+                        title="Edit"
+                        icon="pencil"
+                      />
+                      <Divider />
+                      <Menu.Item
+                        onPress={() => handleDeleteSplit(split)}
+                        title="Delete"
+                        icon="delete"
+                        titleStyle={{color: 'red'}}
+                      />
+                    </Menu>
+                  </View>
+                </TouchableOpacity>
+              </Card>
+            ))}
+            {splits.length > RECENT_SPLITS_LIMIT && (
+              <TouchableOpacity
+                onPress={() => setShowAllSplits(!showAllSplits)}
+                style={styles.showAllButton}>
+                <Text style={styles.showAllText}>
+                  {showAllSplits ? 'Show Less' : `Show All Splits (${splits.length})`}
+                </Text>
+                <MaterialCommunityIcons
+                  name={showAllSplits ? 'chevron-up' : 'chevron-down'}
+                  size={20}
+                  color={PRIMARY_COLOR}
+                />
+              </TouchableOpacity>
+            )}
+          </>
+        ) : (
+          <Text style={styles.noSplitsText}>No splits yet</Text>
+        )}
+      </View>
+    );
+  };
 
   // Render detailed lending summary
   const renderDetailedLendingSummary = () => {
@@ -577,6 +553,20 @@ const styles = StyleSheet.create({
   splitSubtitle: {
     fontSize: 12,
     color: '#959698',
+    marginTop: 4,
+  },
+  showAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    marginTop: 5,
+  },
+  showAllText: {
+    color: PRIMARY_COLOR,
+    fontSize: 14,
+    fontWeight: '500',
+    marginRight: 5,
   },
   splitAmount: {
     fontSize: 16,

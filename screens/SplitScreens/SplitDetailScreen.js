@@ -1,107 +1,98 @@
 import React from 'react';
 import {
   View,
-  Text,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
 } from 'react-native';
-import {Card, Chip} from 'react-native-paper';
+import { Text } from 'react-native-paper';
 import UserAvatar from 'react-native-user-avatar';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import auth from '@react-native-firebase/auth';
 
-const PRIMARY_COLOR = '#677CD2';
-const BACKGROUND_COLOR = '#F4F6FA';
-
 const SplitDetailScreen = ({route, navigation}) => {
   const {split, group} = route.params;
   const currentUser = auth().currentUser;
+
+  const formatDate = (timestamp) => {
+    if (!timestamp) return '';
+    const date = timestamp.toDate();
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
 
   const renderSplitUserDetails = () => {
     return split.splitUsers.map(user => {
       const isCurrentUser = user.email === currentUser?.email;
       const splitAmount =
         split.splitType === 'percentage'
-          ? `${user.percentage}% (₹${(
-              split.amount *
-              (user.percentage / 100)
-            ).toFixed(2)})`
+          ? `₹${(split.amount * (user.percentage / 100)).toFixed(2)}`
           : `₹${(split.amount / split.splitUsers.length).toFixed(2)}`;
 
       return (
-        <Card key={user.email} style={styles.userCard}>
-          <View style={styles.userCardContent}>
-            <View style={styles.userInfo}>
-              <UserAvatar size={40} name={user.name} />
-              <View style={styles.userNameContainer}>
-                <Text style={styles.userName}>
-                  {user.name}
-                  {isCurrentUser && ' (You)'}
-                </Text>
-                {split.splitType === 'percentage' && (
-                  <Text style={styles.userSplitPercentage}>
-                    {user.percentage}% Split
-                  </Text>
-                )}
-              </View>
+        <View key={user.email} style={styles.transactionsCard}>
+          <UserAvatar size={50} name={user.name} style={styles.transactionsCardImage} />
+          <View style={styles.transactionsCardContent}>
+            <View>
+              <Text style={styles.transactionsCardTitle}>
+                {user.name}{isCurrentUser ? ' (You)' : ''}
+              </Text>
+              <Text style={styles.splitAmount}>{splitAmount}</Text>
+              {split.splitType === 'percentage' && (
+                <Text style={styles.percentageText}>{user.percentage}% Split</Text>
+              )}
             </View>
-            <Text style={styles.userSplitAmount}>{splitAmount}</Text>
           </View>
-        </Card>
+        </View>
       );
     });
   };
 
   return (
     <ScrollView style={styles.container}>
-      <Card style={styles.splitSummaryCard}>
-        <View style={styles.splitSummaryContent}>
-          <Text style={styles.splitTitle}>{split.title}</Text>
-
-          <View style={styles.splitInfoRow}>
-            <MaterialCommunityIcons
-              name="cash"
-              size={24}
-              color={PRIMARY_COLOR}
-              style={styles.icon}
-            />
-            <Text style={styles.splitAmount}>
-              ₹ {parseFloat(split.amount).toLocaleString()}
+      <View style={styles.myCard}>
+        <View style={styles.cardContentWithIcon}>
+          <View style={styles.Icon}>
+            <MaterialCommunityIcons name="cash-multiple" color="#fff" size={24} />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={styles.TitleText}>{split.title}</Text>
+            <Text style={styles.BalanceText}>
+              ₹{parseFloat(split.amount).toLocaleString()}
             </Text>
           </View>
-
-          <View style={styles.splitInfoRow}>
-            <MaterialCommunityIcons
-              name="account"
-              size={24}
-              color={PRIMARY_COLOR}
-              style={styles.icon}
-            />
-            <Text style={styles.splitPaidBy}>
-              Paid by {split.paidBy.name || split.paidBy.email}
-            </Text>
-          </View>
-
-          <View style={styles.splitInfoRow}>
-            <MaterialCommunityIcons
-              name="tag"
-              size={24}
-              color={PRIMARY_COLOR}
-              style={styles.icon}
-            />
-            <Text style={styles.splitCategory}>{split.category}</Text>
-          </View>
-
-          <Chip
-            style={styles.splitTypeChip}
-            textStyle={styles.splitTypeChipText}>
-            {split.splitType === 'percentage'
-              ? 'Percentage Split'
-              : 'Equal Split'}
-          </Chip>
         </View>
-      </Card>
+
+        <View style={styles.dataCard}>
+          <View style={styles.cardContent}>
+            <Text style={styles.TitleText}>Date</Text>
+            <Text style={styles.ValueText}>
+              {formatDate(split.date || split.createdAt)}
+            </Text>
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={styles.TitleText}>Category</Text>
+            <Text style={styles.ValueText}>{split.category}</Text>
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={styles.TitleText}>Split Type</Text>
+            <Text style={styles.ValueText}>
+              {split.splitType === 'percentage' ? 'Percentage' : 'Equal'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.dataCard, { marginTop: 10 }]}>
+          <View style={styles.cardContent}>
+            <Text style={styles.TitleText}>Paid By</Text>
+            <Text style={styles.ValueText}>
+              {split.paidBy.name || split.paidBy.email}
+            </Text>
+          </View>
+        </View>
+      </View>
 
       <Text style={styles.sectionTitle}>Split Breakdown</Text>
       {renderSplitUserDetails()}
@@ -112,112 +103,103 @@ const SplitDetailScreen = ({route, navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BACKGROUND_COLOR,
-    padding: 15,
-  },
-  headerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  backButton: {
-    marginRight: 15,
-  },
-  screenTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#3A3B3E',
-  },
-  splitSummaryCard: {
     backgroundColor: '#fff',
+    paddingHorizontal: 10,
+  },
+  myCard: {
+    margin: 5,
     padding: 20,
-    marginBottom: 20,
-    borderRadius: 12, // Rounded corners
-    elevation: 5, // Shadow for better elevation
-    shadowColor: '#000', // Shadow color
-    shadowOpacity: 0.1, // Slight shadow opacity
-    shadowOffset: {width: 0, height: 4}, // Slight offset for shadow
-    shadowRadius: 6, // Radius for softer shadow
+    backgroundColor: '#677CD2',
+    borderRadius: 12,
   },
-  splitSummaryContent: {
-    alignItems: 'flex-start', // Align elements to the start for a cleaner look
+  dataCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 20,
   },
-  splitTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: PRIMARY_COLOR,
-    marginBottom: 15,
-    textAlign: 'center', // Center the title
+  cardContent: {
+    flexDirection: 'column',
+    justifyContent: 'center',
   },
-  splitInfoRow: {
+  cardContentWithIcon: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15, // Increased margin for better spacing
   },
-  splitAmount: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#3A3B3E',
+  Icon: {
+    width: 43,
+    height: 43,
+    borderRadius: 12,
+    backgroundColor: '#7A8EE0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
   },
-  splitPaidBy: {
-    fontSize: 16,
-    color: '#3A3B3E',
-  },
-  splitCategory: {
-    fontSize: 16,
-    color: '#3A3B3E',
-  },
-  splitTypeChip: {
-    marginTop: 15,
-    backgroundColor: PRIMARY_COLOR,
-    borderRadius: 30, // Round the corners of the chip
-    paddingVertical: 5,
-    paddingHorizontal: 15,
-  },
-  splitTypeChipText: {
-    color: 'white',
-    fontSize: 14,
+  TitleText: {
+    fontSize: 12,
     fontWeight: '500',
+    color: '#CED6EC',
+    marginBottom: 5,
   },
-  icon: {
-    marginRight: 10, // Add space between icon and text
+  BalanceText: {
+    fontSize: 26,
+    fontWeight: '500',
+    color: '#fff',
+  },
+  ValueText: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#fff',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '500',
     color: '#3A3B3E',
+    marginTop: 20,
     marginBottom: 10,
-  },
-  userCard: {
-    marginBottom: 10,
-    backgroundColor: '#fff',
-    padding: 15,
-  },
-  userCardContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  userNameContainer: {
     marginLeft: 10,
   },
-  userName: {
+  transactionsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    marginVertical: 5,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  transactionsCardImage: {
+    borderRadius: 10,
+  },
+  transactionsCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flex: 1,
+    marginLeft: 10,
+  },
+  transactionsCardTitle: {
     fontSize: 16,
     fontWeight: '500',
     color: '#3A3B3E',
   },
-  userSplitPercentage: {
+  splitAmount: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#677CD2',
+    marginTop: 2,
+  },
+  percentageText: {
     fontSize: 12,
     color: '#959698',
-  },
-  userSplitAmount: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: PRIMARY_COLOR,
+    marginTop: 2,
   },
 });
 
