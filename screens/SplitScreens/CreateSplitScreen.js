@@ -14,7 +14,7 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import FormButton from '../../components/FormButton';
-import { DatePickerModal } from 'react-native-paper-dates';
+import {DatePickerModal} from 'react-native-paper-dates';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const {width} = Dimensions.get('window');
@@ -24,58 +24,84 @@ const BACKGROUND_COLOR = '#F4F6FA';
 // Category Options
 const CATEGORY_OPTIONS = [
   {
-    label: 'Groceries',
+    label: 'Groceries & Food',
     value: 'Groceries',
-    icon: '🛒',
+    icon: 'cart-variant',
   },
   {
-    label: 'Restaurant',
+    label: 'Restaurant & Dining',
     value: 'Restaurant',
-    icon: '🍽️',
+    icon: 'silverware-fork-knife',
   },
   {
-    label: 'Transportation',
-    value: 'Transportation',
-    icon: '🚗',
+    label: 'Gas & Fuel',
+    value: 'Gas',
+    icon: 'gas-station',
   },
   {
-    label: 'Utilities',
-    value: 'Utilities',
-    icon: '💡',
+    label: 'Public Transport',
+    value: 'PublicTransport',
+    icon: 'bus',
   },
   {
-    label: 'Entertainment',
+    label: 'Electricity Bill',
+    value: 'Electricity',
+    icon: 'lightning-bolt',
+  },
+  {
+    label: 'Water Bill',
+    value: 'Water',
+    icon: 'water',
+  },
+  {
+    label: 'Internet & Phone',
+    value: 'Internet',
+    icon: 'wifi',
+  },
+  {
+    label: 'Movies & Entertainment',
     value: 'Entertainment',
-    icon: '🎉',
+    icon: 'movie-open',
   },
   {
-    label: 'Travel',
+    label: 'Travel & Hotels',
     value: 'Travel',
-    icon: '✈️',
+    icon: 'airplane',
   },
   {
-    label: 'Shopping',
+    label: 'Shopping & Retail',
     value: 'Shopping',
-    icon: '🛍️',
+    icon: 'shopping',
   },
   {
-    label: 'Home',
-    value: 'Home',
-    icon: '🏠',
+    label: 'Rent & Housing',
+    value: 'Housing',
+    icon: 'home',
   },
   {
-    label: 'Personal Care',
-    value: 'PersonalCare',
-    icon: '💆',
+    label: 'Medical & Healthcare',
+    value: 'Healthcare',
+    icon: 'hospital-box',
   },
   {
-    label: 'Health',
-    value: 'Health',
-    icon: '🏥',
+    label: 'Fitness & Sports',
+    value: 'Fitness',
+    icon: 'dumbbell',
+  },
+  {
+    label: 'Education & Books',
+    value: 'Education',
+    icon: 'book-open-variant',
+  },
+  {
+    label: 'Maintenance & Repairs',
+    value: 'Maintenance',
+    icon: 'tools',
   },
 ];
 
 const CreateSplitScreen = ({route, navigation}) => {
+  const [isSplitByPercentage, setIsSplitByPercentage] = useState(false);
   const {group, split} = route.params || {};
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
@@ -84,14 +110,9 @@ const CreateSplitScreen = ({route, navigation}) => {
   const [selectedPercentages, setSelectedPercentages] = useState({});
   const [groupMembers, setGroupMembers] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Category states
   const [category, setCategory] = useState(null);
   const [openCategory, setOpenCategory] = useState(false);
-
-  // New state for split type
-  const [isSplitByPercentage, setIsSplitByPercentage] = useState(false);
-
+  const [splitType, setSplitType] = useState('equal'); // Changed from isSplitByPercentage to splitType
   const [date, setDate] = useState(new Date());
   const [datePickerVisible, setDatePickerVisible] = useState(false);
 
@@ -135,21 +156,13 @@ const CreateSplitScreen = ({route, navigation}) => {
       const initialSelectedUsers = {};
       const initialSelectedPercentages = {};
       groupMembers.forEach(member => {
-        const isSplitMember = split.splitUsers.some(
-          user => user.email === member.email,
-        );
-
-        initialSelectedUsers[member.email] = isSplitMember;
-
-        // Handle percentage for backward compatibility
         const splitUser = split.splitUsers.find(
           user => user.email === member.email,
         );
+        initialSelectedUsers[member.email] = true; // Set all to true by default
         initialSelectedPercentages[member.email] = splitUser?.percentage
           ? splitUser.percentage.toString()
-          : splitType === 'percentage'
-          ? (100 / split.splitUsers.length).toFixed(2)
-          : '';
+          : (100 / groupMembers.length).toFixed(2);
       });
 
       setSelectedUsers(initialSelectedUsers);
@@ -165,15 +178,12 @@ const CreateSplitScreen = ({route, navigation}) => {
         .get();
       const membersData = groupDoc.data()?.members || [];
 
-      // Fetch user data for each member email
       const memberPromises = membersData.map(async email => {
-        // Try to find user in the users collection
         const userSnapshot = await firestore()
           .collection('users')
           .where('email', '==', email)
           .get();
 
-        // If user found in users collection
         if (!userSnapshot.empty) {
           const userData = userSnapshot.docs[0].data();
           return {
@@ -184,7 +194,6 @@ const CreateSplitScreen = ({route, navigation}) => {
           };
         }
 
-        // If not found in users collection, create a basic user object
         return {
           email,
           name: email.split('@')[0],
@@ -192,14 +201,16 @@ const CreateSplitScreen = ({route, navigation}) => {
         };
       });
 
-      // Wait for all user data to be fetched
       const formattedMembers = await Promise.all(memberPromises);
 
+      // Initialize all users as selected with equal percentages
       const initialSelectedUsers = {};
       const initialSelectedPercentages = {};
+      const defaultPercentage = (100 / formattedMembers.length).toFixed(2);
+
       formattedMembers.forEach(member => {
-        initialSelectedUsers[member.email] = false;
-        initialSelectedPercentages[member.email] = '';
+        initialSelectedUsers[member.email] = true; // Set all to true by default
+        initialSelectedPercentages[member.email] = defaultPercentage;
       });
 
       setGroupMembers(formattedMembers);
@@ -224,7 +235,7 @@ const CreateSplitScreen = ({route, navigation}) => {
     setDatePickerVisible(false);
   };
 
-  const onConfirmDate = (params) => {
+  const onConfirmDate = params => {
     setDatePickerVisible(false);
     setDate(params.date);
   };
@@ -339,6 +350,39 @@ const CreateSplitScreen = ({route, navigation}) => {
     }
   };
 
+  const renderSplitTypeButtons = () => (
+    <View style={styles.splitTypeButtons}>
+      <TouchableOpacity
+        style={[
+          styles.splitTypeButton,
+          splitType === 'equal' && styles.splitTypeButtonActive,
+        ]}
+        onPress={() => setSplitType('equal')}>
+        <Text
+          style={[
+            styles.splitTypeButtonText,
+            splitType === 'equal' && styles.splitTypeButtonTextActive,
+          ]}>
+          Equal Split
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[
+          styles.splitTypeButton,
+          splitType === 'percentage' && styles.splitTypeButtonActive,
+        ]}
+        onPress={() => setSplitType('percentage')}>
+        <Text
+          style={[
+            styles.splitTypeButtonText,
+            splitType === 'percentage' && styles.splitTypeButtonTextActive,
+          ]}>
+          Percentage Split
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   const renderMemberCheckbox = member => {
     const currentUser = auth().currentUser;
     const isCurrentUser = member.email === currentUser?.email;
@@ -350,24 +394,26 @@ const CreateSplitScreen = ({route, navigation}) => {
           style={styles.memberCheckboxContainer}
           onPress={() => !isCurrentUser && toggleUserSelection(member.email)}>
           <View style={styles.memberInfo}>
-            <Text style={styles.memberName}>
-              {member.name}
-              {isCurrentUser && ' (You)'}
-            </Text>
-            {isSplitByPercentage && isSelected && (
-              <TextInput
-                style={styles.percentageInput}
-                placeholder="% Split"
-                keyboardType="numeric"
-                value={selectedPercentages[member.email]}
-                onChangeText={text => {
-                  setSelectedPercentages(prev => ({
-                    ...prev,
-                    [member.email]: text,
-                  }));
-                }}
-              />
-            )}
+            <View style={styles.memberNameContainer}>
+              <Text style={styles.memberName}>
+                {member.name}
+                {isCurrentUser && ' (You)'}
+              </Text>
+              {splitType === 'percentage' && (
+                <TextInput
+                  style={styles.percentageInput}
+                  placeholder="% Split"
+                  keyboardType="numeric"
+                  value={selectedPercentages[member.email]}
+                  onChangeText={text => {
+                    setSelectedPercentages(prev => ({
+                      ...prev,
+                      [member.email]: text,
+                    }));
+                  }}
+                />
+              )}
+            </View>
           </View>
           <Checkbox
             status={isSelected ? 'checked' : 'unchecked'}
@@ -420,7 +466,11 @@ const CreateSplitScreen = ({route, navigation}) => {
           style={styles.dateInput}
           onPress={() => setDatePickerVisible(true)}>
           <Text>{date.toLocaleDateString()}</Text>
-          <MaterialCommunityIcons name="calendar" size={24} color={PRIMARY_COLOR} />
+          <MaterialCommunityIcons
+            name="calendar"
+            size={24}
+            color={PRIMARY_COLOR}
+          />
         </TouchableOpacity>
         <DatePickerModal
           locale="en"
@@ -439,7 +489,14 @@ const CreateSplitScreen = ({route, navigation}) => {
           value={category}
           items={CATEGORY_OPTIONS.map(cat => ({
             ...cat,
-            icon: () => <Text style={styles.categoryIcon}>{cat.icon}</Text>,
+            icon: () => (
+              <MaterialCommunityIcons
+                name={cat.icon}
+                size={24}
+                color={PRIMARY_COLOR}
+                style={styles.categoryIcon}
+              />
+            ),
           }))}
           setOpen={setOpenCategory}
           setValue={setCategory}
@@ -479,17 +536,8 @@ const CreateSplitScreen = ({route, navigation}) => {
       </View>
 
       <View style={styles.formGroup}>
-        <View style={styles.splitTypeContainer}>
-          <Text style={styles.label}>Split Type</Text>
-          <View style={styles.splitTypeToggle}>
-            <Text>{isSplitByPercentage ? 'Percentage' : 'Equal'}</Text>
-            <Switch
-              value={isSplitByPercentage}
-              onValueChange={setIsSplitByPercentage}
-              color={PRIMARY_COLOR}
-            />
-          </View>
-        </View>
+        <Text style={styles.label}>Split Type</Text>
+        {renderSplitTypeButtons()}
       </View>
 
       <View style={styles.formGroup}>
@@ -620,6 +668,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  splitTypeButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  splitTypeButton: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: PRIMARY_COLOR,
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+  },
+  splitTypeButtonActive: {
+    backgroundColor: PRIMARY_COLOR,
+  },
+  splitTypeButtonText: {
+    color: PRIMARY_COLOR,
+    fontWeight: '500',
+  },
+  splitTypeButtonTextActive: {
+    color: '#fff',
+  },
+  categoryIcon: {
+    marginRight: 10,
   },
 });
 

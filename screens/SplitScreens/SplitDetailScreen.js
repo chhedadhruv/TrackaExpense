@@ -1,10 +1,6 @@
 import React from 'react';
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-} from 'react-native';
-import { Text } from 'react-native-paper';
+import {View, ScrollView, StyleSheet} from 'react-native';
+import {Text} from 'react-native-paper';
 import UserAvatar from 'react-native-user-avatar';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import auth from '@react-native-firebase/auth';
@@ -13,14 +9,17 @@ const SplitDetailScreen = ({route, navigation}) => {
   const {split, group} = route.params;
   const currentUser = auth().currentUser;
 
-  const formatDate = (timestamp) => {
+  const formatDate = timestamp => {
     if (!timestamp) return '';
     const date = timestamp.toDate();
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    return date
+      .toLocaleDateString('en-GB', {
+        year: '2-digit',
+        month: '2-digit',
+        day: '2-digit',
+      })
+      .split('/')
+      .join('-');
   };
 
   const renderSplitUserDetails = () => {
@@ -33,15 +32,22 @@ const SplitDetailScreen = ({route, navigation}) => {
 
       return (
         <View key={user.email} style={styles.transactionsCard}>
-          <UserAvatar size={50} name={user.name} style={styles.transactionsCardImage} />
+          <UserAvatar
+            size={50}
+            name={user.name}
+            style={styles.transactionsCardImage}
+          />
           <View style={styles.transactionsCardContent}>
             <View>
               <Text style={styles.transactionsCardTitle}>
-                {user.name}{isCurrentUser ? ' (You)' : ''}
+                {user.name}
+                {isCurrentUser ? ' (You)' : ''}
               </Text>
               <Text style={styles.splitAmount}>{splitAmount}</Text>
               {split.splitType === 'percentage' && (
-                <Text style={styles.percentageText}>{user.percentage}% Split</Text>
+                <Text style={styles.percentageText}>
+                  {user.percentage}% Split
+                </Text>
               )}
             </View>
           </View>
@@ -55,7 +61,11 @@ const SplitDetailScreen = ({route, navigation}) => {
       <View style={styles.myCard}>
         <View style={styles.cardContentWithIcon}>
           <View style={styles.Icon}>
-            <MaterialCommunityIcons name="cash-multiple" color="#fff" size={24} />
+            <MaterialCommunityIcons
+              name="cash-multiple"
+              color="#fff"
+              size={24}
+            />
           </View>
           <View style={styles.cardContent}>
             <Text style={styles.TitleText}>{split.title}</Text>
@@ -84,7 +94,7 @@ const SplitDetailScreen = ({route, navigation}) => {
           </View>
         </View>
 
-        <View style={[styles.dataCard, { marginTop: 10 }]}>
+        <View style={[styles.dataCard, {marginTop: 10}]}>
           <View style={styles.cardContent}>
             <Text style={styles.TitleText}>Paid By</Text>
             <Text style={styles.ValueText}>

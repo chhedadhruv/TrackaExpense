@@ -4,7 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Dimensions
+  Dimensions,
 } from 'react-native';
 import React, {useState, useEffect, useCallback} from 'react';
 import {Card} from 'react-native-paper';
@@ -63,7 +63,7 @@ const StatisticScreen = ({navigation}) => {
     return transactions.filter(t => new Date(t.date) >= cutoffDate);
   };
 
-  const getGroupingInterval = (range) => {
+  const getGroupingInterval = range => {
     switch (range) {
       case '7days':
       case '30days':
@@ -83,7 +83,10 @@ const StatisticScreen = ({navigation}) => {
     const d = new Date(date);
     switch (interval) {
       case 'daily':
-        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        return d.toLocaleDateString(undefined, {
+          month: 'short',
+          day: 'numeric',
+        });
       case 'weekly':
         const week = Math.ceil(d.getDate() / 7);
         return `W${week}`;
@@ -106,10 +109,10 @@ const StatisticScreen = ({navigation}) => {
       querySnapshot.forEach(doc => {
         transactions.push({
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
         });
       });
-      
+
       setUserData({transactions});
       setLoading(false);
     } catch (error) {
@@ -130,7 +133,10 @@ const StatisticScreen = ({navigation}) => {
 
   useEffect(() => {
     if (userData?.transactions) {
-      const filtered = filterTransactionsByTimeRange(userData.transactions, timeRange);
+      const filtered = filterTransactionsByTimeRange(
+        userData.transactions,
+        timeRange,
+      );
       setFilteredTransactions(filtered);
 
       // Calculate totals based on filtered transactions
@@ -176,10 +182,10 @@ const StatisticScreen = ({navigation}) => {
     const barData = [];
     const entries = Object.entries(aggregatedData);
     entries.sort((a, b) => new Date(a[0]) - new Date(b[0]));
-    
+
     // Take only last 6 entries to prevent overcrowding
     const lastEntries = entries.slice(-6);
-    
+
     lastEntries.forEach(([label, values]) => {
       // Add placeholder bar with zero height for centered label
       barData.push({
@@ -187,9 +193,9 @@ const StatisticScreen = ({navigation}) => {
         label,
         frontColor: 'transparent',
         spacing: 2,
-        showLabel: true
+        showLabel: true,
       });
-      
+
       // Add income bar
       if (values.income > 0) {
         barData.push({
@@ -205,11 +211,11 @@ const StatisticScreen = ({navigation}) => {
           value: values.expense,
           label: '',
           frontColor: '#E98852',
-          spacing: 30
+          spacing: 30,
         });
       }
     });
-    
+
     setBarData(barData);
   }, [filteredTransactions, timeRange]);
 
@@ -252,7 +258,9 @@ const StatisticScreen = ({navigation}) => {
             <Card.Content>
               <View style={styles.cardContent}>
                 <Text style={styles.cardText}>Total Income</Text>
-                <Text style={styles.cardIncomeText}>₹ {totalIncome.toFixed(2)}</Text>
+                <Text style={styles.cardIncomeText}>
+                  ₹ {totalIncome.toFixed(2)}
+                </Text>
               </View>
             </Card.Content>
           </Card>
@@ -260,7 +268,9 @@ const StatisticScreen = ({navigation}) => {
             <Card.Content>
               <View style={styles.cardContent}>
                 <Text style={styles.cardText}>Total Expense</Text>
-                <Text style={styles.cardExpenseText}>₹ {totalExpense.toFixed(2)}</Text>
+                <Text style={styles.cardExpenseText}>
+                  ₹ {totalExpense.toFixed(2)}
+                </Text>
               </View>
             </Card.Content>
           </Card>
@@ -288,7 +298,7 @@ const StatisticScreen = ({navigation}) => {
               fontSize: 11,
               textAlign: 'center',
               width: 60,
-              marginTop: 15
+              marginTop: 15,
             }}
             noOfSections={3}
             isAnimated
@@ -300,7 +310,13 @@ const StatisticScreen = ({navigation}) => {
             xAxisLabelsHeight={40}
             horizontalRulesStyle={{color: '#ECECEC'}}
             rulesColor="#ECECEC"
-            maxValue={Math.max(...barData.filter(item => item.value > 0).map(item => item.value)) * 1.1}
+            maxValue={
+              Math.max(
+                ...barData
+                  .filter(item => item.value > 0)
+                  .map(item => item.value),
+              ) * 1.1
+            }
             initialSpacing={20}
             endSpacing={20}
             hideRules={true}
@@ -308,7 +324,7 @@ const StatisticScreen = ({navigation}) => {
             showFractionalValue={false}
             hideDataPoints={true}
           />
-          
+
           {selectedBar && (
             <View style={styles.selectedBarContainer}>
               <Text style={styles.selectedBarText}>
@@ -321,18 +337,34 @@ const StatisticScreen = ({navigation}) => {
 
         <View style={styles.buttonSection}>
           <TouchableOpacity
-            style={selectedBtn === 'Income' ? styles.selectedBtn : styles.notSelectedBtn}
+            style={
+              selectedBtn === 'Income'
+                ? styles.selectedBtn
+                : styles.notSelectedBtn
+            }
             onPress={() => handleBtnPress('Income')}>
             <Text
-              style={selectedBtn === 'Income' ? styles.selectedBtnText : styles.notSelectedBtnText}>
+              style={
+                selectedBtn === 'Income'
+                  ? styles.selectedBtnText
+                  : styles.notSelectedBtnText
+              }>
               Income
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={selectedBtn === 'Expense' ? styles.selectedBtn : styles.notSelectedBtn}
+            style={
+              selectedBtn === 'Expense'
+                ? styles.selectedBtn
+                : styles.notSelectedBtn
+            }
             onPress={() => handleBtnPress('Expense')}>
             <Text
-              style={selectedBtn === 'Expense' ? styles.selectedBtnText : styles.notSelectedBtnText}>
+              style={
+                selectedBtn === 'Expense'
+                  ? styles.selectedBtnText
+                  : styles.notSelectedBtnText
+              }>
               Expense
             </Text>
           </TouchableOpacity>
@@ -341,9 +373,10 @@ const StatisticScreen = ({navigation}) => {
         <View style={styles.transactionsList}>
           {filteredTransactions.length > 0 ? (
             filteredTransactions
-              .filter(transaction => 
-                (selectedBtn === 'Income' && transaction.type === 'income') ||
-                (selectedBtn === 'Expense' && transaction.type === 'expense')
+              .filter(
+                transaction =>
+                  (selectedBtn === 'Income' && transaction.type === 'income') ||
+                  (selectedBtn === 'Expense' && transaction.type === 'expense'),
               )
               .map(transaction => (
                 <Card
@@ -358,7 +391,10 @@ const StatisticScreen = ({navigation}) => {
                     <View style={styles.transactionsCardDetails}>
                       <View style={styles.transactionsCardIcon}>
                         <MaterialCommunityIcons
-                          name={getCategoryIcon(transaction.category, transaction.type)}
+                          name={getCategoryIcon(
+                            transaction.category,
+                            transaction.type,
+                          )}
                           size={25}
                           color="#CBD3EE"
                         />
@@ -384,7 +420,8 @@ const StatisticScreen = ({navigation}) => {
                             ? styles.transactionsCardAmountIncomeText
                             : styles.transactionsCardAmountExpenseText
                         }>
-                        {transaction.type === 'income' ? '+' : '-'} ₹{transaction.amount}
+                        {transaction.type === 'income' ? '+' : '-'} ₹
+                        {transaction.amount}
                       </Text>
                     </View>
                   </View>
@@ -412,7 +449,7 @@ const getCategoryIcon = (category, type) => {
     Salary: 'cash',
     Bonus: 'cash',
     Gift: 'gift',
-    Others: type === 'income' ? 'cash' : 'cash-remove'
+    Others: type === 'income' ? 'cash' : 'cash-remove',
   };
 
   return iconMap[category] || (type === 'income' ? 'cash' : 'cash-remove');
@@ -478,7 +515,6 @@ const styles = StyleSheet.create({
   },
   statisticSection: {
     marginTop: 20,
-    marginBottom: 20,
     paddingHorizontal: 0,
     zIndex: 1,
   },
@@ -510,7 +546,6 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   buttonSection: {
-    marginTop: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     zIndex: 1,
