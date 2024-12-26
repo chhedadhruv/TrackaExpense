@@ -12,59 +12,106 @@ import {Text, Provider, Checkbox} from 'react-native-paper';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import AntDesign from 'react-native-vector-icons/AntDesign';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import UserAvatar from 'react-native-user-avatar';
 import DropDownPicker from 'react-native-dropdown-picker';
 
 const PRIMARY_COLOR = '#677CD2';
 const SECONDARY_COLOR = '#7A8EE0';
 const BACKGROUND_COLOR = '#F4F6FA';
+const ICON_COLOR = '#fff';
 
 const GROUP_CATEGORIES = [
   {
     label: 'Work',
     value: 'Work',
-    icon: () => <Text style={styles.categoryIcon}>💼</Text>,
+    icon: () => (
+      <MaterialCommunityIcons
+        name="briefcase"
+        size={24}
+        color={PRIMARY_COLOR}
+      />
+    ),
   },
   {
     label: 'Family',
     value: 'Family',
-    icon: () => <Text style={styles.categoryIcon}>👪</Text>,
+    icon: () => (
+      <MaterialCommunityIcons
+        name="home-heart"
+        size={24}
+        color={PRIMARY_COLOR}
+      />
+    ),
   },
   {
     label: 'Couple',
     value: 'Couple',
-    icon: () => <Text style={styles.categoryIcon}>🫶</Text>,
+    icon: () => (
+      <MaterialCommunityIcons
+        name="heart-multiple"
+        size={24}
+        color={PRIMARY_COLOR}
+      />
+    ),
   },
   {
     label: 'Friends',
     value: 'Friends',
-    icon: () => <Text style={styles.categoryIcon}>👥</Text>,
+    icon: () => (
+      <MaterialCommunityIcons
+        name="account-group"
+        size={24}
+        color={PRIMARY_COLOR}
+      />
+    ),
   },
   {
     label: 'Travel',
     value: 'Travel',
-    icon: () => <Text style={styles.categoryIcon}>✈️</Text>,
+    icon: () => (
+      <MaterialCommunityIcons name="airplane" size={24} color={PRIMARY_COLOR} />
+    ),
   },
   {
     label: 'Sports',
     value: 'Sports',
-    icon: () => <Text style={styles.categoryIcon}>⚽</Text>,
+    icon: () => (
+      <MaterialCommunityIcons
+        name="basketball"
+        size={24}
+        color={PRIMARY_COLOR}
+      />
+    ),
   },
   {
     label: 'Hobby',
     value: 'Hobby',
-    icon: () => <Text style={styles.categoryIcon}>🎨</Text>,
+    icon: () => (
+      <MaterialCommunityIcons name="palette" size={24} color={PRIMARY_COLOR} />
+    ),
   },
   {
     label: 'Study',
     value: 'Study',
-    icon: () => <Text style={styles.categoryIcon}>📚</Text>,
+    icon: () => (
+      <MaterialCommunityIcons
+        name="book-open-variant"
+        size={24}
+        color={PRIMARY_COLOR}
+      />
+    ),
   },
   {
     label: 'Other',
     value: 'Other',
-    icon: () => <Text style={styles.categoryIcon}>🌈</Text>,
+    icon: () => (
+      <MaterialCommunityIcons
+        name="dots-horizontal-circle"
+        size={24}
+        color={PRIMARY_COLOR}
+      />
+    ),
   },
 ];
 
@@ -229,7 +276,7 @@ const SplitScreen = ({navigation}) => {
     }
   };
 
-  const deleteGroup = async (groupId) => {
+  const deleteGroup = async groupId => {
     try {
       Alert.alert(
         'Delete Group',
@@ -250,7 +297,7 @@ const SplitScreen = ({navigation}) => {
               Alert.alert('Success', 'Group deleted successfully');
             },
           },
-        ]
+        ],
       );
     } catch (error) {
       console.error('Error deleting group:', error);
@@ -261,10 +308,7 @@ const SplitScreen = ({navigation}) => {
   // Render user card
   const renderUserCard = (user, withCheckbox = false) => (
     <View style={styles.userCard} key={user.email}>
-      <UserAvatar
-        size={50}
-        name={user.name || user.email}
-      />
+      <UserAvatar size={50} name={user.name || user.email} />
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{user.name || user.email}</Text>
         <Text style={styles.userEmail}>{user.email}</Text>
@@ -289,6 +333,13 @@ const SplitScreen = ({navigation}) => {
     );
     const isExpanded = expandedGroupId === group.id;
 
+    const GroupCardIcon = () => {
+      const IconComponent = () => categoryItem?.icon();
+      return IconComponent
+        ? React.cloneElement(IconComponent(), {color: '#fff'})
+        : null;
+    };
+
     return (
       <TouchableOpacity
         style={styles.groupCard}
@@ -296,24 +347,25 @@ const SplitScreen = ({navigation}) => {
         onPress={() => setExpandedGroupId(isExpanded ? null : group.id)}>
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderLeft}>
-            <Text style={styles.categoryIcon}>{categoryItem?.icon()}</Text>
+            <View style={styles.categoryIconContainer}>
+              <GroupCardIcon />
+            </View>
             <Text style={styles.groupName}>{group.name}</Text>
           </View>
           <View style={styles.cardHeaderRight}>
             <Text style={styles.groupMembers}>
               {group.members.length} Members
             </Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.deleteButton}
-              onPress={(e) => {
+              onPress={e => {
                 e.stopPropagation();
                 deleteGroup(group.id);
-              }}
-            >
-              <MaterialCommunityIcons 
-                name="trash-can-outline" 
-                size={20} 
-                color="#fff" 
+              }}>
+              <MaterialCommunityIcons
+                name="trash-can-outline"
+                size={20}
+                color="#fff"
               />
             </TouchableOpacity>
           </View>
@@ -337,10 +389,7 @@ const SplitScreen = ({navigation}) => {
             <View style={styles.memberPreviewContainer}>
               {group.memberDetails.slice(0, 3).map((member, index) => (
                 <View key={member.email} style={styles.memberPreview}>
-                  <UserAvatar
-                    size={30}
-                    name={member.name || member.email}
-                  />
+                  <UserAvatar size={30} name={member.name || member.email} />
                   <Text style={styles.memberPreviewName} numberOfLines={1}>
                     {member.name || member.email}
                   </Text>
@@ -706,6 +755,9 @@ const styles = StyleSheet.create({
   expandedDetailText: {
     color: '#fff',
     fontSize: 12,
+  },
+  categoryIconContainer: {
+    marginRight: 10,
   },
 });
 
