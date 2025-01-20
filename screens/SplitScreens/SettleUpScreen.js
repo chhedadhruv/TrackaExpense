@@ -6,13 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+    TextInput,
 } from 'react-native';
 import {
-  TextInput,
   Button,
   Card,
-  ActivityIndicator,
-  Divider,
 } from 'react-native-paper';
 import UserAvatar from 'react-native-user-avatar';
 import firestore from '@react-native-firebase/firestore';
@@ -236,13 +234,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   card: {
+    backgroundColor: PRIMARY_COLOR,
     marginBottom: 16,
     elevation: 2,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
+    color: '#fff',
     marginBottom: 12,
   },
   userList: {
@@ -255,11 +254,11 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#fff',
     width: 80,
   },
   selectedUserItem: {
-    backgroundColor: PRIMARY_COLOR + '10',
+    backgroundColor: '#fff',
     borderColor: PRIMARY_COLOR,
   },
   userAvatar: {
@@ -268,7 +267,7 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 12,
     textAlign: 'center',
-    color: '#666',
+    color: '#fff',
   },
   selectedUserName: {
     color: PRIMARY_COLOR,
@@ -283,10 +282,15 @@ const styles = StyleSheet.create({
   },
   amountInput: {
     backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 8,
   },
   noteInput: {
     backgroundColor: '#fff',
-    height: 80,
+    height: 100,
+    borderRadius: 8,
+    textAlignVertical: 'top',
+    padding: 8,
   },
   summaryCard: {
     marginBottom: 16,

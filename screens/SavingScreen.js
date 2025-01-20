@@ -468,11 +468,13 @@ const SavingScreen = ({navigation}) => {
           </Text>
           <View style={styles.badgeContainer}>
             {item.isCollaborative && (
-              <Text style={[styles.categoryBadge, styles.collaborativeBadge]}>
-                Group
-              </Text>
+              <View style={[styles.categoryBadge, styles.collaborativeBadge]}>
+                <Text style={styles.badgeText}>Group</Text>
+              </View>
             )}
-            <Text style={styles.categoryBadge}>{item.category}</Text>
+            <View style={styles.categoryBadge}>
+              <Text style={styles.badgeText}>{item.category}</Text>
+            </View>
           </View>
         </View>
         <View style={styles.progressContainer}>
@@ -641,47 +643,20 @@ const SavingScreen = ({navigation}) => {
             </View>
           )}
 
-          {savingsList.length === 0 ? (
+{savingsList.length === 0 ? (
             <View style={styles.emptyState}>
               <AntDesign name="inbox" size={64} color={PRIMARY_COLOR} />
               <Text style={styles.emptyStateText}>
                 No savings goals yet. Start tracking your goals!
               </Text>
             </View>
-          ) :
-          (
-            <>
-              <Text style={styles.sectionHeader}>Personal Goals:</Text>
-              <FlatList
-                data={savingsList.filter(item => !item.isCollaborative)}
-                renderItem={renderSavingItem}
-                keyExtractor={item => item.id}
-                contentContainerStyle={styles.listContainer}
-              />
-
-              <Text style={[styles.sectionHeader, styles.groupHeader]}>
-                Group Goals:
-              </Text>
-              {mySavingGroups.length === 0 ? (
-                <View style={styles.emptyGroupState}>
-                  <MaterialCommunityIcons
-                    name="account-group"
-                    size={48}
-                    color={PRIMARY_COLOR}
-                  />
-                  <Text style={styles.emptyStateText}>
-                    No group savings yet. Create a collaborative goal to start saving together!
-                  </Text>
-                </View>
-              ) : (
-                <FlatList
-                  data={savingsList.filter(item => item.isCollaborative)}
-                  renderItem={renderSavingItem}
-                  keyExtractor={item => item.id}
-                  contentContainerStyle={styles.listContainer}
-                />
-              )}
-            </>
+          ) : (
+            <FlatList
+              data={savingsList}
+              renderItem={renderSavingItem}
+              keyExtractor={item => item.id}
+              contentContainerStyle={styles.listContainer}
+            />
           )}
         </ScrollView>
       </SafeAreaView>
@@ -965,6 +940,34 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     marginLeft: 5,
+  },
+  categoryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    marginLeft: 8,
+  },
+  collaborativeBadge: {
+    backgroundColor: SECONDARY_COLOR,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  sectionHeader: {
+    color: PRIMARY_COLOR,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
   },
 });
 

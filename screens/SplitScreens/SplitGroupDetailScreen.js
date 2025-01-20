@@ -755,6 +755,7 @@ const styles = StyleSheet.create({
   settleButton: {
     marginTop: 10,
     backgroundColor: PRIMARY_COLOR,
+    color: '#fff',
   },
   modalContainer: {
     flex: 1,
