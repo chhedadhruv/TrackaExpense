@@ -13,14 +13,39 @@ import FormButton from '../components/FormButton';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import AntDesign from 'react-native-vector-icons/AntDesign';
+import Feather from 'react-native-vector-icons/Feather';
 import DropDownPicker from 'react-native-dropdown-picker';
 
 const {width} = Dimensions.get('window');
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 
+// Category options for dropdown - matching the main screen categories
+const CATEGORY_OPTIONS = [
+  {
+    label: 'Emergency Fund',
+    value: 'Emergency',
+    icon: () => <Feather name="alert-circle" size={24} color={PRIMARY_COLOR} />,
+  },
+  {
+    label: 'Investment',
+    value: 'Investment',
+    icon: () => <Feather name="trending-up" size={24} color={PRIMARY_COLOR} />,
+  },
+  {
+    label: 'Personal',
+    value: 'Personal',
+    icon: () => <Feather name="user" size={24} color={PRIMARY_COLOR} />,
+  },
+  {
+    label: 'Travel',
+    value: 'Travel',
+    icon: () => <Feather name="map" size={24} color={PRIMARY_COLOR} />,
+  },
+];
+
 const EditSavingScreen = ({route, navigation}) => {
-  const {savingId} = route.params;
+  const {savingId, isCollaborative} = route.params;
 
   const [savingGoal, setSavingGoal] = useState('');
   const [category, setCategory] = useState(null);
@@ -84,91 +109,106 @@ const EditSavingScreen = ({route, navigation}) => {
   // Handle saving an updated goal
   const handleUpdate = async () => {
     if (validateInputs()) {
+      setLoading(true);
       const currentUser = auth().currentUser;
 
       if (!currentUser) {
         Alert.alert('Error', 'No user is logged in');
+        setLoading(false);
         return;
       }
 
       try {
         const targetAmountParsed = parseFloat(targetAmount);
         const currentAmountParsed = parseFloat(amount);
-
-        // Calculate progress as an integer percentage (rounded to nearest integer)
         const progress = Math.round(
           (currentAmountParsed / targetAmountParsed) * 100,
         );
 
-        // Update saving goal and amount in Firestore
-        const userSavingsRef = firestore()
-          .collection('users')
-          .doc(currentUser.uid)
-          .collection('savings')
-          .doc(savingId);
-
-        await userSavingsRef.update({
+        const updateData = {
           goal: savingGoal,
           category: category,
           targetAmount: targetAmountParsed,
           currentAmount: currentAmountParsed,
-          progressPercentage: progress, // Rounded integer value
+          progressPercentage: progress,
           updatedAt: firestore.FieldValue.serverTimestamp(),
-        });
+        };
+
+        if (isCollaborative) {
+          // Get the group ID from the current saving
+          const savingDoc = await firestore()
+            .collection('users')
+            .doc(currentUser.uid)
+            .collection('savings')
+            .doc(savingId)
+            .get();
+
+          const groupId = savingDoc.data().groupId;
+
+          if (groupId) {
+            // Update the group document
+            await firestore()
+              .collection('savingGroups')
+              .doc(groupId)
+              .update({
+                totalSaved: currentAmountParsed,
+                targetAmount: targetAmountParsed,
+                goal: savingGoal,
+              });
+
+            // Update savings for all group members
+            const groupDoc = await firestore()
+              .collection('savingGroups')
+              .doc(groupId)
+              .get();
+            
+            const groupData = groupDoc.data();
+            const batch = firestore().batch();
+
+            for (const memberEmail of groupData.members) {
+              const userSnapshot = await firestore()
+                .collection('users')
+                .where('email', '==', memberEmail)
+                .get();
+
+              if (!userSnapshot.empty) {
+                const userId = userSnapshot.docs[0].id;
+                const memberSavingsQuery = await firestore()
+                  .collection('users')
+                  .doc(userId)
+                  .collection('savings')
+                  .where('groupId', '==', groupId)
+                  .get();
+
+                memberSavingsQuery.docs.forEach((doc) => {
+                  batch.update(doc.ref, updateData);
+                });
+              }
+            }
+
+            await batch.commit();
+          }
+        } else {
+          // Update individual saving
+          await firestore()
+            .collection('users')
+            .doc(currentUser.uid)
+            .collection('savings')
+            .doc(savingId)
+            .update(updateData);
+        }
 
         Alert.alert('Success', 'Saving goal updated successfully');
         navigation.goBack();
       } catch (error) {
+        console.error('Error updating goal:', error);
         setError('Error updating goal. Please try again.');
-        console.error(error);
         Alert.alert('Error', 'Failed to update saving goal.');
+      } finally {
+        setLoading(false);
       }
     }
   };
-
-  // Category options for dropdown
-  const CATEGORY_OPTIONS = [
-    {
-      label: 'Emergency Fund',
-      value: 'Emergency',
-      icon: () => <Text style={styles.categoryIcon}>🚨</Text>,
-    },
-    {
-      label: 'Vacation',
-      value: 'Vacation',
-      icon: () => <Text style={styles.categoryIcon}>🏖️</Text>,
-    },
-    {
-      label: 'Home Down Payment',
-      value: 'HomePurchase',
-      icon: () => <Text style={styles.categoryIcon}>🏠</Text>,
-    },
-    {
-      label: 'Car',
-      value: 'Car',
-      icon: () => <Text style={styles.categoryIcon}>🚗</Text>,
-    },
-    {
-      label: 'Technology',
-      value: 'Tech',
-      icon: () => <Text style={styles.categoryIcon}>💻</Text>,
-    },
-    {
-      label: 'Education',
-      value: 'Education',
-      icon: () => <Text style={styles.categoryIcon}>📚</Text>,
-    },
-    {
-      label: 'Personal Growth',
-      value: 'PersonalGrowth',
-      icon: () => <Text style={styles.categoryIcon}>🌱</Text>,
-    },
-    {
-      label: 'Wedding',
-      value: 'Wedding',
-      icon: () => <Text style={styles.categoryIcon}>💍</Text>,
-    },
-  ];
 
   return (
     <Provider>
@@ -177,7 +217,9 @@ const EditSavingScreen = ({route, navigation}) => {
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled">
           <View style={styles.headerContainer}>
-            <Text style={styles.header}>Edit Saving Goal</Text>
+            <Text style={styles.header}>
+              Edit {isCollaborative ? 'Group' : ''} Saving Goal
+            </Text>
           </View>
 
           {error && <Text style={styles.errorText}>{error}</Text>}
@@ -218,6 +260,7 @@ const EditSavingScreen = ({route, navigation}) => {
               listMode="MODAL"
               modalTitle="Select Saving Category"
               modalAnimationType="slide"
+              zIndex={1000}
             />
 
             <FormButton

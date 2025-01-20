@@ -24,6 +24,8 @@ import SplitScreen from '../screens/SplitScreens/SplitScreen';
 import SplitGroupDetailScreen from '../screens/SplitScreens/SplitGroupDetailScreen';
 import CreateSplitScreen from '../screens/SplitScreens/CreateSplitScreen';
 import SplitDetailScreen from '../screens/SplitScreens/SplitDetailScreen';
+import SettleUpScreen from '../screens/SplitScreens/SettleUpScreen';
+import SplitTransactionScreen from '../screens/SplitScreens/SplitTransactionScreen';
 import FeedbackScreen from '../screens/FeedbackScreen';
 
 const Stack = createStackNavigator();
@@ -106,6 +108,8 @@ const SplitStack = () =>
     { name: 'SplitGroupDetail', component: SplitGroupDetailScreen, title: 'Split Group Detail' },
     { name: 'CreateSplit', component: CreateSplitScreen, title: 'Create Split' },
     { name: 'SplitDetail', component: SplitDetailScreen, title: 'Split Detail' },
+    { name: 'SettleUp', component: SettleUpScreen, title: 'Settle Up' },
+    { name: 'SplitTransaction', component: SplitTransactionScreen, title: 'Split Transaction' },
   ]);
 
   const SavingStack = () =>

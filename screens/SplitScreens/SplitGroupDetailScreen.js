@@ -7,12 +7,13 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import {Card, ActivityIndicator, Menu, Divider} from 'react-native-paper';
-import {useFocusEffect} from '@react-navigation/native';
+import {ActivityIndicator, Card, Divider, Button, Menu} from 'react-native-paper';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import UserAvatar from 'react-native-user-avatar';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import moment from 'moment';
 
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
@@ -27,6 +28,8 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
   const [menuVisibleForSplit, setMenuVisibleForSplit] = useState(null);
   const [groupMembers, setGroupMembers] = useState([]);
   const [showAllSplits, setShowAllSplits] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredSplits, setFilteredSplits] = useState([]);
   const RECENT_SPLITS_LIMIT = 3;
 
   if (!group || !group.id) {
@@ -307,12 +310,52 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
     </Card>
   );
 
+  const handleSearch = query => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setFilteredSplits(splits);
+      return;
+    }
+
+    const searchTerms = query.toLowerCase().trim().split(' ');
+    const filtered = splits.filter(split => {
+      const matchTitle = split.title.toLowerCase().includes(query.toLowerCase());
+      const matchDate = moment(split.createdAt.toDate()).format('MMM D, YYYY').toLowerCase().includes(query.toLowerCase());
+      const matchCategory = split.category?.toLowerCase().includes(query.toLowerCase());
+      const matchAmount = split.amount.toString().includes(query);
+      const matchPaidBy = split.paidBy.name.toLowerCase().includes(query.toLowerCase());
+      
+      return matchTitle || matchDate || matchCategory || matchAmount || matchPaidBy;
+    });
+
+    setFilteredSplits(filtered);
+  };
+
+  const handleSettleUp = (lender, borrower, amount) => {
+    navigation.navigate('SettleUp', {
+      group: {
+        ...group,
+        members: groupMembers
+      },
+      lendingDetails: detailedLendingInfo
+    });
+  };
+
   const renderSplitsList = () => {
-    const splitsToShow = showAllSplits ? splits : splits.slice(0, RECENT_SPLITS_LIMIT);
+    const splitsToShow = showAllSplits 
+      ? filteredSplits 
+      : filteredSplits.slice(0, RECENT_SPLITS_LIMIT);
 
     return (
       <View style={styles.splitsList}>
-        {splits.length > 0 ? (
+        {/* <Searchbar
+          placeholder="Search splits..."
+          onChangeText={handleSearch}
+          value={searchQuery}
+          style={styles.searchBar}
+        /> */}
+        
+        {filteredSplits.length > 0 ? (
           <>
             {splitsToShow.map(split => (
               <Card key={split.id} style={styles.splitCard}>
@@ -326,12 +369,20 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
                     <Text style={styles.splitSubtitle}>
                       Paid by {split.paidBy.name || split.paidBy.email}
                     </Text>
+                    <Text style={styles.splitDate}>
+                      {moment(split.createdAt.toDate()).format('MMM D, YYYY')}
+                    </Text>
+                    {split.category && (
+                      <View style={styles.categoryTag}>
+                        <Text style={styles.categoryText}>{split.category}</Text>
+                      </View>
+                    )}
                   </View>
                   <View style={styles.splitCardRight}>
                     <Text style={styles.splitAmount}>
                       ₹{parseFloat(split.amount).toLocaleString()}
                     </Text>
-                    <Menu
+                    {/* <Menu
                       visible={menuVisibleForSplit === split.id}
                       onDismiss={() => setMenuVisibleForSplit(null)}
                       anchor={
@@ -357,17 +408,17 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
                         icon="delete"
                         titleStyle={{color: 'red'}}
                       />
-                    </Menu>
+                    </Menu> */}
                   </View>
                 </TouchableOpacity>
               </Card>
             ))}
-            {splits.length > RECENT_SPLITS_LIMIT && (
+            {/* {filteredSplits.length > RECENT_SPLITS_LIMIT && (
               <TouchableOpacity
                 onPress={() => setShowAllSplits(!showAllSplits)}
                 style={styles.showAllButton}>
                 <Text style={styles.showAllText}>
-                  {showAllSplits ? 'Show Less' : `Show All Splits (${splits.length})`}
+                  {showAllSplits ? 'Show Less' : `Show All Splits (${filteredSplits.length})`}
                 </Text>
                 <MaterialCommunityIcons
                   name={showAllSplits ? 'chevron-up' : 'chevron-down'}
@@ -375,10 +426,24 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
                   color={PRIMARY_COLOR}
                 />
               </TouchableOpacity>
+            )} */}
+            {filteredSplits.length > 3 && (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('SplitTransaction', { group })}
+                style={styles.showAllButton}>
+                <Text style={styles.showAllText}>Show all transactions</Text>
+                <MaterialCommunityIcons
+                  name="chevron-right"
+                  size={20}
+                  color={PRIMARY_COLOR}
+                />
+              </TouchableOpacity>
             )}
           </>
         ) : (
-          <Text style={styles.noSplitsText}>No splits yet</Text>
+          <Text style={styles.noSplitsText}>
+            {searchQuery ? 'No splits found matching your search' : 'No splits yet'}
+          </Text>
         )}
       </View>
     );
@@ -409,12 +474,22 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
               <Text style={styles.lendingDetailText}>
                 {detail.borrower.name} should pay ₹{detail.amount.toLocaleString()} to {detail.lender.name}
               </Text>
+              <Button
+                mode="contained"
+                onPress={() => handleSettleUp(detail.lender, detail.borrower, detail.amount)}
+                style={styles.settleButton}>
+                Settle Up
+              </Button>
             </View>
           </Card>
         ))}
       </View>
     );
   };
+
+  useEffect(() => {
+    setFilteredSplits(splits);
+  }, [splits]);
 
   if (loading) {
     return (
@@ -425,21 +500,19 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      {renderGroupSummaryCard()}
-
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionHeaderText}>Recent Splits</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => navigation.navigate('CreateSplit', {group})}>
-          <MaterialCommunityIcons name="plus" size={20} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
-      {renderSplitsList()}
-      {renderDetailedLendingSummary()}
-    </ScrollView>
+      <ScrollView style={styles.container}>
+        {renderGroupSummaryCard()}
+        {renderDetailedLendingSummary()}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionHeaderText}>Recent Splits</Text>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => navigation.navigate('CreateSplit', {group})}>
+            <MaterialCommunityIcons name="plus" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+        {renderSplitsList()}
+      </ScrollView>
   );
 };
 
@@ -657,6 +730,95 @@ const styles = StyleSheet.create({
   },
   arrowIcon: {
     marginHorizontal: 10,
+  },
+  searchBar: {
+    marginBottom: 15,
+    elevation: 2,
+  },
+  splitDate: {
+    fontSize: 12,
+    color: '#959698',
+    marginTop: 2,
+  },
+  categoryTag: {
+    backgroundColor: PRIMARY_COLOR + '20',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginTop: 5,
+    alignSelf: 'flex-start',
+  },
+  categoryText: {
+    fontSize: 12,
+    color: PRIMARY_COLOR,
+  },
+  settleButton: {
+    marginTop: 10,
+    backgroundColor: PRIMARY_COLOR,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    width: '90%',
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  userList: {
+    marginBottom: 15,
+  },
+  userItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  selectedUser: {
+    backgroundColor: '#e3e3e3',
+  },
+  userName: {
+    marginLeft: 10,
+    flex: 1,
+  },
+  amountInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 20,
+    fontSize: 16,
+  },
+  summaryText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#666',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  button: {
+    width: '45%',
   },
 });
 
