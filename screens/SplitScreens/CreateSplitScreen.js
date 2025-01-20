@@ -24,79 +24,29 @@ const BACKGROUND_COLOR = '#F4F6FA';
 // Category Options
 const CATEGORY_OPTIONS = [
   {
-    label: 'Groceries & Food',
-    value: 'Groceries',
-    icon: 'cart-variant',
+    label: 'Food & Drinks',
+    value: 'Food',
+    icon: 'food',
   },
   {
-    label: 'Restaurant & Dining',
-    value: 'Restaurant',
-    icon: 'silverware-fork-knife',
-  },
-  {
-    label: 'Gas & Fuel',
-    value: 'Gas',
-    icon: 'gas-station',
-  },
-  {
-    label: 'Public Transport',
-    value: 'PublicTransport',
-    icon: 'bus',
-  },
-  {
-    label: 'Electricity Bill',
-    value: 'Electricity',
-    icon: 'lightning-bolt',
-  },
-  {
-    label: 'Water Bill',
-    value: 'Water',
-    icon: 'water',
-  },
-  {
-    label: 'Internet & Phone',
-    value: 'Internet',
-    icon: 'wifi',
-  },
-  {
-    label: 'Movies & Entertainment',
-    value: 'Entertainment',
-    icon: 'movie-open',
-  },
-  {
-    label: 'Travel & Hotels',
-    value: 'Travel',
-    icon: 'airplane',
-  },
-  {
-    label: 'Shopping & Retail',
+    label: 'Shopping',
     value: 'Shopping',
     icon: 'shopping',
   },
   {
-    label: 'Rent & Housing',
-    value: 'Housing',
-    icon: 'home',
+    label: 'Transport',
+    value: 'Transport',
+    icon: 'car',
   },
   {
-    label: 'Medical & Healthcare',
-    value: 'Healthcare',
-    icon: 'hospital-box',
+    label: 'Bills & Utilities',
+    value: 'Bills',
+    icon: 'file-document',
   },
   {
-    label: 'Fitness & Sports',
-    value: 'Fitness',
-    icon: 'dumbbell',
-  },
-  {
-    label: 'Education & Books',
-    value: 'Education',
-    icon: 'book-open-variant',
-  },
-  {
-    label: 'Maintenance & Repairs',
-    value: 'Maintenance',
-    icon: 'tools',
+    label: 'Others',
+    value: 'Others',
+    icon: 'dots-horizontal',
   },
 ];
 
@@ -224,11 +174,61 @@ const CreateSplitScreen = ({route, navigation}) => {
     }
   };
 
+  // Update splitType handling
+  useEffect(() => {
+    setIsSplitByPercentage(splitType === 'percentage');
+  }, [splitType]);
+
+  // Function to update percentages automatically
+  const updatePercentages = (email, newValue) => {
+    const selectedEmails = Object.entries(selectedUsers)
+      .filter(([_, isSelected]) => isSelected)
+      .map(([email]) => email);
+    
+    if (selectedEmails.length === 0) return;
+
+    const newPercentage = parseFloat(newValue) || 0;
+    let remainingPercentage = 100 - newPercentage;
+    
+    // Calculate how many other users to split remaining percentage between
+    const otherSelectedUsers = selectedEmails.filter(e => e !== email);
+    
+    if (otherSelectedUsers.length === 0) return;
+
+    // Evenly distribute remaining percentage
+    const percentagePerUser = (remainingPercentage / otherSelectedUsers.length).toFixed(2);
+    
+    const updatedPercentages = {...selectedPercentages};
+    updatedPercentages[email] = newValue;
+    
+    otherSelectedUsers.forEach(userEmail => {
+      updatedPercentages[userEmail] = percentagePerUser;
+    });
+    
+    setSelectedPercentages(updatedPercentages);
+  };
+
   const toggleUserSelection = userEmail => {
-    setSelectedUsers(prev => ({
-      ...prev,
-      [userEmail]: !prev[userEmail],
-    }));
+    const newSelectedUsers = {
+      ...selectedUsers,
+      [userEmail]: !selectedUsers[userEmail],
+    };
+    
+    setSelectedUsers(newSelectedUsers);
+
+    // Recalculate percentages when users are selected/deselected
+    const selectedEmails = Object.entries(newSelectedUsers)
+      .filter(([_, isSelected]) => isSelected)
+      .map(([email]) => email);
+
+    if (selectedEmails.length > 0) {
+      const equalPercentage = (100 / selectedEmails.length).toFixed(2);
+      const newPercentages = {};
+      selectedEmails.forEach(email => {
+        newPercentages[email] = equalPercentage;
+      });
+      setSelectedPercentages(newPercentages);
+    }
   };
 
   const onDismissDatePicker = () => {
@@ -390,37 +390,33 @@ const CreateSplitScreen = ({route, navigation}) => {
 
     return (
       <Card key={member.email} style={styles.memberCard}>
-        <TouchableOpacity
-          style={styles.memberCheckboxContainer}
-          onPress={() => !isCurrentUser && toggleUserSelection(member.email)}>
+        <View style={styles.memberCheckboxContainer}>
           <View style={styles.memberInfo}>
             <View style={styles.memberNameContainer}>
+              <Checkbox
+                status={isSelected ? 'checked' : 'unchecked'}
+                onPress={() => !isCurrentUser && toggleUserSelection(member.email)}
+                color={PRIMARY_COLOR}
+              />
               <Text style={styles.memberName}>
                 {member.name}
                 {isCurrentUser && ' (You)'}
               </Text>
-              {splitType === 'percentage' && (
+            </View>
+            {splitType === 'percentage' && isSelected && (
+              <View style={styles.percentageInputContainer}>
                 <TextInput
                   style={styles.percentageInput}
-                  placeholder="% Split"
                   keyboardType="numeric"
                   value={selectedPercentages[member.email]}
-                  onChangeText={text => {
-                    setSelectedPercentages(prev => ({
-                      ...prev,
-                      [member.email]: text,
-                    }));
-                  }}
+                  onChangeText={(text) => updatePercentages(member.email, text)}
+                  placeholder="0"
                 />
-              )}
-            </View>
+                <Text style={styles.percentageSymbol}>%</Text>
+              </View>
+            )}
           </View>
-          <Checkbox
-            status={isSelected ? 'checked' : 'unchecked'}
-            onPress={() => toggleUserSelection(member.email)}
-            color={PRIMARY_COLOR}
-          />
-        </TouchableOpacity>
+        </View>
       </Card>
     );
   };
@@ -542,6 +538,14 @@ const CreateSplitScreen = ({route, navigation}) => {
 
       <View style={styles.formGroup}>
         <Text style={styles.label}>Split With</Text>
+        {splitType === 'percentage' && (
+          <Text style={styles.percentageNote}>
+            Total: {Object.entries(selectedUsers)
+              .filter(([_, isSelected]) => isSelected)
+              .reduce((sum, [email]) => sum + parseFloat(selectedPercentages[email] || 0), 0)
+              .toFixed(2)}%
+          </Text>
+        )}
         {groupMembers.map(renderMemberCheckbox)}
       </View>
 
@@ -616,13 +620,48 @@ const styles = StyleSheet.create({
   },
   memberCheckboxContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     padding: 15,
+  },
+  memberInfo: {
+    flex: 1,
+  },
+  memberNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   memberName: {
     fontSize: 16,
     color: '#3A3B3E',
+    flex: 1,
+  },
+  percentageInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    marginTop: 8,
+    paddingHorizontal: 12,
+    height: 40,
+  },
+  percentageInput: {
+    flex: 1,
+    fontSize: 16,
+    padding: 0,
+    color: PRIMARY_COLOR,
+    textAlign: 'right',
+  },
+  percentageSymbol: {
+    marginLeft: 4,
+    color: '#666',
+    fontSize: 16,
+  },
+  percentageNote: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 10,
+    textAlign: 'right',
   },
   dropdown: {
     borderColor: PRIMARY_COLOR,
