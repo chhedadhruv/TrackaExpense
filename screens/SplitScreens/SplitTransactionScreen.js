@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -6,17 +6,17 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
-import { Card, Searchbar, ActivityIndicator, Button } from 'react-native-paper';
+import {Card, Searchbar, ActivityIndicator, Button} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import firestore from '@react-native-firebase/firestore';
 import moment from 'moment';
-import { DatePickerModal } from 'react-native-paper-dates';
+import {DatePickerModal} from 'react-native-paper-dates';
 
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 
-const SplitTransactionScreen = ({ route, navigation }) => {
-  const { group } = route.params;
+const SplitTransactionScreen = ({route, navigation}) => {
+  const {group} = route.params;
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
   const [filteredTransactions, setFilteredTransactions] = useState([]);
@@ -63,18 +63,27 @@ const SplitTransactionScreen = ({ route, navigation }) => {
     switch (filter) {
       case '7days':
         filtered = transactions.filter(transaction =>
-          moment(transaction.createdAt.toDate()).isAfter(moment().subtract(7, 'days'))
+          moment(transaction.createdAt.toDate()).isAfter(
+            moment().subtract(7, 'days'),
+          ),
         );
         break;
       case '30days':
         filtered = transactions.filter(transaction =>
-          moment(transaction.createdAt.toDate()).isAfter(moment().subtract(30, 'days'))
+          moment(transaction.createdAt.toDate()).isAfter(
+            moment().subtract(30, 'days'),
+          ),
         );
         break;
       case 'custom':
         if (customStartDate && customEndDate) {
           filtered = transactions.filter(transaction =>
-            moment(transaction.createdAt.toDate()).isBetween(customStartDate, customEndDate, undefined, '[]')
+            moment(transaction.createdAt.toDate()).isBetween(
+              customStartDate,
+              customEndDate,
+              undefined,
+              '[]',
+            ),
           );
         }
         break;
@@ -94,13 +103,24 @@ const SplitTransactionScreen = ({ route, navigation }) => {
 
     const searchTerms = query.toLowerCase().trim().split(' ');
     const filtered = transactions.filter(transaction => {
-      const matchTitle = transaction.title.toLowerCase().includes(query.toLowerCase());
-      const matchDate = moment(transaction.createdAt.toDate()).format('MMM D, YYYY').toLowerCase().includes(query.toLowerCase());
-      const matchCategory = transaction.category?.toLowerCase().includes(query.toLowerCase());
+      const matchTitle = transaction.title
+        .toLowerCase()
+        .includes(query.toLowerCase());
+      const matchDate = moment(transaction.createdAt.toDate())
+        .format('MMM D, YYYY')
+        .toLowerCase()
+        .includes(query.toLowerCase());
+      const matchCategory = transaction.category
+        ?.toLowerCase()
+        .includes(query.toLowerCase());
       const matchAmount = transaction.amount.toString().includes(query);
-      const matchPaidBy = transaction.paidBy.name.toLowerCase().includes(query.toLowerCase());
+      const matchPaidBy = transaction.paidBy.name
+        .toLowerCase()
+        .includes(query.toLowerCase());
 
-      return matchTitle || matchDate || matchCategory || matchAmount || matchPaidBy;
+      return (
+        matchTitle || matchDate || matchCategory || matchAmount || matchPaidBy
+      );
     });
 
     setFilteredTransactions(filtered);
@@ -141,17 +161,53 @@ const SplitTransactionScreen = ({ route, navigation }) => {
         style={styles.searchBar}
       />
       <View style={styles.filterContainer}>
-        <TouchableOpacity onPress={() => setFilter('all')} style={styles.filterButton}>
-          <Text style={filter === 'all' ? styles.filterButtonTextActive : styles.filterButtonText}>All</Text>
+        <TouchableOpacity
+          onPress={() => setFilter('all')}
+          style={styles.filterButton}>
+          <Text
+            style={
+              filter === 'all'
+                ? styles.filterButtonTextActive
+                : styles.filterButtonText
+            }>
+            All
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setFilter('7days')} style={styles.filterButton}>
-          <Text style={filter === '7days' ? styles.filterButtonTextActive : styles.filterButtonText}>Last 7 Days</Text>
+        <TouchableOpacity
+          onPress={() => setFilter('7days')}
+          style={styles.filterButton}>
+          <Text
+            style={
+              filter === '7days'
+                ? styles.filterButtonTextActive
+                : styles.filterButtonText
+            }>
+            Last 7 Days
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setFilter('30days')} style={styles.filterButton}>
-          <Text style={filter === '30days' ? styles.filterButtonTextActive : styles.filterButtonText}>Last 30 Days</Text>
+        <TouchableOpacity
+          onPress={() => setFilter('30days')}
+          style={styles.filterButton}>
+          <Text
+            style={
+              filter === '30days'
+                ? styles.filterButtonTextActive
+                : styles.filterButtonText
+            }>
+            Last 30 Days
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setFilter('custom')} style={styles.filterButton}>
-          <Text style={filter === 'custom' ? styles.filterButtonTextActive : styles.filterButtonText}>Custom Range</Text>
+        <TouchableOpacity
+          onPress={() => setFilter('custom')}
+          style={styles.filterButton}>
+          <Text
+            style={
+              filter === 'custom'
+                ? styles.filterButtonTextActive
+                : styles.filterButtonText
+            }>
+            Custom Range
+          </Text>
         </TouchableOpacity>
       </View>
       {filter === 'custom' && (
@@ -159,7 +215,11 @@ const SplitTransactionScreen = ({ route, navigation }) => {
           <TouchableOpacity
             style={styles.dateInput}
             onPress={() => setStartDatePickerVisible(true)}>
-            <Text>{customStartDate ? moment(customStartDate).format('YYYY-MM-DD') : 'Start Date'}</Text>
+            <Text>
+              {customStartDate
+                ? moment(customStartDate).format('YYYY-MM-DD')
+                : 'Start Date'}
+            </Text>
             <MaterialCommunityIcons
               name="calendar"
               size={24}
@@ -177,7 +237,11 @@ const SplitTransactionScreen = ({ route, navigation }) => {
           <TouchableOpacity
             style={styles.dateInput}
             onPress={() => setEndDatePickerVisible(true)}>
-            <Text>{customEndDate ? moment(customEndDate).format('YYYY-MM-DD') : 'End Date'}</Text>
+            <Text>
+              {customEndDate
+                ? moment(customEndDate).format('YYYY-MM-DD')
+                : 'End Date'}
+            </Text>
             <MaterialCommunityIcons
               name="calendar"
               size={24}
@@ -192,7 +256,10 @@ const SplitTransactionScreen = ({ route, navigation }) => {
             date={customEndDate}
             onConfirm={onConfirmEndDate}
           />
-          <Button mode="contained" onPress={filterTransactions} style={styles.applyButton}>
+          <Button
+            mode="contained"
+            onPress={filterTransactions}
+            style={styles.applyButton}>
             Apply
           </Button>
         </View>
@@ -203,23 +270,36 @@ const SplitTransactionScreen = ({ route, navigation }) => {
             <Card
               key={transaction.id}
               style={styles.transactionsCard}
-              onPress={() => navigation.navigate('SplitDetail', { group, split: transaction })}
-            >
+              onPress={() =>
+                navigation.navigate('SplitDetail', {group, split: transaction})
+              }>
               <View style={styles.transactionsCardContent}>
                 <View style={styles.transactionsCardDetails}>
-                  <View style={styles.transactionsCardIcon}>
-                    <MaterialCommunityIcons
-                      name="cash"
-                      size={25}
-                      color="#CBD3EE"
-                    />
-                  </View>
                   <View style={styles.transactionsCardInfo}>
-                    <Text style={styles.transactionsCardTitle}>{transaction.title}</Text>
-                    <Text style={styles.transactionsCardDate}>{moment(transaction.createdAt.toDate()).format('MMM D, YYYY')}</Text>
+                    <Text style={styles.transactionsCardTitle}>
+                      {transaction.title}
+                    </Text>
+                    <Text style={styles.transactionsCardSubtitle}>
+                      Paid by{' '}
+                      {transaction.paidBy.name || transaction.paidBy.email}
+                    </Text>
+                    <Text style={styles.transactionsCardDate}>
+                      {moment(transaction.createdAt.toDate()).format(
+                        'MMM D, YYYY',
+                      )}
+                    </Text>
+                    {transaction.category && (
+                      <View style={styles.categoryTag}>
+                        <Text style={styles.categoryText}>
+                          {transaction.category}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </View>
-                <Text style={styles.transactionsCardAmount}>₹{transaction.amount}</Text>
+                <Text style={styles.transactionsCardAmount}>
+                  ₹{transaction.amount}
+                </Text>
               </View>
             </Card>
           ))
@@ -297,8 +377,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   transactionsCardDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flex: 1,
   },
   transactionsCardIcon: {
     width: 50,
@@ -317,6 +396,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#3A3B3E',
   },
+  transactionsCardSubtitle: {
+    fontSize: 12,
+    color: '#959698',
+    marginTop: 2,
+  },
   transactionsCardDate: {
     fontSize: 12,
     color: '#959698',
@@ -331,6 +415,18 @@ const styles = StyleSheet.create({
     color: '#959698',
     marginTop: 20,
     fontSize: 14,
+  },
+  categoryTag: {
+    backgroundColor: PRIMARY_COLOR + '20',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginTop: 5,
+    alignSelf: 'flex-start',
+  },
+  categoryText: {
+    fontSize: 12,
+    color: PRIMARY_COLOR,
   },
 });
 

@@ -48,14 +48,9 @@ const HomeScreen = ({navigation}) => {
 
       const transactionsArray = transactionsSnapshot.docs.map(document => {
         const data = document.data();
-        // const createdAt = data.createdAt 
-        //   ? (data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt))
-        //   : null;
-        // const createdAt = data.createdAt.toDate();
         return {
           id: document.id,
           ...data,
-          // createdAt,
         };
       });
 
@@ -123,10 +118,6 @@ const HomeScreen = ({navigation}) => {
   const toggleShowAll = () => {
     setShowAll(!showAll);
   };
-
-  // const renderTransactionDate = date => {
-  //   return date instanceof Date ? date.toLocaleDateString() : '';
-  // };
 
   if (loading) {
     return (

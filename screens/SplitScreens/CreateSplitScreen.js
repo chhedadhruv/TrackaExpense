@@ -34,6 +34,11 @@ const CATEGORY_OPTIONS = [
     icon: 'shopping',
   },
   {
+    label: 'Entertainment',
+    value: 'Entertainment',
+    icon: 'movie',
+  },
+  {
     label: 'Transport',
     value: 'Transport',
     icon: 'car',
@@ -163,6 +168,16 @@ const CreateSplitScreen = ({route, navigation}) => {
         initialSelectedPercentages[member.email] = defaultPercentage;
       });
 
+      // Set current user as paidBy by default
+      const currentUserEmail = auth().currentUser?.email;
+      const currentUserMember = formattedMembers.find(
+        member => member.email === currentUserEmail,
+      );
+
+      if (currentUserMember) {
+        setPaidBy(currentUserMember);
+      }
+
       setGroupMembers(formattedMembers);
       setSelectedUsers(initialSelectedUsers);
       setSelectedPercentages(initialSelectedPercentages);
@@ -184,27 +199,29 @@ const CreateSplitScreen = ({route, navigation}) => {
     const selectedEmails = Object.entries(selectedUsers)
       .filter(([_, isSelected]) => isSelected)
       .map(([email]) => email);
-    
+
     if (selectedEmails.length === 0) return;
 
     const newPercentage = parseFloat(newValue) || 0;
     let remainingPercentage = 100 - newPercentage;
-    
+
     // Calculate how many other users to split remaining percentage between
     const otherSelectedUsers = selectedEmails.filter(e => e !== email);
-    
+
     if (otherSelectedUsers.length === 0) return;
 
     // Evenly distribute remaining percentage
-    const percentagePerUser = (remainingPercentage / otherSelectedUsers.length).toFixed(2);
-    
+    const percentagePerUser = (
+      remainingPercentage / otherSelectedUsers.length
+    ).toFixed(2);
+
     const updatedPercentages = {...selectedPercentages};
     updatedPercentages[email] = newValue;
-    
+
     otherSelectedUsers.forEach(userEmail => {
       updatedPercentages[userEmail] = percentagePerUser;
     });
-    
+
     setSelectedPercentages(updatedPercentages);
   };
 
@@ -213,7 +230,7 @@ const CreateSplitScreen = ({route, navigation}) => {
       ...selectedUsers,
       [userEmail]: !selectedUsers[userEmail],
     };
-    
+
     setSelectedUsers(newSelectedUsers);
 
     // Recalculate percentages when users are selected/deselected
@@ -395,7 +412,9 @@ const CreateSplitScreen = ({route, navigation}) => {
             <View style={styles.memberNameContainer}>
               <Checkbox
                 status={isSelected ? 'checked' : 'unchecked'}
-                onPress={() => !isCurrentUser && toggleUserSelection(member.email)}
+                onPress={() =>
+                  !isCurrentUser && toggleUserSelection(member.email)
+                }
                 color={PRIMARY_COLOR}
               />
               <Text style={styles.memberName}>
@@ -409,7 +428,7 @@ const CreateSplitScreen = ({route, navigation}) => {
                   style={styles.percentageInput}
                   keyboardType="numeric"
                   value={selectedPercentages[member.email]}
-                  onChangeText={(text) => updatePercentages(member.email, text)}
+                  onChangeText={text => updatePercentages(member.email, text)}
                   placeholder="0"
                 />
                 <Text style={styles.percentageSymbol}>%</Text>
@@ -442,6 +461,7 @@ const CreateSplitScreen = ({route, navigation}) => {
           placeholder="Enter split title"
           value={title}
           onChangeText={setTitle}
+          placeholderTextColor={'#666'}
         />
       </View>
 
@@ -453,6 +473,7 @@ const CreateSplitScreen = ({route, navigation}) => {
           keyboardType="numeric"
           value={amount}
           onChangeText={setAmount}
+          placeholderTextColor={'#666'}
         />
       </View>
 
@@ -540,10 +561,16 @@ const CreateSplitScreen = ({route, navigation}) => {
         <Text style={styles.label}>Split With</Text>
         {splitType === 'percentage' && (
           <Text style={styles.percentageNote}>
-            Total: {Object.entries(selectedUsers)
+            Total:{' '}
+            {Object.entries(selectedUsers)
               .filter(([_, isSelected]) => isSelected)
-              .reduce((sum, [email]) => sum + parseFloat(selectedPercentages[email] || 0), 0)
-              .toFixed(2)}%
+              .reduce(
+                (sum, [email]) =>
+                  sum + parseFloat(selectedPercentages[email] || 0),
+                0,
+              )
+              .toFixed(2)}
+            %
           </Text>
         )}
         {groupMembers.map(renderMemberCheckbox)}

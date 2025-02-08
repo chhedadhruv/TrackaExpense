@@ -1,4 +1,4 @@
-import {View, Text, StyleSheet, Button, Image} from 'react-native';
+import {StyleSheet, Image} from 'react-native';
 import React from 'react';
 import Onboarding from 'react-native-onboarding-swiper';
 
