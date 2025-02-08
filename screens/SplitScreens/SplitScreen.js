@@ -19,7 +19,6 @@ import DropDownPicker from 'react-native-dropdown-picker';
 const PRIMARY_COLOR = '#677CD2';
 const SECONDARY_COLOR = '#7A8EE0';
 const BACKGROUND_COLOR = '#F4F6FA';
-const ICON_COLOR = '#fff';
 
 const GROUP_CATEGORIES = [
   {

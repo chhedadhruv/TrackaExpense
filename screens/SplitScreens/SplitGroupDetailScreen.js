@@ -7,12 +7,11 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import {ActivityIndicator, Card, Divider, Button, Menu} from 'react-native-paper';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {ActivityIndicator, Card, Button, Menu} from 'react-native-paper';
+import {useFocusEffect} from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import UserAvatar from 'react-native-user-avatar';
 import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
 import moment from 'moment';
 
 const PRIMARY_COLOR = '#677CD2';
@@ -319,13 +318,24 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
 
     const searchTerms = query.toLowerCase().trim().split(' ');
     const filtered = splits.filter(split => {
-      const matchTitle = split.title.toLowerCase().includes(query.toLowerCase());
-      const matchDate = moment(split.createdAt.toDate()).format('MMM D, YYYY').toLowerCase().includes(query.toLowerCase());
-      const matchCategory = split.category?.toLowerCase().includes(query.toLowerCase());
+      const matchTitle = split.title
+        .toLowerCase()
+        .includes(query.toLowerCase());
+      const matchDate = moment(split.createdAt.toDate())
+        .format('MMM D, YYYY')
+        .toLowerCase()
+        .includes(query.toLowerCase());
+      const matchCategory = split.category
+        ?.toLowerCase()
+        .includes(query.toLowerCase());
       const matchAmount = split.amount.toString().includes(query);
-      const matchPaidBy = split.paidBy.name.toLowerCase().includes(query.toLowerCase());
-      
-      return matchTitle || matchDate || matchCategory || matchAmount || matchPaidBy;
+      const matchPaidBy = split.paidBy.name
+        .toLowerCase()
+        .includes(query.toLowerCase());
+
+      return (
+        matchTitle || matchDate || matchCategory || matchAmount || matchPaidBy
+      );
     });
 
     setFilteredSplits(filtered);
@@ -335,26 +345,19 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
     navigation.navigate('SettleUp', {
       group: {
         ...group,
-        members: groupMembers
+        members: groupMembers,
       },
-      lendingDetails: detailedLendingInfo
+      lendingDetails: detailedLendingInfo,
     });
   };
 
   const renderSplitsList = () => {
-    const splitsToShow = showAllSplits 
-      ? filteredSplits 
+    const splitsToShow = showAllSplits
+      ? filteredSplits
       : filteredSplits.slice(0, RECENT_SPLITS_LIMIT);
 
     return (
       <View style={styles.splitsList}>
-        {/* <Searchbar
-          placeholder="Search splits..."
-          onChangeText={handleSearch}
-          value={searchQuery}
-          style={styles.searchBar}
-        /> */}
-        
         {filteredSplits.length > 0 ? (
           <>
             {splitsToShow.map(split => (
@@ -374,7 +377,9 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
                     </Text>
                     {split.category && (
                       <View style={styles.categoryTag}>
-                        <Text style={styles.categoryText}>{split.category}</Text>
+                        <Text style={styles.categoryText}>
+                          {split.category}
+                        </Text>
                       </View>
                     )}
                   </View>
@@ -382,54 +387,13 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
                     <Text style={styles.splitAmount}>
                       ₹{parseFloat(split.amount).toLocaleString()}
                     </Text>
-                    {/* <Menu
-                      visible={menuVisibleForSplit === split.id}
-                      onDismiss={() => setMenuVisibleForSplit(null)}
-                      anchor={
-                        <TouchableOpacity
-                          onPress={() => setMenuVisibleForSplit(split.id)}
-                          style={styles.menuAnchor}>
-                          <MaterialCommunityIcons
-                            name="dots-vertical"
-                            size={20}
-                            color="#959698"
-                          />
-                        </TouchableOpacity>
-                      }>
-                      <Menu.Item
-                        onPress={() => handleEditSplit(split)}
-                        title="Edit"
-                        icon="pencil"
-                      />
-                      <Divider />
-                      <Menu.Item
-                        onPress={() => handleDeleteSplit(split)}
-                        title="Delete"
-                        icon="delete"
-                        titleStyle={{color: 'red'}}
-                      />
-                    </Menu> */}
                   </View>
                 </TouchableOpacity>
               </Card>
             ))}
-            {/* {filteredSplits.length > RECENT_SPLITS_LIMIT && (
-              <TouchableOpacity
-                onPress={() => setShowAllSplits(!showAllSplits)}
-                style={styles.showAllButton}>
-                <Text style={styles.showAllText}>
-                  {showAllSplits ? 'Show Less' : `Show All Splits (${filteredSplits.length})`}
-                </Text>
-                <MaterialCommunityIcons
-                  name={showAllSplits ? 'chevron-up' : 'chevron-down'}
-                  size={20}
-                  color={PRIMARY_COLOR}
-                />
-              </TouchableOpacity>
-            )} */}
             {filteredSplits.length > 3 && (
               <TouchableOpacity
-                onPress={() => navigation.navigate('SplitTransaction', { group })}
+                onPress={() => navigation.navigate('SplitTransaction', {group})}
                 style={styles.showAllButton}>
                 <Text style={styles.showAllText}>Show all transactions</Text>
                 <MaterialCommunityIcons
@@ -442,7 +406,9 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
           </>
         ) : (
           <Text style={styles.noSplitsText}>
-            {searchQuery ? 'No splits found matching your search' : 'No splits yet'}
+            {searchQuery
+              ? 'No splits found matching your search'
+              : 'No splits yet'}
           </Text>
         )}
       </View>
@@ -472,12 +438,16 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
                 <UserAvatar size={40} name={detail.lender.name} />
               </View>
               <Text style={styles.lendingDetailText}>
-                {detail.borrower.name} should pay ₹{detail.amount.toLocaleString()} to {detail.lender.name}
+                {detail.borrower.name} should pay ₹
+                {detail.amount.toLocaleString()} to {detail.lender.name}
               </Text>
               <Button
                 mode="contained"
-                onPress={() => handleSettleUp(detail.lender, detail.borrower, detail.amount)}
-                style={styles.settleButton}>
+                onPress={() =>
+                  handleSettleUp(detail.lender, detail.borrower, detail.amount)
+                }
+                style={styles.settleButton}
+                textColor="#fff">
                 Settle Up
               </Button>
             </View>
@@ -500,19 +470,19 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
   }
 
   return (
-      <ScrollView style={styles.container}>
-        {renderGroupSummaryCard()}
-        {renderDetailedLendingSummary()}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionHeaderText}>Recent Splits</Text>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => navigation.navigate('CreateSplit', {group})}>
-            <MaterialCommunityIcons name="plus" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
-        {renderSplitsList()}
-      </ScrollView>
+    <ScrollView style={styles.container}>
+      {renderGroupSummaryCard()}
+      {renderDetailedLendingSummary()}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionHeaderText}>Recent Splits</Text>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => navigation.navigate('CreateSplit', {group})}>
+          <MaterialCommunityIcons name="plus" size={20} color="#fff" />
+        </TouchableOpacity>
+      </View>
+      {renderSplitsList()}
+    </ScrollView>
   );
 };
 

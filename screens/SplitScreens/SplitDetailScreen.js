@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, ScrollView, StyleSheet, TouchableOpacity} from 'react-native';
-import {Text, Menu, IconButton} from 'react-native-paper';
+import {Text} from 'react-native-paper';
 import UserAvatar from 'react-native-user-avatar';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import auth from '@react-native-firebase/auth';
@@ -78,7 +78,9 @@ const SplitDetailScreen = ({route, navigation}) => {
               <View>
                 <Text style={styles.transactionsCardTitle}>
                   {split.splitUsers[0].name}
-                  {split.splitUsers[0].email === currentUser?.email ? ' (You)' : ''}
+                  {split.splitUsers[0].email === currentUser?.email
+                    ? ' (You)'
+                    : ''}
                 </Text>
                 <Text style={styles.roleText}>Received</Text>
                 <Text style={[styles.splitAmount, styles.positiveAmount]}>
@@ -185,13 +187,17 @@ const SplitDetailScreen = ({route, navigation}) => {
       </Text>
       {renderSplitUserDetails()}
       <View style={styles.buttonContainer}>
-    <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('CreateSplit', { group, split })}>
-      <Text style={styles.buttonText}>Edit</Text>
-    </TouchableOpacity>
-    <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteSplit}>
-      <Text style={styles.buttonText}>Delete</Text>
-    </TouchableOpacity>
-  </View>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => navigation.navigate('CreateSplit', {group, split})}>
+          <Text style={styles.buttonText}>Edit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={handleDeleteSplit}>
+          <Text style={styles.buttonText}>Delete</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 };

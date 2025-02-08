@@ -6,12 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-    TextInput,
+  TextInput,
 } from 'react-native';
-import {
-  Button,
-  Card,
-} from 'react-native-paper';
+import {Button, Card} from 'react-native-paper';
 import UserAvatar from 'react-native-user-avatar';
 import firestore from '@react-native-firebase/firestore';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -72,8 +69,8 @@ const SettleUpScreen = ({route, navigation}) => {
         settlement: {
           from: selectedBorrower,
           to: selectedLender,
-          amount: settlementAmount
-        }
+          amount: settlementAmount,
+        },
       };
 
       await firestore()
@@ -92,7 +89,13 @@ const SettleUpScreen = ({route, navigation}) => {
     }
   };
 
-  const renderUserSelectionCard = (title, selectedUser, users, onSelect, excludeUser) => (
+  const renderUserSelectionCard = (
+    title,
+    selectedUser,
+    users,
+    onSelect,
+    excludeUser,
+  ) => (
     <Card style={styles.card}>
       <Card.Content>
         <Text style={styles.cardTitle}>{title}</Text>
@@ -105,7 +108,8 @@ const SettleUpScreen = ({route, navigation}) => {
                   key={user.email}
                   style={[
                     styles.userItem,
-                    selectedUser?.email === user.email && styles.selectedUserItem,
+                    selectedUser?.email === user.email &&
+                      styles.selectedUserItem,
                   ]}
                   onPress={() => onSelect(user)}>
                   <UserAvatar
@@ -117,7 +121,8 @@ const SettleUpScreen = ({route, navigation}) => {
                   <Text
                     style={[
                       styles.userName,
-                      selectedUser?.email === user.email && styles.selectedUserName,
+                      selectedUser?.email === user.email &&
+                        styles.selectedUserName,
                     ]}>
                     {user.name}
                   </Text>
@@ -141,7 +146,7 @@ const SettleUpScreen = ({route, navigation}) => {
     <ScrollView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.headerText}>Settle Up</Text>
-        
+
         {/* Who paid section */}
         {renderUserSelectionCard(
           'Who paid?',
@@ -198,8 +203,8 @@ const SettleUpScreen = ({route, navigation}) => {
             <Card.Content>
               <Text style={styles.summaryTitle}>Summary</Text>
               <Text style={styles.summaryText}>
-                {selectedBorrower.name} pays ₹{parseFloat(amount).toLocaleString()} to{' '}
-                {selectedLender.name}
+                {selectedBorrower.name} pays ₹
+                {parseFloat(amount).toLocaleString()} to {selectedLender.name}
               </Text>
             </Card.Content>
           </Card>

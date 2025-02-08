@@ -16,7 +16,6 @@ import FormButton from '../components/FormButton';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import AntDesign from 'react-native-vector-icons/AntDesign';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import DropDownPicker from 'react-native-dropdown-picker';
 import UserAvatar from 'react-native-user-avatar';
 import Feather from 'react-native-vector-icons/Feather';
