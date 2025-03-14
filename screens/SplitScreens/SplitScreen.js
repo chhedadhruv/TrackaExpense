@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   TextInput,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import {Text, Provider, Checkbox} from 'react-native-paper';
 import firestore from '@react-native-firebase/firestore';
@@ -124,6 +125,8 @@ const SplitScreen = ({navigation}) => {
   const [category, setCategory] = useState(null);
   const [openCategoryDropdown, setOpenCategoryDropdown] = useState(false);
   const [expandedGroupId, setExpandedGroupId] = useState(null);
+  const [editingGroupId, setEditingGroupId] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const currentUser = auth().currentUser;
 
@@ -131,6 +134,7 @@ const SplitScreen = ({navigation}) => {
   useEffect(() => {
     const fetchGroups = async () => {
       try {
+        setLoading(true);
         if (!currentUser) return;
 
         const groupSnapshot = await firestore()
@@ -166,34 +170,55 @@ const SplitScreen = ({navigation}) => {
       } catch (error) {
         console.error('Error fetching groups:', error);
         Alert.alert('Error', 'Failed to fetch groups');
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchGroups();
   }, [currentUser]);
 
-  // Fetch user by email
-  const fetchUserByEmail = async email => {
+  // Fetch user by email or phone
+  const fetchUserByEmailOrPhone = async query => {
     try {
-      const userSnapshot = await firestore()
-        .collection('users')
-        .where('email', '==', email.trim())
-        .get();
+      // Check if query is a phone number (contains only digits)
+      const isPhoneNumber = /^\d+$/.test(query);
+      
+      let userSnapshot;
+      if (isPhoneNumber) {
+        // Search by phone number with exact match
+        userSnapshot = await firestore()
+          .collection('users')
+          .where('phone', '==', query)
+          .get();
+      } else if (query.includes('@')) {
+        // Search by email
+        userSnapshot = await firestore()
+          .collection('users')
+          .where('email', '==', query.trim())
+          .get();
+      }
 
       if (!userSnapshot.empty) {
         const user = userSnapshot.docs[0].data();
         setUserDetails(user);
       } else {
-        setUserDetails({name: 'Not Registered', email});
+        setUserDetails({name: 'Not Registered', email: query});
       }
     } catch (error) {
-      console.error('Error fetching user by email:', error);
+      console.error('Error fetching user:', error);
       Alert.alert('Error', 'Failed to fetch user');
     }
   };
 
   // Add/remove user from selected list
   const toggleUserSelection = user => {
+    // Prevent adding yourself
+    if (user.email === currentUser.email) {
+      Alert.alert('Invalid Selection', 'You cannot add yourself to the group');
+      return;
+    }
+
     setSelectedUsers(prev => {
       const isSelected = prev.some(selected => selected.email === user.email);
       if (isSelected) {
@@ -204,7 +229,34 @@ const SplitScreen = ({navigation}) => {
     });
   };
 
-  // Create a group
+  // Edit group members
+  const handleEditGroup = async (group) => {
+    try {
+      const updatedMembers = [...group.members];
+      const updatedMemberDetails = [...group.memberDetails];
+      
+      // Remove current user from the lists
+      const currentUserIndex = updatedMembers.indexOf(currentUser.email);
+      if (currentUserIndex > -1) {
+        updatedMembers.splice(currentUserIndex, 1);
+        updatedMemberDetails.splice(currentUserIndex, 1);
+      }
+
+      // Set the current state for editing
+      setGroupName(group.name);
+      setCategory(group.category);
+      setSelectedUsers(updatedMemberDetails);
+      setIsFormVisible(true);
+      
+      // Store the group ID for updating
+      setEditingGroupId(group.id);
+    } catch (error) {
+      console.error('Error preparing group edit:', error);
+      Alert.alert('Error', 'Failed to prepare group for editing');
+    }
+  };
+
+  // Create or update a group
   const createGroup = async () => {
     if (!groupName.trim()) {
       Alert.alert('Validation Error', 'Group name is required');
@@ -222,56 +274,74 @@ const SplitScreen = ({navigation}) => {
     }
 
     try {
-      const groupRef = await firestore()
-        .collection('groups')
-        .add({
-          name: groupName,
-          category: category,
-          members: [
-            ...selectedUsers.map(user => user.email),
-            currentUser.email,
-          ],
-          createdBy: currentUser.uid,
-          createdAt: firestore.FieldValue.serverTimestamp(),
-        });
+      const groupData = {
+        name: groupName,
+        category: category,
+        members: [
+          ...selectedUsers.map(user => user.email),
+          currentUser.email,
+        ],
+        createdBy: currentUser.uid,
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+      };
 
-      // Fetch member details for the new group
-      const memberPromises = [...selectedUsers, {email: currentUser.email}].map(
-        async user => {
-          const userSnapshot = await firestore()
-            .collection('users')
-            .where('email', '==', user.email)
-            .get();
+      if (editingGroupId) {
+        // Update existing group
+        await firestore()
+          .collection('groups')
+          .doc(editingGroupId)
+          .update(groupData);
 
-          return userSnapshot.docs[0]?.data() || user;
-        },
-      );
+        // Update local state
+        setGroups(prev => prev.map(group => 
+          group.id === editingGroupId 
+            ? { ...group, ...groupData, memberDetails: [...selectedUsers, { email: currentUser.email, name: currentUser.displayName }] }
+            : group
+        ));
 
-      const memberDetails = await Promise.all(memberPromises);
+        Alert.alert('Success', 'Group updated successfully');
+      } else {
+        // Create new group
+        groupData.createdAt = firestore.FieldValue.serverTimestamp();
+        const groupRef = await firestore()
+          .collection('groups')
+          .add(groupData);
 
-      setGroups(prev => [
-        ...prev,
-        {
-          id: groupRef.id,
-          name: groupName,
-          category: category,
-          members: [
-            ...selectedUsers.map(user => user.email),
-            currentUser.email,
-          ],
-          memberDetails,
-        },
-      ]);
+        // Fetch member details for the new group
+        const memberPromises = [...selectedUsers, {email: currentUser.email}].map(
+          async user => {
+            const userSnapshot = await firestore()
+              .collection('users')
+              .where('email', '==', user.email)
+              .get();
+
+            return userSnapshot.docs[0]?.data() || user;
+          },
+        );
+
+        const memberDetails = await Promise.all(memberPromises);
+
+        setGroups(prev => [
+          ...prev,
+          {
+            id: groupRef.id,
+            ...groupData,
+            memberDetails,
+          },
+        ]);
+
+        Alert.alert('Success', 'Group created successfully');
+      }
 
       // Reset form
       setGroupName('');
       setCategory(null);
       setSelectedUsers([]);
       setIsFormVisible(false);
-      Alert.alert('Success', 'Group created successfully');
+      setEditingGroupId(null);
     } catch (error) {
-      console.error('Error creating group:', error);
-      Alert.alert('Error', 'Failed to create group');
+      console.error('Error creating/updating group:', error);
+      Alert.alert('Error', 'Failed to create/update group');
     }
   };
 
@@ -355,18 +425,32 @@ const SplitScreen = ({navigation}) => {
             <Text style={styles.groupMembers}>
               {group.members.length} Members
             </Text>
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={e => {
-                e.stopPropagation();
-                deleteGroup(group.id);
-              }}>
-              <MaterialCommunityIcons
-                name="trash-can-outline"
-                size={20}
-                color="#fff"
-              />
-            </TouchableOpacity>
+            <View style={styles.groupActions}>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={e => {
+                  e.stopPropagation();
+                  handleEditGroup(group);
+                }}>
+                <MaterialCommunityIcons
+                  name="pencil"
+                  size={20}
+                  color="#fff"
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={e => {
+                  e.stopPropagation();
+                  deleteGroup(group.id);
+                }}>
+                <MaterialCommunityIcons
+                  name="trash-can-outline"
+                  size={20}
+                  color="#fff"
+                />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -467,15 +551,16 @@ const SplitScreen = ({navigation}) => {
 
               <TextInput
                 style={styles.input}
-                placeholder="Search user by email"
+                placeholder="Search user by email or phone number"
                 placeholderTextColor="#999"
                 value={searchQuery}
-                onChangeText={email => {
-                  setSearchQuery(email);
-                  if (email.includes('@')) {
-                    fetchUserByEmail(email);
+                onChangeText={query => {
+                  setSearchQuery(query);
+                  if (query.includes('@') || /^\d+$/.test(query)) {
+                    fetchUserByEmailOrPhone(query);
                   }
                 }}
+                keyboardType="email-address"
               />
 
               {userDetails && renderUserCard(userDetails, true)}
@@ -496,7 +581,12 @@ const SplitScreen = ({navigation}) => {
 
           <View style={styles.groupsSection}>
             <Text style={styles.sectionHeader}>Your Groups:</Text>
-            {groups.length === 0 ? (
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+                <Text style={styles.loadingText}>Loading groups...</Text>
+              </View>
+            ) : groups.length === 0 ? (
               <View style={styles.emptyState}>
                 <AntDesign name="team" size={64} color={PRIMARY_COLOR} />
                 <Text style={styles.emptyStateText}>
@@ -757,6 +847,33 @@ const styles = StyleSheet.create({
   },
   categoryIconContainer: {
     marginRight: 10,
+  },
+  groupActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  editButton: {
+    marginLeft: 10,
+    padding: 5,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    borderColor: PRIMARY_COLOR,
+    borderWidth: 1,
+    marginTop: 20,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: PRIMARY_COLOR,
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
 

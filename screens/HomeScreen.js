@@ -1,10 +1,13 @@
-import {View, Text, ScrollView, StyleSheet} from 'react-native';
+import {View, Text, ScrollView, StyleSheet, TouchableOpacity} from 'react-native';
 import React, {useState, useEffect, useCallback} from 'react';
 import {ActivityIndicator, Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {useFocusEffect} from '@react-navigation/native';
+
+const PRIMARY_COLOR = '#677CD2';
+const BACKGROUND_COLOR = '#F4F6FA';
 
 const HomeScreen = ({navigation}) => {
   const [userData, setUserData] = useState(null);
@@ -181,11 +184,16 @@ const HomeScreen = ({navigation}) => {
         <View style={styles.transactions}>
           <View style={styles.transactionsHeader}>
             <Text style={styles.transactionsHeaderText}>Transactions</Text>
-            <Text
-              style={styles.transactionsHeaderSeeAll}
-              onPress={toggleShowAll}>
-              {showAll ? 'Hide' : 'See All'}
-            </Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Transaction')}
+              style={styles.seeAllButton}>
+              <Text style={styles.transactionsHeaderSeeAll}>See All</Text>
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={20}
+                color={PRIMARY_COLOR}
+              />
+            </TouchableOpacity>
           </View>
           <View style={styles.transactionsList}>
             {transactions.length > 0 ? (
@@ -277,8 +285,10 @@ const HomeScreen = ({navigation}) => {
                           )}
                         </View>
                         <View style={{flexDirection: 'column', marginLeft: 5}}>
-                          <Text style={styles.transactionsCardTitle}>
-                            {transaction.title}
+                          <Text style={styles.transactionsCardTitle} numberOfLines={1}>
+                            {transaction.title.length > 25
+                              ? transaction.title.slice(0, 25) + '...'
+                              : transaction.title}
                           </Text>
                           <View style={styles.transactionsCardDateAndTime}>
                             <Text style={styles.transactionsCardDate}>
@@ -456,6 +466,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '500',
     color: '#F64E4E',
+  },
+  seeAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });
 

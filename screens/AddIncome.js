@@ -7,6 +7,7 @@ import {DatePickerModal} from 'react-native-paper-dates';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import FormButton from '../components/FormButton';
+import {ActivityIndicator} from 'react-native-paper';
 
 const AddIncome = ({navigation}) => {
   const [title, setTitle] = useState('');
@@ -23,6 +24,7 @@ const AddIncome = ({navigation}) => {
     {label: 'Others', value: 'Others'},
   ]);
   const [openDate, setOpenDate] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const onDismissSingle = () => {
     setOpenDate(false);
@@ -55,40 +57,66 @@ const AddIncome = ({navigation}) => {
     ) {
       alert('Please fill in all fields');
     } else {
-      const userDocRef = firestore().collection('users').doc(getUser());
+      setIsLoading(true);
+      try {
+        const userDocRef = firestore().collection('users').doc(getUser());
 
-      await firestore().runTransaction(async transaction => {
-        const userDoc = await transaction.get(userDocRef);
-        const userData = userDoc.data();
-        const newBalance = userData.balance + parseInt(amount);
-        transaction.update(userDocRef, {balance: newBalance});
+        await firestore().runTransaction(async transaction => {
+          const userDoc = await transaction.get(userDocRef);
+          const userData = userDoc.data();
+          const newBalance = userData.balance + parseInt(amount);
+          transaction.update(userDocRef, {balance: newBalance});
 
-        const transactionRef = userDocRef.collection('transactions');
-        const incomeData = {
-          userId: getUser(),
-          title: title,
-          description: description,
-          amount: amount,
-          category: category,
-          date: date,
-          createdAt: firestore.Timestamp.fromDate(new Date()),
-          type: 'income',
-        };
+          const transactionRef = userDocRef.collection('transactions');
+          const incomeData = {
+            userId: getUser(),
+            title: title,
+            description: description,
+            amount: amount,
+            category: category,
+            date: date,
+            createdAt: firestore.Timestamp.fromDate(new Date()),
+            type: 'income',
+          };
 
-        const incomeDocRef = await transactionRef.add(incomeData);
-        incomeData.documentId = incomeDocRef.id; // Save the document ID along with the data
-        transaction.update(incomeDocRef, {documentId: incomeDocRef.id}); // Update the document with the document ID
-      });
+          const incomeDocRef = await transactionRef.add(incomeData);
+          incomeData.documentId = incomeDocRef.id;
+          transaction.update(incomeDocRef, {documentId: incomeDocRef.id});
+        });
 
-      setAmount('');
-      setTitle('');
-      setDescription('');
-      setCategory('');
-      setDate(undefined);
-      alert('Income added successfully');
-      navigation.goBack();
+        setAmount('');
+        setTitle('');
+        setDescription('');
+        setCategory('');
+        setDate(undefined);
+        alert('Income added successfully');
+        navigation.goBack();
+      } catch (error) {
+        console.error('Error adding income:', error);
+        alert('An error occurred while adding the income. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
+
+  const isFormValid = () => {
+    return (
+      title.trim() !== '' &&
+      description.trim() !== '' &&
+      amount.trim() !== '' &&
+      category !== '' &&
+      date !== undefined
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.progressBarContainer}>
+        <ActivityIndicator size="large" color="#333333" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaProvider>
@@ -165,7 +193,12 @@ const AddIncome = ({navigation}) => {
             animationType="fade"
           />
         </View>
-        <FormButton buttonTitle="Submit" onPress={() => handleSubmit()} />
+        <FormButton 
+          buttonTitle="Submit" 
+          onPress={() => handleSubmit()} 
+          disabled={!isFormValid()}
+          style={!isFormValid() && styles.disabledButton}
+        />
       </View>
     </SafeAreaProvider>
   );
@@ -198,5 +231,13 @@ const styles = StyleSheet.create({
   datePicker: {
     flex: 1,
     marginLeft: 10,
+  },
+  progressBarContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
 });

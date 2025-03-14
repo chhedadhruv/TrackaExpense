@@ -126,7 +126,6 @@ const AddExpense = ({navigation}) => {
           transaction.update(expenseDocRef, {documentId: expenseDocRef.id});
         });
 
-        setUploading(false);
         setAmount('');
         setTitle('');
         setDescription('');
@@ -138,6 +137,7 @@ const AddExpense = ({navigation}) => {
       } catch (error) {
         console.error('Error adding expense:', error);
         alert('An error occurred while adding the expense. Please try again.');
+      } finally {
         setUploading(false);
       }
     }
@@ -229,6 +229,16 @@ const AddExpense = ({navigation}) => {
       },
     );
     toggleModal();
+  };
+
+  const isFormValid = () => {
+    return (
+      title.trim() !== '' &&
+      description.trim() !== '' &&
+      amount.trim() !== '' &&
+      category !== '' &&
+      date !== undefined
+    );
   };
 
   if (uploading) {
@@ -325,7 +335,12 @@ const AddExpense = ({navigation}) => {
         ) : (
           <FormButton buttonTitle="Upload Bill" onPress={() => toggleModal()} />
         )}
-        <FormButton buttonTitle="Submit" onPress={() => handleSubmit()} />
+        <FormButton 
+          buttonTitle="Submit" 
+          onPress={() => handleSubmit()} 
+          disabled={!isFormValid()}
+          style={!isFormValid() && styles.disabledButton}
+        />
         <Provider>
           <Portal>
             <Modal
@@ -399,5 +414,8 @@ const styles = StyleSheet.create({
   datePicker: {
     flex: 1,
     marginLeft: 10,
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
 });
