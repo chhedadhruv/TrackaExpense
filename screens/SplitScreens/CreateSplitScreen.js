@@ -226,18 +226,26 @@ const CreateSplitScreen = ({route, navigation}) => {
   };
 
   const toggleUserSelection = userEmail => {
+    const currentlySelected = Object.entries(selectedUsers)
+      .filter(([_, isSelected]) => isSelected)
+      .map(([email]) => email);
+      
+    if (currentlySelected.length === 1 && currentlySelected[0] === userEmail && selectedUsers[userEmail]) {
+      Alert.alert('Error', 'At least one person must be included in the split.');
+      return;
+    }
+  
     const newSelectedUsers = {
       ...selectedUsers,
       [userEmail]: !selectedUsers[userEmail],
     };
-
+  
     setSelectedUsers(newSelectedUsers);
-
-    // Recalculate percentages when users are selected/deselected
+  
     const selectedEmails = Object.entries(newSelectedUsers)
       .filter(([_, isSelected]) => isSelected)
       .map(([email]) => email);
-
+  
     if (selectedEmails.length > 0) {
       const equalPercentage = (100 / selectedEmails.length).toFixed(2);
       const newPercentages = {};
@@ -316,9 +324,14 @@ const CreateSplitScreen = ({route, navigation}) => {
     setLoading(true);
 
     try {
+      const currentUser = auth().currentUser;
+      const currentUserEmail = currentUser.email;
+      const splitAmount = parseFloat(amount);
+      const splitDate = firestore.Timestamp.fromDate(date);
+
       const splitData = {
         title,
-        amount: parseFloat(amount),
+        amount: splitAmount,
         paidBy: {
           email: paidBy.email,
           name: paidBy.name,
@@ -332,7 +345,7 @@ const CreateSplitScreen = ({route, navigation}) => {
             }))
           : selectedUsersList,
         category,
-        date: firestore.Timestamp.fromDate(date),
+        date: splitDate,
         createdAt: isEditMode
           ? split.createdAt
           : firestore.Timestamp.fromDate(new Date()),
@@ -343,14 +356,50 @@ const CreateSplitScreen = ({route, navigation}) => {
         .doc(group.id)
         .collection('splits');
 
+      let splitRef;
       if (isEditMode) {
         // Update existing split
-        await splitsCollection.doc(split.id).update(splitData);
+        splitRef = splitsCollection.doc(split.id);
+        await splitRef.update(splitData);
         Alert.alert('Success', 'Split updated successfully');
       } else {
         // Add new split
-        await splitsCollection.add(splitData);
+        splitRef = await splitsCollection.add(splitData);
         Alert.alert('Success', 'Split added successfully');
+      }
+
+      // Only create transaction if the current user is the payer
+      if (paidBy.email === currentUserEmail) {
+        // Current user paid for the split
+        const expenseData = {
+          userId: currentUser.uid,
+          title: `Split: ${title}`,
+          description: `Split expense with ${selectedUsersList.map(u => u.name).join(', ')}`,
+          amount: splitAmount.toString(),
+          category: category,
+          date: date.toISOString().split('T')[0],
+          createdAt: splitDate,
+          type: 'expense',
+          splitId: splitRef.id,
+          groupId: group.id,
+        };
+
+        await firestore()
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('transactions')
+          .add(expenseData);
+
+        // Update user's balance
+        await firestore().runTransaction(async transaction => {
+          const userDoc = await transaction.get(
+            firestore().collection('users').doc(currentUser.uid),
+          );
+          const userData = userDoc.data();
+          transaction.update(userDoc.ref, {
+            balance: userData.balance - splitAmount,
+          });
+        });
       }
 
       navigation.goBack();
@@ -412,9 +461,18 @@ const CreateSplitScreen = ({route, navigation}) => {
             <View style={styles.memberNameContainer}>
               <Checkbox
                 status={isSelected ? 'checked' : 'unchecked'}
-                onPress={() =>
-                  !isCurrentUser && toggleUserSelection(member.email)
-                }
+                onPress={() => {
+                  const selectedCount =
+                    Object.values(selectedUsers).filter(Boolean).length;
+                  if (!isSelected || selectedCount > 1) {
+                    toggleUserSelection(member.email);
+                  } else {
+                    Alert.alert(
+                      'Error',
+                      'At least one person must be included in the split.',
+                    );
+                  }
+                }}
                 color={PRIMARY_COLOR}
               />
               <Text style={styles.memberName}>

@@ -88,7 +88,11 @@ const SignupScreen = ({navigation}) => {
         await register(email, password, name, phone, parseFloat(balance));
         setLoading(false);
       } catch (error) {
-        setErrorMessage(error.message || 'Registration failed');
+        if (error.code === 'auth/email-already-in-use') {
+          setErrorMessage('This email is already registered. Please use a different email or login.');
+        } else {
+          setErrorMessage(error.message || 'Registration failed');
+        }
         setLoading(false);
       }
     }
@@ -100,8 +104,11 @@ const SignupScreen = ({navigation}) => {
       keyboardShouldPersistTaps="always">
       <View style={styles.container}>
         <Text style={styles.text}>Create an account</Text>
+        <Text style={styles.infoText}>
+          After signing up, please check your email to verify your account before logging in.
+        </Text>
         {errorMessage && (
-          <Text style={{color: 'red', marginBottom: 10}}>{errorMessage}</Text>
+          <Text style={styles.errorMessage}>{errorMessage}</Text>
         )}
         <FormInput
           labelValue={name}
@@ -129,15 +136,20 @@ const SignupScreen = ({navigation}) => {
           autoCapitalize="none"
           autoCorrect={false}
         />
-        <FormInput
-          labelValue={balance}
-          onChangeText={setBalance}
-          placeholderText="Balance"
-          iconType="wallet"
-          keyboardType="numeric"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
+        <View style={styles.balanceContainer}>
+          <FormInput
+            labelValue={balance}
+            onChangeText={setBalance}
+            placeholderText="Initial Balance"
+            iconType="wallet"
+            keyboardType="numeric"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <Text style={styles.balanceInfo}>
+            Enter your current account balance to start tracking your expenses
+          </Text>
+        </View>
         <FormInput
           labelValue={password}
           onChangeText={setPassword}
@@ -202,6 +214,19 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: '#333',
   },
+  infoText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 20,
+  },
+  errorMessage: {
+    color: 'red',
+    marginBottom: 10,
+    textAlign: 'center',
+    fontSize: 16,
+  },
   loader: {
     marginTop: 20,
   },
@@ -230,5 +255,16 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     fontFamily: 'Lato-Regular',
     color: 'grey',
+  },
+  balanceContainer: {
+    width: '100%',
+    marginBottom: 10,
+  },
+  balanceInfo: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 5,
+    marginLeft: 10,
+    fontStyle: 'italic',
   },
 });

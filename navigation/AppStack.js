@@ -9,6 +9,7 @@ import FeatherIcons from 'react-native-vector-icons/Feather';
 
 // Screens
 import HomeScreen from '../screens/HomeScreen';
+import TransactionScreen from '../screens/TransactionScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import SavingScreen from '../screens/SavingScreen';
@@ -67,6 +68,7 @@ const createStack = (screens) => (
 const HomeStack = () =>
   createStack([
     { name: 'Home', component: HomeScreen, title: 'Tracka Expense' },
+    { name: 'Transaction', component: TransactionScreen, title: 'Transaction' },
     { name: 'Saving', component: SavingScreen, title: 'Your Savings' },
     { name: 'TransactionDetail', component: TransactionDetailScreen, title: 'Transaction Detail' },
     { name: 'EditTransaction', component: EditTransactionScreen, title: 'Edit Transaction' },

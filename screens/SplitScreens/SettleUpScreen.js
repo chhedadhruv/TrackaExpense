@@ -12,6 +12,7 @@ import {Button, Card} from 'react-native-paper';
 import UserAvatar from 'react-native-user-avatar';
 import firestore from '@react-native-firebase/firestore';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import auth from '@react-native-firebase/auth';
 
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
@@ -39,6 +40,9 @@ const SettleUpScreen = ({route, navigation}) => {
     try {
       setLoading(true);
 
+      const currentUser = auth().currentUser;
+      const currentUserEmail = currentUser.email;
+
       // Create settlement record
       const settlementData = {
         from: selectedBorrower,
@@ -50,7 +54,7 @@ const SettleUpScreen = ({route, navigation}) => {
         groupId: group.id,
       };
 
-      await firestore()
+      const settlementRef = await firestore()
         .collection('groups')
         .doc(group.id)
         .collection('settlements')
@@ -73,11 +77,77 @@ const SettleUpScreen = ({route, navigation}) => {
         },
       };
 
-      await firestore()
+      const splitRef = await firestore()
         .collection('groups')
         .doc(group.id)
         .collection('splits')
         .add(settlementSplit);
+
+      // Create transaction if the current user is settling up
+      if (selectedBorrower.email === currentUserEmail) {
+        const expenseData = {
+          userId: currentUser.uid,
+          title: `Settlement: ${note.trim() || 'Settlement Payment'}`,
+          description: `Settlement payment to ${selectedLender.name}`,
+          amount: settlementAmount.toString(),
+          category: 'Settlement',
+          date: new Date().toISOString().split('T')[0],
+          createdAt: firestore.FieldValue.serverTimestamp(),
+          type: 'expense',
+          splitId: splitRef.id,
+          groupId: group.id,
+          settlementId: settlementRef.id,
+        };
+
+        await firestore()
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('transactions')
+          .add(expenseData);
+
+        // Update user's balance
+        await firestore().runTransaction(async transaction => {
+          const userDoc = await transaction.get(
+            firestore().collection('users').doc(currentUser.uid),
+          );
+          const userData = userDoc.data();
+          transaction.update(userDoc.ref, {
+            balance: userData.balance - settlementAmount,
+          });
+        });
+      } else if (selectedLender.email === currentUserEmail) {
+        // Create income transaction if the current user is receiving the settlement
+        const incomeData = {
+          userId: currentUser.uid,
+          title: `Settlement Received: ${note.trim() || 'Settlement Payment'}`,
+          description: `Settlement received from ${selectedBorrower.name}`,
+          amount: settlementAmount.toString(),
+          category: 'Settlement',
+          date: new Date().toISOString().split('T')[0],
+          createdAt: firestore.FieldValue.serverTimestamp(),
+          type: 'income',
+          splitId: splitRef.id,
+          groupId: group.id,
+          settlementId: settlementRef.id,
+        };
+
+        await firestore()
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('transactions')
+          .add(incomeData);
+
+        // Update user's balance
+        await firestore().runTransaction(async transaction => {
+          const userDoc = await transaction.get(
+            firestore().collection('users').doc(currentUser.uid),
+          );
+          const userData = userDoc.data();
+          transaction.update(userDoc.ref, {
+            balance: userData.balance + settlementAmount,
+          });
+        });
+      }
 
       Alert.alert('Success', 'Settlement recorded successfully');
       navigation.goBack();
