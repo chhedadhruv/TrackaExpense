@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import {Card} from 'react-native-paper';
 import FormInput from '../components/FormInput';
 import FormButton from '../components/FormButton';
 import {AuthContext} from '../navigation/AuthProvider';
@@ -99,103 +100,132 @@ const SignupScreen = ({navigation}) => {
   };
 
   return (
-    <KeyboardAwareScrollView
-      style={{flex: 1, width: '100%'}}
-      keyboardShouldPersistTaps="always">
-      <View style={styles.container}>
-        <Text style={styles.text}>Create an account</Text>
-        <Text style={styles.infoText}>
-          Create your account to start tracking your expenses. You'll receive an email verification link after signing up.
-        </Text>
-        {errorMessage && (
-          <Text style={styles.errorMessage}>{errorMessage}</Text>
-        )}
-        <FormInput
-          labelValue={name}
-          onChangeText={setName}
-          placeholderText="Name"
-          iconType="user"
-          autoCapitalize="words"
-          autoCorrect={false}
-        />
-        <FormInput
-          labelValue={email}
-          onChangeText={setEmail}
-          placeholderText="Email"
-          iconType="mail"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        <FormInput
-          labelValue={phone}
-          onChangeText={setPhone}
-          placeholderText="Phone"
-          iconType="phone"
-          keyboardType="numeric"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        <View style={styles.balanceContainer}>
-          <FormInput
-            labelValue={balance}
-            onChangeText={setBalance}
-            placeholderText="Initial Balance"
-            iconType="wallet"
-            keyboardType="numeric"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <Text style={styles.balanceInfo}>
-            💡 Enter your current account balance. This helps you track your income and expenses accurately from the start. You can always update this later in your profile.
-          </Text>
-        </View>
-        <FormInput
-          labelValue={password}
-          onChangeText={setPassword}
-          placeholderText="Password"
-          iconType="lock"
-          secureTextEntry={true}
-        />
-        <FormInput
-          labelValue={confirmPassword}
-          onChangeText={setConfirmPassword}
-          placeholderText="Confirm Password"
-          iconType="lock"
-          secureTextEntry={true}
-        />
-        {loading ? (
-          <ActivityIndicator
-            size="large"
-            color="#677CD2"
-            style={styles.loader}
-          />
-        ) : (
-          <FormButton buttonTitle="Sign Up" onPress={handleSignup} />
-        )}
-        <View style={styles.textPrivate}>
-          <Text style={styles.color_textPrivate}>
-            By registering, you confirm that you accept our{' '}
-          </Text>
-          <TouchableOpacity onPress={() => alert('Terms Clicked!')}>
-            <Text style={[styles.color_textPrivate, {color: '#e88832'}]}>
-              Terms of service
+    <View style={styles.container}>
+      <KeyboardAwareScrollView
+        style={{flex: 1, width: '100%'}}
+        keyboardShouldPersistTaps="always"
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
+          <View style={styles.headerContainer}>
+            <Text style={styles.headerText}>Create Account</Text>
+            <Text style={styles.subtitleText}>
+              Start tracking your expenses with a new account
             </Text>
-          </TouchableOpacity>
-          <Text style={styles.color_textPrivate}> and </Text>
-          <Text style={[styles.color_textPrivate, {color: '#e88832'}]}>
-            Privacy Policy
-          </Text>
+          </View>
+
+          <Card style={styles.formCard}>
+            <View style={styles.cardContent}>
+              {errorMessage && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorMessage}>{errorMessage}</Text>
+                </View>
+              )}
+              
+              <View style={styles.inputSection}>
+                <Text style={styles.sectionTitle}>Personal Information</Text>
+                <FormInput
+                  labelValue={name}
+                  onChangeText={setName}
+                  placeholderText="Full Name"
+                  iconType="user"
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                />
+                <FormInput
+                  labelValue={email}
+                  onChangeText={setEmail}
+                  placeholderText="Email Address"
+                  iconType="mail"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <FormInput
+                  labelValue={phone}
+                  onChangeText={setPhone}
+                  placeholderText="Phone Number"
+                  iconType="phone"
+                  keyboardType="numeric"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+
+              <View style={styles.inputSection}>
+                <Text style={styles.sectionTitle}>Financial Information</Text>
+                <FormInput
+                  labelValue={balance}
+                  onChangeText={setBalance}
+                  placeholderText="Initial Balance"
+                  iconType="wallet"
+                  keyboardType="numeric"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <View style={styles.balanceInfoCard}>
+                  <Text style={styles.balanceInfo}>
+                    💡 Enter your current account balance to get started with accurate expense tracking
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.inputSection}>
+                <Text style={styles.sectionTitle}>Security</Text>
+                <FormInput
+                  labelValue={password}
+                  onChangeText={setPassword}
+                  placeholderText="Password"
+                  iconType="lock"
+                  secureTextEntry={true}
+                />
+                <FormInput
+                  labelValue={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholderText="Confirm Password"
+                  iconType="lock"
+                  secureTextEntry={true}
+                />
+              </View>
+
+              {loading ? (
+                <ActivityIndicator
+                  size="large"
+                  color="#677CD2"
+                  style={styles.loader}
+                />
+              ) : (
+                <FormButton buttonTitle="Create Account" onPress={handleSignup} />
+              )}
+            </View>
+          </Card>
+
+          <Card style={styles.termsCard}>
+            <View style={styles.termsContent}>
+              <Text style={styles.termsText}>
+                By creating an account, you agree to our{' '}
+                <TouchableOpacity onPress={() => alert('Terms Clicked!')}>
+                  <Text style={styles.termsLink}>Terms of Service</Text>
+                </TouchableOpacity>
+                {' '}and{' '}
+                <TouchableOpacity onPress={() => alert('Privacy Policy Clicked!')}>
+                  <Text style={styles.termsLink}>Privacy Policy</Text>
+                </TouchableOpacity>
+              </Text>
+            </View>
+          </Card>
+
+          <View style={styles.loginContainer}>
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => navigation.navigate('Login')}>
+              <Text style={styles.loginButtonText}>
+                Already have an account? <Text style={styles.loginLinkText}>Sign in here</Text>
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <TouchableOpacity
-          style={styles.forgotButton}
-          onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.navButtonText}>
-            Already have an account? Login here
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAwareScrollView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 };
 
@@ -203,75 +233,135 @@ export default SignupScreen;
 
 const styles = StyleSheet.create({
   container: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
     flex: 1,
+    backgroundColor: '#F4F6FA',
   },
-  text: {
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    paddingBottom: 20,
+  },
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  headerText: {
     fontFamily: 'Kufam-SemiBoldItalic',
-    fontSize: 28,
-    marginBottom: 10,
-    color: '#333',
+    fontSize: 32,
+    color: '#677CD2',
+    fontWeight: 'bold',
+    marginBottom: 8,
   },
-  infoText: {
-    fontSize: 14,
+  subtitleText: {
+    fontSize: 16,
     color: '#666',
     textAlign: 'center',
+    fontFamily: 'Lato-Regular',
+  },
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    elevation: 8,
+    shadowColor: '#677CD2',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
     marginBottom: 20,
-    paddingHorizontal: 20,
-    lineHeight: 20,
+  },
+  cardContent: {
+    padding: 25,
+  },
+  inputSection: {
+    marginBottom: 25,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#677CD2',
+    fontFamily: 'Lato-Bold',
+    marginBottom: 15,
+    borderBottomWidth: 2,
+    borderBottomColor: '#E8EBF7',
+    paddingBottom: 5,
+  },
+  errorContainer: {
+    backgroundColor: '#FFEBEE',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F44336',
   },
   errorMessage: {
-    color: 'red',
-    marginBottom: 10,
-    textAlign: 'center',
-    fontSize: 16,
-  },
-  loader: {
-    marginTop: 20,
-  },
-  navButton: {
-    marginTop: 15,
-  },
-  forgotButton: {
-    marginVertical: 10,
-  },
-  navButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
+    color: '#C62828',
+    fontSize: 14,
     fontFamily: 'Lato-Regular',
-    marginBottom: 10,
+    lineHeight: 20,
   },
-  textPrivate: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginVertical: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  color_textPrivate: {
-    fontSize: 13,
-    fontWeight: '400',
-    fontFamily: 'Lato-Regular',
-    color: 'grey',
-  },
-  balanceContainer: {
-    width: '100%',
-    marginBottom: 10,
+  balanceInfoCard: {
+    backgroundColor: '#F0F8FF',
+    borderRadius: 12,
+    padding: 15,
+    marginTop: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#677CD2',
   },
   balanceInfo: {
-    fontSize: 12,
+    fontSize: 13,
+    color: '#555',
+    fontFamily: 'Lato-Regular',
+    lineHeight: 18,
+  },
+  loader: {
+    marginVertical: 20,
+  },
+  termsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    elevation: 4,
+    shadowColor: '#677CD2',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    marginBottom: 20,
+  },
+  termsContent: {
+    padding: 20,
+  },
+  termsText: {
+    fontSize: 13,
     color: '#666',
-    marginTop: 5,
-    marginLeft: 10,
-    fontStyle: 'italic',
-    lineHeight: 16,
-    backgroundColor: '#f0f8ff',
-    padding: 10,
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#677CD2',
+    fontFamily: 'Lato-Regular',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  termsLink: {
+    color: '#677CD2',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  loginContainer: {
+    alignItems: 'center',
+    paddingBottom: 20,
+  },
+  loginButton: {
+    padding: 15,
+  },
+  loginButtonText: {
+    fontSize: 16,
+    color: '#666',
+    fontFamily: 'Lato-Regular',
+    textAlign: 'center',
+  },
+  loginLinkText: {
+    color: '#677CD2',
+    fontWeight: '600',
   },
 });
