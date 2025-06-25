@@ -41,6 +41,7 @@ const AddExpense = ({navigation}) => {
   ]);
   const [modalVisible, setModalVisible] = useState(false);
   const [openDate, setOpenDate] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const onDismissSingle = () => {
     setOpenDate(false);
@@ -81,8 +82,6 @@ const AddExpense = ({navigation}) => {
   }, []);
 
   const handleSubmit = async () => {
-    let imageUrl = await uploadImage();
-
     if (
       title === '' ||
       description === '' ||
@@ -93,20 +92,24 @@ const AddExpense = ({navigation}) => {
       alert('Please fill in all fields');
     } else {
       setUploading(true);
-
+      setIsSubmitting(true);
       try {
+        let imageUrl = null;
+
+        if (image) {
+          // Upload image to Firebase Storage
+          imageUrl = await uploadImageAsync();
+        }
+
         const userDocRef = firestore().collection('users').doc(getUser());
 
         await firestore().runTransaction(async transaction => {
           const userDoc = await transaction.get(userDocRef);
           const userData = userDoc.data();
-
-          const newBalance = userData.balance - parseFloat(amount);
+          const newBalance = userData.balance - parseInt(amount);
           transaction.update(userDocRef, {balance: newBalance});
 
-          const transactionsCollectionRef =
-            userDocRef.collection('transactions');
-
+          const transactionRef = userDocRef.collection('transactions');
           const expenseData = {
             userId: getUser(),
             title: title,
@@ -114,14 +117,12 @@ const AddExpense = ({navigation}) => {
             amount: amount,
             category: category,
             date: date,
+            image: imageUrl,
             createdAt: firestore.Timestamp.fromDate(new Date()),
             type: 'expense',
-            imageUrl: imageUrl,
           };
 
-          const expenseDocRef = await transactionsCollectionRef.add(
-            expenseData,
-          );
+          const expenseDocRef = await transactionRef.add(expenseData);
           expenseData.documentId = expenseDocRef.id;
           transaction.update(expenseDocRef, {documentId: expenseDocRef.id});
         });
@@ -139,6 +140,7 @@ const AddExpense = ({navigation}) => {
         alert('An error occurred while adding the expense. Please try again.');
       } finally {
         setUploading(false);
+        setIsSubmitting(false);
       }
     }
   };
@@ -237,137 +239,153 @@ const AddExpense = ({navigation}) => {
       description.trim() !== '' &&
       amount.trim() !== '' &&
       category !== '' &&
-      date !== undefined
+      date !== undefined &&
+      !isSubmitting
     );
   };
 
   if (uploading) {
     return (
       <View style={styles.progressBarContainer}>
-        <ActivityIndicator size="large" color="#333333" />
+        <ActivityIndicator size="large" color="#677CD2" />
       </View>
     );
   }
 
   return (
-    <SafeAreaProvider>
-      <View style={styles.container}>
-        <View style={styles.action}>
-          <FontAwesome name="font" color="#333333" size={20} />
-          <TextInput
-            placeholder="Title"
-            placeholderTextColor="#666666"
-            autoCorrect={false}
-            value={title}
-            onChangeText={text => setTitle(text)}
-            style={styles.textInput}
+    <Provider>
+      <SafeAreaProvider>
+        <View style={styles.container}>
+          <View style={styles.action}>
+            <FontAwesome name="font" color="#333333" size={20} />
+            <TextInput
+              placeholder="Title"
+              placeholderTextColor="#666666"
+              autoCorrect={false}
+              value={title}
+              onChangeText={text => setTitle(text)}
+              style={styles.textInput}
+              editable={!isSubmitting}
+            />
+          </View>
+          <View style={styles.action}>
+            <FontAwesome name="pencil" color="#333333" size={20} />
+            <TextInput
+              placeholder="Description"
+              placeholderTextColor="#666666"
+              autoCorrect={false}
+              value={description}
+              onChangeText={text => setDescription(text)}
+              style={styles.textInput}
+              editable={!isSubmitting}
+            />
+          </View>
+          <View style={styles.action}>
+            <DropDownPicker
+              placeholder="Category"
+              placeholderStyle={{
+                color: '#666666',
+              }}
+              open={open}
+              value={value}
+              items={items}
+              setOpen={setOpen}
+              setValue={setValue}
+              setItems={setItems}
+              style={styles.dropdown}
+              onChangeValue={text => setCategory(text)}
+              disabled={isSubmitting}
+            />
+          </View>
+          <View style={styles.action}>
+            <FontAwesome name="money" color="#333333" size={20} />
+            <TextInput
+              placeholder="Amount"
+              placeholderTextColor="#666666"
+              keyboardType="numeric"
+              autoCorrect={false}
+              value={amount}
+              onChangeText={text => setAmount(text)}
+              style={styles.textInput}
+              editable={!isSubmitting}
+            />
+          </View>
+          <View style={styles.action}>
+            <FontAwesome name="calendar" color="#333333" size={20} />
+            <TextInput
+              placeholder="Date"
+              placeholderTextColor="#666666"
+              autoCorrect={false}
+              value={date}
+              onChangeText={setDate}
+              style={styles.textInput}
+              onFocus={() => !isSubmitting && setOpenDate(true)}
+              editable={!isSubmitting}
+            />
+            <DatePickerModal
+              mode="single"
+              visible={openDate}
+              onDismiss={onDismissSingle}
+              date={date ? new Date(date) : new Date()}
+              onConfirm={onConfirmSingle}
+              saveLabel="Confirm"
+              label="Select date"
+              animationType="fade"
+            />
+          </View>
+          <View style={styles.action}>
+            <Button
+              mode="contained"
+              style={styles.button}
+              onPress={() => !isSubmitting && setModalVisible(true)}
+              disabled={isSubmitting}>
+              {image ? 'Change Image' : 'Attach Image'}
+            </Button>
+          </View>
+          {image && (
+            <View style={styles.action}>
+              <Image source={{uri: image.uri}} style={{width: 100, height: 100}} />
+            </View>
+          )}
+          <FormButton 
+            buttonTitle={isSubmitting ? "Adding Expense..." : "Submit"} 
+            onPress={() => handleSubmit()} 
+            disabled={!isFormValid()}
+            style={!isFormValid() && styles.disabledButton}
           />
-        </View>
-        <View style={styles.action}>
-          <FontAwesome name="pencil" color="#333333" size={20} />
-          <TextInput
-            placeholder="Description"
-            placeholderTextColor="#666666"
-            autoCorrect={false}
-            value={description}
-            onChangeText={text => setDescription(text)}
-            style={styles.textInput}
-          />
-        </View>
-        <View style={styles.action}>
-          <DropDownPicker
-            placeholder="Category"
-            placeholderStyle={{color: '#666666'}}
-            open={open}
-            value={value}
-            items={items}
-            setOpen={setOpen}
-            setValue={setValue}
-            setItems={setItems}
-            style={styles.dropdown}
-            onChangeValue={text => setCategory(text)}
-          />
-        </View>
-        <View style={styles.action}>
-          <FontAwesome name="money" color="#333333" size={20} />
-          <TextInput
-            placeholder="Amount"
-            placeholderTextColor="#666666"
-            keyboardType="numeric"
-            autoCorrect={false}
-            value={amount}
-            onChangeText={text => setAmount(text)}
-            style={styles.textInput}
-          />
-        </View>
-        <View style={styles.action}>
-          <FontAwesome name="calendar" color="#333333" size={20} />
-          <TextInput
-            placeholder="Date"
-            placeholderTextColor="#666666"
-            autoCorrect={false}
-            value={date}
-            onChangeText={setDate}
-            style={styles.textInput}
-            onFocus={() => setOpenDate(true)}
-          />
-          <DatePickerModal
-            mode="single"
-            visible={openDate}
-            onDismiss={onDismissSingle}
-            date={date ? new Date(date) : new Date()}
-            onConfirm={onConfirmSingle}
-            saveLabel="Confirm"
-            label="Select date"
-            animationType="fade"
-          />
-        </View>
-        {image != null ? (
-          <Image
-            source={{uri: image}}
-            style={{
-              width: 200,
-              height: 200,
-              alignSelf: 'center',
-              marginBottom: 10,
-            }}
-          />
-        ) : (
-          <FormButton buttonTitle="Upload Bill" onPress={() => toggleModal()} />
-        )}
-        <FormButton 
-          buttonTitle="Submit" 
-          onPress={() => handleSubmit()} 
-          disabled={!isFormValid()}
-          style={!isFormValid() && styles.disabledButton}
-        />
-        <Provider>
+          {isSubmitting && (
+            <View style={styles.loadingIndicator}>
+              <ActivityIndicator size="small" color="#677CD2" />
+            </View>
+          )}
           <Portal>
             <Modal
               visible={modalVisible}
-              onDismiss={toggleModal}
-              contentContainerStyle={styles.modalContent}>
-              <View>
-                <Button
-                  icon="camera"
-                  mode="contained"
-                  onPress={() => takePhotoFromCamera()}
-                  style={styles.button}>
-                  Take a photo
-                </Button>
-                <Button
-                  icon="image"
-                  mode="contained"
-                  onPress={() => choosePhotoFromLibrary()}
-                  style={[styles.button, {marginTop: 10}]}>
-                  Choose from gallery
-                </Button>
-              </View>
+              contentContainerStyle={styles.modalContent}
+              onDismiss={() => setModalVisible(false)}>
+              <Button
+                mode="contained"
+                style={styles.button}
+                onPress={() => {
+                  setModalVisible(false);
+                  takePhotoFromCamera();
+                }}>
+                Take Photo
+              </Button>
+              <Button
+                mode="contained"
+                style={styles.button}
+                onPress={() => {
+                  setModalVisible(false);
+                  choosePhotoFromLibrary();
+                }}>
+                Choose from Gallery
+              </Button>
             </Modal>
           </Portal>
-        </Provider>
-      </View>
-    </SafeAreaProvider>
+        </View>
+      </SafeAreaProvider>
+    </Provider>
   );
 };
 
@@ -417,5 +435,9 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.5,
+  },
+  loadingIndicator: {
+    alignItems: 'center',
+    marginTop: 10,
   },
 });
