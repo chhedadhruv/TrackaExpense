@@ -83,29 +83,9 @@ const SettleUpScreen = ({route, navigation}) => {
         .collection('splits')
         .add(settlementSplit);
 
-      // Create transaction if the current user is settling up
+      // Only update balance if the current user is involved (no transaction creation)
       if (selectedBorrower.email === currentUserEmail) {
-        const expenseData = {
-          userId: currentUser.uid,
-          title: `Settlement: ${note.trim() || 'Settlement Payment'}`,
-          description: `Settlement payment to ${selectedLender.name}`,
-          amount: settlementAmount.toString(),
-          category: 'Settlement',
-          date: new Date().toISOString().split('T')[0],
-          createdAt: firestore.FieldValue.serverTimestamp(),
-          type: 'expense',
-          splitId: splitRef.id,
-          groupId: group.id,
-          settlementId: settlementRef.id,
-        };
-
-        await firestore()
-          .collection('users')
-          .doc(currentUser.uid)
-          .collection('transactions')
-          .add(expenseData);
-
-        // Update user's balance
+        // Update user's balance without creating a transaction
         await firestore().runTransaction(async transaction => {
           const userDoc = await transaction.get(
             firestore().collection('users').doc(currentUser.uid),
@@ -116,28 +96,7 @@ const SettleUpScreen = ({route, navigation}) => {
           });
         });
       } else if (selectedLender.email === currentUserEmail) {
-        // Create income transaction if the current user is receiving the settlement
-        const incomeData = {
-          userId: currentUser.uid,
-          title: `Settlement Received: ${note.trim() || 'Settlement Payment'}`,
-          description: `Settlement received from ${selectedBorrower.name}`,
-          amount: settlementAmount.toString(),
-          category: 'Settlement',
-          date: new Date().toISOString().split('T')[0],
-          createdAt: firestore.FieldValue.serverTimestamp(),
-          type: 'income',
-          splitId: splitRef.id,
-          groupId: group.id,
-          settlementId: settlementRef.id,
-        };
-
-        await firestore()
-          .collection('users')
-          .doc(currentUser.uid)
-          .collection('transactions')
-          .add(incomeData);
-
-        // Update user's balance
+        // Update user's balance without creating a transaction
         await firestore().runTransaction(async transaction => {
           const userDoc = await transaction.get(
             firestore().collection('users').doc(currentUser.uid),

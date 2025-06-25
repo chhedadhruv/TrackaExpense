@@ -368,29 +368,9 @@ const CreateSplitScreen = ({route, navigation}) => {
         Alert.alert('Success', 'Split added successfully');
       }
 
-      // Only create transaction if the current user is the payer
+      // Only update balance if the current user is the payer (no transaction creation)
       if (paidBy.email === currentUserEmail) {
-        // Current user paid for the split
-        const expenseData = {
-          userId: currentUser.uid,
-          title: `Split: ${title}`,
-          description: `Split expense with ${selectedUsersList.map(u => u.name).join(', ')}`,
-          amount: splitAmount.toString(),
-          category: category,
-          date: date.toISOString().split('T')[0],
-          createdAt: splitDate,
-          type: 'expense',
-          splitId: splitRef.id,
-          groupId: group.id,
-        };
-
-        await firestore()
-          .collection('users')
-          .doc(currentUser.uid)
-          .collection('transactions')
-          .add(expenseData);
-
-        // Update user's balance
+        // Update user's balance without creating a transaction
         await firestore().runTransaction(async transaction => {
           const userDoc = await transaction.get(
             firestore().collection('users').doc(currentUser.uid),
