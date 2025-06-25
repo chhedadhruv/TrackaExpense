@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import {Card} from 'react-native-paper';
 import FormInput from '../components/FormInput';
 import FormButton from '../components/FormButton';
 import {AuthContext} from '../navigation/AuthProvider';
@@ -58,91 +59,168 @@ const LoginScreen = ({navigation}) => {
   };
 
   return (
-    <KeyboardAwareScrollView
-      style={{flex: 1, width: '100%'}}
-      keyboardShouldPersistTaps="always">
-      <View style={styles.container}>
-        <Image source={require('../assets/Tracka.png')} style={styles.logo} />
-        {errorMessage && (
-          <Text style={styles.errorMessage}>{errorMessage}</Text>
-        )}
+    <View style={styles.container}>
+      <KeyboardAwareScrollView
+        style={{flex: 1, width: '100%'}}
+        keyboardShouldPersistTaps="always"
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
+          <View style={styles.logoContainer}>
+            <Image source={require('../assets/Tracka.png')} style={styles.logo} />
+            <Text style={styles.welcomeText}>Welcome Back!</Text>
+            <Text style={styles.subtitleText}>Sign in to continue tracking your expenses</Text>
+          </View>
 
-        <FormInput
-          labelValue={email}
-          onChangeText={setEmail}
-          placeholderText="Email"
-          iconType="user"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
+          <Card style={styles.formCard}>
+            <View style={styles.cardContent}>
+              {errorMessage && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorMessage}>{errorMessage}</Text>
+                </View>
+              )}
 
-        <FormInput
-          labelValue={password}
-          onChangeText={setPassword}
-          placeholderText="Password"
-          iconType="lock"
-          secureTextEntry={true}
-        />
+              <FormInput
+                labelValue={email}
+                onChangeText={setEmail}
+                placeholderText="Email"
+                iconType="user"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
 
-        {loading ? (
-          <ActivityIndicator
-            size="large"
-            color="#677CD2"
-            style={styles.loadingIndicator}
-          />
-        ) : (
-          <FormButton buttonTitle="Sign In" onPress={handleSignIn} />
-        )}
+              <FormInput
+                labelValue={password}
+                onChangeText={setPassword}
+                placeholderText="Password"
+                iconType="lock"
+                secureTextEntry={true}
+              />
 
-        <TouchableOpacity
-          style={styles.forgotButton}
-          onPress={() => navigation.navigate('ForgotPassword')}>
-          <Text style={styles.navButtonText}>Forgot Password?</Text>
-        </TouchableOpacity>
+              {loading ? (
+                <ActivityIndicator
+                  size="large"
+                  color="#677CD2"
+                  style={styles.loadingIndicator}
+                />
+              ) : (
+                <FormButton buttonTitle="Sign In" onPress={handleSignIn} />
+              )}
 
-        <TouchableOpacity
-          style={styles.forgotButton}
-          onPress={() => navigation.navigate('Signup')}>
-          <Text style={styles.navButtonText}>
-            Don't have an account? Create one here
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAwareScrollView>
+              <TouchableOpacity
+                style={styles.forgotButton}
+                onPress={() => navigation.navigate('ForgotPassword')}>
+                <Text style={styles.forgotButtonText}>Forgot Password?</Text>
+              </TouchableOpacity>
+            </View>
+          </Card>
+
+          <View style={styles.signupContainer}>
+            <TouchableOpacity
+              style={styles.signupButton}
+              onPress={() => navigation.navigate('Signup')}>
+              <Text style={styles.signupButtonText}>
+                Don't have an account? <Text style={styles.signupLinkText}>Create one here</Text>
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAwareScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    justifyContent: 'center',
+    flex: 1,
+    backgroundColor: '#F4F6FA',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 40,
+  },
+  logoContainer: {
     alignItems: 'center',
-    padding: 20,
+    marginBottom: 30,
   },
   logo: {
-    height: 250,
-    width: 250,
+    height: 180,
+    width: 180,
     resizeMode: 'cover',
-    marginBottom: 10,
-    marginTop: 20,
+    marginBottom: 20,
+  },
+  welcomeText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#677CD2',
+    fontFamily: 'Kufam-SemiBoldItalic',
+    marginBottom: 8,
+  },
+  subtitleText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    fontFamily: 'Lato-Regular',
+  },
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    elevation: 8,
+    shadowColor: '#677CD2',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    marginBottom: 20,
+  },
+  cardContent: {
+    padding: 30,
+  },
+  errorContainer: {
+    backgroundColor: '#FFEBEE',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F44336',
   },
   errorMessage: {
-    color: 'red',
-    marginBottom: 10,
-    textAlign: 'center',
-    fontSize: 16,
+    color: '#C62828',
+    fontSize: 14,
+    fontFamily: 'Lato-Regular',
   },
   loadingIndicator: {
     marginVertical: 20,
   },
   forgotButton: {
-    marginVertical: 20,
+    alignItems: 'center',
+    marginTop: 20,
   },
-  navButtonText: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#333',
+  forgotButtonText: {
+    fontSize: 16,
+    color: '#677CD2',
     fontFamily: 'Lato-Regular',
+    fontWeight: '500',
+  },
+  signupContainer: {
+    alignItems: 'center',
+    paddingBottom: 40,
+  },
+  signupButton: {
+    padding: 15,
+  },
+  signupButtonText: {
+    fontSize: 16,
+    color: '#666',
+    fontFamily: 'Lato-Regular',
+    textAlign: 'center',
+  },
+  signupLinkText: {
+    color: '#677CD2',
+    fontWeight: '600',
   },
 });
 
