@@ -105,7 +105,7 @@ const SignupScreen = ({navigation}) => {
       <View style={styles.container}>
         <Text style={styles.text}>Create an account</Text>
         <Text style={styles.infoText}>
-          After signing up, please check your email to verify your account before logging in.
+          Create your account to start tracking your expenses. You'll receive an email verification link after signing up.
         </Text>
         {errorMessage && (
           <Text style={styles.errorMessage}>{errorMessage}</Text>
@@ -147,7 +147,7 @@ const SignupScreen = ({navigation}) => {
             autoCorrect={false}
           />
           <Text style={styles.balanceInfo}>
-            Enter your current account balance to start tracking your expenses
+            💡 Enter your current account balance. This helps you track your income and expenses accurately from the start. You can always update this later in your profile.
           </Text>
         </View>
         <FormInput
@@ -220,6 +220,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
     paddingHorizontal: 20,
+    lineHeight: 20,
   },
   errorMessage: {
     color: 'red',
@@ -266,5 +267,11 @@ const styles = StyleSheet.create({
     marginTop: 5,
     marginLeft: 10,
     fontStyle: 'italic',
+    lineHeight: 16,
+    backgroundColor: '#f0f8ff',
+    padding: 10,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#677CD2',
   },
 });

@@ -25,6 +25,7 @@ const AddIncome = ({navigation}) => {
   ]);
   const [openDate, setOpenDate] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const onDismissSingle = () => {
     setOpenDate(false);
@@ -58,6 +59,7 @@ const AddIncome = ({navigation}) => {
       alert('Please fill in all fields');
     } else {
       setIsLoading(true);
+      setIsSubmitting(true);
       try {
         const userDocRef = firestore().collection('users').doc(getUser());
 
@@ -96,6 +98,7 @@ const AddIncome = ({navigation}) => {
         alert('An error occurred while adding the income. Please try again.');
       } finally {
         setIsLoading(false);
+        setIsSubmitting(false);
       }
     }
   };
@@ -106,7 +109,8 @@ const AddIncome = ({navigation}) => {
       description.trim() !== '' &&
       amount.trim() !== '' &&
       category !== '' &&
-      date !== undefined
+      date !== undefined &&
+      !isSubmitting
     );
   };
 
@@ -130,6 +134,7 @@ const AddIncome = ({navigation}) => {
             value={title}
             onChangeText={text => setTitle(text)}
             style={styles.textInput}
+            editable={!isSubmitting}
           />
         </View>
         <View style={styles.action}>
@@ -141,6 +146,7 @@ const AddIncome = ({navigation}) => {
             value={description}
             onChangeText={text => setDescription(text)}
             style={styles.textInput}
+            editable={!isSubmitting}
           />
         </View>
         <View style={styles.action}>
@@ -157,6 +163,7 @@ const AddIncome = ({navigation}) => {
             setItems={setItems}
             style={styles.dropdown}
             onChangeValue={text => setCategory(text)}
+            disabled={isSubmitting}
           />
         </View>
         <View style={styles.action}>
@@ -169,6 +176,7 @@ const AddIncome = ({navigation}) => {
             value={amount}
             onChangeText={text => setAmount(text)}
             style={styles.textInput}
+            editable={!isSubmitting}
           />
         </View>
         <View style={styles.action}>
@@ -180,7 +188,8 @@ const AddIncome = ({navigation}) => {
             value={date}
             onChangeText={setDate}
             style={styles.textInput}
-            onFocus={() => setOpenDate(true)}
+            onFocus={() => !isSubmitting && setOpenDate(true)}
+            editable={!isSubmitting}
           />
           <DatePickerModal
             mode="single"
@@ -194,11 +203,16 @@ const AddIncome = ({navigation}) => {
           />
         </View>
         <FormButton 
-          buttonTitle="Submit" 
+          buttonTitle={isSubmitting ? "Adding Income..." : "Submit"} 
           onPress={() => handleSubmit()} 
           disabled={!isFormValid()}
           style={!isFormValid() && styles.disabledButton}
         />
+        {isSubmitting && (
+          <View style={styles.loadingIndicator}>
+            <ActivityIndicator size="small" color="#677CD2" />
+          </View>
+        )}
       </View>
     </SafeAreaProvider>
   );
@@ -239,5 +253,9 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.5,
+  },
+  loadingIndicator: {
+    alignItems: 'center',
+    marginTop: 10,
   },
 });

@@ -12,36 +12,36 @@ const AuthProvider = ({ children }) => {
   const handleAuthError = (error) => {
     const errorMessages = {
       'auth/user-not-found': {
-        title: 'User not found',
-        message: 'Please check your email address',
+        title: 'Account Not Found',
+        message: 'No account found with this email address. Please check your email or sign up for a new account.',
       },
       'auth/wrong-password': {
-        title: 'Wrong password',
-        message: 'Please check your password',
+        title: 'Incorrect Password',
+        message: 'The password you entered is incorrect. Please try again or reset your password.',
       },
       'auth/invalid-email': {
-        title: 'Invalid email',
-        message: 'Please check your email address',
+        title: 'Invalid Email',
+        message: 'Please enter a valid email address.',
       },
       'auth/user-disabled': {
-        title: 'User disabled',
-        message: 'This account has been disabled',
+        title: 'Account Disabled',
+        message: 'This account has been disabled. Please contact support for assistance.',
       },
       'auth/too-many-requests': {
-        title: 'Too many requests',
-        message: 'Please try again later',
+        title: 'Too Many Attempts',
+        message: 'Too many unsuccessful login attempts. Please wait a moment and try again.',
       },
       'auth/operation-not-allowed': {
-        title: 'Operation not allowed',
-        message: 'Please contact support',
+        title: 'Operation Not Allowed',
+        message: 'This sign-in method is not enabled. Please contact support.',
       },
       'auth/email-already-in-use': {
-        title: 'Email already in use',
-        message: 'Please use a different email address',
+        title: 'Email Already Registered',
+        message: 'An account with this email already exists. Please use a different email or try logging in.',
       },
       'auth/invalid-credential': {
-        title: 'Invalid credential',
-        message: 'Please check your credentials',
+        title: 'Login Failed',
+        message: 'Invalid email or password. Please check your credentials and try again.',
       },
     };
 
@@ -60,7 +60,7 @@ const AuthProvider = ({ children }) => {
         setUser,
         login: async (email, password) => {
           if (!email || !password) {
-            Alert.alert('Error', 'Email and password are required.', [{ text: 'OK' }]);
+            Alert.alert('Missing Information', 'Please enter both email and password.', [{ text: 'OK' }]);
             return;
           }
 
@@ -73,11 +73,27 @@ const AuthProvider = ({ children }) => {
               // Sign out the user
               await auth().signOut();
 
-              // Alert the user about email verification
+              // Alert the user about email verification with more helpful message
               Alert.alert(
-                'Email Not Verified', 
-                'Please verify your email before logging in. Check your inbox for the verification email.', 
-                [{ text: 'OK' }]
+                'Email Verification Required', 
+                'Please verify your email address before logging in. Check your inbox (and spam folder) for the verification email we sent when you signed up.\n\nDidn\'t receive the email? You can request a new one from the signup screen.', 
+                [
+                  { text: 'OK' },
+                  { 
+                    text: 'Resend Email', 
+                    onPress: async () => {
+                      try {
+                        // Sign in temporarily to send verification email
+                        const tempUser = await auth().signInWithEmailAndPassword(email, password);
+                        await tempUser.user.sendEmailVerification();
+                        await auth().signOut();
+                        Alert.alert('Verification Email Sent', 'A new verification email has been sent to your inbox.', [{ text: 'OK' }]);
+                      } catch (error) {
+                        Alert.alert('Error', 'Failed to send verification email. Please try again later.', [{ text: 'OK' }]);
+                      }
+                    }
+                  }
+                ]
               );
               return;
             }
@@ -88,7 +104,7 @@ const AuthProvider = ({ children }) => {
         },
         register: async (email, password, name, phone, balance) => {
           if (!email || !password || !name || !phone) {
-            Alert.alert('Error', 'All fields are required.', [{ text: 'OK' }]);
+            Alert.alert('Missing Information', 'All fields are required to create your account.', [{ text: 'OK' }]);
             return;
           }
 
@@ -109,7 +125,11 @@ const AuthProvider = ({ children }) => {
             });
             
             await auth().signOut();
-            Alert.alert('Success', 'Registration successful! Please check your email for verification.', [{ text: 'OK' }]);
+            Alert.alert(
+              'Account Created Successfully!', 
+              `Welcome to TrackaExpense, ${name}!\n\nWe've sent a verification email to ${email}. Please check your inbox (and spam folder) and click the verification link before logging in.\n\nOnce verified, you can start tracking your expenses right away!`, 
+              [{ text: 'Got it!' }]
+            );
           } catch (error) {
             handleAuthError(error);
             setErrorMessage(error.message);
@@ -119,19 +139,19 @@ const AuthProvider = ({ children }) => {
           try {
             await auth().signOut();
           } catch (error) {
-            Alert.alert('Error', 'Failed to log out.', [{ text: 'OK' }]);
+            Alert.alert('Error', 'Failed to log out. Please try again.', [{ text: 'OK' }]);
             console.log(error);
           }
         },
         forgotPassword: async (email) => {
           if (!email) {
-            Alert.alert('Error', 'Please enter an email address.', [{ text: 'OK' }]);
+            Alert.alert('Email Required', 'Please enter your email address to reset your password.', [{ text: 'OK' }]);
             return;
           }
 
           try {
             await auth().sendPasswordResetEmail(email);
-            Alert.alert('Success', 'Password reset email sent.', [{ text: 'OK' }]);
+            Alert.alert('Password Reset Email Sent', 'Check your inbox for instructions to reset your password.', [{ text: 'OK' }]);
           } catch (error) {
             handleAuthError(error);
             console.log(error);

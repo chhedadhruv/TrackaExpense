@@ -215,7 +215,7 @@ const SplitScreen = ({navigation}) => {
   const toggleUserSelection = user => {
     // Prevent adding yourself
     if (user.email === currentUser.email) {
-      Alert.alert('Invalid Selection', 'You cannot add yourself to the group');
+      Alert.alert('Cannot Add Yourself', 'You cannot add yourself to the group. You are automatically included as the group creator.');
       return;
     }
 
@@ -235,7 +235,7 @@ const SplitScreen = ({navigation}) => {
       const updatedMembers = [...group.members];
       const updatedMemberDetails = [...group.memberDetails];
       
-      // Remove current user from the lists
+      // Remove current user from the lists for editing
       const currentUserIndex = updatedMembers.indexOf(currentUser.email);
       if (currentUserIndex > -1) {
         updatedMembers.splice(currentUserIndex, 1);
@@ -269,7 +269,7 @@ const SplitScreen = ({navigation}) => {
     }
 
     if (selectedUsers.length === 0) {
-      Alert.alert('Validation Error', 'Please select at least one user');
+      Alert.alert('Validation Error', 'Please select at least one user to add to the group');
       return;
     }
 
@@ -295,7 +295,7 @@ const SplitScreen = ({navigation}) => {
         // Update local state
         setGroups(prev => prev.map(group => 
           group.id === editingGroupId 
-            ? { ...group, ...groupData, memberDetails: [...selectedUsers, { email: currentUser.email, name: currentUser.displayName }] }
+            ? { ...group, ...groupData, memberDetails: [...selectedUsers, { email: currentUser.email, name: currentUser.displayName || 'You' }] }
             : group
         ));
 
@@ -381,8 +381,11 @@ const SplitScreen = ({navigation}) => {
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{user.name || user.email}</Text>
         <Text style={styles.userEmail}>{user.email}</Text>
+        {user.email === currentUser.email && (
+          <Text style={styles.youLabel}>(You - Group Creator)</Text>
+        )}
       </View>
-      {withCheckbox && (
+      {withCheckbox && user.email !== currentUser.email && (
         <Checkbox
           status={
             selectedUsers.some(selected => selected.email === user.email)
@@ -563,18 +566,32 @@ const SplitScreen = ({navigation}) => {
                 keyboardType="email-address"
               />
 
-              {userDetails && renderUserCard(userDetails, true)}
+              {userDetails && userDetails.email !== currentUser.email && renderUserCard(userDetails, true)}
+              {userDetails && userDetails.email === currentUser.email && (
+                <View style={styles.warningCard}>
+                  <Text style={styles.warningText}>
+                    ⚠️ You cannot add yourself to the group. You are automatically included.
+                  </Text>
+                </View>
+              )}
 
               <View style={styles.selectedContainer}>
                 <Text style={styles.sectionHeader}>Selected Users:</Text>
                 {selectedUsers.map(user => renderUserCard(user, true))}
+                {selectedUsers.length === 0 && (
+                  <Text style={styles.emptySelectionText}>
+                    No users selected yet. Search and add members above.
+                  </Text>
+                )}
               </View>
 
               <TouchableOpacity
                 style={styles.createGroupButton}
                 onPress={createGroup}>
-                <Text style={styles.createGroupButtonText}>Create Group</Text>
-                <AntDesign name="save" size={20} color="#fff" />
+                <Text style={styles.createGroupButtonText}>
+                  {editingGroupId ? 'Update Group' : 'Create Group'}
+                </Text>
+                <AntDesign name={editingGroupId ? "edit" : "save"} size={20} color="#fff" />
               </TouchableOpacity>
             </View>
           )}
@@ -874,6 +891,32 @@ const styles = StyleSheet.create({
     color: PRIMARY_COLOR,
     fontSize: 16,
     fontWeight: '500',
+  },
+  youLabel: {
+    fontSize: 12,
+    color: PRIMARY_COLOR,
+    fontWeight: '600',
+    fontStyle: 'italic',
+  },
+  warningCard: {
+    backgroundColor: '#fff3cd',
+    borderColor: '#ffeaa7',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 15,
+    marginVertical: 10,
+  },
+  warningText: {
+    color: '#856404',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  emptySelectionText: {
+    color: '#666',
+    fontSize: 14,
+    textAlign: 'center',
+    paddingVertical: 20,
+    fontStyle: 'italic',
   },
 });
 
