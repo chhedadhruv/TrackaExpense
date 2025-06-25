@@ -9,23 +9,40 @@ const OnboardingScreen = ({navigation}) => {
       onDone={() => navigation.replace('Login')}
       pages={[
         {
-          backgroundColor: '#fff',
-          image: <Image source={require('../assets/onboarding-img1.png')} />,
-          title: 'Expense Tracker',
-          subtitle:
-            'Effortlessly Manage Your Finances and Spending',
+          backgroundColor: '#FCE9E4',
+          image: (
+            <Image
+              source={require('../assets/monitoring.png')}
+              style={styles.image}
+              resizeMode="contain"
+            />
+          ),
+          title: 'Track Your Finances',
+          subtitle: 'Monitor your expenses and track your spending habits.',
         },
         {
-          backgroundColor: '#fff',
-          image: <Image source={require('../assets/onboarding-img2.png')} />,
-          title: 'Split Bill',
-          subtitle: 'Easily Share Expenses with Friends and Split Costs',
+          backgroundColor: '#FDE7DC',
+          image: (
+            <Image
+              source={require('../assets/split.png')}
+              style={styles.image}
+              resizeMode="contain"
+            />
+          ),
+          title: 'Share Expenses',
+          subtitle: 'Quickly split payments and settle up with friends.',
         },
         {
-            backgroundColor: '#fff',
-            image: <Image source={require('../assets/onboarding-img3.png')} />,
-            title: 'Save and Buy',
-            subtitle: "Achieve Your Financial Goals and Plan Your Future",
+          backgroundColor: '#FDE9DF',
+          image: (
+            <Image
+              source={require('../assets/savings.png')}
+              style={styles.image}
+              resizeMode="contain"
+            />
+          ),
+          title: 'Save for What Matters',
+          subtitle: 'Set savings goals and build a better future, one coin at a time.',
         },
       ]}
     />
@@ -35,9 +52,8 @@ const OnboardingScreen = ({navigation}) => {
 export default OnboardingScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  image: {
+    width: 300,
+    height: 300,
   },
 });
