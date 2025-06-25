@@ -8,10 +8,13 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import {Text} from 'react-native-paper';
+import {Text, Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
+
+const PRIMARY_COLOR = '#677CD2';
+const BACKGROUND_COLOR = '#F4F6FA';
 
 const TransactionDetailScreen = ({route, navigation}) => {
   const {transaction} = route.params;
@@ -86,79 +89,135 @@ const TransactionDetailScreen = ({route, navigation}) => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#677CD2" />
+        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <Text style={styles.loadingText}>Deleting transaction...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.myCard}>
-        <View style={styles.cardContentWithIcon}>
-          <View style={styles.Icon}>
-            <MaterialCommunityIcons name="wallet" color="#fff" size={24} />
+    <View style={styles.container}>
+      {/* Header Section */}
+      <View style={styles.headerSection}>
+        <View style={styles.headerContent}>
+          <View style={styles.transactionTypeIcon}>
+            <MaterialCommunityIcons
+              name={transaction.type === 'income' ? 'trending-up' : 'trending-down'}
+              size={24}
+              color={transaction.type === 'income' ? '#25B07F' : '#F64E4E'}
+            />
           </View>
-          <View style={styles.cardContent}>
-            <Text style={styles.TitleText}>{transaction.title}</Text>
-            <Text style={styles.BalanceText}>
-              ₹{parseInt(transaction.amount).toLocaleString()}
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerTitle}>{transaction.title}</Text>
+            <Text style={styles.headerAmount}>
+              {transaction.type === 'income' ? '+ ' : '- '}₹{parseInt(transaction.amount).toLocaleString()}
             </Text>
           </View>
         </View>
+      </View>
 
-        <View style={styles.dataCard}>
-          <View style={styles.cardContent}>
-            <Text style={styles.TitleText}>Date</Text>
-            <Text style={styles.ValueText}>{transaction.date}</Text>
-          </View>
-          <View style={styles.cardContent}>
-            <Text style={styles.TitleText}>Category</Text>
-            <Text style={styles.ValueText}>{transaction.category}</Text>
-          </View>
-          <View style={styles.cardContent}>
-            <Text style={styles.TitleText}>Type</Text>
-            <Text style={styles.ValueText}>
-              {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
-            </Text>
-          </View>
-        </View>
-
-        {transaction.description && (
-          <View style={[styles.dataCard, {marginTop: 10}]}>
-            <View style={styles.cardContent}>
-              <Text style={styles.TitleText}>Description</Text>
-              <Text style={styles.ValueText}>{transaction.description}</Text>
+      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        {/* Transaction Details Card */}
+        <Card style={styles.detailsCard}>
+          <View style={styles.detailsCardContent}>
+            <Text style={styles.sectionTitle}>Transaction Details</Text>
+            
+            <View style={styles.detailRow}>
+              <View style={styles.detailIconContainer}>
+                <MaterialCommunityIcons name="calendar" size={20} color={PRIMARY_COLOR} />
+              </View>
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Date</Text>
+                <Text style={styles.detailValue}>{transaction.date}</Text>
+              </View>
             </View>
+
+            <View style={styles.detailRow}>
+              <View style={styles.detailIconContainer}>
+                <MaterialCommunityIcons name="tag" size={20} color={PRIMARY_COLOR} />
+              </View>
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Category</Text>
+                <Text style={styles.detailValue}>{transaction.category}</Text>
+              </View>
+            </View>
+
+            <View style={styles.detailRow}>
+              <View style={styles.detailIconContainer}>
+                <MaterialCommunityIcons 
+                  name={transaction.type === 'income' ? 'plus-circle' : 'minus-circle'} 
+                  size={20} 
+                  color={PRIMARY_COLOR} 
+                />
+              </View>
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Type</Text>
+                <View style={[styles.typeTag, {backgroundColor: transaction.type === 'income' ? '#E8F5E8' : '#FFEBEE'}]}>
+                  <Text style={[styles.typeText, {color: transaction.type === 'income' ? '#25B07F' : '#F64E4E'}]}>
+                    {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {transaction.description && (
+              <View style={styles.detailRow}>
+                <View style={styles.detailIconContainer}>
+                  <MaterialCommunityIcons name="text" size={20} color={PRIMARY_COLOR} />
+                </View>
+                <View style={styles.detailContent}>
+                  <Text style={styles.detailLabel}>Description</Text>
+                  <Text style={styles.detailValue}>{transaction.description}</Text>
+                </View>
+              </View>
+            )}
+          </View>
+        </Card>
+
+        {/* Receipt Image Card */}
+        {transaction.imageUrl && (
+          <Card style={styles.imageCard}>
+            <TouchableOpacity onPress={onImagePress} style={styles.imageCardContent}>
+              <View style={styles.imageContainer}>
+                <Image
+                  source={{uri: transaction.imageUrl}}
+                  style={styles.receiptImage}
+                />
+              </View>
+              <View style={styles.imageInfo}>
+                <Text style={styles.imageTitle}>Receipt Image</Text>
+                <Text style={styles.imageSubtitle}>Tap to view full size</Text>
+              </View>
+              <MaterialCommunityIcons 
+                name="chevron-right" 
+                size={24} 
+                color={PRIMARY_COLOR} 
+              />
+            </TouchableOpacity>
+          </Card>
+        )}
+
+        {/* Action Buttons */}
+        <View style={styles.actionSection}>
+          <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
+            <MaterialCommunityIcons name="pencil" size={20} color="#FFFFFF" />
+            <Text style={styles.editButtonText}>Edit Transaction</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+            <MaterialCommunityIcons name="delete" size={20} color="#FFFFFF" />
+            <Text style={styles.deleteButtonText}>Delete Transaction</Text>
+          </TouchableOpacity>
+        </View>
+
+        {error && (
+          <View style={styles.errorContainer}>
+            <MaterialCommunityIcons name="alert-circle" size={20} color="#F64E4E" />
+            <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
-      </View>
-
-      {transaction.imageUrl && (
-        <TouchableOpacity onPress={onImagePress}>
-          <View style={styles.transactionsCard}>
-            <Image
-              source={{uri: transaction.imageUrl}}
-              style={styles.transactionsCardImage}
-            />
-            <View style={styles.transactionsCardContent}>
-              <Text style={styles.transactionsCardTitle}>Receipt Image</Text>
-              <MaterialCommunityIcons name="chevron-right" size={24} color="#959698" />
-            </View>
-          </View>
-        </TouchableOpacity>
-      )}
-
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={handleEdit}>
-          <Text style={styles.buttonText}>Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-          <Text style={styles.buttonText}>Delete</Text>
-        </TouchableOpacity>
-      </View>
-
-      {error && <Text style={styles.errorText}>{error}</Text>}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
@@ -167,123 +226,228 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: BACKGROUND_COLOR,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: PRIMARY_COLOR,
+    marginTop: 15,
+    fontFamily: 'Lato-Regular',
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 10,
+    backgroundColor: BACKGROUND_COLOR,
   },
-  myCard: {
-    margin: 5,
-    padding: 20,
-    backgroundColor: '#677CD2',
-    borderRadius: 12,
+  headerSection: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 25,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
-  dataCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  cardContent: {
-    flexDirection: 'column',
-    justifyContent: 'center',
-  },
-  cardContentWithIcon: {
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  Icon: {
-    width: 43,
-    height: 43,
-    borderRadius: 12,
-    backgroundColor: '#7A8EE0',
+  transactionTypeIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 20,
+    backgroundColor: '#F8F9FA',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 20,
   },
-  TitleText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#CED6EC',
-    marginBottom: 5,
+  headerInfo: {
+    flex: 1,
   },
-  BalanceText: {
-    fontSize: 26,
-    fontWeight: '500',
-    color: '#fff',
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    marginBottom: 6,
+    fontFamily: 'Kufam-SemiBoldItalic',
   },
-  ValueText: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#fff',
+  headerAmount: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: PRIMARY_COLOR,
+    fontFamily: 'Lato-Bold',
   },
-  transactionsCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-    marginVertical: 5,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+  scrollContainer: {
+    flex: 1,
+  },
+  detailsCard: {
+    margin: 20,
+    borderRadius: 16,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
-  transactionsCardImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 10,
+  detailsCardContent: {
+    padding: 25,
   },
-  transactionsCardContent: {
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    marginBottom: 20,
+    fontFamily: 'Lato-Bold',
+  },
+  detailRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flex: 1,
-    marginLeft: 10,
+    alignItems: 'flex-start',
+    marginBottom: 20,
   },
-  transactionsCardTitle: {
+  detailIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#E8EBF7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 15,
+  },
+  detailContent: {
+    flex: 1,
+  },
+  detailLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#3A3B3E',
+    color: '#666',
+    marginBottom: 6,
+    fontFamily: 'Lato-Regular',
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingVertical: 15,
-  },
-  button: {
-    width: '48%',
-    height: 45,
-    borderRadius: 24,
-    backgroundColor: '#677CD2',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
+  detailValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
-    textTransform: 'uppercase',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
   },
-  deleteButton: {
-    width: '48%',
-    height: 45,
-    borderRadius: 24,
-    backgroundColor: '#F64E4E',
+  typeTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  typeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Lato-Bold',
+  },
+  imageCard: {
+    margin: 20,
+    borderRadius: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
+  imageCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+  },
+  imageContainer: {
+    marginRight: 15,
+  },
+  receiptImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+  },
+  imageInfo: {
+    flex: 1,
+  },
+  imageTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    marginBottom: 4,
+    fontFamily: 'Lato-Bold',
+  },
+  imageSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Lato-Regular',
+  },
+  actionSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+    gap: 15,
+  },
+  editButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: PRIMARY_COLOR,
+    paddingVertical: 16,
+    borderRadius: 12,
+    elevation: 4,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  editButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginLeft: 8,
+    fontFamily: 'Lato-Bold',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F64E4E',
+    paddingVertical: 16,
+    borderRadius: 12,
+    elevation: 4,
+    shadowColor: '#F64E4E',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  deleteButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginLeft: 8,
+    fontFamily: 'Lato-Bold',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFEBEE',
+    padding: 15,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F64E4E',
   },
   errorText: {
+    fontSize: 14,
     color: '#F64E4E',
-    marginTop: 20,
-    textAlign: 'center',
+    marginLeft: 10,
+    flex: 1,
+    fontFamily: 'Lato-Regular',
   },
 });
 

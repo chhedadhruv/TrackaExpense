@@ -15,6 +15,11 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import DropDownPicker from 'react-native-dropdown-picker';
 
+const PRIMARY_COLOR = '#677CD2';
+const BACKGROUND_COLOR = '#F4F6FA';
+const INCOME_COLOR = '#25B07F';
+const EXPENSE_COLOR = '#F64E4E';
+
 const StatisticScreen = ({navigation}) => {
   const [selectedBar, setSelectedBar] = useState(null);
   const [userData, setUserData] = useState(null);
@@ -237,8 +242,15 @@ const StatisticScreen = ({navigation}) => {
   };
 
   return (
-    <ScrollView>
-      <View style={styles.container}>
+    <View style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
+        {/* Header Section */}
+        <View style={styles.headerSection}>
+          <Text style={styles.headerText}>Statistics</Text>
+          <Text style={styles.subHeaderText}>Track your financial insights</Text>
+        </View>
+
+        {/* Time Range Picker */}
         <View style={styles.timeRangeSection}>
           <DropDownPicker
             open={timeRangeOpen}
@@ -250,189 +262,232 @@ const StatisticScreen = ({navigation}) => {
             textStyle={styles.timeRangePickerText}
             placeholder="Select Time Range"
             containerStyle={styles.timeRangePickerContainer}
+            dropDownContainerStyle={styles.dropDownContainer}
           />
         </View>
 
+        {/* Summary Cards */}
         <View style={styles.cardSection}>
           <Card style={styles.incomeCard}>
-            <Card.Content>
-              <View style={styles.cardContent}>
-                <Text style={styles.cardText}>Total Income</Text>
-                <Text style={styles.cardIncomeText}>
-                  ₹ {totalIncome.toFixed(2)}
-                </Text>
+            <View style={styles.cardContent}>
+              <View style={styles.cardHeader}>
+                <View style={styles.cardIcon}>
+                  <MaterialCommunityIcons
+                    name="arrow-down"
+                    size={20}
+                    color={INCOME_COLOR}
+                  />
+                </View>
+                <Text style={styles.cardTitle}>Total Income</Text>
               </View>
-            </Card.Content>
+              <Text style={styles.cardIncomeAmount}>
+                ₹ {totalIncome.toLocaleString()}
+              </Text>
+            </View>
           </Card>
+          
           <Card style={styles.expenseCard}>
-            <Card.Content>
-              <View style={styles.cardContent}>
-                <Text style={styles.cardText}>Total Expense</Text>
-                <Text style={styles.cardExpenseText}>
-                  ₹ {totalExpense.toFixed(2)}
-                </Text>
+            <View style={styles.cardContent}>
+              <View style={styles.cardHeader}>
+                <View style={styles.cardIcon}>
+                  <MaterialCommunityIcons
+                    name="arrow-up"
+                    size={20}
+                    color={EXPENSE_COLOR}
+                  />
+                </View>
+                <Text style={styles.cardTitle}>Total Expense</Text>
               </View>
-            </Card.Content>
+              <Text style={styles.cardExpenseAmount}>
+                ₹ {totalExpense.toLocaleString()}
+              </Text>
+            </View>
           </Card>
         </View>
 
-        <View style={styles.statisticSection}>
+        {/* Statistics Chart Section */}
+        <Card style={styles.statisticCard}>
           <View style={styles.statisticHeader}>
-            <Text style={styles.statisticHeaderText}>Statistics</Text>
+            <Text style={styles.statisticHeaderText}>Financial Overview</Text>
             <Text style={styles.statisticHeaderSubText}>
               {getTimeRangeLabel()}
             </Text>
           </View>
 
-          <BarChart
-            data={barData}
-            height={220}
-            barWidth={15}
-            spacing={2}
-            roundedTop
-            xAxisThickness={0}
-            yAxisThickness={0}
-            yAxisTextStyle={{color: 'gray'}}
-            xAxisLabelTextStyle={{
-              color: 'gray',
-              fontSize: 11,
-              textAlign: 'center',
-              width: 60,
-              marginTop: 15,
-            }}
-            noOfSections={3}
-            isAnimated
-            onPress={handleBarPress}
-            yAxisLabelFormatter={value => `₹${value}`}
-            yAxisLabelWidth={50}
-            yAxisLabelPrefix={'₹'}
-            width={Dimensions.get('window').width - 40}
-            xAxisLabelsHeight={40}
-            horizontalRulesStyle={{color: '#ECECEC'}}
-            rulesColor="#ECECEC"
-            maxValue={
-              Math.max(
-                ...barData
-                  .filter(item => item.value > 0)
-                  .map(item => item.value),
-              ) * 1.1
-            }
-            initialSpacing={20}
-            endSpacing={20}
-            hideRules={true}
-            barBorderRadius={4}
-            showFractionalValue={false}
-            hideDataPoints={true}
-          />
+          <View style={styles.chartContainer}>
+            <BarChart
+              data={barData}
+              height={220}
+              barWidth={15}
+              spacing={2}
+              roundedTop
+              xAxisThickness={0}
+              yAxisThickness={0}
+              yAxisTextStyle={{color: '#888', fontFamily: 'Lato-Regular'}}
+              xAxisLabelTextStyle={{
+                color: '#888',
+                fontSize: 11,
+                textAlign: 'center',
+                width: 60,
+                marginTop: 15,
+                fontFamily: 'Lato-Regular',
+              }}
+              noOfSections={3}
+              isAnimated
+              onPress={handleBarPress}
+              yAxisLabelFormatter={value => `₹${value}`}
+              yAxisLabelWidth={50}
+              yAxisLabelPrefix={'₹'}
+              width={Dimensions.get('window').width - 80}
+              xAxisLabelsHeight={40}
+              horizontalRulesStyle={{color: '#ECECEC'}}
+              rulesColor="#ECECEC"
+              maxValue={
+                Math.max(
+                  ...barData
+                    .filter(item => item.value > 0)
+                    .map(item => item.value),
+                ) * 1.1
+              }
+              initialSpacing={20}
+              endSpacing={20}
+              hideRules={true}
+              barBorderRadius={4}
+              showFractionalValue={false}
+              hideDataPoints={true}
+            />
 
-          {selectedBar && (
-            <View style={styles.selectedBarContainer}>
-              <Text style={styles.selectedBarText}>
-                {selectedBar.frontColor === '#677CD2' ? 'Income' : 'Expense'}: ₹{' '}
-                {selectedBar.value.toFixed(2)}
-              </Text>
-            </View>
-          )}
-        </View>
+            {selectedBar && (
+              <View style={styles.selectedBarContainer}>
+                <Text style={styles.selectedBarText}>
+                  {selectedBar.frontColor === '#677CD2' ? 'Income' : 'Expense'}: ₹{' '}
+                  {selectedBar.value.toFixed(2)}
+                </Text>
+              </View>
+            )}
+          </View>
+        </Card>
 
+        {/* Filter Buttons */}
         <View style={styles.buttonSection}>
           <TouchableOpacity
-            style={
-              selectedBtn === 'Income'
-                ? styles.selectedBtn
-                : styles.notSelectedBtn
-            }
+            style={[
+              styles.filterButton,
+              selectedBtn === 'Income' && styles.selectedFilterButton
+            ]}
             onPress={() => handleBtnPress('Income')}>
             <Text
-              style={
-                selectedBtn === 'Income'
-                  ? styles.selectedBtnText
-                  : styles.notSelectedBtnText
-              }>
+              style={[
+                styles.filterButtonText,
+                selectedBtn === 'Income' && styles.selectedFilterButtonText
+              ]}>
               Income
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={
-              selectedBtn === 'Expense'
-                ? styles.selectedBtn
-                : styles.notSelectedBtn
-            }
+            style={[
+              styles.filterButton,
+              selectedBtn === 'Expense' && styles.selectedFilterButton
+            ]}
             onPress={() => handleBtnPress('Expense')}>
             <Text
-              style={
-                selectedBtn === 'Expense'
-                  ? styles.selectedBtnText
-                  : styles.notSelectedBtnText
-              }>
+              style={[
+                styles.filterButtonText,
+                selectedBtn === 'Expense' && styles.selectedFilterButtonText
+              ]}>
               Expense
             </Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.transactionsList}>
-          {filteredTransactions.length > 0 ? (
-            filteredTransactions
-              .filter(
-                transaction =>
-                  (selectedBtn === 'Income' && transaction.type === 'income') ||
-                  (selectedBtn === 'Expense' && transaction.type === 'expense'),
-              )
-              .map(transaction => (
-                <Card
-                  style={styles.transactionsCard}
-                  key={transaction.id}
-                  onPress={() =>
-                    navigation.navigate('TransactionDetail', {
-                      transaction,
-                    })
-                  }>
-                  <View style={styles.transactionsCardContent}>
-                    <View style={styles.transactionsCardDetails}>
-                      <View style={styles.transactionsCardIcon}>
-                        <MaterialCommunityIcons
-                          name={getCategoryIcon(
-                            transaction.category,
-                            transaction.type,
-                          )}
-                          size={25}
-                          color="#CBD3EE"
-                        />
-                      </View>
-                      <View style={styles.transactionsCardInfo}>
-                        <Text style={styles.transactionsCardTitle}>
-                          {transaction.title}
-                        </Text>
-                        <View style={styles.transactionsCardDateAndTime}>
+        {/* Transactions List */}
+        <View style={styles.transactionsSection}>
+          <Text style={styles.transactionsHeaderText}>
+            {selectedBtn} Transactions
+          </Text>
+          <Text style={styles.transactionsSubHeaderText}>
+            {filteredTransactions.filter(
+              transaction =>
+                (selectedBtn === 'Income' && transaction.type === 'income') ||
+                (selectedBtn === 'Expense' && transaction.type === 'expense'),
+            ).length} transaction{filteredTransactions.filter(
+              transaction =>
+                (selectedBtn === 'Income' && transaction.type === 'income') ||
+                (selectedBtn === 'Expense' && transaction.type === 'expense'),
+            ).length !== 1 ? 's' : ''}
+          </Text>
+          
+          <View style={styles.transactionsList}>
+            {filteredTransactions.length > 0 ? (
+              filteredTransactions
+                .filter(
+                  transaction =>
+                    (selectedBtn === 'Income' && transaction.type === 'income') ||
+                    (selectedBtn === 'Expense' && transaction.type === 'expense'),
+                )
+                .map(transaction => (
+                  <Card
+                    style={styles.transactionsCard}
+                    key={transaction.id}
+                    onPress={() =>
+                      navigation.navigate('TransactionDetail', {
+                        transaction,
+                      })
+                    }>
+                    <View style={styles.transactionsCardContent}>
+                      <View style={styles.transactionsCardDetails}>
+                        <View style={styles.transactionsCardIcon}>
+                          <MaterialCommunityIcons
+                            name={getCategoryIcon(
+                              transaction.category,
+                              transaction.type,
+                            )}
+                            size={24}
+                            color={PRIMARY_COLOR}
+                          />
+                        </View>
+                        <View style={styles.transactionsCardInfo}>
+                          <Text style={styles.transactionsCardTitle} numberOfLines={1}>
+                            {transaction.title.length > 25
+                              ? transaction.title.slice(0, 25) + '...'
+                              : transaction.title}
+                          </Text>
                           <Text style={styles.transactionsCardDate}>
                             {transaction.date}
                           </Text>
-                          <Text style={styles.transactionsCardTime}>
-                            {transaction.time}
-                          </Text>
                         </View>
                       </View>
+                      <View style={styles.transactionsCardAmount}>
+                        <Text
+                          style={
+                            transaction.type === 'income'
+                              ? styles.transactionsCardAmountIncomeText
+                              : styles.transactionsCardAmountExpenseText
+                          }>
+                          {transaction.type === 'income' ? '+ ₹' : '- ₹'}
+                          {parseInt(transaction.amount, 10).toLocaleString()}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={styles.transactionsCardAmount}>
-                      <Text
-                        style={
-                          transaction.type === 'income'
-                            ? styles.transactionsCardAmountIncomeText
-                            : styles.transactionsCardAmountExpenseText
-                        }>
-                        {transaction.type === 'income' ? '+' : '-'} ₹
-                        {transaction.amount}
-                      </Text>
-                    </View>
-                  </View>
-                </Card>
-              ))
-          ) : (
-            <Text style={styles.noTransactionsText}>No Transactions</Text>
-          )}
+                  </Card>
+                ))
+            ) : (
+              <View style={styles.emptyState}>
+                <MaterialCommunityIcons 
+                  name="chart-line" 
+                  size={48} 
+                  color="#CBD3EE" 
+                />
+                <Text style={styles.emptyStateText}>No {selectedBtn.toLowerCase()} transactions</Text>
+                <Text style={styles.emptyStateSubText}>
+                  No {selectedBtn.toLowerCase()} data available for the selected period
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
@@ -457,80 +512,171 @@ const getCategoryIcon = (category, type) => {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    flex: 1,
+    backgroundColor: BACKGROUND_COLOR,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  headerSection: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 15,
+  },
+  headerText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    fontFamily: 'Kufam-SemiBoldItalic',
+  },
+  subHeaderText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 4,
+    fontFamily: 'Lato-Regular',
   },
   timeRangeSection: {
+    marginHorizontal: 20,
     marginBottom: 20,
     zIndex: 1000,
   },
   timeRangePicker: {
-    borderRadius: 12,
-    borderColor: '#E5E5E5',
+    borderRadius: 16,
+    borderColor: '#E8EBF7',
+    backgroundColor: '#FFFFFF',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   timeRangePickerText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '500',
-    color: '#959698',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
   },
   timeRangePickerContainer: {
     marginBottom: 10,
   },
+  dropDownContainer: {
+    borderColor: '#E8EBF7',
+    backgroundColor: '#FFFFFF',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
   cardSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginHorizontal: 20,
+    marginBottom: 20,
     zIndex: 1,
   },
   incomeCard: {
     width: '48%',
-    height: 80,
-    borderRadius: 12,
-    backgroundColor: '#E6EBFE',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   expenseCard: {
     width: '48%',
-    height: 80,
-    borderRadius: 12,
-    backgroundColor: '#F6E5DC',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   cardContent: {
-    flexDirection: 'column',
-    justifyContent: 'space-between',
+    padding: 16,
+  },
+  cardHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    height: '100%',
+    marginBottom: 12,
   },
-  cardText: {
-    fontSize: 12,
+  cardIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#F4F6FA',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  cardTitle: {
+    fontSize: 14,
     fontWeight: '500',
-    color: '#AAB1CF',
+    color: '#666',
+    fontFamily: 'Lato-Regular',
   },
-  cardIncomeText: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#677CD2',
+  cardIncomeAmount: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: INCOME_COLOR,
+    fontFamily: 'Lato-Bold',
   },
-  cardExpenseText: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#E98852',
+  cardExpenseAmount: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: EXPENSE_COLOR,
+    fontFamily: 'Lato-Bold',
   },
-  statisticSection: {
-    marginTop: 20,
-    paddingHorizontal: 0,
+  statisticCard: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
     zIndex: 1,
   },
   statisticHeader: {
-    flexDirection: 'column',
-    marginBottom: 20,
+    padding: 20,
+    paddingBottom: 10,
   },
   statisticHeaderText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#3A3B3E',
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    fontFamily: 'Kufam-SemiBoldItalic',
   },
   statisticHeaderSubText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '400',
-    color: '#959698',
+    color: '#666',
+    marginTop: 4,
+    fontFamily: 'Lato-Regular',
+  },
+  chartContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   selectedBarContainer: {
     position: 'absolute',
@@ -542,56 +688,87 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   selectedBarText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 14,
+    color: '#2C2C2C',
+    fontWeight: '600',
+    fontFamily: 'Lato-Bold',
   },
   buttonSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginHorizontal: 20,
+    marginBottom: 20,
     zIndex: 1,
   },
-  notSelectedBtn: {
+  filterButton: {
     width: '48%',
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#fff',
+    height: 44,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: '#E8EBF7',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
-  notSelectedBtnText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#959698',
+  selectedFilterButton: {
+    backgroundColor: PRIMARY_COLOR,
+    borderColor: PRIMARY_COLOR,
   },
-  selectedBtn: {
-    width: '48%',
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#677CD2',
-    justifyContent: 'center',
-    alignItems: 'center',
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    fontFamily: 'Lato-Bold',
   },
-  selectedBtnText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#fff',
+  selectedFilterButtonText: {
+    color: '#FFFFFF',
+  },
+  transactionsSection: {
+    marginHorizontal: 20,
+    marginBottom: 30,
+  },
+  transactionsHeaderText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    fontFamily: 'Kufam-SemiBoldItalic',
+  },
+  transactionsSubHeaderText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+    marginBottom: 15,
+    fontFamily: 'Lato-Regular',
   },
   transactionsList: {
-    marginTop: 20,
     zIndex: 1,
   },
   transactionsCard: {
-    marginVertical: 5,
-    borderRadius: 12,
-    backgroundColor: '#fff',
+    marginVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   transactionsCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 15,
+    padding: 18,
   },
   transactionsCardDetails: {
     flexDirection: 'row',
@@ -601,55 +778,61 @@ const styles = StyleSheet.create({
   transactionsCardIcon: {
     width: 50,
     height: 50,
-    borderRadius: 10,
-    backgroundColor: '#7A8EE0',
+    borderRadius: 14,
+    backgroundColor: '#E8EBF7',
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 15,
   },
   transactionsCardInfo: {
-    marginLeft: 10,
     flex: 1,
   },
   transactionsCardTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#3A3B3E',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C2C2C',
     marginBottom: 4,
-  },
-  transactionsCardDateAndTime: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    fontFamily: 'Lato-Bold',
   },
   transactionsCardDate: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '400',
-    color: '#959698',
-  },
-  transactionsCardTime: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#959698',
-    marginLeft: 10,
+    color: '#888',
+    fontFamily: 'Lato-Regular',
   },
   transactionsCardAmount: {
-    minWidth: 80,
     alignItems: 'flex-end',
   },
   transactionsCardAmountIncomeText: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#25B07F',
+    fontWeight: 'bold',
+    color: INCOME_COLOR,
+    fontFamily: 'Lato-Bold',
   },
   transactionsCardAmountExpenseText: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#F64E4E',
+    fontWeight: 'bold',
+    color: EXPENSE_COLOR,
+    fontFamily: 'Lato-Bold',
   },
-  noTransactionsText: {
-    textAlign: 'center',
-    color: '#959698',
-    marginTop: 20,
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#666',
+    marginTop: 15,
+    fontFamily: 'Lato-Bold',
+  },
+  emptyStateSubText: {
     fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+    marginTop: 8,
+    fontFamily: 'Lato-Regular',
   },
 });
 
