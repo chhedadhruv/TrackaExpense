@@ -13,6 +13,11 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {useFocusEffect} from '@react-navigation/native';
 
+const PRIMARY_COLOR = '#677CD2';
+const BACKGROUND_COLOR = '#F4F6FA';
+const INCOME_COLOR = '#25B07F';
+const EXPENSE_COLOR = '#F64E4E';
+
 const AddOrRemoveExpense = ({navigation}) => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -22,8 +27,17 @@ const AddOrRemoveExpense = ({navigation}) => {
 
   const handleSearch = text => {
     setSearchQuery(text);
+    if (!userData?.transactions) return;
+    
+    if (!text.trim()) {
+      setFilteredTransactions([]);
+      return;
+    }
+    
     const filteredTransactions = userData.transactions.filter(transaction =>
-      transaction.title.toLowerCase().includes(text.toLowerCase()),
+      transaction.title.toLowerCase().includes(text.toLowerCase()) ||
+      transaction.category?.toLowerCase().includes(text.toLowerCase()) ||
+      transaction.amount.toString().includes(text)
     );
     setFilteredTransactions(filteredTransactions);
   };
@@ -37,10 +51,11 @@ const AddOrRemoveExpense = ({navigation}) => {
         .collection('users')
         .doc(currentUserUid)
         .collection('transactions')
+        .orderBy('createdAt', 'desc')
         .get();
 
       if (transactionsQuerySnapshot.empty) {
-        Alert.alert('No Transactions', 'You have no transactions yet.');
+        setUserData({transactions: []});
         setLoading(false);
         return;
       }
@@ -64,7 +79,9 @@ const AddOrRemoveExpense = ({navigation}) => {
 
       if (searchQuery !== '') {
         const filteredTransactions = transactions.filter(transaction =>
-          transaction.title.toLowerCase().includes(searchQuery.toLowerCase()),
+          transaction.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          transaction.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          transaction.amount.toString().includes(searchQuery)
         );
         setFilteredTransactions(filteredTransactions);
       }
@@ -100,214 +117,179 @@ const AddOrRemoveExpense = ({navigation}) => {
     setShowAll(!showAll);
   };
 
+  const getCategoryIcon = (category, type) => {
+    const iconMap = {
+      Bills: 'receipt',
+      Education: 'school',
+      Entertainment: 'movie',
+      Food: 'food',
+      Health: 'hospital',
+      Shopping: 'cart',
+      Travel: 'bus',
+      Salary: 'cash',
+      Bonus: 'cash',
+      Gift: 'cash',
+      Others: type === 'income' ? 'cash' : 'cash-remove',
+    };
+
+    return iconMap[category] || (type === 'income' ? 'cash' : 'cash-remove');
+  };
+
   if (loading) {
     return (
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator animating={true} size="large" color="#677CD2" />
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <Text style={styles.loadingText}>Loading transactions...</Text>
       </View>
     );
   }
 
+  const displayTransactions = searchQuery !== '' ? filteredTransactions : userData?.transactions || [];
+  const sortedTransactions = displayTransactions
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, showAll ? displayTransactions.length : 5);
+
   return (
-    <>
-      <View style={styles.container}>
-        <Searchbar
-          placeholder="Search"
-          onChangeText={handleSearch}
-          value={searchQuery}
-          style={{marginBottom: 10}}
-        />
-        <View style={styles.lastAdded}>
-          <Text style={styles.lastAddedText}>Last Added</Text>
-          <TouchableOpacity onPress={toggleShowAll}>
-            <Text style={styles.seeAllText}>
-              {showAll ? 'See Less' : 'See All'}
-            </Text>
-          </TouchableOpacity>
+    <View style={styles.container}>
+      {/* Header Section */}
+      <View style={styles.headerSection}>
+        <Text style={styles.headerTitle}>Manage Transactions</Text>
+        <Text style={styles.headerSubtitle}>
+          Add income or expenses to track your finances
+        </Text>
+      </View>
+
+      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Searchbar
+            placeholder="Search by title, amount, or category..."
+            onChangeText={handleSearch}
+            value={searchQuery}
+            style={styles.searchBar}
+            inputStyle={styles.searchInput}
+            iconColor={PRIMARY_COLOR}
+          />
         </View>
-        <ScrollView
-          style={styles.transactionsList}
-          showsVerticalScrollIndicator={false}>
-          {userData ? (
-            <>
-              {userData.transactions.length > 0 ? (
-                <>
-                  {(searchQuery !== ''
-                    ? filteredTransactions
-                    : userData?.transactions
-                  )
-                    ?.sort((a, b) => b.createdAt - a.createdAt)
-                    .slice(0, showAll ? userData?.transactions?.length : 5)
-                    .map((item, index) => (
-                      <Card
-                        style={styles.transactionsCard}
-                        key={index}
-                        onPress={() =>
-                          navigation.navigate('TransactionDetail', {
-                            transaction: item,
-                          })
-                        }>
-                        <View style={styles.transactionsCardContent}>
-                          <View style={styles.transactionsCardDetails}>
-                            <View style={styles.transactionsCardIcon}>
-                              {item.category === 'Bills' ? (
-                                <MaterialCommunityIcons
-                                  name="receipt"
-                                  size={25}
-                                  color="#CBD3EE"
-                                />
-                              ) : null}
-                              {item.category === 'Education' ? (
-                                <MaterialCommunityIcons
-                                  name="school"
-                                  size={25}
-                                  color="#CBD3EE"
-                                />
-                              ) : null}
-                              {item.category === 'Entertainment' ? (
-                                <MaterialCommunityIcons
-                                  name="movie"
-                                  size={25}
-                                  color="#CBD3EE"
-                                />
-                              ) : null}
-                              {item.category === 'Food' ? (
-                                <MaterialCommunityIcons
-                                  name="food"
-                                  size={25}
-                                  color="#CBD3EE"
-                                />
-                              ) : null}
-                              {item.category === 'Health' ? (
-                                <MaterialCommunityIcons
-                                  name="hospital"
-                                  size={25}
-                                  color="#CBD3EE"
-                                />
-                              ) : null}
-                              {item.category === 'Shopping' ? (
-                                <MaterialCommunityIcons
-                                  name="cart"
-                                  size={25}
-                                  color="#CBD3EE"
-                                />
-                              ) : null}
-                              {item.category === 'Travel' ? (
-                                <MaterialCommunityIcons
-                                  name="bus"
-                                  size={25}
-                                  color="#CBD3EE"
-                                />
-                              ) : null}
-                              {item.type === 'expense' &&
-                              item.category === 'Others' ? (
-                                <MaterialCommunityIcons
-                                  name="cash-remove"
-                                  size={25}
-                                  color="#CBD3EE"
-                                />
-                              ) : null}
-                              {item.category === 'Salary' ? (
-                                <MaterialCommunityIcons
-                                  name="cash"
-                                  size={25}
-                                  color="#CBD3EE"
-                                />
-                              ) : null}
-                              {item.category === 'Bonus' ? (
-                                <MaterialCommunityIcons
-                                  name="cash"
-                                  size={25}
-                                  color="#CBD3EE"
-                                />
-                              ) : null}
-                              {item.category === 'Gift' ? (
-                                <MaterialCommunityIcons
-                                  name="cash"
-                                  size={25}
-                                  color="#CBD3EE"
-                                />
-                              ) : null}
-                              {item.type === 'income' &&
-                              item.category === 'Others' ? (
-                                <MaterialCommunityIcons
-                                  name="cash"
-                                  size={25}
-                                  color="#CBD3EE"
-                                />
-                              ) : null}
-                            </View>
-                            <View
-                              style={{flexDirection: 'column', marginLeft: 5}}>
-                              <Text style={styles.transactionsCardTitle}>
-                                {item.title}
-                              </Text>
-                              <View style={styles.transactionsCardDateAndTime}>
-                                <Text style={styles.transactionsCardDate}>
-                                  {item.date}
-                                </Text>
-                                <Text style={styles.transactionsCardTime}>
-                                  {item.time}
-                                </Text>
-                              </View>
-                            </View>
-                          </View>
-                          <View style={styles.transactionsCardAmount}>
-                            <Text
-                              style={
-                                item.type === 'income'
-                                  ? styles.transactionsCardAmountIncomeText
-                                  : styles.transactionsCardAmountExpenseText
-                              }>
-                              {item.type === 'income' ? '+ ₹' : '- ₹'}
-                              {item.amount}
-                            </Text>
-                          </View>
+
+        {/* Recent Transactions Header */}
+        <View style={styles.sectionHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>Recent Transactions</Text>
+            <Text style={styles.sectionSubtitle}>
+              {displayTransactions.length} transaction{displayTransactions.length !== 1 ? 's' : ''} found
+            </Text>
+          </View>
+          {displayTransactions.length > 5 && (
+            <TouchableOpacity onPress={toggleShowAll} style={styles.toggleButton}>
+              <Text style={styles.toggleButtonText}>
+                {showAll ? 'Show Less' : 'Show All'}
+              </Text>
+              <MaterialCommunityIcons
+                name={showAll ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={PRIMARY_COLOR}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Transactions List */}
+        <View style={styles.transactionsList}>
+          {sortedTransactions.length > 0 ? (
+            sortedTransactions.map((transaction, index) => (
+              <Card
+                style={styles.transactionsCard}
+                key={transaction.id || index}
+                onPress={() =>
+                  navigation.navigate('TransactionDetail', {
+                    transaction,
+                  })
+                }>
+                <View style={styles.transactionsCardContent}>
+                  <View style={styles.transactionsCardDetails}>
+                    <View style={styles.transactionsCardIcon}>
+                      <MaterialCommunityIcons
+                        name={getCategoryIcon(transaction.category, transaction.type)}
+                        size={24}
+                        color={PRIMARY_COLOR}
+                      />
+                    </View>
+                    <View style={styles.transactionsCardInfo}>
+                      <Text style={styles.transactionsCardTitle} numberOfLines={1}>
+                        {transaction.title.length > 30
+                          ? transaction.title.slice(0, 30) + '...'
+                          : transaction.title}
+                      </Text>
+                      <View style={styles.transactionsCardMeta}>
+                        <Text style={styles.transactionsCardDate}>
+                          {transaction.date}
+                        </Text>
+                        {transaction.time && (
+                          <Text style={styles.transactionsCardTime}>
+                            {transaction.time}
+                          </Text>
+                        )}
+                      </View>
+                      {transaction.category && (
+                        <View style={styles.categoryTag}>
+                          <Text style={styles.categoryText}>
+                            {transaction.category}
+                          </Text>
                         </View>
-                      </Card>
-                    ))}
-                </>
-              ) : (
-                <View
-                  style={{
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginTop: 20,
-                  }}>
-                  <Text
-                    style={{fontSize: 16, fontWeight: '500', color: '#3A3B3E'}}>
-                    No Transactions
-                  </Text>
+                      )}
+                    </View>
+                  </View>
+                  <View style={styles.transactionsCardAmount}>
+                    <Text
+                      style={
+                        transaction.type === 'income'
+                          ? styles.transactionsCardAmountIncomeText
+                          : styles.transactionsCardAmountExpenseText
+                      }>
+                      {transaction.type === 'income' ? '+ ₹' : '- ₹'}
+                      {parseInt(transaction.amount, 10).toLocaleString()}
+                    </Text>
+                  </View>
                 </View>
-              )}
-            </>
+              </Card>
+            ))
           ) : (
-            <View
-              style={{
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: 20,
-              }}>
-              <Text style={{fontSize: 16, fontWeight: '500', color: '#3A3B3E'}}>
-                No Transactions
+            <View style={styles.emptyState}>
+              <MaterialCommunityIcons 
+                name={searchQuery ? "magnify" : "receipt-text-outline"} 
+                size={64} 
+                color="#CBD3EE" 
+              />
+              <Text style={styles.emptyStateTitle}>
+                {searchQuery ? 'No transactions found' : 'No transactions yet'}
+              </Text>
+              <Text style={styles.emptyStateSubtitle}>
+                {searchQuery 
+                  ? 'Try adjusting your search terms' 
+                  : 'Add your first transaction to get started'}
               </Text>
             </View>
           )}
-        </ScrollView>
-      </View>
+        </View>
+      </ScrollView>
+
+      {/* Action Buttons */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity
-          style={styles.button}
+          style={[styles.actionButton, styles.incomeButton]}
           onPress={() => navigation.navigate('AddIncome')}>
+          <MaterialCommunityIcons name="plus" size={20} color="#FFFFFF" />
           <Text style={styles.buttonText}>Add Income</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.button}
+          style={[styles.actionButton, styles.expenseButton]}
           onPress={() => navigation.navigate('AddExpense')}>
+          <MaterialCommunityIcons name="minus" size={20} color="#FFFFFF" />
           <Text style={styles.buttonText}>Add Expense</Text>
         </TouchableOpacity>
       </View>
-    </>
+    </View>
   );
 };
 
@@ -315,119 +297,259 @@ export default AddOrRemoveExpense;
 
 const styles = StyleSheet.create({
   container: {
-    padding: 10,
+    flex: 1,
+    backgroundColor: BACKGROUND_COLOR,
   },
-  lastAdded: {
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: BACKGROUND_COLOR,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: PRIMARY_COLOR,
+    marginTop: 15,
+    fontFamily: 'Lato-Regular',
+  },
+  headerSection: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 15,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    fontFamily: 'Kufam-SemiBoldItalic',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+    fontFamily: 'Lato-Regular',
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  searchContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  searchBar: {
+    backgroundColor: '#FFFFFF',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    borderRadius: 12,
+  },
+  searchInput: {
+    fontFamily: 'Lato-Regular',
+    fontSize: 16,
+  },
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    paddingHorizontal: 20,
+    marginBottom: 15,
   },
-  lastAddedText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#3A3B3E',
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    fontFamily: 'Kufam-SemiBoldItalic',
   },
-  seeAllText: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#3A3B3E',
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+    fontFamily: 'Lato-Regular',
   },
-  transactionsList: {
-    marginTop: 10,
-    marginBottom: 100,
-  },
-  transactionsCard: {
+  toggleButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    marginVertical: 5,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-  },
-  transactionsCardIcon: {
-    width: 50,
-    height: 50,
+    backgroundColor: 'rgba(103, 124, 210, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: '#7A8EE0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
   },
-  transactionsCardImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 10,
+  toggleButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: PRIMARY_COLOR,
+    marginRight: 4,
+    fontFamily: 'Lato-Bold',
+  },
+  transactionsList: {
+    paddingHorizontal: 20,
+    paddingBottom: 120,
+  },
+  transactionsCard: {
+    marginBottom: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   transactionsCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    width: '100%',
+    padding: 18,
   },
   transactionsCardDetails: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+  },
+  transactionsCardIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: '#E8EBF7',
+    alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 15,
+  },
+  transactionsCardInfo: {
+    flex: 1,
   },
   transactionsCardTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#3A3B3E',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
+    marginBottom: 4,
   },
-  transactionsCardDateAndTime: {
+  transactionsCardMeta: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 6,
   },
   transactionsCardDate: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#959698',
+    fontSize: 13,
+    color: '#888',
+    fontFamily: 'Lato-Regular',
   },
   transactionsCardTime: {
+    fontSize: 13,
+    color: '#888',
+    marginLeft: 8,
+    fontFamily: 'Lato-Regular',
+  },
+  categoryTag: {
+    backgroundColor: PRIMARY_COLOR + '20',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  categoryText: {
     fontSize: 12,
-    fontWeight: '400',
-    color: '#959698',
-    marginLeft: 10,
+    color: PRIMARY_COLOR,
+    fontWeight: '500',
+    fontFamily: 'Lato-Regular',
   },
   transactionsCardAmount: {
-    flexDirection: 'column',
     alignItems: 'flex-end',
-    justifyContent: 'center',
   },
   transactionsCardAmountIncomeText: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#25B07F',
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: INCOME_COLOR,
+    fontFamily: 'Lato-Bold',
   },
   transactionsCardAmountExpenseText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: EXPENSE_COLOR,
+    fontFamily: 'Lato-Bold',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyStateTitle: {
     fontSize: 18,
-    fontWeight: '500',
-    color: '#F64E4E',
+    fontWeight: '600',
+    color: '#666',
+    marginTop: 20,
+    marginBottom: 8,
+    fontFamily: 'Lato-Bold',
+  },
+  emptyStateSubtitle: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+    lineHeight: 20,
+    fontFamily: 'Lato-Regular',
   },
   buttonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingVertical: 15,
-    backgroundColor: '#fff',
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   },
-  button: {
-    width: '48%',
-    height: 45,
-    borderRadius: 24,
-    backgroundColor: '#677CD2',
+  actionButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    width: '47%',
+    height: 50,
+    borderRadius: 16,
+    elevation: 4,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  incomeButton: {
+    backgroundColor: PRIMARY_COLOR,
+    shadowColor: PRIMARY_COLOR,
+  },
+  expenseButton: {
+    backgroundColor: EXPENSE_COLOR,
+    shadowColor: EXPENSE_COLOR,
   },
   buttonText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
-    textTransform: 'uppercase',
+    color: '#FFFFFF',
+    marginLeft: 8,
+    fontFamily: 'Lato-Bold',
   },
 });

@@ -139,12 +139,19 @@ const HomeScreen = ({navigation}) => {
   }
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false}>
-      <View style={styles.container}>
-        <Card style={styles.myCard}>
-          <View style={styles.cardContent}>
-            <Text style={styles.TitleText}>Total Balance</Text>
-            <Text style={styles.BalanceText}>
+    <View style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
+        {/* Header Section */}
+        <View style={styles.headerSection}>
+          <Text style={styles.greetingText}>Hello, {userData?.name || 'User'}!</Text>
+          <Text style={styles.subGreetingText}>Track your expenses today</Text>
+        </View>
+
+        {/* Balance Card */}
+        <Card style={styles.balanceCard}>
+          <View style={styles.balanceCardContent}>
+            <Text style={styles.balanceTitle}>Total Balance</Text>
+            <Text style={styles.balanceAmount}>
               ₹ {userData?.balance ? userData.balance.toLocaleString() : '0'}
             </Text>
           </View>
@@ -181,16 +188,22 @@ const HomeScreen = ({navigation}) => {
             </View>
           </View>
         </Card>
-        <View style={styles.transactions}>
+        {/* Transactions Section */}
+        <View style={styles.transactionsSection}>
           <View style={styles.transactionsHeader}>
-            <Text style={styles.transactionsHeaderText}>Transactions</Text>
+            <View>
+              <Text style={styles.transactionsHeaderText}>Recent Transactions</Text>
+              <Text style={styles.transactionsSubHeaderText}>
+                {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
+              </Text>
+            </View>
             <TouchableOpacity
               onPress={() => navigation.navigate('Transaction')}
               style={styles.seeAllButton}>
-              <Text style={styles.transactionsHeaderSeeAll}>See All</Text>
+              <Text style={styles.seeAllText}>See All</Text>
               <MaterialCommunityIcons
                 name="chevron-right"
-                size={20}
+                size={18}
                 color={PRIMARY_COLOR}
               />
             </TouchableOpacity>
@@ -215,7 +228,7 @@ const HomeScreen = ({navigation}) => {
                             <MaterialCommunityIcons
                               name="receipt"
                               size={25}
-                              color="#CBD3EE"
+                              color="#677CD2"
                               style={{
                                 justifyContent: 'center',
                                 alignItems: 'center',
@@ -226,42 +239,42 @@ const HomeScreen = ({navigation}) => {
                             <MaterialCommunityIcons
                               name="school"
                               size={25}
-                              color="#CBD3EE"
+                              color="#677CD2"
                             />
                           )}
                           {transaction.category === 'Entertainment' && (
                             <MaterialCommunityIcons
                               name="movie"
                               size={25}
-                              color="#CBD3EE"
+                              color="#677CD2"
                             />
                           )}
                           {transaction.category === 'Food' && (
                             <MaterialCommunityIcons
                               name="food"
                               size={25}
-                              color="#CBD3EE"
+                              color="#677CD2"
                             />
                           )}
                           {transaction.category === 'Health' && (
                             <MaterialCommunityIcons
                               name="hospital"
                               size={25}
-                              color="#CBD3EE"
+                              color="#677CD2"
                             />
                           )}
                           {transaction.category === 'Shopping' && (
                             <MaterialCommunityIcons
                               name="cart"
                               size={25}
-                              color="#CBD3EE"
+                              color="#677CD2"
                             />
                           )}
                           {transaction.category === 'Travel' && (
                             <MaterialCommunityIcons
                               name="bus"
                               size={25}
-                              color="#CBD3EE"
+                              color="#677CD2"
                             />
                           )}
                           {transaction.type === 'expense' &&
@@ -269,7 +282,7 @@ const HomeScreen = ({navigation}) => {
                               <MaterialCommunityIcons
                                 name="cash-remove"
                                 size={25}
-                                color="#CBD3EE"
+                                color="#677CD2"
                               />
                             )}
                           {(transaction.category === 'Salary' ||
@@ -280,7 +293,7 @@ const HomeScreen = ({navigation}) => {
                             <MaterialCommunityIcons
                               name="cash"
                               size={25}
-                              color="#CBD3EE"
+                              color="#677CD2"
                             />
                           )}
                         </View>
@@ -312,12 +325,16 @@ const HomeScreen = ({navigation}) => {
                   </Card>
                 ))
             ) : (
-              <Text>No transactions available.</Text>
+              <View style={styles.emptyState}>
+                <MaterialCommunityIcons name="receipt-text-outline" size={48} color="#CBD3EE" />
+                <Text style={styles.emptyStateText}>No transactions yet</Text>
+                <Text style={styles.emptyStateSubText}>Add your first transaction to get started</Text>
+              </View>
             )}
           </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
@@ -326,21 +343,74 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: BACKGROUND_COLOR,
   },
   container: {
-    paddingHorizontal: 10,
+    flex: 1,
+    backgroundColor: BACKGROUND_COLOR,
   },
-  myCard: {
-    margin: 5,
+  scrollContainer: {
+    flex: 1,
+  },
+  headerSection: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 15,
+  },
+  greetingText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    fontFamily: 'Kufam-SemiBoldItalic',
+  },
+  subGreetingText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 4,
+    fontFamily: 'Lato-Regular',
+  },
+  balanceCard: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 16,
+    elevation: 8,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  balanceCardContent: {
     padding: 20,
-    backgroundColor: '#677CD2',
+    backgroundColor: PRIMARY_COLOR,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  balanceTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#CED6EC',
+    marginBottom: 8,
+    fontFamily: 'Lato-Regular',
+  },
+  balanceAmount: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontFamily: 'Kufam-SemiBoldItalic',
   },
   dataCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 20,
+    backgroundColor: PRIMARY_COLOR,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
   },
   cardContent: {
     flexDirection: 'column',
@@ -365,56 +435,78 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#CED6EC',
     marginBottom: 5,
-  },
-  BalanceText: {
-    fontSize: 26,
-    fontWeight: '500',
-    color: '#fff',
+    fontFamily: 'Lato-Regular',
   },
   ValueText: {
     fontSize: 18,
-    fontWeight: '500',
-    color: '#fff',
+    fontWeight: '600',
+    color: '#FFFFFF',
+    fontFamily: 'Lato-Bold',
   },
-  transactions: {
-    marginTop: 20,
+  transactionsSection: {
+    marginTop: 10,
+    paddingHorizontal: 20,
   },
   transactionsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    marginBottom: 15,
   },
   transactionsHeaderText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#3A3B3E',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    fontFamily: 'Kufam-SemiBoldItalic',
   },
-  transactionsHeaderSeeAll: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#3A3B3E',
+  transactionsSubHeaderText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+    fontFamily: 'Lato-Regular',
+  },
+  seeAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(103, 124, 210, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  seeAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: PRIMARY_COLOR,
+    marginRight: 4,
+    fontFamily: 'Lato-Bold',
   },
   transactionsList: {
-    marginTop: 10,
     marginBottom: 30,
   },
   transactionsCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    marginVertical: 5,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    padding: 18,
+    marginVertical: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   transactionsCardIcon: {
     width: 50,
     height: 50,
-    borderRadius: 10,
-    backgroundColor: '#7A8EE0',
+    borderRadius: 14,
+    backgroundColor: '#E8EBF7',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 15,
   },
   transactionsCardImage: {
     width: 50,
@@ -433,24 +525,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   transactionsCardTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#3A3B3E',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
   },
   transactionsCardDateAndTime: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 4,
   },
   transactionsCardDate: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '400',
-    color: '#959698',
+    color: '#888',
+    fontFamily: 'Lato-Regular',
   },
   transactionsCardTime: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '400',
-    color: '#959698',
+    color: '#888',
     marginLeft: 10,
+    fontFamily: 'Lato-Regular',
   },
   transactionsCardAmount: {
     flexDirection: 'column',
@@ -458,18 +554,48 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   transactionsCardAmountIncomeText: {
-    fontSize: 18,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: 'bold',
     color: '#25B07F',
+    fontFamily: 'Lato-Bold',
   },
   transactionsCardAmountExpenseText: {
-    fontSize: 18,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: 'bold',
     color: '#F64E4E',
+    fontFamily: 'Lato-Bold',
   },
-  seeAllButton: {
-    flexDirection: 'row',
+  emptyState: {
     alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#666',
+    marginTop: 15,
+    fontFamily: 'Lato-Bold',
+  },
+  emptyStateSubText: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+    marginTop: 8,
+    fontFamily: 'Lato-Regular',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: BACKGROUND_COLOR,
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#F64E4E',
+    textAlign: 'center',
+    fontFamily: 'Lato-Regular',
   },
 });
 
