@@ -7,19 +7,21 @@ import {
   SafeAreaView,
   TextInput,
   ScrollView,
-  ActivityIndicator,
 } from 'react-native';
-import {Text, Provider, Checkbox} from 'react-native-paper';
+import {Text, Provider, Checkbox, Card, ActivityIndicator} from 'react-native-paper';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import UserAvatar from 'react-native-user-avatar';
 import DropDownPicker from 'react-native-dropdown-picker';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
+import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 
 const PRIMARY_COLOR = '#677CD2';
-const SECONDARY_COLOR = '#7A8EE0';
 const BACKGROUND_COLOR = '#F4F6FA';
+const SUCCESS_COLOR = '#25B07F';
+const EXPENSE_COLOR = '#F64E4E';
 
 const GROUP_CATEGORIES = [
   {
@@ -332,16 +334,16 @@ const SplitScreen = ({navigation}) => {
 
         Alert.alert('Success', 'Group created successfully');
       }
-
-      // Reset form
+    } catch (error) {
+      console.error('Error creating/updating group:', error);
+      Alert.alert('Error', 'Failed to create/update group');
+    } finally {
+      // Always reset form regardless of success or failure
       setGroupName('');
       setCategory(null);
       setSelectedUsers([]);
       setIsFormVisible(false);
       setEditingGroupId(null);
-    } catch (error) {
-      console.error('Error creating/updating group:', error);
-      Alert.alert('Error', 'Failed to create/update group');
     }
   };
 
@@ -406,297 +408,481 @@ const SplitScreen = ({navigation}) => {
     const isExpanded = expandedGroupId === group.id;
 
     const GroupCardIcon = () => {
-      const IconComponent = () => categoryItem?.icon();
-      return IconComponent
-        ? React.cloneElement(IconComponent(), {color: '#fff'})
-        : null;
+      if (categoryItem) {
+        // Get the icon name from the category item based on the label
+        let iconName = "account-group"; // default fallback
+        switch(categoryItem.value) {
+          case 'Work':
+            iconName = "briefcase";
+            break;
+          case 'Family':
+            iconName = "home-heart";
+            break;
+          case 'Couple':
+            iconName = "heart-multiple";
+            break;
+          case 'Friends':
+            iconName = "account-group";
+            break;
+          case 'Travel':
+            iconName = "airplane";
+            break;
+          case 'Sports':
+            iconName = "basketball";
+            break;
+          case 'Hobby':
+            iconName = "palette";
+            break;
+          case 'Study':
+            iconName = "book-open-variant";
+            break;
+          case 'Other':
+            iconName = "dots-horizontal-circle";
+            break;
+        }
+        return <MaterialCommunityIcons name={iconName} size={24} color="#fff" />;
+      }
+      // Fallback icon if category not found
+      return <MaterialCommunityIcons name="account-group" size={24} color="#fff" />;
     };
 
     return (
-      <TouchableOpacity
-        style={styles.groupCard}
-        key={group.id}
-        onPress={() => setExpandedGroupId(isExpanded ? null : group.id)}>
-        <View style={styles.cardHeader}>
-          <View style={styles.cardHeaderLeft}>
-            <View style={styles.categoryIconContainer}>
-              <GroupCardIcon />
+      <Card key={group.id} style={styles.groupCard}>
+        <TouchableOpacity
+          style={styles.groupCardContent}
+          onPress={() => setExpandedGroupId(isExpanded ? null : group.id)}>
+          <View style={styles.groupCardHeader}>
+            <View style={styles.groupCardLeft}>
+              <View style={styles.categoryIconContainer}>
+                <GroupCardIcon />
+              </View>
+              <View style={styles.groupInfo}>
+                <Text style={styles.groupName}>{group.name}</Text>
+                <View style={styles.memberCountContainer}>
+                  <MaterialCommunityIcons name="account-multiple" size={14} color="#666" />
+                  <Text style={styles.groupMembers}>
+                    {group.members.length} {group.members.length === 1 ? 'Member' : 'Members'}
+                  </Text>
+                </View>
+              </View>
             </View>
-            <Text style={styles.groupName}>{group.name}</Text>
-          </View>
-          <View style={styles.cardHeaderRight}>
-            <Text style={styles.groupMembers}>
-              {group.members.length} Members
-            </Text>
-            <View style={styles.groupActions}>
+            <View style={styles.groupCardRight}>
               <TouchableOpacity
-                style={styles.editButton}
+                style={styles.editGroupButton}
                 onPress={e => {
                   e.stopPropagation();
                   handleEditGroup(group);
                 }}>
                 <MaterialCommunityIcons
                   name="pencil"
-                  size={20}
-                  color="#fff"
+                  size={18}
+                  color={PRIMARY_COLOR}
                 />
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.deleteButton}
+                style={styles.deleteGroupButton}
                 onPress={e => {
                   e.stopPropagation();
                   deleteGroup(group.id);
                 }}>
                 <MaterialCommunityIcons
                   name="trash-can-outline"
-                  size={20}
-                  color="#fff"
+                  size={18}
+                  color={EXPENSE_COLOR}
                 />
               </TouchableOpacity>
+              <MaterialCommunityIcons
+                name={isExpanded ? "chevron-up" : "chevron-down"}
+                size={24}
+                color="#666"
+              />
             </View>
           </View>
-        </View>
 
-        {isExpanded && (
-          <TouchableOpacity
-            style={styles.expandedGroupDetails}
-            onPress={() =>
-              navigation.navigate('SplitGroupDetail', {
-                group: {
-                  id: group.id,
-                  name: group.name,
-                  category: group.category,
-                  members: group.members,
-                  memberDetails: group.memberDetails,
-                },
-              })
-            }>
-            <Text style={styles.expandedDetailTitle}>Members:</Text>
-            <View style={styles.memberPreviewContainer}>
-              {group.memberDetails.slice(0, 3).map((member, index) => (
-                <View key={member.email} style={styles.memberPreview}>
-                  <UserAvatar size={30} name={member.name || member.email} />
-                  <Text style={styles.memberPreviewName} numberOfLines={1}>
-                    {member.name || member.email}
-                  </Text>
+          {isExpanded && (
+            <View style={styles.expandedGroupDetails}>
+              <View style={styles.membersSection}>
+                <Text style={styles.expandedDetailTitle}>Members</Text>
+                <View style={styles.memberAvatarsContainer}>
+                  {group.memberDetails.slice(0, 4).map((member, index) => (
+                    <View key={member.email} style={styles.memberAvatarWrapper}>
+                      <UserAvatar 
+                        size={36} 
+                        name={member.name || member.email} 
+                        bgColor={PRIMARY_COLOR}
+                        style={styles.memberAvatar}
+                      />
+                      <Text style={styles.memberNameText} numberOfLines={1}>
+                        {member.name || member.email.split('@')[0]}
+                      </Text>
+                    </View>
+                  ))}
+                  {group.memberDetails.length > 4 && (
+                    <View style={styles.moreMembersIndicator}>
+                      <Text style={styles.moreMembersText}>
+                        +{group.memberDetails.length - 4}
+                      </Text>
+                    </View>
+                  )}
                 </View>
-              ))}
-              {group.memberDetails.length > 3 && (
-                <Text style={styles.moreMembersText}>
-                  +{group.memberDetails.length - 3} more
-                </Text>
-              )}
-            </View>
-
-            <View style={styles.groupDetailsRow}>
-              <Text style={styles.expandedDetailText}>
-                Category: {group.category}
-              </Text>
-              <Text style={styles.expandedDetailText}>
-                Created:{' '}
-                {group.createdAt
-                  ? new Date(
-                      group.createdAt.seconds * 1000,
-                    ).toLocaleDateString()
-                  : 'Unknown Date'}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        )}
-      </TouchableOpacity>
-    );
-  };
-
-  return (
-    <Provider>
-      <SafeAreaView style={styles.container}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled">
-          <View style={styles.headerContainer}>
-            <Text style={styles.header}>Create Group</Text>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => setIsFormVisible(!isFormVisible)}>
-              <AntDesign
-                name={isFormVisible ? 'close' : 'plus'}
-                size={20}
-                color="#fff"
-              />
-            </TouchableOpacity>
-          </View>
-
-          {isFormVisible && (
-            <View style={styles.formContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter group name"
-                placeholderTextColor="#999"
-                value={groupName}
-                onChangeText={setGroupName}
-              />
-
-              <DropDownPicker
-                open={openCategoryDropdown}
-                value={category}
-                items={GROUP_CATEGORIES}
-                setOpen={setOpenCategoryDropdown}
-                setValue={setCategory}
-                placeholder="Select Group Category"
-                style={styles.dropdown}
-                dropDownContainerStyle={styles.dropdownContainer}
-                searchable={true}
-                searchPlaceholder="Search categories..."
-                listMode="MODAL"
-                modalTitle="Select Group Category"
-                modalAnimationType="slide"
-              />
-
-              <TextInput
-                style={styles.input}
-                placeholder="Search user by email or phone number"
-                placeholderTextColor="#999"
-                value={searchQuery}
-                onChangeText={query => {
-                  setSearchQuery(query);
-                  if (query.includes('@') || /^\d+$/.test(query)) {
-                    fetchUserByEmailOrPhone(query);
-                  }
-                }}
-                keyboardType="email-address"
-              />
-
-              {userDetails && userDetails.email !== currentUser.email && renderUserCard(userDetails, true)}
-              {userDetails && userDetails.email === currentUser.email && (
-                <View style={styles.warningCard}>
-                  <Text style={styles.warningText}>
-                    ⚠️ You cannot add yourself to the group. You are automatically included.
-                  </Text>
-                </View>
-              )}
-
-              <View style={styles.selectedContainer}>
-                <Text style={styles.sectionHeader}>Selected Users:</Text>
-                {selectedUsers.map(user => renderUserCard(user, true))}
-                {selectedUsers.length === 0 && (
-                  <Text style={styles.emptySelectionText}>
-                    No users selected yet. Search and add members above.
-                  </Text>
-                )}
               </View>
 
+              <View style={styles.groupMetaInfo}>
+                <View style={styles.metaItem}>
+                  <MaterialCommunityIcons name="tag" size={16} color="#666" />
+                  <Text style={styles.metaText}>{group.category}</Text>
+                </View>
+                <View style={styles.metaItem}>
+                  <MaterialCommunityIcons name="calendar" size={16} color="#666" />
+                  <Text style={styles.metaText}>
+                    {group.createdAt
+                      ? new Date(group.createdAt.seconds * 1000).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })
+                      : 'Unknown Date'}
+                  </Text>
+                </View>
+              </View>
+              
               <TouchableOpacity
-                style={styles.createGroupButton}
-                onPress={createGroup}>
-                <Text style={styles.createGroupButtonText}>
-                  {editingGroupId ? 'Update Group' : 'Create Group'}
-                </Text>
-                <AntDesign name={editingGroupId ? "edit" : "save"} size={20} color="#fff" />
+                style={styles.viewGroupButton}
+                onPress={() =>
+                  navigation.navigate('SplitGroupDetail', {
+                    group: {
+                      id: group.id,
+                      name: group.name,
+                      category: group.category,
+                      members: group.members,
+                      memberDetails: group.memberDetails,
+                    },
+                  })
+                }>
+                <MaterialCommunityIcons name="eye" size={18} color="#FFFFFF" />
+                <Text style={styles.viewGroupButtonText}>View Group Details</Text>
+                <MaterialCommunityIcons name="arrow-right" size={16} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
           )}
+        </TouchableOpacity>
+      </Card>
+    );
+  };
 
-          <View style={styles.groupsSection}>
-            <Text style={styles.sectionHeader}>Your Groups:</Text>
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-                <Text style={styles.loadingText}>Loading groups...</Text>
-              </View>
-            ) : groups.length === 0 ? (
-              <View style={styles.emptyState}>
-                <AntDesign name="team" size={64} color={PRIMARY_COLOR} />
-                <Text style={styles.emptyStateText}>
-                  No groups created yet. Start connecting!
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <Text style={styles.loadingText}>Loading groups...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaProvider>
+      <View style={styles.container}>
+        <KeyboardAwareScrollView
+          style={styles.scrollView}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          
+          {/* Header Section */}
+          <View style={styles.headerSection}>
+            <View style={styles.headerTitleRow}>
+              <MaterialCommunityIcons name="account-group" size={32} color={PRIMARY_COLOR} />
+              <Text style={styles.headerTitle}>Split Groups</Text>
+            </View>
+            <Text style={styles.headerSubtitle}>Manage your expense groups</Text>
+          </View>
+
+          {/* Create Group Card */}
+          <Card style={styles.createGroupCard}>
+            <View style={styles.cardContent}>
+              <View style={styles.createGroupHeader}>
+                <Text style={styles.createGroupTitle}>
+                  {editingGroupId ? 'Edit Group' : 'Create New Group'}
                 </Text>
+                <TouchableOpacity
+                  style={styles.toggleButton}
+                  onPress={() => {
+                    if (!isFormVisible) {
+                      // When opening form for new group creation, ensure we're not in edit mode
+                      setEditingGroupId(null);
+                      setGroupName('');
+                      setCategory(null);
+                      setSelectedUsers([]);
+                    }
+                    setIsFormVisible(!isFormVisible);
+                  }}>
+                  <MaterialCommunityIcons
+                    name={isFormVisible ? 'chevron-up' : 'chevron-down'}
+                    size={24}
+                    color={PRIMARY_COLOR}
+                  />
+                </TouchableOpacity>
               </View>
+
+              {isFormVisible && (
+                <View style={styles.formContainer}>
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Group Name</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Enter group name"
+                      placeholderTextColor="#999"
+                      value={groupName}
+                      onChangeText={setGroupName}
+                    />
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Category</Text>
+                    <DropDownPicker
+                      open={openCategoryDropdown}
+                      value={category}
+                      items={GROUP_CATEGORIES}
+                      setOpen={setOpenCategoryDropdown}
+                      setValue={setCategory}
+                      placeholder="Select Group Category"
+                      style={styles.dropdown}
+                      dropDownContainerStyle={styles.dropdownContainer}
+                      searchable={true}
+                      searchPlaceholder="Search categories..."
+                      listMode="MODAL"
+                      modalTitle="Select Group Category"
+                      modalAnimationType="slide"
+                    />
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Add Members</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Search user by email or phone number"
+                      placeholderTextColor="#999"
+                      value={searchQuery}
+                      onChangeText={query => {
+                        setSearchQuery(query);
+                        if (query.includes('@') || /^\d+$/.test(query)) {
+                          fetchUserByEmailOrPhone(query);
+                        }
+                      }}
+                      keyboardType="email-address"
+                    />
+                  </View>
+
+                  {userDetails && userDetails.email !== currentUser.email && renderUserCard(userDetails, true)}
+                  {userDetails && userDetails.email === currentUser.email && (
+                    <View style={styles.warningCard}>
+                      <Text style={styles.warningText}>
+                        ⚠️ You cannot add yourself to the group. You are automatically included.
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={styles.selectedContainer}>
+                    <Text style={styles.selectedUsersLabel}>Selected Users:</Text>
+                    {selectedUsers.map(user => renderUserCard(user, true))}
+                    {selectedUsers.length === 0 && (
+                      <Text style={styles.emptySelectionText}>
+                        No users selected yet. Search and add members above.
+                      </Text>
+                    )}
+                  </View>
+
+                  <View style={styles.buttonContainer}>
+                    <TouchableOpacity
+                      style={styles.createGroupButton}
+                      onPress={createGroup}>
+                      <Text style={styles.createGroupButtonText}>
+                        {editingGroupId ? 'Update Group' : 'Create Group'}
+                      </Text>
+                      <MaterialCommunityIcons name={editingGroupId ? "pencil" : "check"} size={20} color="#fff" />
+                    </TouchableOpacity>
+                    
+                    {editingGroupId && (
+                      <TouchableOpacity
+                        style={styles.cancelButton}
+                        onPress={() => {
+                          setEditingGroupId(null);
+                          setGroupName('');
+                          setCategory(null);
+                          setSelectedUsers([]);
+                          setIsFormVisible(false);
+                        }}>
+                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                        <MaterialCommunityIcons name="close" size={20} color="#666" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              )}
+            </View>
+          </Card>
+
+          {/* Groups List */}
+          <View style={styles.groupsSection}>
+            <Text style={styles.sectionTitle}>Your Groups</Text>
+            {groups.length === 0 ? (
+              <Card style={styles.emptyStateCard}>
+                <View style={styles.emptyState}>
+                  <MaterialCommunityIcons name="account-group-outline" size={64} color="#CBD3EE" />
+                  <Text style={styles.emptyStateText}>
+                    No groups created yet
+                  </Text>
+                  <Text style={styles.emptyStateSubtext}>
+                    Create your first group to start splitting expenses
+                  </Text>
+                </View>
+              </Card>
             ) : (
               groups.map(renderGroupCard)
             )}
           </View>
-        </ScrollView>
-      </SafeAreaView>
-    </Provider>
+        </KeyboardAwareScrollView>
+      </View>
+    </SafeAreaProvider>
   );
 };
 
 const styles = StyleSheet.create({
-  // Container and Layout Styles
   container: {
     flex: 1,
     backgroundColor: BACKGROUND_COLOR,
   },
-  scrollContainer: {
-    flexGrow: 1,
-    padding: 15,
+  scrollView: {
+    flex: 1,
   },
-
-  // Header Styles
-  headerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  header: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-  },
-  addButton: {
-    backgroundColor: PRIMARY_COLOR,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: BACKGROUND_COLOR,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: PRIMARY_COLOR,
+    marginTop: 15,
+    fontFamily: 'Lato-Regular',
+  },
+  headerSection: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 30,
+    paddingBottom: 20,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: PRIMARY_COLOR,
+    fontFamily: 'Kufam-SemiBoldItalic',
+    marginLeft: 12,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    fontFamily: 'Lato-Regular',
+  },
+  createGroupCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    elevation: 8,
     shadowColor: PRIMARY_COLOR,
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-
-  // Form Container Styles
-  formContainer: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    padding: 15,
-    marginBottom: 20,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: PRIMARY_COLOR,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 8,
+    marginHorizontal: 20,
+    marginBottom: 20,
   },
-  input: {
-    backgroundColor: '#fff',
-    borderColor: PRIMARY_COLOR,
+  cardContent: {
+    padding: 25,
+  },
+  createGroupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  createGroupTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
+  },
+  toggleButton: {
+    padding: 5,
+  },
+  formContainer: {
+    marginTop: 20,
+  },
+  inputContainer: {
+    marginBottom: 15,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    marginBottom: 8,
+    fontFamily: 'Lato-Bold',
+  },
+  textInput: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
     borderWidth: 1,
-    borderRadius: 10,
+    borderColor: '#E8EBF7',
     paddingHorizontal: 15,
     paddingVertical: 12,
-    marginBottom: 15,
     fontSize: 16,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
+  },
+  dropdown: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+  },
+  dropdownContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
 
-  // User Card Styles
   userCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     padding: 15,
     borderRadius: 12,
     marginBottom: 10,
-    borderWidth: 1,
-    borderColor: PRIMARY_COLOR,
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 2,
   },
   userInfo: {
     marginLeft: 15,
@@ -705,87 +891,330 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: '600',
-    color: PRIMARY_COLOR,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
   },
   userEmail: {
     fontSize: 14,
-    color: SECONDARY_COLOR,
+    color: '#666',
+    fontFamily: 'Lato-Regular',
+  },
+  addUserButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: PRIMARY_COLOR,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addUserButtonSelected: {
+    backgroundColor: PRIMARY_COLOR,
   },
 
-  // Selected Users Section
   selectedContainer: {
-    marginTop: 10,
+    marginTop: 15,
   },
-  sectionHeader: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
+  selectedUsersLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2C2C2C',
     marginBottom: 10,
+    fontFamily: 'Lato-Bold',
   },
-
-  // Groups Section
+  emptySelectionText: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    fontFamily: 'Lato-Regular',
+  },
+  warningCard: {
+    backgroundColor: '#FFF3E0',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#FFB74D',
+  },
+  warningText: {
+    fontSize: 14,
+    color: '#E65100',
+    fontFamily: 'Lato-Regular',
+  },
+  buttonContainer: {
+    marginTop: 20,
+    gap: 12,
+  },
+  createGroupButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: PRIMARY_COLOR,
+    paddingVertical: 15,
+    borderRadius: 12,
+    elevation: 3,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  createGroupButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 8,
+    fontFamily: 'Lato-Bold',
+  },
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+    paddingVertical: 15,
+    borderRadius: 12,
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 8,
+    fontFamily: 'Lato-Bold',
+  },
   groupsSection: {
-    marginTop: 10,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    marginBottom: 15,
+    fontFamily: 'Kufam-SemiBoldItalic',
   },
   groupCard: {
-    backgroundColor: PRIMARY_COLOR,
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    elevation: 8,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 8,
+    marginBottom: 15,
   },
-  cardHeader: {
+  groupCardContent: {
+    padding: 22,
+  },
+  groupCardHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
   },
-  cardHeaderRight: {
+  groupCardLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
-  deleteButton: {
-    marginLeft: 10,
-    padding: 5,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  groupInfo: {
+    marginLeft: 12,
+    flex: 1,
   },
   groupName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff',
-    flex: 1,
-    marginRight: 10,
+    color: '#2C2C2C',
+    fontFamily: 'Kufam-SemiBoldItalic',
+    marginBottom: 4,
+  },
+  memberCountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
   },
   groupMembers: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    color: '#fff',
-    fontSize: 12,
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Lato-Regular',
+    marginLeft: 4,
   },
-
-  // Empty State Styles
-  emptyState: {
-    flex: 1,
+  groupCardRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  editGroupButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  deleteGroupButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  categoryIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: PRIMARY_COLOR,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 50,
-    padding: 20,
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    borderColor: PRIMARY_COLOR,
-    borderWidth: 1,
+    elevation: 2,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  expandedGroupDetails: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E8EBF7',
+  },
+  membersSection: {
+    marginBottom: 20,
+  },
+  expandedDetailTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1A1A1A',
+    marginBottom: 15,
+    fontFamily: 'Kufam-SemiBoldItalic',
+  },
+  memberAvatarsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  memberAvatarWrapper: {
+    alignItems: 'center',
+    marginRight: 12,
+    marginBottom: 12,
+    width: 60,
+  },
+  memberAvatar: {
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  memberNameText: {
+    fontSize: 12,
+    fontFamily: 'Lato-Regular',
+    color: '#666',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  moreMembersIndicator: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E8EBF7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  moreMembersText: {
+    fontSize: 11,
+    color: PRIMARY_COLOR,
+    fontWeight: '600',
+    fontFamily: 'Lato-Bold',
+  },
+  groupMetaInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  metaText: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 6,
+    fontFamily: 'Lato-Regular',
+  },
+  groupDetailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  expandedDetailText: {
+    fontSize: 12,
+    color: '#666',
+    fontFamily: 'Lato-Regular',
+  },
+  viewGroupButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: PRIMARY_COLOR,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    elevation: 3,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  viewGroupButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginHorizontal: 8,
+    fontFamily: 'Lato-Bold',
+  },
+  emptyStateCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
   },
   emptyStateText: {
-    color: PRIMARY_COLOR,
     fontSize: 16,
-    textAlign: 'center',
+    fontWeight: '600',
+    color: '#666',
     marginTop: 15,
+    marginBottom: 5,
+    fontFamily: 'Lato-Bold',
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+    fontFamily: 'Lato-Regular',
   },
 
   categoryIcon: {
@@ -818,105 +1247,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     marginRight: 10,
-  },
-  cardHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  expandedGroupDetails: {
-    marginTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.2)',
-    paddingTop: 10,
-  },
-  expandedDetailTitle: {
-    color: '#fff',
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  memberPreviewContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  memberPreview: {
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  memberPreviewName: {
-    color: '#fff',
-    fontSize: 10,
-    marginTop: 5,
-    maxWidth: 60,
-  },
-  moreMembersText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  groupDetailsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  expandedDetailText: {
-    color: '#fff',
-    fontSize: 12,
-  },
-  categoryIconContainer: {
-    marginRight: 10,
-  },
-  groupActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  editButton: {
-    marginLeft: 10,
-    padding: 5,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    borderColor: PRIMARY_COLOR,
-    borderWidth: 1,
-    marginTop: 20,
-  },
-  loadingText: {
-    marginTop: 10,
-    color: PRIMARY_COLOR,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  youLabel: {
-    fontSize: 12,
-    color: PRIMARY_COLOR,
-    fontWeight: '600',
-    fontStyle: 'italic',
-  },
-  warningCard: {
-    backgroundColor: '#fff3cd',
-    borderColor: '#ffeaa7',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 15,
-    marginVertical: 10,
-  },
-  warningText: {
-    color: '#856404',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  emptySelectionText: {
-    color: '#666',
-    fontSize: 14,
-    textAlign: 'center',
-    paddingVertical: 20,
-    fontStyle: 'italic',
   },
 });
 

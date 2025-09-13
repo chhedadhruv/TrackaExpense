@@ -13,9 +13,13 @@ import UserAvatar from 'react-native-user-avatar';
 import firestore from '@react-native-firebase/firestore';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import auth from '@react-native-firebase/auth';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
+import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
+const SUCCESS_COLOR = '#25B07F';
+const EXPENSE_COLOR = '#F64E4E';
 
 const SettleUpScreen = ({route, navigation}) => {
   const {group, lendingDetails} = route.params;
@@ -125,9 +129,9 @@ const SettleUpScreen = ({route, navigation}) => {
     onSelect,
     excludeUser,
   ) => (
-    <Card style={styles.card}>
-      <Card.Content>
-        <Text style={styles.cardTitle}>{title}</Text>
+    <Card style={styles.sectionCard}>
+      <View style={styles.cardContent}>
+        <Text style={styles.sectionTitle}>{title}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.userList}>
             {users
@@ -146,6 +150,7 @@ const SettleUpScreen = ({route, navigation}) => {
                     name={user.name}
                     src={user.avatar}
                     style={styles.userAvatar}
+                    bgColor={selectedUser?.email === user.email ? PRIMARY_COLOR : '#CBD3EE'}
                   />
                   <Text
                     style={[
@@ -158,7 +163,7 @@ const SettleUpScreen = ({route, navigation}) => {
                   {selectedUser?.email === user.email && (
                     <MaterialCommunityIcons
                       name="check-circle"
-                      size={24}
+                      size={20}
                       color={PRIMARY_COLOR}
                       style={styles.checkIcon}
                     />
@@ -167,89 +172,111 @@ const SettleUpScreen = ({route, navigation}) => {
               ))}
           </View>
         </ScrollView>
-      </Card.Content>
+      </View>
     </Card>
   );
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.headerText}>Settle Up</Text>
+    <SafeAreaProvider>
+      <View style={styles.container}>
+        <KeyboardAwareScrollView
+          style={styles.scrollView}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          
+          {/* Header Section */}
+          <View style={styles.headerSection}>
+            <View style={styles.headerTitleRow}>
+              <MaterialCommunityIcons name="handshake" size={32} color={SUCCESS_COLOR} />
+              <Text style={styles.headerTitle}>Settle Up</Text>
+            </View>
+            <Text style={styles.headerSubtitle}>Record payments between group members</Text>
+          </View>
 
-        {/* Who paid section */}
-        {renderUserSelectionCard(
-          'Who paid?',
-          selectedBorrower,
-          group.members,
-          setSelectedBorrower,
-          selectedLender,
-        )}
+          {/* Who paid section */}
+          {renderUserSelectionCard(
+            'Who paid?',
+            selectedBorrower,
+            group.members,
+            setSelectedBorrower,
+            selectedLender,
+          )}
 
-        {/* To whom section */}
-        {renderUserSelectionCard(
-          'To whom?',
-          selectedLender,
-          group.members,
-          setSelectedLender,
-          selectedBorrower,
-        )}
+          {/* To whom section */}
+          {renderUserSelectionCard(
+            'To whom?',
+            selectedLender,
+            group.members,
+            setSelectedLender,
+            selectedBorrower,
+          )}
 
-        {/* Amount section */}
-        <Card style={styles.card}>
-          <Card.Content>
-            <Text style={styles.cardTitle}>Amount</Text>
-            <TextInput
-              style={styles.amountInput}
-              label="Enter amount"
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="numeric"
-              mode="outlined"
-              placeholder="₹0"
-            />
-          </Card.Content>
-        </Card>
-
-        {/* Note section */}
-        <Card style={styles.card}>
-          <Card.Content>
-            <Text style={styles.cardTitle}>Add a note</Text>
-            <TextInput
-              style={styles.noteInput}
-              label="Note (optional)"
-              value={note}
-              onChangeText={setNote}
-              mode="outlined"
-              placeholder="Add a note for this settlement"
-              multiline
-            />
-          </Card.Content>
-        </Card>
-
-        {/* Summary section */}
-        {selectedLender && selectedBorrower && amount && (
-          <Card style={styles.summaryCard}>
-            <Card.Content>
-              <Text style={styles.summaryTitle}>Summary</Text>
-              <Text style={styles.summaryText}>
-                {selectedBorrower.name} pays ₹
-                {parseFloat(amount).toLocaleString()} to {selectedLender.name}
-              </Text>
-            </Card.Content>
+          {/* Amount section */}
+          <Card style={styles.sectionCard}>
+            <View style={styles.cardContent}>
+              <Text style={styles.sectionTitle}>Amount</Text>
+              <TextInput
+                style={styles.textInput}
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="numeric"
+                placeholder="₹0"
+                placeholderTextColor="#999"
+              />
+            </View>
           </Card>
-        )}
 
-        {/* Settle Up button */}
-        <Button
-          mode="contained"
-          onPress={handleSettleUp}
-          style={styles.settleButton}
-          loading={loading}
-          disabled={loading || !selectedLender || !selectedBorrower || !amount}>
-          Settle Up
-        </Button>
+          {/* Note section */}
+          <Card style={styles.sectionCard}>
+            <View style={styles.cardContent}>
+              <Text style={styles.sectionTitle}>Add a note (optional)</Text>
+              <TextInput
+                style={[styles.textInput, styles.multilineInput]}
+                value={note}
+                onChangeText={setNote}
+                placeholder="Add a note for this settlement"
+                placeholderTextColor="#999"
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
+          </Card>
+
+          {/* Summary section */}
+          {selectedLender && selectedBorrower && amount && (
+            <Card style={styles.sectionCard}>
+              <View style={styles.cardContent}>
+                <Text style={styles.sectionTitle}>Summary</Text>
+                <View style={styles.summaryContent}>
+                  <View style={styles.summaryRow}>
+                    <UserAvatar size={40} name={selectedBorrower.name} bgColor={EXPENSE_COLOR} />
+                    <MaterialCommunityIcons name="arrow-right" size={24} color="#666" style={styles.arrowIcon} />
+                    <UserAvatar size={40} name={selectedLender.name} bgColor={SUCCESS_COLOR} />
+                  </View>
+                  <Text style={styles.summaryText}>
+                    {selectedBorrower.name} pays ₹{parseFloat(amount).toLocaleString()} to {selectedLender.name}
+                  </Text>
+                </View>
+              </View>
+            </Card>
+          )}
+
+          {/* Settle Up button */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.settleButton, (!selectedLender || !selectedBorrower || !amount) && styles.disabledButton]}
+              onPress={handleSettleUp}
+              disabled={loading || !selectedLender || !selectedBorrower || !amount}>
+              <MaterialCommunityIcons name="handshake" size={20} color="#FFFFFF" />
+              <Text style={styles.settleButtonText}>
+                {loading ? 'Processing...' : 'Settle Up'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAwareScrollView>
       </View>
-    </ScrollView>
+    </SafeAreaProvider>
   );
 };
 
@@ -258,25 +285,56 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: BACKGROUND_COLOR,
   },
-  content: {
-    padding: 16,
+  scrollView: {
+    flex: 1,
   },
-  headerText: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 20,
+  headerSection: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 30,
+    paddingBottom: 20,
   },
-  card: {
-    backgroundColor: PRIMARY_COLOR,
-    marginBottom: 16,
-    elevation: 2,
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  cardTitle: {
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: SUCCESS_COLOR,
+    fontFamily: 'Kufam-SemiBoldItalic',
+    marginLeft: 12,
+  },
+  headerSubtitle: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#fff',
-    marginBottom: 12,
+    color: '#666',
+    textAlign: 'center',
+    fontFamily: 'Lato-Regular',
+  },
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    elevation: 6,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    marginHorizontal: 20,
+    marginBottom: 15,
+  },
+  cardContent: {
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    marginBottom: 15,
+    fontFamily: 'Lato-Bold',
   },
   userList: {
     flexDirection: 'row',
@@ -285,15 +343,18 @@ const styles = StyleSheet.create({
   userItem: {
     alignItems: 'center',
     marginRight: 16,
-    padding: 8,
-    borderRadius: 8,
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#fff',
-    width: 80,
+    borderColor: '#E8EBF7',
+    backgroundColor: '#F8F9FA',
+    width: 90,
+    position: 'relative',
   },
   selectedUserItem: {
-    backgroundColor: '#fff',
+    backgroundColor: PRIMARY_COLOR + '15',
     borderColor: PRIMARY_COLOR,
+    borderWidth: 2,
   },
   userAvatar: {
     marginBottom: 8,
@@ -301,50 +362,95 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 12,
     textAlign: 'center',
-    color: '#fff',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
+    fontWeight: '500',
   },
   selectedUserName: {
     color: PRIMARY_COLOR,
-    fontWeight: '500',
+    fontWeight: '600',
+    fontFamily: 'Lato-Bold',
   },
   checkIcon: {
     position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: '#fff',
+    top: -5,
+    right: -5,
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
+    padding: 2,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
-  amountInput: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 8,
-  },
-  noteInput: {
-    backgroundColor: '#fff',
-    height: 100,
-    borderRadius: 8,
-    textAlignVertical: 'top',
-    padding: 8,
-  },
-  summaryCard: {
-    marginBottom: 16,
-    backgroundColor: PRIMARY_COLOR,
-  },
-  summaryTitle: {
+  textInput: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
     fontSize: 16,
-    fontWeight: '500',
-    color: '#fff',
-    marginBottom: 8,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
+  },
+  multilineInput: {
+    height: 80,
+    paddingTop: 12,
+  },
+  summaryContent: {
+    alignItems: 'center',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
   },
   summaryText: {
-    fontSize: 14,
-    color: '#fff',
+    fontSize: 16,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  arrowIcon: {
+    marginHorizontal: 15,
+  },
+  buttonContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 30,
   },
   settleButton: {
-    marginTop: 8,
-    marginBottom: 24,
-    backgroundColor: PRIMARY_COLOR,
-    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: SUCCESS_COLOR,
+    paddingVertical: 15,
+    borderRadius: 12,
+    elevation: 3,
+    shadowColor: SUCCESS_COLOR,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  disabledButton: {
+    backgroundColor: '#CBD3EE',
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  settleButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+    fontFamily: 'Lato-Bold',
   },
 });
 

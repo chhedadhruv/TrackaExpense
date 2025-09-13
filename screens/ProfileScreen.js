@@ -11,7 +11,7 @@ import {
   StyleSheet,
   ScrollView,
   SafeAreaView,
-  Linking,
+  Alert,
 } from 'react-native';
 import {
   Avatar,
@@ -32,6 +32,7 @@ const ProfileScreen = ({navigation, route}) => {
   const [verified, setVerified] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [accountActionsExpanded, setAccountActionsExpanded] = useState(false);
 
   const user = auth().currentUser;
 
@@ -72,6 +73,120 @@ const ProfileScreen = ({navigation, route}) => {
   useEffect(() => {
     handleVerify();
   }, [userData]);
+
+  const handleChangePassword = () => {
+    Alert.alert(
+      'Change Password',
+      'You will be sent a password reset email. Do you want to proceed?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Send Email',
+          onPress: async () => {
+            try {
+              await auth().sendPasswordResetEmail(user.email);
+              Alert.alert(
+                'Email Sent',
+                'A password reset email has been sent to your email address. Please check your inbox and follow the instructions.',
+                [{text: 'OK'}]
+              );
+            } catch (error) {
+              Alert.alert('Error', 'Failed to send password reset email. Please try again later.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      '⚠️ Delete Account',
+      'This action is permanent and cannot be undone. All your data including:\n\n• Transaction history\n• Group memberships\n• Receipt images\n• Account settings\n\nWill be permanently deleted. Are you absolutely sure?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete Forever',
+          style: 'destructive',
+          onPress: () => {
+            // Second confirmation
+            Alert.alert(
+              'Final Confirmation',
+              'Type DELETE in the confirmation dialog to proceed. This is your last chance to cancel.',
+              [
+                {
+                  text: 'Cancel',
+                  style: 'cancel',
+                },
+                {
+                  text: 'Yes, Delete My Account',
+                  style: 'destructive',
+                  onPress: deleteAccountPermanently,
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  };
+
+  const deleteAccountPermanently = async () => {
+    try {
+      setLoading(true);
+      const currentUser = auth().currentUser;
+      
+      // Delete user data from Firestore
+      await firestore().collection('users').doc(currentUser.uid).delete();
+      
+      // Delete user's transactions subcollection
+      const transactionsRef = firestore()
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('transactions');
+      const transactions = await transactionsRef.get();
+      
+      // Delete all transactions
+      const batch = firestore().batch();
+      transactions.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+      
+      // Delete the user account
+      await currentUser.delete();
+      
+      Alert.alert(
+        'Account Deleted',
+        'Your account has been permanently deleted. Thank you for using TrackaExpense.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // User will be automatically logged out due to account deletion
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      setLoading(false);
+      if (error.code === 'auth/requires-recent-login') {
+        Alert.alert(
+          'Authentication Required',
+          'For security reasons, please log out and log back in, then try deleting your account again.',
+          [{text: 'OK'}]
+        );
+      } else {
+        Alert.alert('Error', 'Failed to delete account. Please try again later.');
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -163,16 +278,18 @@ const ProfileScreen = ({navigation, route}) => {
           <Text style={styles.sectionHeader}>Account Settings</Text>
           
           <Card style={styles.settingsCard}>
+
+
             <TouchableOpacity
               style={styles.settingsItem}
-              onPress={() => navigation.navigate('Feedback')}>
+              onPress={() => navigation.navigate('ContactUs')}>
               <View style={styles.settingsItemLeft}>
                 <View style={[styles.settingsIcon, {backgroundColor: '#E3F2FD'}]}>
-                  <MaterialCommunityIcons name="message-text" size={24} color="#2196F3" />
+                  <MaterialCommunityIcons name="account-voice" size={24} color="#2196F3" />
                 </View>
                 <View style={styles.settingsTextContainer}>
-                  <Text style={styles.settingsItemTitle}>Feedback</Text>
-                  <Text style={styles.settingsItemSubtitle}>Share your thoughts with us</Text>
+                  <Text style={styles.settingsItemTitle}>Contact Us</Text>
+                  <Text style={styles.settingsItemSubtitle}>Get help and share feedback</Text>
                 </View>
               </View>
               <MaterialCommunityIcons name="chevron-right" size={24} color="#CBD3EE" />
@@ -182,18 +299,14 @@ const ProfileScreen = ({navigation, route}) => {
 
             <TouchableOpacity
               style={styles.settingsItem}
-              onPress={() => {
-                const url =
-                  'https://www.termsfeed.com/live/2c961df9-554e-434f-a862-ebf55df1bd49';
-                Linking.openURL(url);
-              }}>
+              onPress={() => navigation.navigate('PrivacyPolicy')}>
               <View style={styles.settingsItemLeft}>
                 <View style={[styles.settingsIcon, {backgroundColor: '#E8F5E8'}]}>
                   <MaterialCommunityIcons name="shield-check" size={24} color="#4CAF50" />
                 </View>
                 <View style={styles.settingsTextContainer}>
                   <Text style={styles.settingsItemTitle}>Privacy Policy</Text>
-                  <Text style={styles.settingsItemSubtitle}>View our privacy terms</Text>
+                  <Text style={styles.settingsItemSubtitle}>Learn how we protect your data</Text>
                 </View>
               </View>
               <MaterialCommunityIcons name="chevron-right" size={24} color="#CBD3EE" />
@@ -213,6 +326,78 @@ const ProfileScreen = ({navigation, route}) => {
               </View>
               <MaterialCommunityIcons name="chevron-right" size={24} color="#CBD3EE" />
             </TouchableOpacity>
+          </Card>
+        </View>
+
+        {/* Account Actions Section - Collapsible */}
+        <View style={styles.settingsSection}>
+          <Card style={styles.settingsCard}>
+            <TouchableOpacity
+              style={styles.collapsibleHeader}
+              onPress={() => setAccountActionsExpanded(!accountActionsExpanded)}
+              activeOpacity={0.7}>
+              <View style={styles.settingsItemLeft}>
+                <View style={[styles.settingsIcon, {backgroundColor: '#FFF3E0'}]}>
+                  <MaterialCommunityIcons name="shield-alert" size={24} color="#FF9800" />
+                </View>
+                <View style={styles.settingsTextContainer}>
+                  <Text style={styles.settingsItemTitle}>Account Actions</Text>
+                  <Text style={styles.settingsItemSubtitle}>
+                    {accountActionsExpanded ? 'Hide sensitive options' : 'Password, deletion, and other actions'}
+                  </Text>
+                </View>
+              </View>
+              <MaterialCommunityIcons 
+                name={accountActionsExpanded ? 'chevron-up' : 'chevron-down'} 
+                size={24} 
+                color="#CBD3EE" 
+              />
+            </TouchableOpacity>
+
+            {accountActionsExpanded && (
+              <View style={styles.collapsibleContent}>
+                <Divider style={styles.divider} />
+                
+                <TouchableOpacity
+                  style={styles.settingsItem}
+                  onPress={handleChangePassword}>
+                  <View style={styles.settingsItemLeft}>
+                    <View style={[styles.settingsIcon, {backgroundColor: '#E3F2FD'}]}>
+                      <MaterialCommunityIcons name="lock-reset" size={24} color="#2196F3" />
+                    </View>
+                    <View style={styles.settingsTextContainer}>
+                      <Text style={styles.settingsItemTitle}>Change Password</Text>
+                      <Text style={styles.settingsItemSubtitle}>Reset your password via email</Text>
+                    </View>
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={24} color="#CBD3EE" />
+                </TouchableOpacity>
+
+                <Divider style={styles.divider} />
+
+                <TouchableOpacity
+                  style={styles.settingsItem}
+                  onPress={handleDeleteAccount}>
+                  <View style={styles.settingsItemLeft}>
+                    <View style={[styles.settingsIcon, {backgroundColor: '#FFEBEE'}]}>
+                      <MaterialCommunityIcons name="account-remove" size={24} color="#F44336" />
+                    </View>
+                    <View style={styles.settingsTextContainer}>
+                      <Text style={[styles.settingsItemTitle, {color: '#F44336'}]}>Delete Account</Text>
+                      <Text style={styles.settingsItemSubtitle}>Permanently delete your account and data</Text>
+                    </View>
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={24} color="#CBD3EE" />
+                </TouchableOpacity>
+
+                <View style={styles.warningContainer}>
+                  <MaterialCommunityIcons name="alert-circle" size={16} color="#FF9800" />
+                  <Text style={styles.warningText}>
+                    These actions are sensitive and may require additional verification.
+                  </Text>
+                </View>
+              </View>
+            )}
           </Card>
         </View>
       </ScrollView>
@@ -432,5 +617,33 @@ const styles = StyleSheet.create({
   divider: {
     marginHorizontal: 20,
     backgroundColor: '#F0F0F0',
+  },
+  collapsibleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  collapsibleContent: {
+    paddingBottom: 8,
+  },
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    borderRadius: 8,
+    padding: 12,
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  warningText: {
+    fontSize: 12,
+    color: '#E65100',
+    fontFamily: 'Lato-Regular',
+    marginLeft: 8,
+    flex: 1,
+    lineHeight: 16,
   },
 });
