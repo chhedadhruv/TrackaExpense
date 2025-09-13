@@ -12,8 +12,6 @@ import HomeScreen from '../screens/HomeScreen';
 import TransactionScreen from '../screens/TransactionScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
-import SavingScreen from '../screens/SavingScreen';
-import EditSavingScreen from '../screens/EditSavingScreen';
 import AddOrRemoveExpense from '../screens/AddOrRemoveExpense';
 import StatisticScreen from '../screens/StatisticScreen';
 import AddIncome from '../screens/AddIncome';
@@ -27,7 +25,9 @@ import CreateSplitScreen from '../screens/SplitScreens/CreateSplitScreen';
 import SplitDetailScreen from '../screens/SplitScreens/SplitDetailScreen';
 import SettleUpScreen from '../screens/SplitScreens/SettleUpScreen';
 import SplitTransactionScreen from '../screens/SplitScreens/SplitTransactionScreen';
-import FeedbackScreen from '../screens/FeedbackScreen';
+import ContactUsScreen from '../screens/ContactUsScreen';
+import SavingsScreen from '../screens/SavingsScreen';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -67,57 +67,57 @@ const createStack = (screens) => (
 // Home Stack
 const HomeStack = () =>
   createStack([
-    { name: 'Home', component: HomeScreen, title: 'Tracka Expense' },
-    { name: 'Transaction', component: TransactionScreen, title: 'Transaction' },
-    { name: 'Saving', component: SavingScreen, title: 'Your Savings' },
-    { name: 'TransactionDetail', component: TransactionDetailScreen, title: 'Transaction Detail' },
-    { name: 'EditTransaction', component: EditTransactionScreen, title: 'Edit Transaction' },
+    { name: 'Home', component: HomeScreen, title: 'TrackaExpense' },
+    { name: 'Transaction', component: TransactionScreen, title: 'TrackaExpense' },
+    { name: 'TransactionDetail', component: TransactionDetailScreen, title: 'TrackaExpense' },
+    { name: 'EditTransaction', component: EditTransactionScreen, title: 'TrackaExpense' },
     { name: 'Image', component: ImageScreen, title: '' },
   ]);
 
 // Profile Stack
 const ProfileStack = () =>
   createStack([
-    { name: 'Profile', component: ProfileScreen, title: 'Profile' },
-    { name: 'EditProfile', component: EditProfileScreen, title: 'Edit Profile' },
-    { name: 'Feedback', component: FeedbackScreen, title: 'Feedback' },
+    { name: 'Profile', component: ProfileScreen, title: 'TrackaExpense' },
+    { name: 'EditProfile', component: EditProfileScreen, title: 'TrackaExpense' },
+    { name: 'ContactUs', component: ContactUsScreen, title: 'Contact Us' },
+    { name: 'PrivacyPolicy', component: PrivacyPolicyScreen, title: 'Privacy Policy' },
+  ]);
+
+// Savings Stack
+const SavingsStack = () =>
+  createStack([
+    { name: 'Savings', component: SavingsScreen, title: 'TrackaExpense' },
   ]);
 
 // Statistic Stack
 const StatisticStack = () =>
   createStack([
-    { name: 'Statistic', component: StatisticScreen, title: 'Statistic' },
-    { name: 'TransactionDetail', component: TransactionDetailScreen, title: 'Transaction Detail' },
-    { name: 'EditTransaction', component: EditTransactionScreen, title: 'Edit Transaction' },
+    { name: 'Statistic', component: StatisticScreen, title: 'TrackaExpense' },
+    { name: 'TransactionDetail', component: TransactionDetailScreen, title: 'TrackaExpense' },
+    { name: 'EditTransaction', component: EditTransactionScreen, title: 'TrackaExpense' },
     { name: 'Image', component: ImageScreen, title: '' },
   ]);
 
 // Expense Stack
 const AddOrRemoveExpenseStack = () =>
   createStack([
-    { name: 'AddOrRemoveExpense', component: AddOrRemoveExpense, title: 'Handle Transaction' },
-    { name: 'AddIncome', component: AddIncome, title: 'Add Income' },
-    { name: 'AddExpense', component: AddExpense, title: 'Add Expense' },
-    { name: 'TransactionDetail', component: TransactionDetailScreen, title: 'Transaction Detail' },
-    { name: 'EditTransaction', component: EditTransactionScreen, title: 'Edit Transaction' },
+    { name: 'AddOrRemoveExpense', component: AddOrRemoveExpense, title: 'TrackaExpense' },
+    { name: 'AddIncome', component: AddIncome, title: 'TrackaExpense' },
+    { name: 'AddExpense', component: AddExpense, title: 'TrackaExpense' },
+    { name: 'TransactionDetail', component: TransactionDetailScreen, title: 'TrackaExpense' },
+    { name: 'EditTransaction', component: EditTransactionScreen, title: 'TrackaExpense' },
     { name: 'Image', component: ImageScreen, title: '' },
   ]);
 
 // Split Stack
 const SplitStack = () =>
   createStack([
-    { name: 'Split', component: SplitScreen, title: 'Split' },
-    { name: 'SplitGroupDetail', component: SplitGroupDetailScreen, title: 'Split Group Detail' },
-    { name: 'CreateSplit', component: CreateSplitScreen, title: 'Create Split' },
-    { name: 'SplitDetail', component: SplitDetailScreen, title: 'Split Detail' },
-    { name: 'SettleUp', component: SettleUpScreen, title: 'Settle Up' },
-    { name: 'SplitTransaction', component: SplitTransactionScreen, title: 'Split Transaction' },
-  ]);
-
-  const SavingStack = () =>
-  createStack([
-    { name: 'Saving', component: SavingScreen, title: 'Your Savings' },
-    { name: 'EditSaving', component: EditSavingScreen, title: 'Edit Saving Goal' },
+    { name: 'Split', component: SplitScreen, title: 'TrackaExpense' },
+    { name: 'SplitGroupDetail', component: SplitGroupDetailScreen, title: 'TrackaExpense' },
+    { name: 'CreateSplit', component: CreateSplitScreen, title: 'TrackaExpense' },
+    { name: 'SplitDetail', component: SplitDetailScreen, title: 'TrackaExpense' },
+    { name: 'SettleUp', component: SettleUpScreen, title: 'TrackaExpense' },
+    { name: 'SplitTransaction', component: SplitTransactionScreen, title: 'TrackaExpense' },
   ]);
 
 const AppStack = () => (
@@ -166,20 +166,6 @@ const AppStack = () => (
       }}
     />
     <Tab.Screen
-      name="Saving"
-      component={SavingStack}
-      options={{
-        headerShown: false,
-        tabBarIcon: ({ color, size, focused }) => (
-          <MaterialCommunityIcons
-            name="bank"
-            color={focused ? '#677CD2' : color}
-            size={size}
-          />
-        ),
-      }}
-    />
-    <Tab.Screen
       name="Split"
       component={SplitStack}
       options={{
@@ -187,6 +173,20 @@ const AppStack = () => (
         tabBarIcon: ({ color, size, focused }) => (
           <FontAwesome6
             name="money-bill-transfer"
+            color={focused ? '#677CD2' : color}
+            size={size}
+          />
+        ),
+      }}
+    />
+    <Tab.Screen
+      name="Savings"
+      component={SavingsStack}
+      options={{
+        headerShown: false,
+        tabBarIcon: ({ color, size, focused }) => (
+          <MaterialCommunityIcons
+            name="piggy-bank"
             color={focused ? '#677CD2' : color}
             size={size}
           />

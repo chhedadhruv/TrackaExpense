@@ -16,10 +16,14 @@ import auth from '@react-native-firebase/auth';
 import FormButton from '../../components/FormButton';
 import {DatePickerModal} from 'react-native-paper-dates';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
+import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 
 const {width} = Dimensions.get('window');
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
+const SUCCESS_COLOR = '#25B07F';
+const EXPENSE_COLOR = '#F64E4E';
 
 // Category Options
 const CATEGORY_OPTIONS = [
@@ -434,47 +438,60 @@ const CreateSplitScreen = ({route, navigation}) => {
     const isCurrentUser = member.email === currentUser?.email;
     const isSelected = selectedUsers[member.email];
 
+    const handleCardPress = () => {
+      const selectedCount =
+        Object.values(selectedUsers).filter(Boolean).length;
+      if (!isSelected || selectedCount > 1) {
+        toggleUserSelection(member.email);
+      } else {
+        Alert.alert(
+          'Error',
+          'At least one person must be included in the split.',
+        );
+      }
+    };
+
     return (
-      <Card key={member.email} style={styles.memberCard}>
-        <View style={styles.memberCheckboxContainer}>
-          <View style={styles.memberInfo}>
-            <View style={styles.memberNameContainer}>
-              <Checkbox
-                status={isSelected ? 'checked' : 'unchecked'}
-                onPress={() => {
-                  const selectedCount =
-                    Object.values(selectedUsers).filter(Boolean).length;
-                  if (!isSelected || selectedCount > 1) {
-                    toggleUserSelection(member.email);
-                  } else {
-                    Alert.alert(
-                      'Error',
-                      'At least one person must be included in the split.',
-                    );
-                  }
-                }}
-                color={PRIMARY_COLOR}
-              />
-              <Text style={styles.memberName}>
-                {member.name}
-                {isCurrentUser && ' (You)'}
-              </Text>
-            </View>
-            {splitType === 'percentage' && isSelected && (
-              <View style={styles.percentageInputContainer}>
-                <TextInput
-                  style={styles.percentageInput}
-                  keyboardType="numeric"
-                  value={selectedPercentages[member.email]}
-                  onChangeText={text => updatePercentages(member.email, text)}
-                  placeholder="0"
+      <TouchableOpacity
+        key={member.email}
+        activeOpacity={0.7}
+        onPress={handleCardPress}>
+        <Card style={[
+          styles.memberCard,
+          isSelected && styles.memberCardSelected
+        ]}>
+          <View style={styles.memberCheckboxContainer}>
+            <View style={styles.memberInfo}>
+              <View style={styles.memberNameContainer}>
+                <Checkbox
+                  status={isSelected ? 'checked' : 'unchecked'}
+                  color={PRIMARY_COLOR}
                 />
-                <Text style={styles.percentageSymbol}>%</Text>
+                <Text style={styles.memberName}>
+                  {member.name}
+                  {isCurrentUser && ' (You)'}
+                </Text>
               </View>
-            )}
+              {splitType === 'percentage' && isSelected && (
+                <TouchableOpacity 
+                  style={styles.percentageInputContainer}
+                  activeOpacity={1}
+                  onPress={(e) => e.stopPropagation()}>
+                  <TextInput
+                    style={styles.percentageInput}
+                    keyboardType="numeric"
+                    value={selectedPercentages[member.email]}
+                    onChangeText={text => updatePercentages(member.email, text)}
+                    placeholder="0"
+                    onFocus={(e) => e.stopPropagation()}
+                  />
+                  <Text style={styles.percentageSymbol}>%</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-        </View>
-      </Card>
+        </Card>
+      </TouchableOpacity>
     );
   };
 
@@ -482,145 +499,185 @@ const CreateSplitScreen = ({route, navigation}) => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <Text style={styles.loadingText}>Loading group members...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.screenTitle}>
-        {isEditMode ? 'Edit Split' : 'Create Split'}
-      </Text>
-
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Split Title</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter split title"
-          value={title}
-          onChangeText={setTitle}
-          placeholderTextColor={'#666'}
-        />
-      </View>
-
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Amount</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter total amount"
-          keyboardType="numeric"
-          value={amount}
-          onChangeText={setAmount}
-          placeholderTextColor={'#666'}
-        />
-      </View>
-
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Date</Text>
-        <TouchableOpacity
-          style={styles.dateInput}
-          onPress={() => setDatePickerVisible(true)}>
-          <Text>{date.toLocaleDateString()}</Text>
-          <MaterialCommunityIcons
-            name="calendar"
-            size={24}
-            color={PRIMARY_COLOR}
-          />
-        </TouchableOpacity>
-        <DatePickerModal
-          locale="en"
-          mode="single"
-          visible={datePickerVisible}
-          onDismiss={onDismissDatePicker}
-          date={date}
-          onConfirm={onConfirmDate}
-        />
-      </View>
-
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Category</Text>
-        <DropDownPicker
-          open={openCategory}
-          value={category}
-          items={CATEGORY_OPTIONS.map(cat => ({
-            ...cat,
-            icon: () => (
-              <MaterialCommunityIcons
-                name={cat.icon}
-                size={24}
-                color={PRIMARY_COLOR}
-                style={styles.categoryIcon}
-              />
-            ),
-          }))}
-          setOpen={setOpenCategory}
-          setValue={setCategory}
-          placeholder="Select Category"
-          style={styles.dropdown}
-          dropDownContainerStyle={styles.dropdownContainer}
-          searchable={true}
-          searchPlaceholder="Search categories..."
-          listMode="MODAL"
-          modalTitle="Select Split Category"
-          modalAnimationType="slide"
-        />
-      </View>
-
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Paid By</Text>
-        <View style={styles.paidByContainer}>
-          {groupMembers.map(member => (
-            <TouchableOpacity
-              key={member.email}
-              style={[
-                styles.paidByOption,
-                paidBy?.email === member.email && styles.selectedPaidByOption,
-              ]}
-              onPress={() => setPaidBy(member)}>
-              <Text
-                style={[
-                  styles.paidByText,
-                  paidBy?.email === member.email && {color: 'white'},
-                ]}>
-                {member.name}
-                {member.email === auth().currentUser?.email && ' (You)'}
+    <SafeAreaProvider>
+      <View style={styles.container}>
+        <KeyboardAwareScrollView
+          style={styles.scrollView}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          
+          {/* Header Section */}
+          <View style={styles.headerSection}>
+            <View style={styles.headerTitleRow}>
+              <MaterialCommunityIcons name="cash-multiple" size={32} color={PRIMARY_COLOR} />
+              <Text style={styles.headerTitle}>
+                {isEditMode ? 'Edit Split' : 'Create Split'}
               </Text>
+            </View>
+            <Text style={styles.headerSubtitle}>
+              {isEditMode ? 'Update expense details' : 'Split expenses with your group'}
+            </Text>
+          </View>
+
+          {/* Form Card */}
+          <Card style={styles.formCard}>
+            <View style={styles.cardContent}>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Split Title</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Enter split title"
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholderTextColor="#999"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Amount (₹)</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Enter total amount"
+                  keyboardType="numeric"
+                  value={amount}
+                  onChangeText={setAmount}
+                  placeholderTextColor="#999"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Date</Text>
+                <TouchableOpacity
+                  style={styles.dateInput}
+                  onPress={() => setDatePickerVisible(true)}>
+                  <Text style={styles.dateText}>{date.toLocaleDateString()}</Text>
+                  <MaterialCommunityIcons
+                    name="calendar"
+                    size={20}
+                    color={PRIMARY_COLOR}
+                  />
+                </TouchableOpacity>
+                <DatePickerModal
+                  locale="en"
+                  mode="single"
+                  visible={datePickerVisible}
+                  onDismiss={onDismissDatePicker}
+                  date={date}
+                  onConfirm={onConfirmDate}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Category</Text>
+                <DropDownPicker
+                  open={openCategory}
+                  value={category}
+                  items={CATEGORY_OPTIONS.map(cat => ({
+                    ...cat,
+                    icon: () => (
+                      <MaterialCommunityIcons
+                        name={cat.icon}
+                        size={20}
+                        color={PRIMARY_COLOR}
+                      />
+                    ),
+                  }))}
+                  setOpen={setOpenCategory}
+                  setValue={setCategory}
+                  placeholder="Select Category"
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                  searchable={true}
+                  searchPlaceholder="Search categories..."
+                  listMode="MODAL"
+                  modalTitle="Select Split Category"
+                  modalAnimationType="slide"
+                />
+              </View>
+            </View>
+          </Card>
+
+          {/* Paid By Card */}
+          <Card style={styles.sectionCard}>
+            <View style={styles.cardContent}>
+              <Text style={styles.sectionTitle}>Paid By</Text>
+              <View style={styles.paidByContainer}>
+                {groupMembers.map(member => (
+                  <TouchableOpacity
+                    key={member.email}
+                    style={[
+                      styles.paidByOption,
+                      paidBy?.email === member.email && styles.selectedPaidByOption,
+                    ]}
+                    onPress={() => setPaidBy(member)}>
+                    <Text
+                      style={[
+                        styles.paidByText,
+                        paidBy?.email === member.email && styles.selectedPaidByText,
+                      ]}>
+                      {member.name}
+                      {member.email === auth().currentUser?.email && ' (You)'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </Card>
+
+          {/* Split Type Card */}
+          <Card style={styles.sectionCard}>
+            <View style={styles.cardContent}>
+              <Text style={styles.sectionTitle}>Split Type</Text>
+              {renderSplitTypeButtons()}
+            </View>
+          </Card>
+
+          {/* Split With Card */}
+          <Card style={styles.sectionCard}>
+            <View style={styles.cardContent}>
+              <View style={styles.splitWithHeader}>
+                <Text style={styles.sectionTitle}>Split With</Text>
+                {splitType === 'percentage' && (
+                  <Text style={styles.percentageNote}>
+                    Total:{' '}
+                    {Object.entries(selectedUsers)
+                      .filter(([_, isSelected]) => isSelected)
+                      .reduce(
+                        (sum, [email]) =>
+                          sum + parseFloat(selectedPercentages[email] || 0),
+                        0,
+                      )
+                      .toFixed(2)}
+                    %
+                  </Text>
+                )}
+              </View>
+              {groupMembers.map(renderMemberCheckbox)}
+            </View>
+          </Card>
+
+          {/* Submit Button */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={handleSubmit}
+              disabled={loading}>
+              <Text style={styles.submitButtonText}>
+                {isEditMode ? 'Update Split' : 'Create Split'}
+              </Text>
+              <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
             </TouchableOpacity>
-          ))}
-        </View>
+          </View>
+        </KeyboardAwareScrollView>
       </View>
-
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Split Type</Text>
-        {renderSplitTypeButtons()}
-      </View>
-
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Split With</Text>
-        {splitType === 'percentage' && (
-          <Text style={styles.percentageNote}>
-            Total:{' '}
-            {Object.entries(selectedUsers)
-              .filter(([_, isSelected]) => isSelected)
-              .reduce(
-                (sum, [email]) =>
-                  sum + parseFloat(selectedPercentages[email] || 0),
-                0,
-              )
-              .toFixed(2)}
-            %
-          </Text>
-        )}
-        {groupMembers.map(renderMemberCheckbox)}
-      </View>
-
-      <FormButton
-        buttonTitle={isEditMode ? 'Update Split' : 'Create Split'}
-        onPress={handleSubmit}
-        disabled={loading}
-        style={{width: width - 30, marginBottom: 20}}
-      />
-    </ScrollView>
+    </SafeAreaProvider>
   );
 };
 
@@ -628,37 +685,140 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: BACKGROUND_COLOR,
-    padding: 15,
+  },
+  scrollView: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: BACKGROUND_COLOR,
   },
-  screenTitle: {
-    fontSize: 22,
+  loadingText: {
+    fontSize: 16,
+    color: PRIMARY_COLOR,
+    marginTop: 15,
+    fontFamily: 'Lato-Regular',
+  },
+  headerSection: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 30,
+    paddingBottom: 20,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  headerTitle: {
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#3A3B3E',
-    marginBottom: 20,
+    color: PRIMARY_COLOR,
+    fontFamily: 'Kufam-SemiBoldItalic',
+    marginLeft: 12,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#666',
     textAlign: 'center',
+    fontFamily: 'Lato-Regular',
   },
-  formGroup: {
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    elevation: 8,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    marginHorizontal: 20,
     marginBottom: 20,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#3A3B3E',
-    marginBottom: 10,
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    elevation: 6,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    marginHorizontal: 20,
+    marginBottom: 15,
   },
-  input: {
-    backgroundColor: '#fff',
+  cardContent: {
+    padding: 20,
+  },
+  inputContainer: {
+    marginBottom: 15,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    marginBottom: 8,
+    fontFamily: 'Lato-Bold',
+  },
+  textInput: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
+    borderColor: '#E8EBF7',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
     fontSize: 16,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
+  },
+  dateInput: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
+  },
+  dropdown: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+  },
+  dropdownContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    marginBottom: 15,
+    fontFamily: 'Lato-Bold',
   },
   paidByContainer: {
     flexDirection: 'row',
@@ -666,22 +826,46 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   paidByOption: {
-    backgroundColor: '#fff',
+    backgroundColor: '#F8F9FA',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 10,
+    borderColor: '#E8EBF7',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginRight: 10,
+    marginBottom: 10,
   },
   selectedPaidByOption: {
     backgroundColor: PRIMARY_COLOR,
     borderColor: PRIMARY_COLOR,
   },
   paidByText: {
-    color: '#3A3B3E',
+    fontSize: 14,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
+  },
+  selectedPaidByText: {
+    color: '#FFFFFF',
+    fontFamily: 'Lato-Bold',
   },
   memberCard: {
     marginBottom: 10,
     backgroundColor: '#fff',
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+  },
+  memberCardSelected: {
+    borderWidth: 1,
+    borderColor: PRIMARY_COLOR + '30',
+    elevation: 4,
+    shadowOpacity: 0.1,
   },
   memberCheckboxContainer: {
     flexDirection: 'row',
@@ -799,6 +983,39 @@ const styles = StyleSheet.create({
   },
   categoryIcon: {
     marginRight: 10,
+  },
+  splitWithHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  buttonContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+  },
+  submitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: PRIMARY_COLOR,
+    paddingVertical: 15,
+    borderRadius: 12,
+    elevation: 3,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 8,
+    fontFamily: 'Lato-Bold',
   },
 });
 

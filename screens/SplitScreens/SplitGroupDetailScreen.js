@@ -13,9 +13,13 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import UserAvatar from 'react-native-user-avatar';
 import firestore from '@react-native-firebase/firestore';
 import moment from 'moment';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
+import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
+const SUCCESS_COLOR = '#25B07F';
+const EXPENSE_COLOR = '#F64E4E';
 
 const SplitGroupDetailScreen = ({route, navigation}) => {
   const {group} = route.params || {};
@@ -465,24 +469,46 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <Text style={styles.loadingText}>Loading group details...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      {renderGroupSummaryCard()}
-      {renderDetailedLendingSummary()}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionHeaderText}>Recent Splits</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => navigation.navigate('CreateSplit', {group})}>
-          <MaterialCommunityIcons name="plus" size={20} color="#fff" />
-        </TouchableOpacity>
+    <SafeAreaProvider>
+      <View style={styles.container}>
+        <KeyboardAwareScrollView
+          style={styles.scrollView}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          
+          {/* Header Section */}
+          <View style={styles.headerSection}>
+            <View style={styles.headerTitleRow}>
+              <MaterialCommunityIcons name="account-group" size={32} color={PRIMARY_COLOR} />
+              <Text style={styles.headerTitle}>{group.name}</Text>
+            </View>
+            <Text style={styles.headerSubtitle}>Group expense details and settlements</Text>
+          </View>
+
+          {renderGroupSummaryCard()}
+          {renderDetailedLendingSummary()}
+          
+          {/* Recent Splits Section */}
+          <View style={styles.splitsSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionHeaderText}>Recent Splits</Text>
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => navigation.navigate('CreateSplit', {group})}>
+                <MaterialCommunityIcons name="plus" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            {renderSplitsList()}
+          </View>
+        </KeyboardAwareScrollView>
       </View>
-      {renderSplitsList()}
-    </ScrollView>
+    </SafeAreaProvider>
   );
 };
 
@@ -490,31 +516,79 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: BACKGROUND_COLOR,
-    padding: 15,
+    paddingHorizontal: 20,
+  },
+  scrollView: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: BACKGROUND_COLOR,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: PRIMARY_COLOR,
+    marginTop: 15,
+    fontFamily: 'Lato-Regular',
+  },
+  headerSection: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 30,
+    paddingBottom: 20,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: PRIMARY_COLOR,
+    fontFamily: 'Kufam-SemiBoldItalic',
+    marginLeft: 12,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    fontFamily: 'Lato-Regular',
+  },
+  splitsSection: {
+    paddingBottom: 30,
   },
   groupSummaryCard: {
     backgroundColor: PRIMARY_COLOR,
-    padding: 20,
-    marginBottom: 15,
+    borderRadius: 20,
+    elevation: 8,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    marginHorizontal: 20,
+    marginBottom: 20,
   },
   cardContent: {
     alignItems: 'center',
+    padding: 25,
   },
   titleText: {
     fontSize: 14,
     color: '#CED6EC',
     marginBottom: 5,
+    fontFamily: 'Lato-Regular',
   },
   balanceText: {
     fontSize: 26,
-    fontWeight: '500',
+    fontWeight: 'bold',
     color: '#fff',
+    fontFamily: 'Kufam-SemiBoldItalic',
   },
   balanceDetails: {
     fontSize: 12,
@@ -528,9 +602,10 @@ const styles = StyleSheet.create({
     marginVertical: 15,
   },
   sectionHeaderText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#3A3B3E',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    fontFamily: 'Kufam-SemiBoldItalic',
   },
   addButton: {
     backgroundColor: PRIMARY_COLOR,

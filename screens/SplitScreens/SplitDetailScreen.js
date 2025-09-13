@@ -1,10 +1,17 @@
 import React from 'react';
-import {View, ScrollView, StyleSheet, TouchableOpacity} from 'react-native';
-import {Text} from 'react-native-paper';
+import {View, ScrollView, StyleSheet, TouchableOpacity, Alert} from 'react-native';
+import {Text, Card} from 'react-native-paper';
 import UserAvatar from 'react-native-user-avatar';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
+import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
+
+const PRIMARY_COLOR = '#677CD2';
+const BACKGROUND_COLOR = '#F4F6FA';
+const SUCCESS_COLOR = '#25B07F';
+const EXPENSE_COLOR = '#F64E4E';
 
 const SplitDetailScreen = ({route, navigation}) => {
   const {split, group, transaction} = route.params;
@@ -127,86 +134,223 @@ const SplitDetailScreen = ({route, navigation}) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.myCard}>
-        <View style={styles.cardContentWithIcon}>
-          <View style={[styles.Icon, isSettlement && styles.settlementIcon]}>
-            <MaterialCommunityIcons
-              name={isSettlement ? 'bank-transfer' : 'cash-multiple'}
-              color="#fff"
-              size={24}
-            />
-          </View>
-          <View style={styles.cardContent}>
-            <Text style={styles.TitleText}>
-              {isSettlement ? 'Settlement' : split.title}
-            </Text>
-            <Text style={styles.BalanceText}>
-              ₹{parseFloat(split.amount).toLocaleString()}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.dataCard}>
-          <View style={styles.cardContent}>
-            <Text style={styles.TitleText}>Date</Text>
-            <Text style={styles.ValueText}>
-              {formatDate(split.date || split.createdAt)}
-            </Text>
-          </View>
-          <View style={styles.cardContent}>
-            <Text style={styles.TitleText}>Type</Text>
-            <Text style={styles.ValueText}>
-              {isSettlement ? 'Settlement' : split.category || 'Expense'}
-            </Text>
-          </View>
-          {!isSettlement && (
-            <View style={styles.cardContent}>
-              <Text style={styles.TitleText}>Split Type</Text>
-              <Text style={styles.ValueText}>
-                {split.splitType === 'percentage' ? 'Percentage' : 'Equal'}
+    <SafeAreaProvider>
+      <View style={styles.container}>
+        <KeyboardAwareScrollView
+          style={styles.scrollView}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          
+          {/* Header Section */}
+          <View style={styles.headerSection}>
+            <View style={styles.headerTitleRow}>
+              <MaterialCommunityIcons 
+                name={isSettlement ? 'bank-transfer' : 'cash-multiple'} 
+                size={32} 
+                color={PRIMARY_COLOR} 
+              />
+              <Text style={styles.headerTitle}>
+                {isSettlement ? 'Settlement Details' : 'Split Details'}
               </Text>
             </View>
-          )}
-        </View>
-
-        {!isSettlement && (
-          <View style={[styles.dataCard, {marginTop: 10}]}>
-            <View style={styles.cardContent}>
-              <Text style={styles.TitleText}>Paid By</Text>
-              <Text style={styles.ValueText}>
-                {split.paidBy.name || split.paidBy.email}
-              </Text>
-            </View>
+            <Text style={styles.headerSubtitle}>
+              {isSettlement ? 'Payment settlement information' : 'Expense split breakdown'}
+            </Text>
           </View>
-        )}
-      </View>
 
-      <Text style={styles.sectionTitle}>
-        {isSettlement ? 'Settlement Details' : 'Split Breakdown'}
-      </Text>
-      {renderSplitUserDetails()}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigation.navigate('CreateSplit', {group, split})}>
-          <Text style={styles.buttonText}>Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={handleDeleteSplit}>
-          <Text style={styles.buttonText}>Delete</Text>
-        </TouchableOpacity>
+          {/* Summary Card */}
+          <Card style={styles.summaryCard}>
+            <View style={styles.cardContent}>
+              <View style={styles.summaryHeader}>
+                <View style={styles.summaryIcon}>
+                  <MaterialCommunityIcons
+                    name={isSettlement ? 'bank-transfer' : 'cash-multiple'}
+                    color="#fff"
+                    size={24}
+                  />
+                </View>
+                <View style={styles.summaryInfo}>
+                  <Text style={styles.summaryTitle}>
+                    {isSettlement ? 'Settlement' : split.title}
+                  </Text>
+                  <Text style={styles.summaryAmount}>
+                    ₹{parseFloat(split.amount).toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.detailsGrid}>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Date</Text>
+                  <Text style={styles.detailValue}>
+                    {formatDate(split.date || split.createdAt)}
+                  </Text>
+                </View>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Type</Text>
+                  <Text style={styles.detailValue}>
+                    {isSettlement ? 'Settlement' : split.category || 'Expense'}
+                  </Text>
+                </View>
+                {!isSettlement && (
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>Split Type</Text>
+                    <Text style={styles.detailValue}>
+                      {split.splitType === 'percentage' ? 'Percentage' : 'Equal'}
+                    </Text>
+                  </View>
+                )}
+                {!isSettlement && (
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>Paid By</Text>
+                    <Text style={styles.detailValue}>
+                      {split.paidBy.name || split.paidBy.email}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </Card>
+
+          {/* Split Breakdown Section */}
+          <View style={styles.breakdownSection}>
+            <Text style={styles.sectionTitle}>
+              {isSettlement ? 'Settlement Details' : 'Split Breakdown'}
+            </Text>
+            {renderSplitUserDetails()}
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => navigation.navigate('CreateSplit', {group, split})}>
+              <MaterialCommunityIcons name="pencil" size={20} color="#FFFFFF" />
+              <Text style={styles.buttonText}>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDeleteSplit}>
+              <MaterialCommunityIcons name="trash-can" size={20} color="#FFFFFF" />
+              <Text style={styles.buttonText}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAwareScrollView>
       </View>
-    </ScrollView>
+    </SafeAreaProvider>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 10,
+    backgroundColor: BACKGROUND_COLOR,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  headerSection: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 30,
+    paddingBottom: 20,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: PRIMARY_COLOR,
+    fontFamily: 'Kufam-SemiBoldItalic',
+    marginLeft: 12,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    fontFamily: 'Lato-Regular',
+  },
+  summaryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    elevation: 8,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  cardContent: {
+    padding: 25,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  summaryIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: PRIMARY_COLOR,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 15,
+  },
+  summaryInfo: {
+    flex: 1,
+  },
+  summaryTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
+    marginBottom: 4,
+  },
+  summaryAmount: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: PRIMARY_COLOR,
+    fontFamily: 'Kufam-SemiBoldItalic',
+  },
+  detailsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  detailItem: {
+    width: '48%',
+    marginBottom: 15,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+    fontFamily: 'Lato-Regular',
+  },
+  detailValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
+  },
+  breakdownSection: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    marginBottom: 15,
+    fontFamily: 'Kufam-SemiBoldItalic',
   },
   myCard: {
     margin: 5,
@@ -267,18 +411,19 @@ const styles = StyleSheet.create({
   transactionsCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    marginVertical: 5,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    shadowColor: '#000',
+    padding: 20,
+    marginVertical: 8,
+    marginHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    elevation: 6,
+    shadowColor: PRIMARY_COLOR,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 3,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
   },
   transactionsCardImage: {
     borderRadius: 10,
@@ -292,14 +437,16 @@ const styles = StyleSheet.create({
   },
   transactionsCardTitle: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#3A3B3E',
+    fontWeight: '600',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
   },
   splitAmount: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#677CD2',
-    marginTop: 2,
+    fontSize: 16,
+    fontWeight: '600',
+    color: PRIMARY_COLOR,
+    marginTop: 4,
+    fontFamily: 'Lato-Bold',
   },
   positiveAmount: {
     color: '#25B07F',
@@ -320,30 +467,50 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingVertical: 15,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+    gap: 15,
   },
-  button: {
-    width: '48%',
-    height: 45,
-    borderRadius: 24,
-    backgroundColor: '#677CD2',
+  editButton: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: PRIMARY_COLOR,
+    paddingVertical: 15,
+    borderRadius: 12,
+    elevation: 3,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   deleteButton: {
-    width: '48%',
-    height: 45,
-    borderRadius: 24,
-    backgroundColor: '#F64E4E',
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: EXPENSE_COLOR,
+    paddingVertical: 15,
+    borderRadius: 12,
+    elevation: 3,
+    shadowColor: EXPENSE_COLOR,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   buttonText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
-    textTransform: 'uppercase',
+    marginLeft: 8,
+    fontFamily: 'Lato-Bold',
   },
   title: {
     fontSize: 24,
