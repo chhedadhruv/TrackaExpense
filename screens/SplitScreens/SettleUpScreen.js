@@ -15,12 +15,10 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import auth from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
-
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
-
 const SettleUpScreen = ({route, navigation}) => {
   const {group, lendingDetails} = route.params;
   const [loading, setLoading] = useState(false);
@@ -28,25 +26,20 @@ const SettleUpScreen = ({route, navigation}) => {
   const [selectedBorrower, setSelectedBorrower] = useState(null);
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
-
   const handleSettleUp = async () => {
     if (!selectedLender || !selectedBorrower || !amount) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
-
     const settlementAmount = parseFloat(amount);
     if (isNaN(settlementAmount) || settlementAmount <= 0) {
       Alert.alert('Error', 'Please enter a valid amount');
       return;
     }
-
     try {
       setLoading(true);
-
       const currentUser = auth().currentUser;
       const currentUserEmail = currentUser.email;
-
       // Create settlement record
       const settlementData = {
         from: selectedBorrower,
@@ -57,13 +50,11 @@ const SettleUpScreen = ({route, navigation}) => {
         createdAt: firestore.FieldValue.serverTimestamp(),
         groupId: group.id,
       };
-
       const settlementRef = await firestore()
         .collection('groups')
         .doc(group.id)
         .collection('settlements')
         .add(settlementData);
-
       // Create settlement split with special handling
       const settlementSplit = {
         title: note.trim() || 'Settlement Payment',
@@ -80,13 +71,11 @@ const SettleUpScreen = ({route, navigation}) => {
           amount: settlementAmount,
         },
       };
-
       const splitRef = await firestore()
         .collection('groups')
         .doc(group.id)
         .collection('splits')
         .add(settlementSplit);
-
       // Only update balance if the current user is involved (no transaction creation)
       if (selectedBorrower.email === currentUserEmail) {
         // Update user's balance without creating a transaction
@@ -111,17 +100,14 @@ const SettleUpScreen = ({route, navigation}) => {
           });
         });
       }
-
       Alert.alert('Success', 'Settlement recorded successfully');
       navigation.goBack();
     } catch (error) {
-      console.error('Error settling up:', error);
       Alert.alert('Error', 'Failed to record settlement');
     } finally {
       setLoading(false);
     }
   };
-
   const renderUserSelectionCard = (
     title,
     selectedUser,
@@ -175,7 +161,6 @@ const SettleUpScreen = ({route, navigation}) => {
       </View>
     </Card>
   );
-
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
@@ -183,7 +168,6 @@ const SettleUpScreen = ({route, navigation}) => {
           style={styles.scrollView}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          
           {/* Header Section */}
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
@@ -192,7 +176,6 @@ const SettleUpScreen = ({route, navigation}) => {
             </View>
             <Text style={styles.headerSubtitle}>Record payments between group members</Text>
           </View>
-
           {/* Who paid section */}
           {renderUserSelectionCard(
             'Who paid?',
@@ -201,7 +184,6 @@ const SettleUpScreen = ({route, navigation}) => {
             setSelectedBorrower,
             selectedLender,
           )}
-
           {/* To whom section */}
           {renderUserSelectionCard(
             'To whom?',
@@ -210,7 +192,6 @@ const SettleUpScreen = ({route, navigation}) => {
             setSelectedLender,
             selectedBorrower,
           )}
-
           {/* Amount section */}
           <Card style={styles.sectionCard}>
             <View style={styles.cardContent}>
@@ -225,7 +206,6 @@ const SettleUpScreen = ({route, navigation}) => {
               />
             </View>
           </Card>
-
           {/* Note section */}
           <Card style={styles.sectionCard}>
             <View style={styles.cardContent}>
@@ -242,7 +222,6 @@ const SettleUpScreen = ({route, navigation}) => {
               />
             </View>
           </Card>
-
           {/* Summary section */}
           {selectedLender && selectedBorrower && amount && (
             <Card style={styles.sectionCard}>
@@ -261,7 +240,6 @@ const SettleUpScreen = ({route, navigation}) => {
               </View>
             </Card>
           )}
-
           {/* Settle Up button */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity
@@ -279,7 +257,6 @@ const SettleUpScreen = ({route, navigation}) => {
     </SafeAreaProvider>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -453,5 +430,4 @@ const styles = StyleSheet.create({
     fontFamily: 'Lato-Bold',
   },
 });
-
 export default SettleUpScreen;

@@ -12,10 +12,8 @@ import firestore from '@react-native-firebase/firestore';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import auth from '@react-native-firebase/auth';
-
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
-
 const TransactionScreen = ({navigation}) => {
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
@@ -26,15 +24,12 @@ const TransactionScreen = ({navigation}) => {
   const [customEndDate, setCustomEndDate] = useState(null);
   const [startDatePickerVisible, setStartDatePickerVisible] = useState(false);
   const [endDatePickerVisible, setEndDatePickerVisible] = useState(false);
-
   useEffect(() => {
     fetchTransactions();
   }, []);
-
   useEffect(() => {
     filterTransactions();
   }, [filter, transactions, customStartDate, customEndDate]);
-
   const fetchTransactions = async () => {
     try {
       const currentUser = auth().currentUser;
@@ -44,23 +39,18 @@ const TransactionScreen = ({navigation}) => {
         .collection('transactions')
         .orderBy('createdAt', 'desc')
         .get();
-
       const fetchedTransactions = transactionsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
       }));
-
       setTransactions(fetchedTransactions);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching transactions:', error);
       setLoading(false);
     }
   };
-
   const filterTransactions = () => {
     let filtered = transactions;
-
     switch (filter) {
       case '7days':
         filtered = transactions.filter(transaction =>
@@ -91,17 +81,14 @@ const TransactionScreen = ({navigation}) => {
       default:
         break;
     }
-
     setFilteredTransactions(filtered);
   };
-
   const handleSearch = query => {
     setSearchQuery(query);
     if (!query.trim()) {
       setFilteredTransactions(transactions);
       return;
     }
-
     const searchTerms = query.toLowerCase().trim().split(' ');
     const filtered = transactions.filter(transaction => {
       const matchTitle = transaction.title
@@ -115,31 +102,24 @@ const TransactionScreen = ({navigation}) => {
         ?.toLowerCase()
         .includes(query.toLowerCase());
       const matchAmount = transaction.amount.toString().includes(query);
-
       return matchTitle || matchDate || matchCategory || matchAmount;
     });
-
     setFilteredTransactions(filtered);
   };
-
   const onDismissStartDatePicker = () => {
     setStartDatePickerVisible(false);
   };
-
   const onConfirmStartDate = params => {
     setStartDatePickerVisible(false);
     setCustomStartDate(params.date);
   };
-
   const onDismissEndDatePicker = () => {
     setEndDatePickerVisible(false);
   };
-
   const onConfirmEndDate = params => {
     setEndDatePickerVisible(false);
     setCustomEndDate(params.date);
   };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -148,7 +128,6 @@ const TransactionScreen = ({navigation}) => {
       </View>
     );
   }
-
   return (
     <View style={styles.container}>
       {/* Header Section */}
@@ -158,7 +137,6 @@ const TransactionScreen = ({navigation}) => {
           {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''} found
         </Text>
       </View>
-
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {/* Search Bar */}
         <View style={styles.searchContainer}>
@@ -187,7 +165,6 @@ const TransactionScreen = ({navigation}) => {
                 All
               </Text>
             </TouchableOpacity>
-            
             <TouchableOpacity
               onPress={() => setFilter('7days')}
               style={[styles.filterButton, filter === '7days' && styles.filterButtonActive]}>
@@ -200,7 +177,6 @@ const TransactionScreen = ({navigation}) => {
                 Last 7 Days
               </Text>
             </TouchableOpacity>
-            
             <TouchableOpacity
               onPress={() => setFilter('30days')}
               style={[styles.filterButton, filter === '30days' && styles.filterButtonActive]}>
@@ -213,7 +189,6 @@ const TransactionScreen = ({navigation}) => {
                 Last 30 Days
               </Text>
             </TouchableOpacity>
-            
             <TouchableOpacity
               onPress={() => setFilter('custom')}
               style={[styles.filterButton, filter === 'custom' && styles.filterButtonActive]}>
@@ -248,11 +223,9 @@ const TransactionScreen = ({navigation}) => {
                   </Text>
                 </View>
               </TouchableOpacity>
-              
               <View style={styles.dateSeparator}>
                 <Text style={styles.dateSeparatorText}>to</Text>
               </View>
-              
               <TouchableOpacity
                 style={styles.dateInput}
                 onPress={() => setEndDatePickerVisible(true)}>
@@ -270,14 +243,12 @@ const TransactionScreen = ({navigation}) => {
                 </View>
               </TouchableOpacity>
             </View>
-            
             {customStartDate && customEndDate && (
               <TouchableOpacity style={styles.applyButton} onPress={filterTransactions}>
                 <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
                 <Text style={styles.applyButtonText}>Apply Filter</Text>
               </TouchableOpacity>
             )}
-            
             <DatePickerModal
               locale="en"
               mode="single"
@@ -420,7 +391,6 @@ const TransactionScreen = ({navigation}) => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -704,5 +674,4 @@ const styles = StyleSheet.create({
     fontFamily: 'Lato-Regular',
   },
 });
-
 export default TransactionScreen; 

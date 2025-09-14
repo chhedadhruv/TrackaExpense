@@ -7,10 +7,8 @@ import FormButton from '../components/FormButton';
 import FormInput from '../components/FormInput';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
-
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
-
 const EditProfileScreen = ({navigation}) => {
   const [userData, setUserData] = useState({
     name: '',
@@ -22,7 +20,6 @@ const EditProfileScreen = ({navigation}) => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-
   useEffect(() => {
     // Fetch user data from Firebase Auth and Firestore
     const fetchUserData = async () => {
@@ -33,41 +30,33 @@ const EditProfileScreen = ({navigation}) => {
           navigation.goBack();
           return;
         }
-
         const userDoc = await firestore()
           .collection('users')
           .doc(currentUser.uid)
           .get();
-
         if (userDoc.exists) {
           setUserData(userDoc.data());
         } else {
           setErrorMessage('User data not found');
         }
       } catch (error) {
-        console.error(error);
         setErrorMessage('Failed to load user data');
       } finally {
         setLoading(false);
       }
     };
-
     fetchUserData();
   }, []);
-
   // Handle profile update
   const handleUpdate = async () => {
     setErrorMessage('');
-    
     if (validateInputs()) {
       setUpdating(true);
       const currentUser = auth().currentUser;
-
       if (!currentUser) {
         setUpdating(false);
         return;
       }
-
       try {
         await firestore().collection('users').doc(currentUser.uid).update({
           name: userData.name,
@@ -75,7 +64,6 @@ const EditProfileScreen = ({navigation}) => {
           phone: userData.phone,
           balance: userData.balance,
         });
-
         Alert.alert(
           'Success! 🎉', 
           'Your profile has been updated successfully.',
@@ -84,11 +72,9 @@ const EditProfileScreen = ({navigation}) => {
       } catch (error) {
         setUpdating(false);
         setErrorMessage('Failed to update profile. Please check your connection and try again.');
-        console.error(error);
       }
     }
   };
-
   // Input validation
   const validateInputs = () => {
     if (!userData.name || userData.name.trim().length < 2) {
@@ -105,13 +91,11 @@ const EditProfileScreen = ({navigation}) => {
     }
     return true;
   };
-
   // Email validation
   const validateEmail = email => {
     const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
     return emailRegex.test(email);
   };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -120,7 +104,6 @@ const EditProfileScreen = ({navigation}) => {
       </View>
     );
   }
-
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAwareScrollView
@@ -128,7 +111,6 @@ const EditProfileScreen = ({navigation}) => {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        
         {/* Header Section */}
         <View style={styles.headerSection}>
           <View style={styles.iconContainer}>
@@ -137,7 +119,6 @@ const EditProfileScreen = ({navigation}) => {
           <Text style={styles.titleText}>Edit Profile</Text>
           <Text style={styles.subtitleText}>Update your personal information</Text>
         </View>
-
         {/* Form Card */}
         <Card style={styles.formCard}>
           <View style={styles.cardContent}>
@@ -147,10 +128,8 @@ const EditProfileScreen = ({navigation}) => {
                 <Text style={styles.errorMessage}>{errorMessage}</Text>
               </View>
             )}
-
             <View style={styles.inputSection}>
               <Text style={styles.sectionTitle}>Personal Information</Text>
-              
               <FormInput
                 labelValue={userData.name}
                 onChangeText={(name) => {
@@ -162,7 +141,6 @@ const EditProfileScreen = ({navigation}) => {
                 autoCapitalize="words"
                 autoCorrect={false}
               />
-
               <FormInput
                 labelValue={userData.email}
                 onChangeText={(email) => {
@@ -175,7 +153,6 @@ const EditProfileScreen = ({navigation}) => {
                 autoCapitalize="none"
                 autoCorrect={false}
               />
-
               <FormInput
                 labelValue={userData.phone}
                 onChangeText={(phone) => {
@@ -189,7 +166,6 @@ const EditProfileScreen = ({navigation}) => {
                 maxLength={15}
               />
             </View>
-
             {updating ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={PRIMARY_COLOR} />
@@ -203,7 +179,6 @@ const EditProfileScreen = ({navigation}) => {
             )}
           </View>
         </Card>
-
         {/* Info Section */}
         <View style={styles.infoSection}>
           <View style={styles.infoItem}>
@@ -219,9 +194,7 @@ const EditProfileScreen = ({navigation}) => {
     </SafeAreaView>
   );
 };
-
 export default EditProfileScreen;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -2,13 +2,10 @@ import { View, Text, Alert } from 'react-native';
 import React, { createContext, useState } from 'react';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
-
 export const AuthContext = createContext();
-
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
-
   const handleAuthError = (error) => {
     const errorMessages = {
       'auth/user-not-found': {
@@ -44,7 +41,6 @@ const AuthProvider = ({ children }) => {
         message: 'Invalid email or password. Please check your credentials and try again.',
       },
     };
-
     const alertData = errorMessages[error.code];
     if (alertData) {
       Alert.alert(alertData.title, alertData.message, [{ text: 'OK' }]);
@@ -52,7 +48,6 @@ const AuthProvider = ({ children }) => {
       Alert.alert('Error', error.message, [{ text: 'OK' }]);
     }
   };
-
   return (
     <AuthContext.Provider
       value={{
@@ -63,16 +58,13 @@ const AuthProvider = ({ children }) => {
             Alert.alert('Missing Information', 'Please enter both email and password.', [{ text: 'OK' }]);
             return;
           }
-
           try {
             const userCredential = await auth().signInWithEmailAndPassword(email, password);
             const currentUser = userCredential.user;
-
             // Check if email is verified
             if (!currentUser.emailVerified) {
               // Sign out the user
               await auth().signOut();
-
               // Alert the user about email verification with more helpful message
               Alert.alert(
                 'Email Verification Required', 
@@ -107,12 +99,10 @@ const AuthProvider = ({ children }) => {
             Alert.alert('Missing Information', 'All fields are required to create your account.', [{ text: 'OK' }]);
             return;
           }
-
           try {
             const userCredential = await auth().createUserWithEmailAndPassword(email, password);
             const user = userCredential.user;
             await user.sendEmailVerification();
-
             await firestore().collection('users').doc(user.uid).set({
               name,
               email,
@@ -123,7 +113,6 @@ const AuthProvider = ({ children }) => {
               createdAt: firestore.Timestamp.fromDate(new Date()),
               userImg: null,
             });
-            
             await auth().signOut();
             Alert.alert(
               'Account Created Successfully!', 
@@ -140,7 +129,6 @@ const AuthProvider = ({ children }) => {
             await auth().signOut();
           } catch (error) {
             Alert.alert('Error', 'Failed to log out. Please try again.', [{ text: 'OK' }]);
-            console.log(error);
           }
         },
         forgotPassword: async (email) => {
@@ -148,13 +136,11 @@ const AuthProvider = ({ children }) => {
             Alert.alert('Email Required', 'Please enter your email address to reset your password.', [{ text: 'OK' }]);
             return;
           }
-
           try {
             await auth().sendPasswordResetEmail(email);
             Alert.alert('Password Reset Email Sent', 'Check your inbox for instructions to reset your password.', [{ text: 'OK' }]);
           } catch (error) {
             handleAuthError(error);
-            console.log(error);
           }
         },
       }}
@@ -163,5 +149,4 @@ const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-
 export default AuthProvider;

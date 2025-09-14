@@ -8,10 +8,8 @@ import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
-
 const EditTransactionScreen = ({route, navigation}) => {
   const {transaction} = route.params;
-
   const [title, setTitle] = useState(transaction.title);
   const [description, setDescription] = useState(transaction.description);
   const [amount, setAmount] = useState(transaction.amount.toString());
@@ -39,15 +37,12 @@ const EditTransactionScreen = ({route, navigation}) => {
     {label: 'Gift', value: 'Gift'},
     {label: 'Others', value: 'Others'},
   ]);
-
   const toggleModal = () => {
     setModalVisible(!modalVisible);
   };
-
   const onDismissSingle = () => {
     setOpenDate(false);
   };
-
   const onConfirmSingle = params => {
     setOpenDate(false);
     const formattedDate = `${params.date.getFullYear()}-${
@@ -55,12 +50,10 @@ const EditTransactionScreen = ({route, navigation}) => {
     }-${params.date.getDate()}`;
     setDate(formattedDate);
   };
-
   const getUser = () => {
     const user = auth().currentUser;
     return user.uid;
   };
-
   useEffect(() => {
     const fetchUserData = async () => {
       const user = auth().currentUser;
@@ -68,10 +61,8 @@ const EditTransactionScreen = ({route, navigation}) => {
     };
     fetchUserData();
   }, []);
-
   const handleSubmit = async () => {
     let imageUrl = await uploadImage();
-
     if (
       title === '' ||
       description === '' ||
@@ -82,25 +73,20 @@ const EditTransactionScreen = ({route, navigation}) => {
       alert('Please fill in all fields');
       return;
     }
-
     setUploading(true);
-
     try {
       const userDocRef = firestore().collection('users').doc(getUser());
       const transactionRef = userDocRef
         .collection('transactions')
         .doc(transaction.id);
-
       await firestore().runTransaction(async transaction => {
         const transactionDoc = await transaction.get(transactionRef);
         const transactionData = transactionDoc.data();
-
         if (transactionData.type === 'expense') {
           imageUrl = imageUrl || transactionData.imageUrl;
         } else if (typeof imageUrl === 'undefined') {
           delete transactionData.imageUrl;
         }
-
         transaction.update(transactionRef, {
           title,
           description,
@@ -110,61 +96,49 @@ const EditTransactionScreen = ({route, navigation}) => {
           imageUrl,
           createdAt: firestore.Timestamp.fromDate(new Date()),
         });
-
         const userData = await transaction.get(userDocRef);
         const userBalance = userData.data().balance;
         const transactionAmount = parseFloat(amount);
         let newBalance;
-
         if (transactionData.type === 'expense') {
           newBalance = userBalance + transactionData.amount - transactionAmount;
         } else {
           newBalance = userBalance - transactionData.amount + transactionAmount;
         }
-
         transaction.update(userDocRef, {balance: newBalance});
       });
-
       setUploading(false);
       alert('Transaction updated successfully');
       navigation.navigate('Home');
     } catch (error) {
-      console.error('Error updating transaction:', error);
       alert(
         'An error occurred while updating the transaction. Please try again.',
       );
       setUploading(false);
     }
   };
-
   const uploadImage = async () => {
     if (!image) return null;
-
     const uploadUri = image;
     let filename = uploadUri.substring(uploadUri.lastIndexOf('/') + 1);
     const extension = filename.split('.').pop();
     const name = filename.split('.').slice(0, -1).join('.');
     filename = `${name}${Date.now()}.${extension}`;
-
     const storageRef = storage().ref(`bills/${getUser()}/${filename}`);
     const task = storageRef.putFile(uploadUri);
-
     task.on('state_changed', taskSnapshot => {
       setTransferred(
         Math.round(taskSnapshot.bytesTransferred / taskSnapshot.totalBytes) *
           100,
       );
     });
-
     try {
       await task;
       return await storageRef.getDownloadURL();
     } catch (e) {
-      console.log(e);
       return null;
     }
   };
-
   const takePhotoFromCamera = () => {
     launchCamera(
       {
@@ -173,9 +147,7 @@ const EditTransactionScreen = ({route, navigation}) => {
       },
       response => {
         if (response.didCancel) {
-          console.log('User cancelled camera picker');
         } else if (response.errorCode) {
-          console.log('Camera error: ', response.errorMessage);
         } else {
           const imageUri = response.assets[0].uri;
           setImage(imageUri);
@@ -184,7 +156,6 @@ const EditTransactionScreen = ({route, navigation}) => {
     );
     toggleModal();
   };
-
   const choosePhotoFromLibrary = () => {
     launchImageLibrary(
       {
@@ -193,9 +164,7 @@ const EditTransactionScreen = ({route, navigation}) => {
       },
       response => {
         if (response.didCancel) {
-          console.log('User cancelled image picker');
         } else if (response.errorCode) {
-          console.log('ImagePicker Error: ', response.errorMessage);
         } else {
           const imageUri = response.assets[0].uri;
           setImage(imageUri);
@@ -204,7 +173,6 @@ const EditTransactionScreen = ({route, navigation}) => {
     );
     toggleModal();
   };
-
   return (
     <View style={styles.container}>
       <View style={styles.action}>
@@ -302,7 +270,6 @@ const EditTransactionScreen = ({route, navigation}) => {
           )}
         </View>
       )}
-
       <Button mode="contained" onPress={handleSubmit} style={styles.button}>
         Submit
       </Button>
@@ -334,7 +301,6 @@ const EditTransactionScreen = ({route, navigation}) => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -386,5 +352,4 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
 });
-
 export default EditTransactionScreen;

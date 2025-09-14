@@ -15,12 +15,10 @@ import auth from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import FormButton from '../components/FormButton';
-
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
-
 const SavingsScreen = ({navigation}) => {
   const [loading, setLoading] = useState(true);
   const [savings, setSavings] = useState({
@@ -36,11 +34,9 @@ const SavingsScreen = ({navigation}) => {
     monthly: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   useEffect(() => {
     fetchSavingsData();
   }, []);
-
   const fetchSavingsData = async () => {
     try {
       const currentUser = auth().currentUser;
@@ -48,7 +44,6 @@ const SavingsScreen = ({navigation}) => {
         .collection('users')
         .doc(currentUser.uid)
         .get();
-
       const userData = userDoc.data();
       if (userData.savings) {
         setSavings(userData.savings);
@@ -58,7 +53,6 @@ const SavingsScreen = ({navigation}) => {
           monthly: userData.savings.monthly.toString(),
         });
       }
-
       // Fetch savings history
       const historySnapshot = await firestore()
         .collection('users')
@@ -67,24 +61,19 @@ const SavingsScreen = ({navigation}) => {
         .orderBy('createdAt', 'desc')
         .limit(10)
         .get();
-
       const history = historySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
       }));
-
       setSavingsHistory(history);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching savings data:', error);
       setLoading(false);
     }
   };
-
   const handleEdit = () => {
     setIsEditing(true);
   };
-
   const handleCancel = () => {
     setIsEditing(false);
     setEditValues({
@@ -93,43 +82,35 @@ const SavingsScreen = ({navigation}) => {
       monthly: savings.monthly.toString(),
     });
   };
-
   const handleSave = async () => {
     if (!editValues.current || !editValues.target || !editValues.monthly) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-
     const current = parseFloat(editValues.current);
     const target = parseFloat(editValues.target);
     const monthly = parseFloat(editValues.monthly);
-
     if (isNaN(current) || isNaN(target) || isNaN(monthly)) {
       Alert.alert('Error', 'Please enter valid numbers');
       return;
     }
-
     if (current < 0 || target < 0 || monthly < 0) {
       Alert.alert('Error', 'Values cannot be negative');
       return;
     }
-
     setIsSubmitting(true);
     try {
       const currentUser = auth().currentUser;
       const userDocRef = firestore().collection('users').doc(currentUser.uid);
-
       const newSavings = {
         current,
         target,
         monthly,
         updatedAt: firestore.Timestamp.fromDate(new Date()),
       };
-
       await userDocRef.update({
         savings: newSavings,
       });
-
       // Add to history if values changed
       if (current !== savings.current || target !== savings.target || monthly !== savings.monthly) {
         await userDocRef.collection('savingsHistory').add({
@@ -138,40 +119,33 @@ const SavingsScreen = ({navigation}) => {
           createdAt: firestore.Timestamp.fromDate(new Date()),
         });
       }
-
       setSavings(newSavings);
       setIsEditing(false);
       Alert.alert('Success', 'Savings updated successfully');
     } catch (error) {
-      console.error('Error updating savings:', error);
       Alert.alert('Error', 'Failed to update savings. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
-
   const addToSavings = async (amount) => {
     if (!amount || isNaN(amount) || amount <= 0) {
       Alert.alert('Error', 'Please enter a valid amount');
       return;
     }
-
     setIsSubmitting(true);
     try {
       const currentUser = auth().currentUser;
       const userDocRef = firestore().collection('users').doc(currentUser.uid);
-
       const newCurrent = savings.current + parseFloat(amount);
       const newSavings = {
         ...savings,
         current: newCurrent,
         updatedAt: firestore.Timestamp.fromDate(new Date()),
       };
-
       await userDocRef.update({
         savings: newSavings,
       });
-
       // Add to history
       await userDocRef.collection('savingsHistory').add({
         type: 'deposit',
@@ -180,44 +154,36 @@ const SavingsScreen = ({navigation}) => {
         newAmount: newCurrent,
         createdAt: firestore.Timestamp.fromDate(new Date()),
       });
-
       setSavings(newSavings);
       Alert.alert('Success', `₹${amount} added to savings`);
     } catch (error) {
-      console.error('Error adding to savings:', error);
       Alert.alert('Error', 'Failed to add to savings. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
-
   const withdrawFromSavings = async (amount) => {
     if (!amount || isNaN(amount) || amount <= 0) {
       Alert.alert('Error', 'Please enter a valid amount');
       return;
     }
-
     if (parseFloat(amount) > savings.current) {
       Alert.alert('Error', 'Insufficient savings balance');
       return;
     }
-
     setIsSubmitting(true);
     try {
       const currentUser = auth().currentUser;
       const userDocRef = firestore().collection('users').doc(currentUser.uid);
-
       const newCurrent = savings.current - parseFloat(amount);
       const newSavings = {
         ...savings,
         current: newCurrent,
         updatedAt: firestore.Timestamp.fromDate(new Date()),
       };
-
       await userDocRef.update({
         savings: newSavings,
       });
-
       // Add to history
       await userDocRef.collection('savingsHistory').add({
         type: 'withdrawal',
@@ -226,33 +192,27 @@ const SavingsScreen = ({navigation}) => {
         newAmount: newCurrent,
         createdAt: firestore.Timestamp.fromDate(new Date()),
       });
-
       setSavings(newSavings);
       Alert.alert('Success', `₹${amount} withdrawn from savings`);
     } catch (error) {
-      console.error('Error withdrawing from savings:', error);
       Alert.alert('Error', 'Failed to withdraw from savings. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
-
   const calculateProgress = () => {
     if (savings.target === 0) return 0;
     return Math.min((savings.current / savings.target) * 100, 100);
   };
-
   const calculateMonthsToTarget = () => {
     if (savings.monthly === 0) return null;
     const remaining = savings.target - savings.current;
     if (remaining <= 0) return 0;
     return Math.ceil(remaining / savings.monthly);
   };
-
   const formatCurrency = (amount) => {
     return parseInt(amount, 10).toLocaleString();
   };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -261,7 +221,6 @@ const SavingsScreen = ({navigation}) => {
       </View>
     );
   }
-
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
@@ -269,7 +228,6 @@ const SavingsScreen = ({navigation}) => {
           style={styles.scrollView}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          
           {/* Header Section */}
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
@@ -278,7 +236,6 @@ const SavingsScreen = ({navigation}) => {
             </View>
             <Text style={styles.headerSubtitle}>Track and manage your savings goals</Text>
           </View>
-
           {/* Current Savings Card */}
           <Card style={styles.savingsCard}>
             <View style={styles.cardContent}>
@@ -291,9 +248,7 @@ const SavingsScreen = ({navigation}) => {
                   </TouchableOpacity>
                 )}
               </View>
-              
               <Text style={styles.savingsAmount}>₹{formatCurrency(savings.current)}</Text>
-              
               {isEditing ? (
                 <View style={styles.editForm}>
                   <View style={styles.inputContainer}>
@@ -307,7 +262,6 @@ const SavingsScreen = ({navigation}) => {
                       placeholderTextColor="#999"
                     />
                   </View>
-                  
                   <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Target Amount (₹)</Text>
                     <TextInput
@@ -319,7 +273,6 @@ const SavingsScreen = ({navigation}) => {
                       placeholderTextColor="#999"
                     />
                   </View>
-                  
                   <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Monthly Goal (₹)</Text>
                     <TextInput
@@ -331,7 +284,6 @@ const SavingsScreen = ({navigation}) => {
                       placeholderTextColor="#999"
                     />
                   </View>
-                  
                   <View style={styles.editActions}>
                     <TouchableOpacity
                       style={[styles.actionButton, styles.cancelButton]}
@@ -365,7 +317,6 @@ const SavingsScreen = ({navigation}) => {
               )}
             </View>
           </Card>
-
           {/* Progress Card */}
           <Card style={styles.progressCard}>
             <View style={styles.cardContent}>
@@ -391,12 +342,10 @@ const SavingsScreen = ({navigation}) => {
               )}
             </View>
           </Card>
-
           {/* Quick Actions Card */}
           <Card style={styles.actionsCard}>
             <View style={styles.cardContent}>
               <Text style={styles.actionsTitle}>Quick Actions</Text>
-              
               <View style={styles.actionButtons}>
                 <TouchableOpacity
                   style={[styles.quickActionButton, styles.addButton]}
@@ -418,7 +367,6 @@ const SavingsScreen = ({navigation}) => {
                   <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
                   <Text style={styles.quickActionText}>Add Money</Text>
                 </TouchableOpacity>
-                
                 <TouchableOpacity
                   style={[styles.quickActionButton, styles.withdrawButton]}
                   onPress={() => {
@@ -442,12 +390,10 @@ const SavingsScreen = ({navigation}) => {
               </View>
             </View>
           </Card>
-
           {/* Recent Activity Card */}
           <Card style={styles.historyCard}>
             <View style={styles.cardContent}>
               <Text style={styles.historyTitle}>Recent Activity</Text>
-              
               {savingsHistory.length > 0 ? (
                 savingsHistory.map((item, index) => (
                   <View key={item.id} style={styles.historyItem}>
@@ -494,7 +440,6 @@ const SavingsScreen = ({navigation}) => {
     </SafeAreaProvider>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -824,5 +769,4 @@ const styles = StyleSheet.create({
     fontFamily: 'Lato-Regular',
   },
 });
-
 export default SavingsScreen; 

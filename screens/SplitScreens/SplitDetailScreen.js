@@ -7,18 +7,15 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
-
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
-
 const SplitDetailScreen = ({route, navigation}) => {
   const {split, group, transaction} = route.params;
   const currentUser = auth().currentUser;
   const isSettlement = split.type === 'settlement';
   const [menuVisible, setMenuVisible] = React.useState(false);
-
   const handleDeleteSplit = async () => {
     try {
       await firestore()
@@ -27,15 +24,12 @@ const SplitDetailScreen = ({route, navigation}) => {
         .collection('splits')
         .doc(split.id)
         .delete();
-
       setMenuVisible(false);
       navigation.goBack();
     } catch (error) {
-      console.error('Error deleting split:', error);
       Alert.alert('Error', 'Failed to delete split');
     }
   };
-
   const formatDate = timestamp => {
     if (!timestamp) return '';
     const date = timestamp.toDate();
@@ -48,7 +42,6 @@ const SplitDetailScreen = ({route, navigation}) => {
       .split('/')
       .join('-');
   };
-
   const renderSplitUserDetails = () => {
     if (isSettlement) {
       return (
@@ -73,7 +66,6 @@ const SplitDetailScreen = ({route, navigation}) => {
               </View>
             </View>
           </View>
-
           {/* Person who received (Lender) */}
           <View style={styles.transactionsCard}>
             <UserAvatar
@@ -99,14 +91,12 @@ const SplitDetailScreen = ({route, navigation}) => {
         </>
       );
     }
-
     return split.splitUsers.map(user => {
       const isCurrentUser = user.email === currentUser?.email;
       const splitAmount =
         split.splitType === 'percentage'
           ? `₹${(split.amount * (user.percentage / 100)).toFixed(2)}`
           : `₹${(split.amount / split.splitUsers.length).toFixed(2)}`;
-
       return (
         <View key={user.email} style={styles.transactionsCard}>
           <UserAvatar
@@ -132,7 +122,6 @@ const SplitDetailScreen = ({route, navigation}) => {
       );
     });
   };
-
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
@@ -140,7 +129,6 @@ const SplitDetailScreen = ({route, navigation}) => {
           style={styles.scrollView}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          
           {/* Header Section */}
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
@@ -157,7 +145,6 @@ const SplitDetailScreen = ({route, navigation}) => {
               {isSettlement ? 'Payment settlement information' : 'Expense split breakdown'}
             </Text>
           </View>
-
           {/* Summary Card */}
           <Card style={styles.summaryCard}>
             <View style={styles.cardContent}>
@@ -178,7 +165,6 @@ const SplitDetailScreen = ({route, navigation}) => {
                   </Text>
                 </View>
               </View>
-
               <View style={styles.detailsGrid}>
                 <View style={styles.detailItem}>
                   <Text style={styles.detailLabel}>Date</Text>
@@ -211,7 +197,6 @@ const SplitDetailScreen = ({route, navigation}) => {
               </View>
             </View>
           </Card>
-
           {/* Split Breakdown Section */}
           <View style={styles.breakdownSection}>
             <Text style={styles.sectionTitle}>
@@ -219,7 +204,6 @@ const SplitDetailScreen = ({route, navigation}) => {
             </Text>
             {renderSplitUserDetails()}
           </View>
-
           {/* Action Buttons */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity
@@ -240,7 +224,6 @@ const SplitDetailScreen = ({route, navigation}) => {
     </SafeAreaProvider>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -532,5 +515,4 @@ const styles = StyleSheet.create({
     color: '#3A3B3E',
   },
 });
-
 export default SplitDetailScreen;

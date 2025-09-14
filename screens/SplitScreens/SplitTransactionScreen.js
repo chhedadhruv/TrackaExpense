@@ -13,12 +13,10 @@ import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
-
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
-
 const SplitTransactionScreen = ({route, navigation}) => {
   const {group} = route.params;
   const [loading, setLoading] = useState(true);
@@ -30,15 +28,12 @@ const SplitTransactionScreen = ({route, navigation}) => {
   const [customEndDate, setCustomEndDate] = useState(null);
   const [startDatePickerVisible, setStartDatePickerVisible] = useState(false);
   const [endDatePickerVisible, setEndDatePickerVisible] = useState(false);
-
   useEffect(() => {
     fetchTransactions();
   }, []);
-
   useEffect(() => {
     filterTransactions();
   }, [filter, transactions, customStartDate, customEndDate]);
-
   const fetchTransactions = async () => {
     try {
       const splitsSnapshot = await firestore()
@@ -47,23 +42,18 @@ const SplitTransactionScreen = ({route, navigation}) => {
         .collection('splits')
         .orderBy('createdAt', 'desc')
         .get();
-
       const fetchedTransactions = splitsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
       }));
-
       setTransactions(fetchedTransactions);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching transactions:', error);
       setLoading(false);
     }
   };
-
   const filterTransactions = () => {
     let filtered = transactions;
-
     switch (filter) {
       case '7days':
         filtered = transactions.filter(transaction =>
@@ -94,17 +84,14 @@ const SplitTransactionScreen = ({route, navigation}) => {
       default:
         break;
     }
-
     setFilteredTransactions(filtered);
   };
-
   const handleSearch = query => {
     setSearchQuery(query);
     if (!query.trim()) {
       setFilteredTransactions(transactions);
       return;
     }
-
     const searchTerms = query.toLowerCase().trim().split(' ');
     const filtered = transactions.filter(transaction => {
       const matchTitle = transaction.title
@@ -121,33 +108,26 @@ const SplitTransactionScreen = ({route, navigation}) => {
       const matchPaidBy = transaction.paidBy.name
         .toLowerCase()
         .includes(query.toLowerCase());
-
       return (
         matchTitle || matchDate || matchCategory || matchAmount || matchPaidBy
       );
     });
-
     setFilteredTransactions(filtered);
   };
-
   const onDismissStartDatePicker = () => {
     setStartDatePickerVisible(false);
   };
-
   const onConfirmStartDate = params => {
     setStartDatePickerVisible(false);
     setCustomStartDate(params.date);
   };
-
   const onDismissEndDatePicker = () => {
     setEndDatePickerVisible(false);
   };
-
   const onConfirmEndDate = params => {
     setEndDatePickerVisible(false);
     setCustomEndDate(params.date);
   };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -156,7 +136,6 @@ const SplitTransactionScreen = ({route, navigation}) => {
       </View>
     );
   }
-
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
@@ -164,7 +143,6 @@ const SplitTransactionScreen = ({route, navigation}) => {
           style={styles.scrollView}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          
           {/* Header Section */}
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
@@ -173,7 +151,6 @@ const SplitTransactionScreen = ({route, navigation}) => {
             </View>
             <Text style={styles.headerSubtitle}>View and search group transaction history</Text>
           </View>
-
           {/* Search Bar */}
           <View style={styles.searchContainer}>
             <Searchbar
@@ -186,7 +163,6 @@ const SplitTransactionScreen = ({route, navigation}) => {
               iconColor={PRIMARY_COLOR}
             />
           </View>
-
           {/* Filter Section */}
           <Card style={styles.filterCard}>
             <View style={styles.cardContent}>
@@ -328,7 +304,6 @@ const SplitTransactionScreen = ({route, navigation}) => {
               )}
             </View>
           </Card>
-
           {/* Transactions List */}
           <View style={styles.transactionsSection}>
             <Text style={styles.sectionTitle}>Transactions</Text>
@@ -384,7 +359,6 @@ const SplitTransactionScreen = ({route, navigation}) => {
     </SafeAreaProvider>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -697,5 +671,4 @@ const styles = StyleSheet.create({
     fontFamily: 'Lato-Regular',
   },
 });
-
 export default SplitTransactionScreen;

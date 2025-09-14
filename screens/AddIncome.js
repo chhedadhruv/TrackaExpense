@@ -9,11 +9,9 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import FormButton from '../components/FormButton';
-
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
-
 const AddIncome = ({navigation}) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -33,11 +31,9 @@ const AddIncome = ({navigation}) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
-
   const onDismissSingle = () => {
     setOpenDate(false);
   };
-
   const onConfirmSingle = params => {
     setOpenDate(false);
     const formattedDate = `${params.date.getFullYear()}-${String(
@@ -45,19 +41,15 @@ const AddIncome = ({navigation}) => {
     ).padStart(2, '0')}-${String(params.date.getDate()).padStart(2, '0')}`;
     setDate(formattedDate);
   };
-
   const getUser = () => {
     const user = auth().currentUser;
     return user.uid;
   };
-
   useEffect(() => {
     getUser();
   }, []);
-
   const validateForm = () => {
     setErrorMessage(null);
-    
     if (!title.trim()) {
       setErrorMessage('Please enter a title for your income');
       return false;
@@ -82,24 +74,19 @@ const AddIncome = ({navigation}) => {
       setErrorMessage('Please select a date');
       return false;
     }
-    
     return true;
   };
-
   const handleSubmit = async () => {
     if (!validateForm()) return;
-    
     setIsLoading(true);
     setIsSubmitting(true);
     try {
       const userDocRef = firestore().collection('users').doc(getUser());
-
       await firestore().runTransaction(async transaction => {
         const userDoc = await transaction.get(userDocRef);
         const userData = userDoc.data();
         const newBalance = userData.balance + parseInt(amount);
         transaction.update(userDocRef, {balance: newBalance});
-
         const transactionRef = userDocRef.collection('transactions');
         const incomeData = {
           userId: getUser(),
@@ -111,12 +98,10 @@ const AddIncome = ({navigation}) => {
           createdAt: firestore.Timestamp.fromDate(new Date()),
           type: 'income',
         };
-
         const incomeDocRef = await transactionRef.add(incomeData);
         incomeData.documentId = incomeDocRef.id;
         transaction.update(incomeDocRef, {documentId: incomeDocRef.id});
       });
-
       setAmount('');
       setTitle('');
       setDescription('');
@@ -124,19 +109,16 @@ const AddIncome = ({navigation}) => {
       setValue(null);
       setDate(undefined);
       setSuccessMessage('Income added successfully!');
-      
       setTimeout(() => {
         navigation.goBack();
       }, 1500);
     } catch (error) {
-      console.error('Error adding income:', error);
       setErrorMessage('An error occurred while adding the income. Please try again.');
     } finally {
       setIsLoading(false);
       setIsSubmitting(false);
     }
   };
-
   const isFormValid = () => {
     return (
       title.trim() !== '' &&
@@ -147,7 +129,6 @@ const AddIncome = ({navigation}) => {
       !isSubmitting
     );
   };
-
   const formatDisplayDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -157,7 +138,6 @@ const AddIncome = ({navigation}) => {
       day: 'numeric'
     });
   };
-
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -166,7 +146,6 @@ const AddIncome = ({navigation}) => {
       </View>
     );
   }
-
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
@@ -174,7 +153,6 @@ const AddIncome = ({navigation}) => {
           style={styles.scrollView}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          
           {/* Header Section */}
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
@@ -183,7 +161,6 @@ const AddIncome = ({navigation}) => {
             </View>
             <Text style={styles.headerSubtitle}>Record your income to track your finances</Text>
           </View>
-
           {/* Form Card */}
           <Card style={styles.formCard}>
             <View style={styles.cardContent}>
@@ -193,14 +170,12 @@ const AddIncome = ({navigation}) => {
                   <Text style={styles.errorMessage}>{errorMessage}</Text>
                 </View>
               )}
-
               {successMessage && (
                 <View style={styles.successContainer}>
                   <MaterialCommunityIcons name="check-circle" size={20} color={SUCCESS_COLOR} />
                   <Text style={styles.successMessage}>{successMessage}</Text>
                 </View>
               )}
-
               {/* Title Input */}
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Title</Text>
@@ -217,7 +192,6 @@ const AddIncome = ({navigation}) => {
                   />
                 </View>
               </View>
-
               {/* Description Input */}
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Description</Text>
@@ -236,7 +210,6 @@ const AddIncome = ({navigation}) => {
                   />
                 </View>
               </View>
-
               {/* Category Dropdown */}
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Category</Text>
@@ -259,7 +232,6 @@ const AddIncome = ({navigation}) => {
                   />
                 </View>
               </View>
-
               {/* Amount Input */}
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Amount (₹)</Text>
@@ -277,7 +249,6 @@ const AddIncome = ({navigation}) => {
                   />
                 </View>
               </View>
-
               {/* Date Input */}
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Date</Text>
@@ -292,7 +263,6 @@ const AddIncome = ({navigation}) => {
                   <MaterialCommunityIcons name="chevron-down" size={20} color="#999" />
                 </TouchableOpacity>
               </View>
-
               <DatePickerModal
                 mode="single"
                 visible={openDate}
@@ -303,7 +273,6 @@ const AddIncome = ({navigation}) => {
                 label="Select date"
                 animationType="fade"
               />
-
               {/* Submit Button */}
               <View style={styles.buttonContainer}>
                 {isSubmitting ? (
@@ -330,9 +299,7 @@ const AddIncome = ({navigation}) => {
     </SafeAreaProvider>
   );
 };
-
 export default AddIncome;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
