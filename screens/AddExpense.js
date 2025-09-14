@@ -11,11 +11,9 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import FormButton from '../components/FormButton';
-
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const EXPENSE_COLOR = '#F64E4E';
-
 const AddExpense = ({navigation}) => {
   const [userData, setUserData] = useState([]);
   const [title, setTitle] = useState('');
@@ -43,11 +41,9 @@ const AddExpense = ({navigation}) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
-
   const onDismissSingle = () => {
     setOpenDate(false);
   };
-
   const onConfirmSingle = params => {
     setOpenDate(false);
     const formattedDate = `${params.date.getFullYear()}-${String(
@@ -55,20 +51,16 @@ const AddExpense = ({navigation}) => {
     ).padStart(2, '0')}-${String(params.date.getDate()).padStart(2, '0')}`;
     setDate(formattedDate);
   };
-
   const toggleModal = () => {
     setModalVisible(!modalVisible);
   };
-
   const getUser = () => {
     const user = auth().currentUser;
     return user.uid;
   };
-
   useEffect(() => {
     getUser();
   }, []);
-
   const fetchUserData = async () => {
     const user = auth().currentUser;
     const documentSnapshot = await firestore()
@@ -77,14 +69,11 @@ const AddExpense = ({navigation}) => {
       .get();
     setUserData(documentSnapshot.data());
   };
-
   useEffect(() => {
     fetchUserData();
   }, []);
-
   const validateForm = () => {
     setErrorMessage(null);
-    
     if (!title.trim()) {
       setErrorMessage('Please enter a title for your expense');
       return false;
@@ -109,63 +98,48 @@ const AddExpense = ({navigation}) => {
       setErrorMessage('Please select a date');
       return false;
     }
-    
     return true;
   };
-
   const uploadImageAsync = async () => {
     if (image == null) {
       return null;
     }
-
     const uploadUri = image;
     let filename = uploadUri.substring(uploadUri.lastIndexOf('/') + 1);
-
     const extension = filename.split('.').pop();
     const name = filename.split('.').slice(0, -1).join('.');
     filename = name + Date.now() + '.' + extension;
-
     setTransferred(0);
-
     const storageRef = storage().ref(`bills/${getUser()}/${filename}`);
     const task = storageRef.putFile(uploadUri);
-
     task.on('state_changed', taskSnapshot => {
       setTransferred(
         Math.round(taskSnapshot.bytesTransferred / taskSnapshot.totalBytes) * 100,
       );
     });
-
     try {
       await task;
       const url = await storageRef.getDownloadURL();
       return url;
     } catch (e) {
-      console.log(e);
       return null;
     }
   };
-
   const handleSubmit = async () => {
     if (!validateForm()) return;
-    
     setUploading(true);
     setIsSubmitting(true);
     try {
       let imageUrl = null;
-
       if (image) {
         imageUrl = await uploadImageAsync();
       }
-
       const userDocRef = firestore().collection('users').doc(getUser());
-
       await firestore().runTransaction(async transaction => {
         const userDoc = await transaction.get(userDocRef);
         const userData = userDoc.data();
         const newBalance = userData.balance - parseInt(amount);
         transaction.update(userDocRef, {balance: newBalance});
-
         const transactionRef = userDocRef.collection('transactions');
         const expenseData = {
           userId: getUser(),
@@ -178,12 +152,10 @@ const AddExpense = ({navigation}) => {
           createdAt: firestore.Timestamp.fromDate(new Date()),
           type: 'expense',
         };
-
         const expenseDocRef = await transactionRef.add(expenseData);
         expenseData.documentId = expenseDocRef.id;
         transaction.update(expenseDocRef, {documentId: expenseDocRef.id});
       });
-
       setAmount('');
       setTitle('');
       setDescription('');
@@ -192,19 +164,16 @@ const AddExpense = ({navigation}) => {
       setDate(undefined);
       setImage(null);
       setSuccessMessage('Expense added successfully!');
-      
       setTimeout(() => {
         navigation.goBack();
       }, 1500);
     } catch (error) {
-      console.error('Error adding expense:', error);
       setErrorMessage('An error occurred while adding the expense. Please try again.');
     } finally {
       setUploading(false);
       setIsSubmitting(false);
     }
   };
-
   const takePhotoFromCamera = () => {
     launchCamera(
       {
@@ -214,9 +183,7 @@ const AddExpense = ({navigation}) => {
       },
       response => {
         if (response.didCancel) {
-          console.log('User cancelled camera picker');
         } else if (response.errorCode) {
-          console.log('Camera error: ', response.errorMessage);
         } else {
           const imageUri = response.assets[0].uri;
           setImage(imageUri);
@@ -225,7 +192,6 @@ const AddExpense = ({navigation}) => {
     );
     toggleModal();
   };
-
   const choosePhotoFromLibrary = () => {
     launchImageLibrary(
       {
@@ -235,9 +201,7 @@ const AddExpense = ({navigation}) => {
       },
       response => {
         if (response.didCancel) {
-          console.log('User cancelled image picker');
         } else if (response.errorCode) {
-          console.log('ImagePicker Error: ', response.errorMessage);
         } else {
           const imageUri = response.assets[0].uri;
           setImage(imageUri);
@@ -246,11 +210,9 @@ const AddExpense = ({navigation}) => {
     );
     toggleModal();
   };
-
   const removeImage = () => {
     setImage(null);
   };
-
   const isFormValid = () => {
     return (
       title.trim() !== '' &&
@@ -261,7 +223,6 @@ const AddExpense = ({navigation}) => {
       !isSubmitting
     );
   };
-
   const formatDisplayDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -271,7 +232,6 @@ const AddExpense = ({navigation}) => {
       day: 'numeric'
     });
   };
-
   if (uploading) {
     return (
       <View style={styles.loadingContainer}>
@@ -282,7 +242,6 @@ const AddExpense = ({navigation}) => {
       </View>
     );
   }
-
   return (
     <Provider>
       <SafeAreaProvider>
@@ -291,7 +250,6 @@ const AddExpense = ({navigation}) => {
             style={styles.scrollView}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}>
-            
             {/* Header Section */}
             <View style={styles.headerSection}>
               <View style={styles.headerTitleRow}>
@@ -300,7 +258,6 @@ const AddExpense = ({navigation}) => {
               </View>
               <Text style={styles.headerSubtitle}>Record your expenses to track your spending</Text>
             </View>
-
             {/* Form Card */}
             <Card style={styles.formCard}>
               <View style={styles.cardContent}>
@@ -310,14 +267,12 @@ const AddExpense = ({navigation}) => {
                     <Text style={styles.errorMessage}>{errorMessage}</Text>
                   </View>
                 )}
-
                 {successMessage && (
                   <View style={styles.successContainer}>
                     <MaterialCommunityIcons name="check-circle" size={20} color={EXPENSE_COLOR} />
                     <Text style={styles.successMessage}>{successMessage}</Text>
                   </View>
                 )}
-
                 {/* Title Input */}
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Title</Text>
@@ -334,7 +289,6 @@ const AddExpense = ({navigation}) => {
                     />
                   </View>
                 </View>
-
                 {/* Description Input */}
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Description</Text>
@@ -353,7 +307,6 @@ const AddExpense = ({navigation}) => {
                     />
                   </View>
                 </View>
-
                 {/* Category Dropdown */}
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Category</Text>
@@ -376,7 +329,6 @@ const AddExpense = ({navigation}) => {
                     />
                   </View>
                 </View>
-
                 {/* Amount Input */}
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Amount (₹)</Text>
@@ -394,7 +346,6 @@ const AddExpense = ({navigation}) => {
                     />
                   </View>
                 </View>
-
                 {/* Date Input */}
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Date</Text>
@@ -409,7 +360,6 @@ const AddExpense = ({navigation}) => {
                     <MaterialCommunityIcons name="chevron-down" size={20} color="#999" />
                   </TouchableOpacity>
                 </View>
-
                 <DatePickerModal
                   mode="single"
                   visible={openDate}
@@ -420,11 +370,9 @@ const AddExpense = ({navigation}) => {
                   label="Select date"
                   animationType="fade"
                 />
-
                 {/* Image Upload Section */}
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Receipt/Image (Optional)</Text>
-                  
                   {image ? (
                     <View style={styles.imageContainer}>
                       <Image source={{uri: image}} style={styles.imagePreview} />
@@ -456,7 +404,6 @@ const AddExpense = ({navigation}) => {
                     </TouchableOpacity>
                   )}
                 </View>
-
                 {/* Submit Button */}
                 <View style={styles.buttonContainer}>
                   {isSubmitting ? (
@@ -479,7 +426,6 @@ const AddExpense = ({navigation}) => {
               </View>
             </Card>
           </KeyboardAwareScrollView>
-
           {/* Image Picker Modal */}
           <Portal>
             <Modal
@@ -515,9 +461,7 @@ const AddExpense = ({navigation}) => {
     </Provider>
   );
 };
-
 export default AddExpense;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

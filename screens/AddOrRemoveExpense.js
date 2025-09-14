@@ -12,28 +12,23 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {useFocusEffect} from '@react-navigation/native';
-
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const INCOME_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
-
 const AddOrRemoveExpense = ({navigation}) => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredTransactions, setFilteredTransactions] = useState([]);
-
   const handleSearch = text => {
     setSearchQuery(text);
     if (!userData?.transactions) return;
-    
     if (!text.trim()) {
       setFilteredTransactions([]);
       return;
     }
-    
     const filteredTransactions = userData.transactions.filter(transaction =>
       transaction.title.toLowerCase().includes(text.toLowerCase()) ||
       transaction.category?.toLowerCase().includes(text.toLowerCase()) ||
@@ -41,9 +36,7 @@ const AddOrRemoveExpense = ({navigation}) => {
     );
     setFilteredTransactions(filteredTransactions);
   };
-
   const currentUserUid = auth().currentUser.uid;
-
   const fetchTransactions = async () => {
     setLoading(true);
     try {
@@ -53,30 +46,23 @@ const AddOrRemoveExpense = ({navigation}) => {
         .collection('transactions')
         .orderBy('createdAt', 'desc')
         .get();
-
       if (transactionsQuerySnapshot.empty) {
         setUserData({transactions: []});
         setLoading(false);
         return;
       }
-
       const transactions = [];
-
       transactionsQuerySnapshot.forEach(transactionDoc => {
         const transactionData = transactionDoc.data();
         const transactionId = transactionDoc.id;
-
         const transaction = {
           id: transactionId,
           ...transactionData,
         };
-
         transactions.push(transaction);
       });
-
       setUserData({transactions});
       setLoading(false);
-
       if (searchQuery !== '') {
         const filteredTransactions = transactions.filter(transaction =>
           transaction.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -86,7 +72,6 @@ const AddOrRemoveExpense = ({navigation}) => {
         setFilteredTransactions(filteredTransactions);
       }
     } catch (error) {
-      console.error('Error fetching transactions:', error);
       Alert.alert(
         'Error',
         'Failed to load transactions. Please try again later.',
@@ -94,29 +79,23 @@ const AddOrRemoveExpense = ({navigation}) => {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchTransactions();
   }, []);
-
   useFocusEffect(
     useCallback(() => {
       fetchTransactions();
     }, []),
   );
-
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       fetchTransactions();
     });
-
     return unsubscribe;
   });
-
   const toggleShowAll = () => {
     setShowAll(!showAll);
   };
-
   const getCategoryIcon = (category, type) => {
     const iconMap = {
       Bills: 'receipt',
@@ -131,10 +110,8 @@ const AddOrRemoveExpense = ({navigation}) => {
       Gift: 'cash',
       Others: type === 'income' ? 'cash' : 'cash-remove',
     };
-
     return iconMap[category] || (type === 'income' ? 'cash' : 'cash-remove');
   };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -143,12 +120,10 @@ const AddOrRemoveExpense = ({navigation}) => {
       </View>
     );
   }
-
   const displayTransactions = searchQuery !== '' ? filteredTransactions : userData?.transactions || [];
   const sortedTransactions = displayTransactions
     .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, showAll ? displayTransactions.length : 5);
-
   return (
     <View style={styles.container}>
       {/* Header Section */}
@@ -158,7 +133,6 @@ const AddOrRemoveExpense = ({navigation}) => {
           Add income or expenses to track your finances
         </Text>
       </View>
-
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {/* Search Bar */}
         <View style={styles.searchContainer}>
@@ -171,7 +145,6 @@ const AddOrRemoveExpense = ({navigation}) => {
             iconColor={PRIMARY_COLOR}
           />
         </View>
-
         {/* Recent Transactions Header */}
         <View style={styles.sectionHeader}>
           <View>
@@ -193,7 +166,6 @@ const AddOrRemoveExpense = ({navigation}) => {
             </TouchableOpacity>
           )}
         </View>
-
         {/* Transactions List */}
         <View style={styles.transactionsList}>
           {sortedTransactions.length > 0 ? (
@@ -273,7 +245,6 @@ const AddOrRemoveExpense = ({navigation}) => {
           )}
         </View>
       </ScrollView>
-
       {/* Action Buttons */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity
@@ -292,9 +263,7 @@ const AddOrRemoveExpense = ({navigation}) => {
     </View>
   );
 };
-
 export default AddOrRemoveExpense;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

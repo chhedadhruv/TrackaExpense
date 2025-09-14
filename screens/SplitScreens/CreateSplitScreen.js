@@ -18,13 +18,11 @@ import {DatePickerModal} from 'react-native-paper-dates';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
-
 const {width} = Dimensions.get('window');
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
-
 // Category Options
 const CATEGORY_OPTIONS = [
   {
@@ -58,7 +56,6 @@ const CATEGORY_OPTIONS = [
     icon: 'dots-horizontal',
   },
 ];
-
 const CreateSplitScreen = ({route, navigation}) => {
   const [isSplitByPercentage, setIsSplitByPercentage] = useState(false);
   const {group, split} = route.params || {};
@@ -74,19 +71,15 @@ const CreateSplitScreen = ({route, navigation}) => {
   const [splitType, setSplitType] = useState('equal'); // Changed from isSplitByPercentage to splitType
   const [date, setDate] = useState(new Date());
   const [datePickerVisible, setDatePickerVisible] = useState(false);
-
   const isEditMode = !!split;
-
   useEffect(() => {
     if (!group || !group.id) {
       Alert.alert('Error', 'Group information is missing');
       navigation.goBack();
       return;
     }
-
     fetchGroupMembers();
   }, [group]);
-
   useEffect(() => {
     // Pre-fill form if in edit mode
     if (isEditMode && groupMembers.length > 0) {
@@ -94,23 +87,19 @@ const CreateSplitScreen = ({route, navigation}) => {
       setAmount(split.amount.toString());
       setCategory(split.category);
       setDate(split.date?.toDate() || split.createdAt.toDate());
-
       // Set paid by
       const paidByMember = groupMembers.find(
         member => member.email === split.paidBy.email,
       );
       setPaidBy(paidByMember);
-
       // Determine split type with backward compatibility
       const splitType =
         split.splitType ||
         (split.splitUsers.some(user => user.percentage)
           ? 'percentage'
           : 'equal');
-
       // Set split type
       setIsSplitByPercentage(splitType === 'percentage');
-
       // Set selected users and percentages
       const initialSelectedUsers = {};
       const initialSelectedPercentages = {};
@@ -123,12 +112,10 @@ const CreateSplitScreen = ({route, navigation}) => {
           ? splitUser.percentage.toString()
           : (100 / groupMembers.length).toFixed(2);
       });
-
       setSelectedUsers(initialSelectedUsers);
       setSelectedPercentages(initialSelectedPercentages);
     }
   }, [split, groupMembers]);
-
   const fetchGroupMembers = async () => {
     try {
       const groupDoc = await firestore()
@@ -136,13 +123,11 @@ const CreateSplitScreen = ({route, navigation}) => {
         .doc(group.id)
         .get();
       const membersData = groupDoc.data()?.members || [];
-
       const memberPromises = membersData.map(async email => {
         const userSnapshot = await firestore()
           .collection('users')
           .where('email', '==', email)
           .get();
-
         if (!userSnapshot.empty) {
           const userData = userSnapshot.docs[0].data();
           return {
@@ -152,104 +137,80 @@ const CreateSplitScreen = ({route, navigation}) => {
             ...userData,
           };
         }
-
         return {
           email,
           name: email.split('@')[0],
           userId: null,
         };
       });
-
       const formattedMembers = await Promise.all(memberPromises);
-
       // Initialize all users as selected with equal percentages
       const initialSelectedUsers = {};
       const initialSelectedPercentages = {};
       const defaultPercentage = (100 / formattedMembers.length).toFixed(2);
-
       formattedMembers.forEach(member => {
         initialSelectedUsers[member.email] = true; // Set all to true by default
         initialSelectedPercentages[member.email] = defaultPercentage;
       });
-
       // Set current user as paidBy by default
       const currentUserEmail = auth().currentUser?.email;
       const currentUserMember = formattedMembers.find(
         member => member.email === currentUserEmail,
       );
-
       if (currentUserMember) {
         setPaidBy(currentUserMember);
       }
-
       setGroupMembers(formattedMembers);
       setSelectedUsers(initialSelectedUsers);
       setSelectedPercentages(initialSelectedPercentages);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching group members:', error);
       Alert.alert('Error', 'Failed to load group members');
       navigation.goBack();
     }
   };
-
   // Update splitType handling
   useEffect(() => {
     setIsSplitByPercentage(splitType === 'percentage');
   }, [splitType]);
-
   // Function to update percentages automatically
   const updatePercentages = (email, newValue) => {
     const selectedEmails = Object.entries(selectedUsers)
       .filter(([_, isSelected]) => isSelected)
       .map(([email]) => email);
-
     if (selectedEmails.length === 0) return;
-
     const newPercentage = parseFloat(newValue) || 0;
     let remainingPercentage = 100 - newPercentage;
-
     // Calculate how many other users to split remaining percentage between
     const otherSelectedUsers = selectedEmails.filter(e => e !== email);
-
     if (otherSelectedUsers.length === 0) return;
-
     // Evenly distribute remaining percentage
     const percentagePerUser = (
       remainingPercentage / otherSelectedUsers.length
     ).toFixed(2);
-
     const updatedPercentages = {...selectedPercentages};
     updatedPercentages[email] = newValue;
-
     otherSelectedUsers.forEach(userEmail => {
       updatedPercentages[userEmail] = percentagePerUser;
     });
-
     setSelectedPercentages(updatedPercentages);
   };
-
   const toggleUserSelection = userEmail => {
     const currentlySelected = Object.entries(selectedUsers)
       .filter(([_, isSelected]) => isSelected)
       .map(([email]) => email);
-      
     if (currentlySelected.length === 1 && currentlySelected[0] === userEmail && selectedUsers[userEmail]) {
       Alert.alert('Error', 'At least one person must be included in the split.');
       return;
     }
-  
     const newSelectedUsers = {
       ...selectedUsers,
       [userEmail]: !selectedUsers[userEmail],
     };
-  
     setSelectedUsers(newSelectedUsers);
-  
     const selectedEmails = Object.entries(newSelectedUsers)
       .filter(([_, isSelected]) => isSelected)
       .map(([email]) => email);
-  
     if (selectedEmails.length > 0) {
       const equalPercentage = (100 / selectedEmails.length).toFixed(2);
       const newPercentages = {};
@@ -259,43 +220,35 @@ const CreateSplitScreen = ({route, navigation}) => {
       setSelectedPercentages(newPercentages);
     }
   };
-
   const onDismissDatePicker = () => {
     setDatePickerVisible(false);
   };
-
   const onConfirmDate = params => {
     setDatePickerVisible(false);
     setDate(params.date);
   };
-
   const handleSubmit = async () => {
     // Validate inputs
     if (!title) {
       Alert.alert('Validation Error', 'Please enter a split title');
       return;
     }
-
     if (!amount || isNaN(parseFloat(amount))) {
       Alert.alert('Validation Error', 'Please enter a valid amount');
       return;
     }
-
     if (!paidBy) {
       Alert.alert('Validation Error', 'Please select who paid for this split');
       return;
     }
-
     if (!category) {
       Alert.alert('Validation Error', 'Please select a category');
       return;
     }
-
     // Validate selections based on split type
     const selectedUsersList = Object.entries(selectedUsers)
       .filter(([_, isSelected]) => isSelected)
       .map(([email]) => groupMembers.find(member => member.email === email));
-
     if (selectedUsersList.length === 0) {
       Alert.alert(
         'Validation Error',
@@ -303,19 +256,16 @@ const CreateSplitScreen = ({route, navigation}) => {
       );
       return;
     }
-
     // Additional validation for percentage split
     if (isSplitByPercentage) {
       const selectedPercentageUsers = selectedUsersList.filter(
         user => selectedPercentages[user.email],
       );
-
       // Validate percentage inputs
       const percentageTotal = selectedPercentageUsers.reduce((total, user) => {
         const percentage = parseFloat(selectedPercentages[user.email] || 0);
         return total + percentage;
       }, 0);
-
       if (percentageTotal !== 100) {
         Alert.alert(
           'Validation Error',
@@ -324,15 +274,12 @@ const CreateSplitScreen = ({route, navigation}) => {
         return;
       }
     }
-
     setLoading(true);
-
     try {
       const currentUser = auth().currentUser;
       const currentUserEmail = currentUser.email;
       const splitAmount = parseFloat(amount);
       const splitDate = firestore.Timestamp.fromDate(date);
-
       const splitData = {
         title,
         amount: splitAmount,
@@ -354,12 +301,10 @@ const CreateSplitScreen = ({route, navigation}) => {
           ? split.createdAt
           : firestore.Timestamp.fromDate(new Date()),
       };
-
       const splitsCollection = firestore()
         .collection('groups')
         .doc(group.id)
         .collection('splits');
-
       let splitRef;
       if (isEditMode) {
         // Update existing split
@@ -371,7 +316,6 @@ const CreateSplitScreen = ({route, navigation}) => {
         splitRef = await splitsCollection.add(splitData);
         Alert.alert('Success', 'Split added successfully');
       }
-
       // Only update balance if the current user is the payer (no transaction creation)
       if (paidBy.email === currentUserEmail) {
         // Update user's balance without creating a transaction
@@ -385,10 +329,8 @@ const CreateSplitScreen = ({route, navigation}) => {
           });
         });
       }
-
       navigation.goBack();
     } catch (error) {
-      console.error('Error saving split:', error);
       Alert.alert(
         'Error',
         `Failed to ${
@@ -399,7 +341,6 @@ const CreateSplitScreen = ({route, navigation}) => {
       setLoading(false);
     }
   };
-
   const renderSplitTypeButtons = () => (
     <View style={styles.splitTypeButtons}>
       <TouchableOpacity
@@ -432,12 +373,10 @@ const CreateSplitScreen = ({route, navigation}) => {
       </TouchableOpacity>
     </View>
   );
-
   const renderMemberCheckbox = member => {
     const currentUser = auth().currentUser;
     const isCurrentUser = member.email === currentUser?.email;
     const isSelected = selectedUsers[member.email];
-
     const handleCardPress = () => {
       const selectedCount =
         Object.values(selectedUsers).filter(Boolean).length;
@@ -450,7 +389,6 @@ const CreateSplitScreen = ({route, navigation}) => {
         );
       }
     };
-
     return (
       <TouchableOpacity
         key={member.email}
@@ -494,7 +432,6 @@ const CreateSplitScreen = ({route, navigation}) => {
       </TouchableOpacity>
     );
   };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -503,7 +440,6 @@ const CreateSplitScreen = ({route, navigation}) => {
       </View>
     );
   }
-
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
@@ -511,7 +447,6 @@ const CreateSplitScreen = ({route, navigation}) => {
           style={styles.scrollView}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          
           {/* Header Section */}
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
@@ -524,11 +459,9 @@ const CreateSplitScreen = ({route, navigation}) => {
               {isEditMode ? 'Update expense details' : 'Split expenses with your group'}
             </Text>
           </View>
-
           {/* Form Card */}
           <Card style={styles.formCard}>
             <View style={styles.cardContent}>
-
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Split Title</Text>
                 <TextInput
@@ -539,7 +472,6 @@ const CreateSplitScreen = ({route, navigation}) => {
                   placeholderTextColor="#999"
                 />
               </View>
-
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Amount (₹)</Text>
                 <TextInput
@@ -551,7 +483,6 @@ const CreateSplitScreen = ({route, navigation}) => {
                   placeholderTextColor="#999"
                 />
               </View>
-
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Date</Text>
                 <TouchableOpacity
@@ -573,7 +504,6 @@ const CreateSplitScreen = ({route, navigation}) => {
                   onConfirm={onConfirmDate}
                 />
               </View>
-
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Category</Text>
                 <DropDownPicker
@@ -603,7 +533,6 @@ const CreateSplitScreen = ({route, navigation}) => {
               </View>
             </View>
           </Card>
-
           {/* Paid By Card */}
           <Card style={styles.sectionCard}>
             <View style={styles.cardContent}>
@@ -630,7 +559,6 @@ const CreateSplitScreen = ({route, navigation}) => {
               </View>
             </View>
           </Card>
-
           {/* Split Type Card */}
           <Card style={styles.sectionCard}>
             <View style={styles.cardContent}>
@@ -638,7 +566,6 @@ const CreateSplitScreen = ({route, navigation}) => {
               {renderSplitTypeButtons()}
             </View>
           </Card>
-
           {/* Split With Card */}
           <Card style={styles.sectionCard}>
             <View style={styles.cardContent}>
@@ -662,7 +589,6 @@ const CreateSplitScreen = ({route, navigation}) => {
               {groupMembers.map(renderMemberCheckbox)}
             </View>
           </Card>
-
           {/* Submit Button */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity
@@ -680,7 +606,6 @@ const CreateSplitScreen = ({route, navigation}) => {
     </SafeAreaProvider>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1018,5 +943,4 @@ const styles = StyleSheet.create({
     fontFamily: 'Lato-Bold',
   },
 });
-
 export default CreateSplitScreen;

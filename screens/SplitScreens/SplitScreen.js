@@ -17,12 +17,10 @@ import UserAvatar from 'react-native-user-avatar';
 import DropDownPicker from 'react-native-dropdown-picker';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
-
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
-
 const GROUP_CATEGORIES = [
   {
     label: 'Work',
@@ -116,7 +114,6 @@ const GROUP_CATEGORIES = [
     ),
   },
 ];
-
 const SplitScreen = ({navigation}) => {
   const [groupName, setGroupName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -129,37 +126,29 @@ const SplitScreen = ({navigation}) => {
   const [expandedGroupId, setExpandedGroupId] = useState(null);
   const [editingGroupId, setEditingGroupId] = useState(null);
   const [loading, setLoading] = useState(true);
-
   const currentUser = auth().currentUser;
-
   // Fetch user's groups
   useEffect(() => {
     const fetchGroups = async () => {
       try {
         setLoading(true);
         if (!currentUser) return;
-
         const groupSnapshot = await firestore()
           .collection('groups')
           .where('members', 'array-contains', currentUser.email)
           .get();
-
         const fetchedGroups = await Promise.all(
           groupSnapshot.docs.map(async doc => {
             const groupData = doc.data();
-
             // Fetch member details
             const memberPromises = groupData.members.map(async email => {
               const userSnapshot = await firestore()
                 .collection('users')
                 .where('email', '==', email)
                 .get();
-
               return userSnapshot.docs[0]?.data() || {email};
             });
-
             const memberDetails = await Promise.all(memberPromises);
-
             return {
               id: doc.id,
               ...groupData,
@@ -167,25 +156,20 @@ const SplitScreen = ({navigation}) => {
             };
           }),
         );
-
         setGroups(fetchedGroups);
       } catch (error) {
-        console.error('Error fetching groups:', error);
         Alert.alert('Error', 'Failed to fetch groups');
       } finally {
         setLoading(false);
       }
     };
-
     fetchGroups();
   }, [currentUser]);
-
   // Fetch user by email or phone
   const fetchUserByEmailOrPhone = async query => {
     try {
       // Check if query is a phone number (contains only digits)
       const isPhoneNumber = /^\d+$/.test(query);
-      
       let userSnapshot;
       if (isPhoneNumber) {
         // Search by phone number with exact match
@@ -200,7 +184,6 @@ const SplitScreen = ({navigation}) => {
           .where('email', '==', query.trim())
           .get();
       }
-
       if (!userSnapshot.empty) {
         const user = userSnapshot.docs[0].data();
         setUserDetails(user);
@@ -208,11 +191,9 @@ const SplitScreen = ({navigation}) => {
         setUserDetails({name: 'Not Registered', email: query});
       }
     } catch (error) {
-      console.error('Error fetching user:', error);
       Alert.alert('Error', 'Failed to fetch user');
     }
   };
-
   // Add/remove user from selected list
   const toggleUserSelection = user => {
     // Prevent adding yourself
@@ -220,7 +201,6 @@ const SplitScreen = ({navigation}) => {
       Alert.alert('Cannot Add Yourself', 'You cannot add yourself to the group. You are automatically included as the group creator.');
       return;
     }
-
     setSelectedUsers(prev => {
       const isSelected = prev.some(selected => selected.email === user.email);
       if (isSelected) {
@@ -230,51 +210,42 @@ const SplitScreen = ({navigation}) => {
       }
     });
   };
-
   // Edit group members
   const handleEditGroup = async (group) => {
     try {
       const updatedMembers = [...group.members];
       const updatedMemberDetails = [...group.memberDetails];
-      
       // Remove current user from the lists for editing
       const currentUserIndex = updatedMembers.indexOf(currentUser.email);
       if (currentUserIndex > -1) {
         updatedMembers.splice(currentUserIndex, 1);
         updatedMemberDetails.splice(currentUserIndex, 1);
       }
-
       // Set the current state for editing
       setGroupName(group.name);
       setCategory(group.category);
       setSelectedUsers(updatedMemberDetails);
       setIsFormVisible(true);
-      
       // Store the group ID for updating
       setEditingGroupId(group.id);
     } catch (error) {
-      console.error('Error preparing group edit:', error);
       Alert.alert('Error', 'Failed to prepare group for editing');
     }
   };
-
   // Create or update a group
   const createGroup = async () => {
     if (!groupName.trim()) {
       Alert.alert('Validation Error', 'Group name is required');
       return;
     }
-
     if (!category) {
       Alert.alert('Validation Error', 'Please select a category');
       return;
     }
-
     if (selectedUsers.length === 0) {
       Alert.alert('Validation Error', 'Please select at least one user to add to the group');
       return;
     }
-
     try {
       const groupData = {
         name: groupName,
@@ -286,21 +257,18 @@ const SplitScreen = ({navigation}) => {
         createdBy: currentUser.uid,
         updatedAt: firestore.FieldValue.serverTimestamp(),
       };
-
       if (editingGroupId) {
         // Update existing group
         await firestore()
           .collection('groups')
           .doc(editingGroupId)
           .update(groupData);
-
         // Update local state
         setGroups(prev => prev.map(group => 
           group.id === editingGroupId 
             ? { ...group, ...groupData, memberDetails: [...selectedUsers, { email: currentUser.email, name: currentUser.displayName || 'You' }] }
             : group
         ));
-
         Alert.alert('Success', 'Group updated successfully');
       } else {
         // Create new group
@@ -308,7 +276,6 @@ const SplitScreen = ({navigation}) => {
         const groupRef = await firestore()
           .collection('groups')
           .add(groupData);
-
         // Fetch member details for the new group
         const memberPromises = [...selectedUsers, {email: currentUser.email}].map(
           async user => {
@@ -316,13 +283,10 @@ const SplitScreen = ({navigation}) => {
               .collection('users')
               .where('email', '==', user.email)
               .get();
-
             return userSnapshot.docs[0]?.data() || user;
           },
         );
-
         const memberDetails = await Promise.all(memberPromises);
-
         setGroups(prev => [
           ...prev,
           {
@@ -331,11 +295,9 @@ const SplitScreen = ({navigation}) => {
             memberDetails,
           },
         ]);
-
         Alert.alert('Success', 'Group created successfully');
       }
     } catch (error) {
-      console.error('Error creating/updating group:', error);
       Alert.alert('Error', 'Failed to create/update group');
     } finally {
       // Always reset form regardless of success or failure
@@ -346,7 +308,6 @@ const SplitScreen = ({navigation}) => {
       setEditingGroupId(null);
     }
   };
-
   const deleteGroup = async groupId => {
     try {
       Alert.alert(
@@ -362,20 +323,16 @@ const SplitScreen = ({navigation}) => {
             style: 'destructive',
             onPress: async () => {
               await firestore().collection('groups').doc(groupId).delete();
-
               setGroups(prev => prev.filter(group => group.id !== groupId));
-
               Alert.alert('Success', 'Group deleted successfully');
             },
           },
         ],
       );
     } catch (error) {
-      console.error('Error deleting group:', error);
       Alert.alert('Error', 'Failed to delete group');
     }
   };
-
   // Render user card
   const renderUserCard = (user, withCheckbox = false) => (
     <View style={styles.userCard} key={user.email}>
@@ -399,14 +356,12 @@ const SplitScreen = ({navigation}) => {
       )}
     </View>
   );
-
   // Render group card
   const renderGroupCard = group => {
     const categoryItem = GROUP_CATEGORIES.find(
       cat => cat.value === group.category,
     );
     const isExpanded = expandedGroupId === group.id;
-
     const GroupCardIcon = () => {
       if (categoryItem) {
         // Get the icon name from the category item based on the label
@@ -445,7 +400,6 @@ const SplitScreen = ({navigation}) => {
       // Fallback icon if category not found
       return <MaterialCommunityIcons name="account-group" size={24} color="#fff" />;
     };
-
     return (
       <Card key={group.id} style={styles.groupCard}>
         <TouchableOpacity
@@ -498,7 +452,6 @@ const SplitScreen = ({navigation}) => {
               />
             </View>
           </View>
-
           {isExpanded && (
             <View style={styles.expandedGroupDetails}>
               <View style={styles.membersSection}>
@@ -526,7 +479,6 @@ const SplitScreen = ({navigation}) => {
                   )}
                 </View>
               </View>
-
               <View style={styles.groupMetaInfo}>
                 <View style={styles.metaItem}>
                   <MaterialCommunityIcons name="tag" size={16} color="#666" />
@@ -545,7 +497,6 @@ const SplitScreen = ({navigation}) => {
                   </Text>
                 </View>
               </View>
-              
               <TouchableOpacity
                 style={styles.viewGroupButton}
                 onPress={() =>
@@ -569,7 +520,6 @@ const SplitScreen = ({navigation}) => {
       </Card>
     );
   };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -578,7 +528,6 @@ const SplitScreen = ({navigation}) => {
       </View>
     );
   }
-
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
@@ -586,7 +535,6 @@ const SplitScreen = ({navigation}) => {
           style={styles.scrollView}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          
           {/* Header Section */}
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
@@ -595,7 +543,6 @@ const SplitScreen = ({navigation}) => {
             </View>
             <Text style={styles.headerSubtitle}>Manage your expense groups</Text>
           </View>
-
           {/* Create Group Card */}
           <Card style={styles.createGroupCard}>
             <View style={styles.cardContent}>
@@ -622,7 +569,6 @@ const SplitScreen = ({navigation}) => {
                   />
                 </TouchableOpacity>
               </View>
-
               {isFormVisible && (
                 <View style={styles.formContainer}>
                   <View style={styles.inputContainer}>
@@ -635,7 +581,6 @@ const SplitScreen = ({navigation}) => {
                       onChangeText={setGroupName}
                     />
                   </View>
-
                   <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Category</Text>
                     <DropDownPicker
@@ -654,7 +599,6 @@ const SplitScreen = ({navigation}) => {
                       modalAnimationType="slide"
                     />
                   </View>
-
                   <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Add Members</Text>
                     <TextInput
@@ -671,7 +615,6 @@ const SplitScreen = ({navigation}) => {
                       keyboardType="email-address"
                     />
                   </View>
-
                   {userDetails && userDetails.email !== currentUser.email && renderUserCard(userDetails, true)}
                   {userDetails && userDetails.email === currentUser.email && (
                     <View style={styles.warningCard}>
@@ -680,7 +623,6 @@ const SplitScreen = ({navigation}) => {
                       </Text>
                     </View>
                   )}
-
                   <View style={styles.selectedContainer}>
                     <Text style={styles.selectedUsersLabel}>Selected Users:</Text>
                     {selectedUsers.map(user => renderUserCard(user, true))}
@@ -690,7 +632,6 @@ const SplitScreen = ({navigation}) => {
                       </Text>
                     )}
                   </View>
-
                   <View style={styles.buttonContainer}>
                     <TouchableOpacity
                       style={styles.createGroupButton}
@@ -700,7 +641,6 @@ const SplitScreen = ({navigation}) => {
                       </Text>
                       <MaterialCommunityIcons name={editingGroupId ? "pencil" : "check"} size={20} color="#fff" />
                     </TouchableOpacity>
-                    
                     {editingGroupId && (
                       <TouchableOpacity
                         style={styles.cancelButton}
@@ -720,7 +660,6 @@ const SplitScreen = ({navigation}) => {
               )}
             </View>
           </Card>
-
           {/* Groups List */}
           <View style={styles.groupsSection}>
             <Text style={styles.sectionTitle}>Your Groups</Text>
@@ -745,7 +684,6 @@ const SplitScreen = ({navigation}) => {
     </SafeAreaProvider>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -867,7 +805,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-
   userCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -912,7 +849,6 @@ const styles = StyleSheet.create({
   addUserButtonSelected: {
     backgroundColor: PRIMARY_COLOR,
   },
-
   selectedContainer: {
     marginTop: 15,
   },
@@ -1216,7 +1152,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: 'Lato-Regular',
   },
-
   categoryIcon: {
     fontSize: 24,
     marginRight: 10,
@@ -1249,5 +1184,4 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
 });
-
 export default SplitScreen;

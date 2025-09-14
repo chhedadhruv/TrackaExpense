@@ -15,12 +15,10 @@ import firestore from '@react-native-firebase/firestore';
 import moment from 'moment';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
-
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
-
 const SplitGroupDetailScreen = ({route, navigation}) => {
   const {group} = route.params || {};
   const [loading, setLoading] = useState(true);
@@ -34,7 +32,6 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredSplits, setFilteredSplits] = useState([]);
   const RECENT_SPLITS_LIMIT = 3;
-
   if (!group || !group.id) {
     return (
       <View style={styles.loadingContainer}>
@@ -47,14 +44,12 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
       </View>
     );
   }
-
   useFocusEffect(
     React.useCallback(() => {
       fetchGroupSplits();
       fetchGroupMembers();
     }, [group.id]),
   );
-
   const fetchGroupMembers = async () => {
     try {
       const groupDoc = await firestore()
@@ -62,13 +57,11 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
         .doc(group.id)
         .get();
       const membersData = groupDoc.data()?.members || [];
-
       const memberPromises = membersData.map(async email => {
         const userSnapshot = await firestore()
           .collection('users')
           .where('email', '==', email)
           .get();
-
         if (!userSnapshot.empty) {
           const userData = userSnapshot.docs[0].data();
           return {
@@ -78,7 +71,6 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
             userId: userSnapshot.docs[0].id,
           };
         }
-
         return {
           email,
           name: email.split('@')[0],
@@ -86,14 +78,11 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
           userId: null,
         };
       });
-
       const formattedMembers = await Promise.all(memberPromises);
       setGroupMembers(formattedMembers);
     } catch (error) {
-      console.error('Error fetching group members:', error);
     }
   };
-
   const fetchGroupSplits = async () => {
     try {
       setLoading(true);
@@ -103,34 +92,28 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
         .collection('splits')
         .orderBy('createdAt', 'desc')
         .get();
-
       const fetchedSplits = splitsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
       }));
-
       const totalAmount = fetchedSplits.reduce(
         (sum, split) => sum + parseFloat(split.amount),
         0,
       );
       const userSplitCalculations = calculateUserSplits(fetchedSplits);
-
       setSplits(fetchedSplits);
       setTotalSplitAmount(totalAmount);
       setUserSplits(userSplitCalculations);
     } catch (error) {
-      console.error('Error fetching group splits:', error);
       Alert.alert('Error', 'Failed to fetch group splits');
     } finally {
       setLoading(false);
     }
   };
-
   const handleEditSplit = split => {
     navigation.navigate('CreateSplit', {group, split});
     setMenuVisibleForSplit(null);
   };
-
   const handleDeleteSplit = async split => {
     try {
       await firestore()
@@ -139,27 +122,21 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
         .collection('splits')
         .doc(split.id)
         .delete();
-
       // Refresh splits after deletion
       fetchGroupSplits();
       setMenuVisibleForSplit(null);
       Alert.alert('Success', 'Split deleted successfully');
     } catch (error) {
-      console.error('Error deleting split:', error);
       Alert.alert('Error', 'Failed to delete split');
     }
   };
-
   const calculateUserSplits = splits => {
     const userSplitMap = {};
-
     splits.forEach(split => {
       const paidByUser = split.paidBy;
       const splitUsers = split.splitUsers || [];
-
       // Calculate how much each user owes or is owed
       const splitAmount = parseFloat(split.amount) / splitUsers.length;
-
       splitUsers.forEach(user => {
         if (!userSplitMap[user.email]) {
           userSplitMap[user.email] = {
@@ -168,7 +145,6 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
             name: user.name || user.email,
           };
         }
-
         if (user.email === paidByUser.email) {
           userSplitMap[user.email].paid += parseFloat(split.amount);
         } else {
@@ -176,69 +152,55 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
         }
       });
     });
-
     return userSplitMap;
   };
-
   const calculateNetLendingBalances = splits => {
     const userLendingBalances = {};
-
     splits.forEach(split => {
       const paidByUser = split.paidBy;
       const splitUsers = split.splitUsers || [];
       const splitAmount = parseFloat(split.amount);
       const splitPerUser = splitAmount / splitUsers.length;
-
       // Initialize user balances if not exist
       if (!userLendingBalances[paidByUser.email]) {
         userLendingBalances[paidByUser.email] = {};
       }
-
       splitUsers.forEach(user => {
         if (user.email !== paidByUser.email) {
           // If not already initialized, set the balance to 0
           if (!userLendingBalances[paidByUser.email][user.email]) {
             userLendingBalances[paidByUser.email][user.email] = 0;
           }
-
           // Add the amount that this user owes
           userLendingBalances[paidByUser.email][user.email] += splitPerUser;
         }
       });
     });
-
     // Calculate net lending balances
     const netLendingBalances = [];
-
     // Iterate through all lenders
     Object.keys(userLendingBalances).forEach(lenderEmail => {
       const borrowerBalances = userLendingBalances[lenderEmail];
-
       // Check lending with each borrower
       Object.keys(borrowerBalances).forEach(borrowerEmail => {
         const lenderToborrowerAmount = borrowerBalances[borrowerEmail] || 0;
-
         // Check if reverse lending exists
         const borrowerToLenderAmount =
           (userLendingBalances[borrowerEmail] &&
             userLendingBalances[borrowerEmail][lenderEmail]) ||
           0;
-
         // Calculate net amount
         const netAmount = lenderToborrowerAmount - borrowerToLenderAmount;
-
         if (netAmount !== 0) {
           // Find names using the first available method
           const lenderName =
             splits.find(s => s.paidBy.email === lenderEmail)?.paidBy.name ||
             lenderEmail.split('@')[0];
-
           const borrowerName =
             splits
               .find(s => s.splitUsers.some(u => u.email === borrowerEmail))
               ?.splitUsers.find(u => u.email === borrowerEmail)?.name ||
             borrowerEmail.split('@')[0];
-
           netLendingBalances.push({
             lender: {
               email: netAmount > 0 ? lenderEmail : borrowerEmail,
@@ -253,7 +215,6 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
         }
       });
     });
-
     // Remove duplicate entries and keep only the net amounts
     const uniqueNetLendingBalances = netLendingBalances.reduce(
       (acc, current) => {
@@ -264,26 +225,21 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
             (entry.lender.email === current.borrower.email &&
               entry.borrower.email === current.lender.email),
         );
-
         if (!existingEntry) {
           acc.push(current);
         }
-
         return acc;
       },
       [],
     );
-
     return uniqueNetLendingBalances;
   };
-
   useEffect(() => {
     if (splits.length > 0) {
       const netLendingBalances = calculateNetLendingBalances(splits);
       setDetailedLendingInfo(netLendingBalances);
     }
   }, [splits]);
-
   const renderGroupSummaryCard = () => (
     <Card style={styles.groupSummaryCard}>
       <View style={styles.cardContent}>
@@ -312,14 +268,12 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
       </View>
     </Card>
   );
-
   const handleSearch = query => {
     setSearchQuery(query);
     if (!query.trim()) {
       setFilteredSplits(splits);
       return;
     }
-
     const searchTerms = query.toLowerCase().trim().split(' ');
     const filtered = splits.filter(split => {
       const matchTitle = split.title
@@ -336,15 +290,12 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
       const matchPaidBy = split.paidBy.name
         .toLowerCase()
         .includes(query.toLowerCase());
-
       return (
         matchTitle || matchDate || matchCategory || matchAmount || matchPaidBy
       );
     });
-
     setFilteredSplits(filtered);
   };
-
   const handleSettleUp = (lender, borrower, amount) => {
     navigation.navigate('SettleUp', {
       group: {
@@ -354,12 +305,10 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
       lendingDetails: detailedLendingInfo,
     });
   };
-
   const renderSplitsList = () => {
     const splitsToShow = showAllSplits
       ? filteredSplits
       : filteredSplits.slice(0, RECENT_SPLITS_LIMIT);
-
     return (
       <View style={styles.splitsList}>
         {filteredSplits.length > 0 ? (
@@ -418,13 +367,11 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
       </View>
     );
   };
-
   // Render detailed lending summary
   const renderDetailedLendingSummary = () => {
     if (detailedLendingInfo.length === 0) {
       return null;
     }
-
     return (
       <View style={styles.lendingSummaryContainer}>
         <Text style={styles.sectionHeaderText}>Settlement Suggestions</Text>
@@ -460,11 +407,9 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
       </View>
     );
   };
-
   useEffect(() => {
     setFilteredSplits(splits);
   }, [splits]);
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -473,7 +418,6 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
       </View>
     );
   }
-
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
@@ -481,7 +425,6 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
           style={styles.scrollView}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          
           {/* Header Section */}
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
@@ -490,10 +433,8 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
             </View>
             <Text style={styles.headerSubtitle}>Group expense details and settlements</Text>
           </View>
-
           {renderGroupSummaryCard()}
           {renderDetailedLendingSummary()}
-          
           {/* Recent Splits Section */}
           <View style={styles.splitsSection}>
             <View style={styles.sectionHeader}>
@@ -511,7 +452,6 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
     </SafeAreaProvider>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -867,5 +807,4 @@ const styles = StyleSheet.create({
     width: '45%',
   },
 });
-
 export default SplitGroupDetailScreen;

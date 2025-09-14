@@ -14,12 +14,10 @@ import {useFocusEffect} from '@react-navigation/native';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import DropDownPicker from 'react-native-dropdown-picker';
-
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const INCOME_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
-
 const StatisticScreen = ({navigation}) => {
   const [selectedBar, setSelectedBar] = useState(null);
   const [userData, setUserData] = useState(null);
@@ -38,11 +36,9 @@ const StatisticScreen = ({navigation}) => {
     {label: 'Last Year', value: 'year'},
     {label: 'All Time', value: 'all'},
   ]);
-
   const filterTransactionsByTimeRange = (transactions, range) => {
     const now = new Date();
     const cutoffDate = new Date();
-
     switch (range) {
       case '7days':
         cutoffDate.setDate(now.getDate() - 7);
@@ -64,10 +60,8 @@ const StatisticScreen = ({navigation}) => {
       default:
         cutoffDate.setDate(now.getDate() - 7);
     }
-
     return transactions.filter(t => new Date(t.date) >= cutoffDate);
   };
-
   const getGroupingInterval = range => {
     switch (range) {
       case '7days':
@@ -83,7 +77,6 @@ const StatisticScreen = ({navigation}) => {
         return 'daily';
     }
   };
-
   const formatDateForGrouping = (date, interval) => {
     const d = new Date(date);
     switch (interval) {
@@ -101,7 +94,6 @@ const StatisticScreen = ({navigation}) => {
         return d.toLocaleDateString();
     }
   };
-
   const getUser = async () => {
     try {
       const querySnapshot = await firestore()
@@ -109,7 +101,6 @@ const StatisticScreen = ({navigation}) => {
         .doc(auth().currentUser.uid)
         .collection('transactions')
         .get();
-
       const transactions = [];
       querySnapshot.forEach(doc => {
         transactions.push({
@@ -117,25 +108,20 @@ const StatisticScreen = ({navigation}) => {
           ...doc.data(),
         });
       });
-
       setUserData({transactions});
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching user data:', error);
       setLoading(false);
     }
   };
-
   useEffect(() => {
     getUser();
   }, []);
-
   useFocusEffect(
     useCallback(() => {
       getUser();
     }, []),
   );
-
   useEffect(() => {
     if (userData?.transactions) {
       const filtered = filterTransactionsByTimeRange(
@@ -143,11 +129,9 @@ const StatisticScreen = ({navigation}) => {
         timeRange,
       );
       setFilteredTransactions(filtered);
-
       // Calculate totals based on filtered transactions
       let income = 0;
       let expense = 0;
-
       filtered.forEach(transaction => {
         if (transaction.type === 'income') {
           income += parseFloat(transaction.amount) || 0;
@@ -155,42 +139,32 @@ const StatisticScreen = ({navigation}) => {
           expense += parseFloat(transaction.amount) || 0;
         }
       });
-
       setTotalIncome(income);
       setTotalExpense(expense);
     }
   }, [userData, timeRange]);
-
   const [barData, setBarData] = useState([]);
-
   const handleBarData = useCallback(() => {
     if (!filteredTransactions?.length) return;
-
     const interval = getGroupingInterval(timeRange);
     let aggregatedData = {};
-
     filteredTransactions.forEach(transaction => {
       const groupKey = formatDateForGrouping(transaction.date, interval);
       const value = parseFloat(transaction.amount) || 0;
-
       if (!aggregatedData[groupKey]) {
         aggregatedData[groupKey] = {income: 0, expense: 0};
       }
-
       if (transaction.type === 'income') {
         aggregatedData[groupKey].income += value;
       } else {
         aggregatedData[groupKey].expense += value;
       }
     });
-
     const barData = [];
     const entries = Object.entries(aggregatedData);
     entries.sort((a, b) => new Date(a[0]) - new Date(b[0]));
-
     // Take only last 6 entries to prevent overcrowding
     const lastEntries = entries.slice(-6);
-
     lastEntries.forEach(([label, values]) => {
       // Add placeholder bar with zero height for centered label
       barData.push({
@@ -200,7 +174,6 @@ const StatisticScreen = ({navigation}) => {
         spacing: 2,
         showLabel: true,
       });
-
       // Add income bar
       if (values.income > 0) {
         barData.push({
@@ -220,27 +193,21 @@ const StatisticScreen = ({navigation}) => {
         });
       }
     });
-
     setBarData(barData);
   }, [filteredTransactions, timeRange]);
-
   useEffect(() => {
     handleBarData();
   }, [filteredTransactions, handleBarData]);
-
   const handleBarPress = data => {
     setSelectedBar(data);
   };
-
   const handleBtnPress = btn => {
     setSelectedBtn(btn);
   };
-
   const getTimeRangeLabel = () => {
     const item = timeRangeItems.find(item => item.value === timeRange);
     return item ? item.label : 'Selected Period';
   };
-
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
@@ -249,7 +216,6 @@ const StatisticScreen = ({navigation}) => {
           <Text style={styles.headerText}>Statistics</Text>
           <Text style={styles.subHeaderText}>Track your financial insights</Text>
         </View>
-
         {/* Time Range Picker */}
         <View style={styles.timeRangeSection}>
           <DropDownPicker
@@ -265,7 +231,6 @@ const StatisticScreen = ({navigation}) => {
             dropDownContainerStyle={styles.dropDownContainer}
           />
         </View>
-
         {/* Summary Cards */}
         <View style={styles.cardSection}>
           <Card style={styles.incomeCard}>
@@ -285,7 +250,6 @@ const StatisticScreen = ({navigation}) => {
               </Text>
             </View>
           </Card>
-          
           <Card style={styles.expenseCard}>
             <View style={styles.cardContent}>
               <View style={styles.cardHeader}>
@@ -304,7 +268,6 @@ const StatisticScreen = ({navigation}) => {
             </View>
           </Card>
         </View>
-
         {/* Statistics Chart Section */}
         <Card style={styles.statisticCard}>
           <View style={styles.statisticHeader}>
@@ -313,7 +276,6 @@ const StatisticScreen = ({navigation}) => {
               {getTimeRangeLabel()}
             </Text>
           </View>
-
           <View style={styles.chartContainer}>
             <BarChart
               data={barData}
@@ -356,7 +318,6 @@ const StatisticScreen = ({navigation}) => {
               showFractionalValue={false}
               hideDataPoints={true}
             />
-
             {selectedBar && (
               <View style={styles.selectedBarContainer}>
                 <Text style={styles.selectedBarText}>
@@ -367,7 +328,6 @@ const StatisticScreen = ({navigation}) => {
             )}
           </View>
         </Card>
-
         {/* Filter Buttons */}
         <View style={styles.buttonSection}>
           <TouchableOpacity
@@ -399,7 +359,6 @@ const StatisticScreen = ({navigation}) => {
             </Text>
           </TouchableOpacity>
         </View>
-
         {/* Transactions List */}
         <View style={styles.transactionsSection}>
           <Text style={styles.transactionsHeaderText}>
@@ -416,7 +375,6 @@ const StatisticScreen = ({navigation}) => {
                 (selectedBtn === 'Expense' && transaction.type === 'expense'),
             ).length !== 1 ? 's' : ''}
           </Text>
-          
           <View style={styles.transactionsList}>
             {filteredTransactions.length > 0 ? (
               filteredTransactions
@@ -490,7 +448,6 @@ const StatisticScreen = ({navigation}) => {
     </View>
   );
 };
-
 // Helper function to get the appropriate icon for each category
 const getCategoryIcon = (category, type) => {
   const iconMap = {
@@ -506,10 +463,8 @@ const getCategoryIcon = (category, type) => {
     Gift: 'gift',
     Others: type === 'income' ? 'cash' : 'cash-remove',
   };
-
   return iconMap[category] || (type === 'income' ? 'cash' : 'cash-remove');
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -835,5 +790,4 @@ const styles = StyleSheet.create({
     fontFamily: 'Lato-Regular',
   },
 });
-
 export default StatisticScreen;

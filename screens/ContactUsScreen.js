@@ -14,26 +14,21 @@ import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
-
 import FormButton from '../components/FormButton';
-
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
-
 const ContactUsScreen = ({navigation}) => {
   const [feedbackText, setFeedbackText] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('feedback');
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
-
   useEffect(() => {
     // Get the current authenticated user
     const currentUser = auth().currentUser;
     setUser(currentUser);
   }, []);
-
   const contactCategories = [
     {
       id: 'feedback',
@@ -60,24 +55,19 @@ const ContactUsScreen = ({navigation}) => {
       description: 'Need help using the app?',
     },
   ];
-
   const handleSubmitMessage = async () => {
     setErrorMessage(null);
-    
     // Validate message input
     if (!feedbackText.trim()) {
       setErrorMessage('Please provide your message before submitting');
       return;
     }
-
     if (feedbackText.trim().length < 10) {
       setErrorMessage('Please provide more detailed information (at least 10 characters)');
       return;
     }
-
     try {
       setLoading(true);
-
       // Submit message to Firestore
       await firestore()
         .collection('contact_messages')
@@ -90,23 +80,19 @@ const ContactUsScreen = ({navigation}) => {
           createdAt: firestore.Timestamp.fromDate(new Date()),
           status: 'pending',
         });
-
       // Clear message and show success
       setFeedbackText('');
-
       Alert.alert(
         'Message Sent! 🎉',
         'Your message has been submitted successfully! We\'ll get back to you as soon as possible.',
         [{text: 'OK', onPress: () => navigation.goBack()}],
       );
     } catch (error) {
-      console.error('Message submission error:', error);
       setErrorMessage('Failed to send message. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
   };
-
   const handleQuickContact = (type) => {
     switch (type) {
       case 'email':
@@ -119,11 +105,9 @@ const ContactUsScreen = ({navigation}) => {
         break;
     }
   };
-
   const getCategoryInfo = (categoryId) => {
     return contactCategories.find(cat => cat.id === categoryId) || contactCategories[0];
   };
-
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAwareScrollView
@@ -131,7 +115,6 @@ const ContactUsScreen = ({navigation}) => {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        
         {/* Header Section */}
         <View style={styles.headerSection}>
           <View style={styles.iconContainer}>
@@ -142,12 +125,10 @@ const ContactUsScreen = ({navigation}) => {
             We're here to help! Get in touch with our support team
           </Text>
         </View>
-
         {/* Quick Contact Options */}
         <Card style={styles.quickContactCard}>
           <View style={styles.cardContent}>
             <Text style={styles.sectionTitle}>Quick Contact</Text>
-            
             <TouchableOpacity
               style={styles.quickContactItem}
               onPress={() => handleQuickContact('email')}
@@ -163,9 +144,7 @@ const ContactUsScreen = ({navigation}) => {
               </View>
               <MaterialCommunityIcons name="open-in-new" size={20} color="#666" />
             </TouchableOpacity>
-
             <Divider style={styles.divider} />
-
             <TouchableOpacity
               style={styles.quickContactItem}
               onPress={() => handleQuickContact('privacy')}
@@ -183,19 +162,16 @@ const ContactUsScreen = ({navigation}) => {
             </TouchableOpacity>
           </View>
         </Card>
-
         {/* Message Form Card */}
         <Card style={styles.formCard}>
           <View style={styles.cardContent}>
             <Text style={styles.sectionTitle}>Send us a Message</Text>
-            
             {errorMessage && (
               <View style={styles.errorContainer}>
                 <MaterialCommunityIcons name="alert-circle" size={20} color="#C62828" />
                 <Text style={styles.errorMessage}>{errorMessage}</Text>
               </View>
             )}
-
             {/* Category Selection */}
             <View style={styles.categorySection}>
               <Text style={styles.inputLabel}>What can we help you with?</Text>
@@ -230,7 +206,6 @@ const ContactUsScreen = ({navigation}) => {
                 ))}
               </View>
             </View>
-
             {/* Message Input */}
             <View style={styles.inputSection}>
               <Text style={styles.inputLabel}>
@@ -254,7 +229,6 @@ const ContactUsScreen = ({navigation}) => {
                 {feedbackText.length}/1000 characters
               </Text>
             </View>
-
             {loading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={PRIMARY_COLOR} />
@@ -268,7 +242,6 @@ const ContactUsScreen = ({navigation}) => {
             )}
           </View>
         </Card>
-
         {/* Info Section */}
         <View style={styles.infoSection}>
           <View style={styles.infoItem}>
@@ -288,7 +261,6 @@ const ContactUsScreen = ({navigation}) => {
     </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -527,5 +499,4 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-
 export default ContactUsScreen;

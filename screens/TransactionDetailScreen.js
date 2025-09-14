@@ -12,25 +12,20 @@ import {Text, Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
-
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
-
 const TransactionDetailScreen = ({route, navigation}) => {
   const {transaction} = route.params;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
   const onImagePress = () => {
     if (transaction.imageUrl) {
       navigation.navigate('Image', {imageUrl: transaction.imageUrl});
     }
   };
-
   const handleEdit = () => {
     navigation.navigate('EditTransaction', {transaction});
   };
-
   const handleDelete = async () => {
     Alert.alert(
       'Delete Transaction',
@@ -48,12 +43,10 @@ const TransactionDetailScreen = ({route, navigation}) => {
       {cancelable: false},
     );
   };
-
   const deleteTransaction = async () => {
     setLoading(true);
     setError('');
     const {userId, id, imageUrl, amount, type} = transaction;
-
     try {
       await firestore()
         .collection('users')
@@ -61,7 +54,6 @@ const TransactionDetailScreen = ({route, navigation}) => {
         .collection('transactions')
         .doc(id)
         .delete();
-
       const balanceIncrement = type === 'expense' ? +amount : -amount;
       await firestore()
         .collection('users')
@@ -69,23 +61,19 @@ const TransactionDetailScreen = ({route, navigation}) => {
         .update({
           balance: firestore.FieldValue.increment(balanceIncrement),
         });
-
       if (imageUrl) {
         const imageRef = storage().refFromURL(imageUrl);
         await imageRef.delete();
       }
-
       Alert.alert('Transaction deleted successfully!');
       navigation.goBack();
     } catch (error) {
-      console.error('Error deleting transaction or image: ', error);
       setError('An error occurred while deleting the transaction.');
       Alert.alert('Error', 'An error occurred while deleting the transaction.');
     } finally {
       setLoading(false);
     }
   };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -94,7 +82,6 @@ const TransactionDetailScreen = ({route, navigation}) => {
       </View>
     );
   }
-
   return (
     <View style={styles.container}>
       {/* Header Section */}
@@ -115,13 +102,11 @@ const TransactionDetailScreen = ({route, navigation}) => {
           </View>
         </View>
       </View>
-
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {/* Transaction Details Card */}
         <Card style={styles.detailsCard}>
           <View style={styles.detailsCardContent}>
             <Text style={styles.sectionTitle}>Transaction Details</Text>
-            
             <View style={styles.detailRow}>
               <View style={styles.detailIconContainer}>
                 <MaterialCommunityIcons name="calendar" size={20} color={PRIMARY_COLOR} />
@@ -131,7 +116,6 @@ const TransactionDetailScreen = ({route, navigation}) => {
                 <Text style={styles.detailValue}>{transaction.date}</Text>
               </View>
             </View>
-
             <View style={styles.detailRow}>
               <View style={styles.detailIconContainer}>
                 <MaterialCommunityIcons name="tag" size={20} color={PRIMARY_COLOR} />
@@ -141,7 +125,6 @@ const TransactionDetailScreen = ({route, navigation}) => {
                 <Text style={styles.detailValue}>{transaction.category}</Text>
               </View>
             </View>
-
             <View style={styles.detailRow}>
               <View style={styles.detailIconContainer}>
                 <MaterialCommunityIcons 
@@ -159,7 +142,6 @@ const TransactionDetailScreen = ({route, navigation}) => {
                 </View>
               </View>
             </View>
-
             {transaction.description && (
               <View style={styles.detailRow}>
                 <View style={styles.detailIconContainer}>
@@ -173,7 +155,6 @@ const TransactionDetailScreen = ({route, navigation}) => {
             )}
           </View>
         </Card>
-
         {/* Receipt Image Card */}
         {transaction.imageUrl && (
           <Card style={styles.imageCard}>
@@ -196,20 +177,17 @@ const TransactionDetailScreen = ({route, navigation}) => {
             </TouchableOpacity>
           </Card>
         )}
-
         {/* Action Buttons */}
         <View style={styles.actionSection}>
           <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
             <MaterialCommunityIcons name="pencil" size={20} color="#FFFFFF" />
             <Text style={styles.editButtonText}>Edit Transaction</Text>
           </TouchableOpacity>
-          
           <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
             <MaterialCommunityIcons name="delete" size={20} color="#FFFFFF" />
             <Text style={styles.deleteButtonText}>Delete Transaction</Text>
           </TouchableOpacity>
         </View>
-
         {error && (
           <View style={styles.errorContainer}>
             <MaterialCommunityIcons name="alert-circle" size={20} color="#F64E4E" />
@@ -220,7 +198,6 @@ const TransactionDetailScreen = ({route, navigation}) => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
@@ -450,5 +427,4 @@ const styles = StyleSheet.create({
     fontFamily: 'Lato-Regular',
   },
 });
-
 export default TransactionDetailScreen;
