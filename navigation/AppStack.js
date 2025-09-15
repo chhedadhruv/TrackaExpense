@@ -35,7 +35,16 @@ const Tab = createBottomTabNavigator();
 // Reusable header styles
 const headerStyle = {
   backgroundColor: '#F5F5F5',
-  elevation: 0,
+  borderBottomWidth: 1,
+  borderBottomColor: '#ccc',
+  elevation: 2,
+  shadowColor: '#000',
+  shadowOffset: {
+    width: 0,
+    height: 2,
+  },
+  shadowOpacity: 0.05,
+  shadowRadius: 4,
 };
 const headerTitleStyle = {
   fontFamily: 'Kufam-SemiBoldItalic',

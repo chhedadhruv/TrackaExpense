@@ -7,9 +7,10 @@
         <domain includeSubdomains="true">google.com</domain>
     </domain-config>
     
-    <!-- Block all cleartext traffic by default -->
-    <base-config cleartextTrafficPermitted="false">
+    <!-- Allow cleartext traffic for React Native -->
+    <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
+            <certificates src="user"/>
             <certificates src="system"/>
         </trust-anchors>
     </base-config>
