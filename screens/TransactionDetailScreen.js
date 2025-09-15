@@ -255,6 +255,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   detailsCard: {
+    backgroundColor: '#FFFFFF',
     margin: 20,
     borderRadius: 16,
     elevation: 4,

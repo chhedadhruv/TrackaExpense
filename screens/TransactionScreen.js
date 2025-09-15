@@ -142,6 +142,7 @@ const TransactionScreen = ({navigation}) => {
         <View style={styles.searchContainer}>
           <Searchbar
             placeholder="Search by title, amount, or category..."
+            placeholderTextColor="#000"
             onChangeText={handleSearch}
             value={searchQuery}
             style={styles.searchBar}
@@ -436,6 +437,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   searchBar: {
+    marginBottom: 15,
     backgroundColor: '#FFFFFF',
     elevation: 2,
     shadowColor: '#000',
@@ -446,8 +448,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     borderRadius: 12,
+    fontFamily: 'Lato-Regular',
+    fontSize: 16,
   },
   searchInput: {
+    color: '#000000',
     fontFamily: 'Lato-Regular',
     fontSize: 16,
   },
