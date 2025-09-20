@@ -96,16 +96,6 @@ const EditTransactionScreen = ({route, navigation}) => {
           imageUrl,
           createdAt: firestore.Timestamp.fromDate(new Date()),
         });
-        const userData = await transaction.get(userDocRef);
-        const userBalance = userData.data().balance;
-        const transactionAmount = parseFloat(amount);
-        let newBalance;
-        if (transactionData.type === 'expense') {
-          newBalance = userBalance + transactionData.amount - transactionAmount;
-        } else {
-          newBalance = userBalance - transactionData.amount + transactionAmount;
-        }
-        transaction.update(userDocRef, {balance: newBalance});
       });
       setUploading(false);
       alert('Transaction updated successfully');

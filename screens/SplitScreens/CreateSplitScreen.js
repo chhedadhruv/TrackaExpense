@@ -316,19 +316,6 @@ const CreateSplitScreen = ({route, navigation}) => {
         splitRef = await splitsCollection.add(splitData);
         Alert.alert('Success', 'Split added successfully');
       }
-      // Only update balance if the current user is the payer (no transaction creation)
-      if (paidBy.email === currentUserEmail) {
-        // Update user's balance without creating a transaction
-        await firestore().runTransaction(async transaction => {
-          const userDoc = await transaction.get(
-            firestore().collection('users').doc(currentUser.uid),
-          );
-          const userData = userDoc.data();
-          transaction.update(userDoc.ref, {
-            balance: userData.balance - splitAmount,
-          });
-        });
-      }
       navigation.goBack();
     } catch (error) {
       Alert.alert(

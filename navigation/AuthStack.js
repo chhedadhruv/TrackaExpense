@@ -6,6 +6,7 @@ import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 
@@ -86,6 +87,19 @@ const AuthStack = () => {
             elevation: 0,
           },
           headerLeft: () => renderHeaderLeft(navigation, 'Login'),
+        })}
+      />
+      <Stack.Screen
+        name="PrivacyPolicy"
+        component={PrivacyPolicyScreen}
+        options={({ navigation }) => ({
+          title: 'Privacy Policy',
+          headerStyle: {
+            backgroundColor: '#f9fafd',
+            shadowColor: '#f9fafd',
+            elevation: 0,
+          },
+          headerLeft: () => renderHeaderLeft(navigation, 'Signup'),
         })}
       />
     </Stack.Navigator>

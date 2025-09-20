@@ -5,12 +5,17 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import {Card} from 'react-native-paper';
 import FormInput from '../components/FormInput';
 import FormButton from '../components/FormButton';
 import {AuthContext} from '../navigation/AuthProvider';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
+import {GoogleSignin} from '@react-native-google-signin/google-signin';
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const SignupScreen = ({navigation}) => {
   const [email, setEmail] = useState('');
@@ -18,11 +23,26 @@ const SignupScreen = ({navigation}) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [balance, setBalance] = useState('');
   const [errorMessage, setErrorMessage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordValidation, setPasswordValidation] = useState({
+    length: false,
+    numeric: false,
+    special: false,
+    lowercase: false,
+    uppercase: false,
+  });
 
   const {register} = useContext(AuthContext);
+
+  // Configure Google Sign-In
+  React.useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: 'YOUR_WEB_CLIENT_ID', // You'll need to replace this with your actual web client ID
+    });
+  }, []);
 
   const isValidEmail = email => {
     const re = /\S+@\S+\.\S+/;
@@ -34,14 +54,26 @@ const SignupScreen = ({navigation}) => {
     return re.test(name);
   };
 
-  const isValidBalance = balance => {
-    const re = /^\d+(\.\d{1,2})?$/;
-    return re.test(balance);
-  };
 
   const isValidPhone = phone => {
     const re = /^\d{10}$/;
     return re.test(phone);
+  };
+
+  const validatePassword = (password) => {
+    const validation = {
+      length: password.length >= 6,
+      numeric: /\d/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      uppercase: /[A-Z]/.test(password),
+    };
+    setPasswordValidation(validation);
+    return Object.values(validation).every(Boolean);
+  };
+
+  const isPasswordValid = () => {
+    return Object.values(passwordValidation).every(Boolean);
   };
 
   const handleSignup = async () => {
@@ -63,8 +95,8 @@ const SignupScreen = ({navigation}) => {
     } else if (password !== confirmPassword) {
       setErrorMessage('Passwords do not match');
       setLoading(false);
-    } else if (password.length < 6) {
-      setErrorMessage('Password must be at least 6 characters');
+    } else if (!isPasswordValid()) {
+      setErrorMessage('Password must meet all requirements');
       setLoading(false);
     } else if (!name) {
       setErrorMessage('Please enter your name');
@@ -78,15 +110,9 @@ const SignupScreen = ({navigation}) => {
     } else if (!isValidPhone(phone)) {
       setErrorMessage('Please enter a valid phone number');
       setLoading(false);
-    } else if (!balance) {
-      setErrorMessage('Please enter your balance');
-      setLoading(false);
-    } else if (!isValidBalance(balance)) {
-      setErrorMessage('Please enter a valid balance');
-      setLoading(false);
     } else {
       try {
-        await register(email, password, name, phone, parseFloat(balance));
+        await register(email, password, name, phone);
         setLoading(false);
       } catch (error) {
         if (error.code === 'auth/email-already-in-use') {
@@ -95,6 +121,53 @@ const SignupScreen = ({navigation}) => {
           setErrorMessage(error.message || 'Registration failed');
         }
         setLoading(false);
+      }
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    try {
+      setLoading(true);
+      setErrorMessage(null);
+      
+      // Check if your device supports Google Play
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      
+      // Get the users ID token
+      const { idToken } = await GoogleSignin.signIn();
+      
+      // Create a Google credential with the token
+      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+      
+      // Sign-in the user with the credential
+      const userCredential = await auth().signInWithCredential(googleCredential);
+      const user = userCredential.user;
+      
+      // Check if user exists in Firestore, if not create the user document
+      const userDoc = await firestore().collection('users').doc(user.uid).get();
+      
+      if (!userDoc.exists) {
+        // Create user document for new Google sign-up users
+        await firestore().collection('users').doc(user.uid).set({
+          name: user.displayName || 'Google User',
+          email: user.email,
+          phone: user.phoneNumber || '',
+          transactions: [],
+          verified: true,
+          createdAt: firestore.Timestamp.fromDate(new Date()),
+          userImg: user.photoURL || null,
+        });
+      }
+      
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      if (error.code === 'auth/account-exists-with-different-credential') {
+        setErrorMessage('An account already exists with this email address using a different sign-in method.');
+      } else if (error.code === 'auth/invalid-credential') {
+        setErrorMessage('The credential received is malformed or has expired.');
+      } else {
+        setErrorMessage('Google sign-up failed. Please try again.');
       }
     }
   };
@@ -151,40 +224,84 @@ const SignupScreen = ({navigation}) => {
                 />
               </View>
 
-              <View style={styles.inputSection}>
-                <Text style={styles.sectionTitle}>Financial Information</Text>
-                <FormInput
-                  labelValue={balance}
-                  onChangeText={setBalance}
-                  placeholderText="Initial Balance"
-                  iconType="wallet"
-                  keyboardType="numeric"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-                <View style={styles.balanceInfoCard}>
-                  <Text style={styles.balanceInfo}>
-                    💡 Enter your current account balance to get started with accurate expense tracking
-                  </Text>
-                </View>
-              </View>
 
               <View style={styles.inputSection}>
                 <Text style={styles.sectionTitle}>Security</Text>
-                <FormInput
-                  labelValue={password}
-                  onChangeText={setPassword}
-                  placeholderText="Password"
-                  iconType="lock"
-                  secureTextEntry={true}
-                />
-                <FormInput
-                  labelValue={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholderText="Confirm Password"
-                  iconType="lock"
-                  secureTextEntry={true}
-                />
+                
+                {/* Password Input */}
+                <View style={styles.passwordContainer}>
+                  <FormInput
+                    labelValue={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      validatePassword(text);
+                    }}
+                    placeholderText="Password"
+                    iconType="lock"
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowPassword(!showPassword)}>
+                    <MaterialCommunityIcons
+                      name={showPassword ? 'eye-off' : 'eye'}
+                      size={20}
+                      color="#666"
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Password Validation */}
+                {password.length > 0 && (
+                  <View style={styles.validationContainer}>
+                    <Text style={styles.validationTitle}>Password Requirements:</Text>
+                    <View style={styles.validationItem}>
+                      <Text style={[styles.validationText, passwordValidation.length && styles.validText]}>
+                        {passwordValidation.length ? '✓' : '○'} At least 6 characters
+                      </Text>
+                    </View>
+                    <View style={styles.validationItem}>
+                      <Text style={[styles.validationText, passwordValidation.numeric && styles.validText]}>
+                        {passwordValidation.numeric ? '✓' : '○'} At least 1 numeric character
+                      </Text>
+                    </View>
+                    <View style={styles.validationItem}>
+                      <Text style={[styles.validationText, passwordValidation.special && styles.validText]}>
+                        {passwordValidation.special ? '✓' : '○'} At least 1 special character
+                      </Text>
+                    </View>
+                    <View style={styles.validationItem}>
+                      <Text style={[styles.validationText, passwordValidation.lowercase && styles.validText]}>
+                        {passwordValidation.lowercase ? '✓' : '○'} At least 1 lowercase letter
+                      </Text>
+                    </View>
+                    <View style={styles.validationItem}>
+                      <Text style={[styles.validationText, passwordValidation.uppercase && styles.validText]}>
+                        {passwordValidation.uppercase ? '✓' : '○'} At least 1 uppercase letter
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Confirm Password Input */}
+                <View style={styles.passwordContainer}>
+                  <FormInput
+                    labelValue={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholderText="Confirm Password"
+                    iconType="lock"
+                    secureTextEntry={!showConfirmPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                    <MaterialCommunityIcons
+                      name={showConfirmPassword ? 'eye-off' : 'eye'}
+                      size={20}
+                      color="#666"
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {loading ? (
@@ -196,6 +313,25 @@ const SignupScreen = ({navigation}) => {
               ) : (
                 <FormButton buttonTitle="Create Account" onPress={handleSignup} />
               )}
+
+              <View style={styles.dividerContainer}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <TouchableOpacity
+                style={styles.googleButton}
+                onPress={handleGoogleSignUp}
+                disabled={loading}>
+                <Image
+                  source={{
+                    uri: 'https://developers.google.com/identity/images/g-logo.png',
+                  }}
+                  style={styles.googleIcon}
+                />
+                <Text style={styles.googleButtonText}>Sign up with Google</Text>
+              </TouchableOpacity>
             </View>
           </Card>
 
@@ -203,13 +339,11 @@ const SignupScreen = ({navigation}) => {
             <View style={styles.termsContent}>
               <Text style={styles.termsText}>
                 By creating an account, you agree to our{' '}
-                <TouchableOpacity onPress={() => alert('Terms Clicked!')}>
-                  <Text style={styles.termsLink}>Terms of Service</Text>
-                </TouchableOpacity>
-                {' '}and{' '}
-                <TouchableOpacity onPress={() => alert('Privacy Policy Clicked!')}>
-                  <Text style={styles.termsLink}>Privacy Policy</Text>
-                </TouchableOpacity>
+                <Text 
+                  style={styles.termsLink}
+                  onPress={() => navigation.navigate('PrivacyPolicy')}>
+                  Privacy Policy
+                </Text>
               </Text>
             </View>
           </Card>
@@ -302,20 +436,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Lato-Regular',
     lineHeight: 20,
   },
-  balanceInfoCard: {
-    backgroundColor: '#F0F8FF',
-    borderRadius: 12,
-    padding: 15,
-    marginTop: 10,
-    borderLeftWidth: 4,
-    borderLeftColor: '#677CD2',
-  },
-  balanceInfo: {
-    fontSize: 13,
-    color: '#555',
-    fontFamily: 'Lato-Regular',
-    lineHeight: 18,
-  },
   loader: {
     marginVertical: 20,
   },
@@ -362,6 +482,91 @@ const styles = StyleSheet.create({
   },
   loginLinkText: {
     color: '#677CD2',
+    fontWeight: '600',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E0E0E0',
+  },
+  dividerText: {
+    marginHorizontal: 15,
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Lato-Regular',
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  googleIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 12,
+  },
+  googleButtonText: {
+    fontSize: 16,
+    color: '#333',
+    fontFamily: 'Lato-Regular',
+    fontWeight: '500',
+  },
+  passwordContainer: {
+    position: 'relative',
+    marginBottom: 10,
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 15,
+    top: '50%',
+    transform: [{ translateY: -10 }],
+    zIndex: 1,
+  },
+  validationContainer: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 15,
+    borderLeftWidth: 3,
+    borderLeftColor: '#677CD2',
+  },
+  validationTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    fontFamily: 'Lato-Bold',
+    marginBottom: 8,
+  },
+  validationItem: {
+    marginBottom: 4,
+  },
+  validationText: {
+    fontSize: 13,
+    color: '#666',
+    fontFamily: 'Lato-Regular',
+  },
+  validText: {
+    color: '#4CAF50',
     fontWeight: '600',
   },
 });

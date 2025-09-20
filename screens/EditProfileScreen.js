@@ -14,7 +14,6 @@ const EditProfileScreen = ({navigation}) => {
     name: '',
     email: '',
     phone: '',
-    balance: 0,
     transactions: [],
   });
   const [loading, setLoading] = useState(true);
