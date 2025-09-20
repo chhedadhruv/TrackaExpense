@@ -257,6 +257,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Lato-Regular',
   },
   summaryCard: {
+    padding: 20,
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     elevation: 8,
@@ -396,7 +397,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     marginVertical: 8,
-    marginHorizontal: 20,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     elevation: 6,
