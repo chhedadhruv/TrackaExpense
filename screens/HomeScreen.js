@@ -149,6 +149,7 @@ const HomeScreen = ({navigation}) => {
 
         {/* Data Card */}
         <Card style={styles.dataCard}>
+          <View style={styles.dataCardRow}>
             <View style={styles.cardContentWithIcon}>
               <View style={styles.Icon}>
                 <MaterialCommunityIcons
@@ -179,6 +180,7 @@ const HomeScreen = ({navigation}) => {
                 </Text>
               </View>
             </View>
+          </View>
         </Card>
         {/* Transactions Section */}
         <View style={styles.transactionsSection}>
@@ -362,15 +364,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Lato-Regular',
   },
   dataCard: {
+    marginHorizontal: 20,
+    backgroundColor: PRIMARY_COLOR,
+    padding: 20,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+  },
+  dataCardRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: PRIMARY_COLOR,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 20,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
   },
   cardContent: {
     flexDirection: 'column',
@@ -379,7 +382,7 @@ const styles = StyleSheet.create({
   cardContentWithIcon: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    flex: 1,
   },
   Icon: {
     width: 43,

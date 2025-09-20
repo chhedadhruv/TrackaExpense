@@ -143,6 +143,7 @@ const AddOrRemoveExpense = ({navigation}) => {
             style={styles.searchBar}
             inputStyle={styles.searchInput}
             iconColor={PRIMARY_COLOR}
+            placeholderTextColor="#000000"
           />
         </View>
         {/* Recent Transactions Header */}
@@ -323,6 +324,7 @@ const styles = StyleSheet.create({
   searchInput: {
     fontFamily: 'Lato-Regular',
     fontSize: 16,
+    color: '#000000',
   },
   sectionHeader: {
     flexDirection: 'row',

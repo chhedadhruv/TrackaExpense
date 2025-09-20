@@ -20,21 +20,24 @@ const AddExpense = ({navigation}) => {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
-  const [date, setDate] = useState(undefined);
+  const [date, setDate] = useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  });
   const [image, setImage] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [transferred, setTransferred] = useState(0);
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(null);
   const [items, setItems] = useState([
-    {label: 'Bills', value: 'Bills'},
-    {label: 'Education', value: 'Education'},
-    {label: 'Entertainment', value: 'Entertainment'},
-    {label: 'Food', value: 'Food'},
-    {label: 'Health', value: 'Health'},
-    {label: 'Travel', value: 'Travel'},
-    {label: 'Shopping', value: 'Shopping'},
-    {label: 'Others', value: 'Others'},
+    {label: 'Bills', value: 'Bills', icon: 'file-document'},
+    {label: 'Education', value: 'Education', icon: 'school'},
+    {label: 'Entertainment', value: 'Entertainment', icon: 'movie'},
+    {label: 'Food', value: 'Food', icon: 'food'},
+    {label: 'Health', value: 'Health', icon: 'medical-bag'},
+    {label: 'Travel', value: 'Travel', icon: 'car'},
+    {label: 'Shopping', value: 'Shopping', icon: 'shopping'},
+    {label: 'Others', value: 'Others', icon: 'dots-horizontal'},
   ]);
   const [modalVisible, setModalVisible] = useState(false);
   const [openDate, setOpenDate] = useState(false);
@@ -76,10 +79,6 @@ const AddExpense = ({navigation}) => {
     setErrorMessage(null);
     if (!title.trim()) {
       setErrorMessage('Please enter a title for your expense');
-      return false;
-    }
-    if (!description.trim()) {
-      setErrorMessage('Please enter a description');
       return false;
     }
     if (!amount.trim()) {
@@ -214,7 +213,6 @@ const AddExpense = ({navigation}) => {
   const isFormValid = () => {
     return (
       title.trim() !== '' &&
-      description.trim() !== '' &&
       amount.trim() !== '' &&
       category !== '' &&
       date !== undefined &&
@@ -289,7 +287,7 @@ const AddExpense = ({navigation}) => {
                 </View>
                 {/* Description Input */}
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Description</Text>
+                  <Text style={styles.inputLabel}>Description <Text style={styles.optionalText}>(Optional)</Text></Text>
                   <View style={styles.inputWrapper}>
                     <MaterialCommunityIcons name="text-box" size={20} color={PRIMARY_COLOR} style={styles.inputIcon} />
                     <TextInput
@@ -310,20 +308,31 @@ const AddExpense = ({navigation}) => {
                   <Text style={styles.inputLabel}>Category</Text>
                   <View style={styles.dropdownContainer}>
                     <DropDownPicker
-                      placeholder="Select expense category"
-                      placeholderStyle={styles.dropdownPlaceholder}
                       open={open}
                       value={value}
-                      items={items}
+                      items={items.map(cat => ({
+                        ...cat,
+                        icon: () => (
+                          <MaterialCommunityIcons
+                            name={cat.icon}
+                            size={20}
+                            color={PRIMARY_COLOR}
+                          />
+                        ),
+                      }))}
                       setOpen={setOpen}
                       setValue={setValue}
                       setItems={setItems}
+                      placeholder="Select expense category"
                       style={styles.dropdown}
-                      dropDownContainerStyle={styles.dropdownList}
-                      textStyle={styles.dropdownText}
+                      dropDownContainerStyle={styles.dropdownContainer}
+                      searchable={true}
+                      searchPlaceholder="Search categories..."
+                      listMode="MODAL"
+                      modalTitle="Select Expense Category"
+                      modalAnimationType="slide"
                       onChangeValue={setCategory}
                       disabled={isSubmitting}
-                      listMode="SCROLLVIEW"
                     />
                   </View>
                 </View>
@@ -565,6 +574,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontFamily: 'Lato-Bold',
   },
+  optionalText: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#999',
+    fontFamily: 'Lato-Regular',
+  },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -573,7 +588,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E8EBF7',
     paddingHorizontal: 15,
-    paddingVertical: 15,
+    paddingVertical: 10,
   },
   inputIcon: {
     marginRight: 12,
@@ -587,16 +602,6 @@ const styles = StyleSheet.create({
   },
   dropdownContainer: {
     zIndex: 1000,
-  },
-  dropdown: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    paddingHorizontal: 15,
-    paddingVertical: 15,
-  },
-  dropdownList: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
@@ -609,6 +614,12 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 8,
+  },
+  dropdown: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
   dropdownPlaceholder: {
     color: '#999',
