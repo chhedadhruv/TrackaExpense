@@ -12,14 +12,33 @@ import FormInput from '../components/FormInput';
 import FormButton from '../components/FormButton';
 import {AuthContext} from '../navigation/AuthProvider';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
+import {GoogleSignin} from '@react-native-google-signin/google-signin';
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const LoginScreen = ({navigation}) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordValidation, setPasswordValidation] = useState({
+    length: false,
+    numeric: false,
+    special: false,
+    lowercase: false,
+    uppercase: false,
+  });
 
   const {login} = useContext(AuthContext);
+
+  // Configure Google Sign-In
+  React.useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: 'YOUR_WEB_CLIENT_ID', // You'll need to replace this with your actual web client ID
+    });
+  }, []);
 
   const isValidEmail = email => {
     const re = /\S+@\S+\.\S+/;
@@ -32,6 +51,22 @@ const LoginScreen = ({navigation}) => {
     return re.test(password);
   };
 
+  const validatePassword = (password) => {
+    const validation = {
+      length: password.length >= 6,
+      numeric: /\d/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      uppercase: /[A-Z]/.test(password),
+    };
+    setPasswordValidation(validation);
+    return Object.values(validation).every(Boolean);
+  };
+
+  const isPasswordValid = () => {
+    return Object.values(passwordValidation).every(Boolean);
+  };
+
   const handleSignIn = async () => {
     setErrorMessage(null);
     if (!email) {
@@ -40,10 +75,8 @@ const LoginScreen = ({navigation}) => {
       setErrorMessage('Please enter a valid email address');
     } else if (!password) {
       setErrorMessage('Please enter a password');
-    } else if (!isValidPassword(password)) {
-      setErrorMessage(
-        'Password must contain at least 6 characters, one number, one uppercase letter, and one lowercase letter.',
-      );
+    } else if (!isPasswordValid()) {
+      setErrorMessage('Password must meet all requirements');
     } else {
       setLoading(true);
       try {
@@ -54,6 +87,53 @@ const LoginScreen = ({navigation}) => {
         );
       } finally {
         setLoading(false);
+      }
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setLoading(true);
+      setErrorMessage(null);
+      
+      // Check if your device supports Google Play
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      
+      // Get the users ID token
+      const { idToken } = await GoogleSignin.signIn();
+      
+      // Create a Google credential with the token
+      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+      
+      // Sign-in the user with the credential
+      const userCredential = await auth().signInWithCredential(googleCredential);
+      const user = userCredential.user;
+      
+      // Check if user exists in Firestore, if not create the user document
+      const userDoc = await firestore().collection('users').doc(user.uid).get();
+      
+      if (!userDoc.exists) {
+        // Create user document for new Google sign-in users
+        await firestore().collection('users').doc(user.uid).set({
+          name: user.displayName || 'Google User',
+          email: user.email,
+          phone: user.phoneNumber || '',
+          transactions: [],
+          verified: true,
+          createdAt: firestore.Timestamp.fromDate(new Date()),
+          userImg: user.photoURL || null,
+        });
+      }
+      
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      if (error.code === 'auth/account-exists-with-different-credential') {
+        setErrorMessage('An account already exists with this email address using a different sign-in method.');
+      } else if (error.code === 'auth/invalid-credential') {
+        setErrorMessage('The credential received is malformed or has expired.');
+      } else {
+        setErrorMessage('Google sign-in failed. Please try again.');
       }
     }
   };
@@ -89,13 +169,60 @@ const LoginScreen = ({navigation}) => {
                 autoCorrect={false}
               />
 
-              <FormInput
-                labelValue={password}
-                onChangeText={setPassword}
-                placeholderText="Password"
-                iconType="lock"
-                secureTextEntry={true}
-              />
+              {/* Password Input */}
+              <View style={styles.passwordContainer}>
+                <FormInput
+                  labelValue={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    validatePassword(text);
+                  }}
+                  placeholderText="Password"
+                  iconType="lock"
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => setShowPassword(!showPassword)}>
+                  <MaterialCommunityIcons
+                    name={showPassword ? 'eye-off' : 'eye'}
+                    size={20}
+                    color="#666"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Password Validation */}
+              {password.length > 0 && (
+                <View style={styles.validationContainer}>
+                  <Text style={styles.validationTitle}>Password Requirements:</Text>
+                  <View style={styles.validationItem}>
+                    <Text style={[styles.validationText, passwordValidation.length && styles.validText]}>
+                      {passwordValidation.length ? '✓' : '○'} At least 6 characters
+                    </Text>
+                  </View>
+                  <View style={styles.validationItem}>
+                    <Text style={[styles.validationText, passwordValidation.numeric && styles.validText]}>
+                      {passwordValidation.numeric ? '✓' : '○'} At least 1 numeric character
+                    </Text>
+                  </View>
+                  <View style={styles.validationItem}>
+                    <Text style={[styles.validationText, passwordValidation.special && styles.validText]}>
+                      {passwordValidation.special ? '✓' : '○'} At least 1 special character
+                    </Text>
+                  </View>
+                  <View style={styles.validationItem}>
+                    <Text style={[styles.validationText, passwordValidation.lowercase && styles.validText]}>
+                      {passwordValidation.lowercase ? '✓' : '○'} At least 1 lowercase letter
+                    </Text>
+                  </View>
+                  <View style={styles.validationItem}>
+                    <Text style={[styles.validationText, passwordValidation.uppercase && styles.validText]}>
+                      {passwordValidation.uppercase ? '✓' : '○'} At least 1 uppercase letter
+                    </Text>
+                  </View>
+                </View>
+              )}
 
               {loading ? (
                 <ActivityIndicator
@@ -106,6 +233,25 @@ const LoginScreen = ({navigation}) => {
               ) : (
                 <FormButton buttonTitle="Sign In" onPress={handleSignIn} />
               )}
+
+              <View style={styles.dividerContainer}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <TouchableOpacity
+                style={styles.googleButton}
+                onPress={handleGoogleSignIn}
+                disabled={loading}>
+                <Image
+                  source={{
+                    uri: 'https://developers.google.com/identity/images/g-logo.png',
+                  }}
+                  style={styles.googleIcon}
+                />
+                <Text style={styles.googleButtonText}>Sign in with Google</Text>
+              </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.forgotButton}
@@ -139,6 +285,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 40,
+    justifyContent: 'center',
   },
   logoContainer: {
     alignItems: 'center',
@@ -220,6 +367,91 @@ const styles = StyleSheet.create({
   },
   signupLinkText: {
     color: '#677CD2',
+    fontWeight: '600',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E0E0E0',
+  },
+  dividerText: {
+    marginHorizontal: 15,
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Lato-Regular',
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  googleIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 12,
+  },
+  googleButtonText: {
+    fontSize: 16,
+    color: '#333',
+    fontFamily: 'Lato-Regular',
+    fontWeight: '500',
+  },
+  passwordContainer: {
+    position: 'relative',
+    marginBottom: 10,
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 15,
+    top: '50%',
+    transform: [{ translateY: -10 }],
+    zIndex: 1,
+  },
+  validationContainer: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 15,
+    borderLeftWidth: 3,
+    borderLeftColor: '#677CD2',
+  },
+  validationTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    fontFamily: 'Lato-Bold',
+    marginBottom: 8,
+  },
+  validationItem: {
+    marginBottom: 4,
+  },
+  validationText: {
+    fontSize: 13,
+    color: '#666',
+    fontFamily: 'Lato-Regular',
+  },
+  validText: {
+    color: '#4CAF50',
     fontWeight: '600',
   },
 });

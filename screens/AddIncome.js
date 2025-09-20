@@ -85,8 +85,6 @@ const AddIncome = ({navigation}) => {
       await firestore().runTransaction(async transaction => {
         const userDoc = await transaction.get(userDocRef);
         const userData = userDoc.data();
-        const newBalance = userData.balance + parseInt(amount);
-        transaction.update(userDocRef, {balance: newBalance});
         const transactionRef = userDocRef.collection('transactions');
         const incomeData = {
           userId: getUser(),

@@ -147,15 +147,8 @@ const HomeScreen = ({navigation}) => {
           <Text style={styles.subGreetingText}>Track your expenses today</Text>
         </View>
 
-        {/* Balance Card */}
-        <Card style={styles.balanceCard}>
-          <View style={styles.balanceCardContent}>
-            <Text style={styles.balanceTitle}>Total Balance</Text>
-            <Text style={styles.balanceAmount}>
-              ₹ {userData?.balance ? userData.balance.toLocaleString() : '0'}
-            </Text>
-          </View>
-          <View style={styles.dataCard}>
+        {/* Data Card */}
+        <Card style={styles.dataCard}>
             <View style={styles.cardContentWithIcon}>
               <View style={styles.Icon}>
                 <MaterialCommunityIcons
@@ -186,7 +179,6 @@ const HomeScreen = ({navigation}) => {
                 </Text>
               </View>
             </View>
-          </View>
         </Card>
         {/* Transactions Section */}
         <View style={styles.transactionsSection}>
@@ -368,38 +360,6 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
     fontFamily: 'Lato-Regular',
-  },
-  balanceCard: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 16,
-    elevation: 8,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  balanceCardContent: {
-    padding: 20,
-    backgroundColor: PRIMARY_COLOR,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-  },
-  balanceTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#CED6EC',
-    marginBottom: 8,
-    fontFamily: 'Lato-Regular',
-  },
-  balanceAmount: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    fontFamily: 'Kufam-SemiBoldItalic',
   },
   dataCard: {
     flexDirection: 'row',
