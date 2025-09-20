@@ -8,6 +8,7 @@ import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
+import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 const EditTransactionScreen = ({route, navigation}) => {
   const {transaction} = route.params;
   const [title, setTitle] = useState(transaction.title);
@@ -165,104 +166,110 @@ const EditTransactionScreen = ({route, navigation}) => {
   };
   return (
     <View style={styles.container}>
-      <View style={styles.action}>
-        <FontAwesome name="font" color="#333333" size={20} />
-        <TextInput
-          placeholder="Title"
-          placeholderTextColor="#666666"
-          autoCorrect={false}
-          value={title}
-          onChangeText={setTitle}
-          style={styles.textInput}
-        />
-      </View>
-      <View style={styles.action}>
-        <FontAwesome name="pencil" color="#333333" size={20} />
-        <TextInput
-          placeholder="Description"
-          placeholderTextColor="#666666"
-          autoCorrect={false}
-          value={description}
-          onChangeText={setDescription}
-          style={styles.textInput}
-        />
-      </View>
-      <View style={styles.action}>
-        <DropDownPicker
-          placeholder="Category"
-          placeholderStyle={{color: '#666666'}}
-          open={open}
-          value={category}
-          items={transaction.type === 'expense' ? expenseItems : incomeItems}
-          setOpen={setOpen}
-          setValue={setCategory}
-          style={styles.dropdown}
-        />
-      </View>
-      <View style={styles.action}>
-        <FontAwesome name="money" color="#333333" size={20} />
-        <TextInput
-          placeholder="Amount"
-          placeholderTextColor="#666666"
-          keyboardType="numeric"
-          autoCorrect={false}
-          value={amount}
-          onChangeText={setAmount}
-          style={styles.textInput}
-        />
-      </View>
-      <View style={styles.action}>
-        <FontAwesome name="calendar" color="#333333" size={20} />
-        <TextInput
-          placeholder="Date"
-          placeholderTextColor="#666666"
-          autoCorrect={false}
-          value={date}
-          onChangeText={setDate}
-          style={styles.textInput}
-          onFocus={() => setOpenDate(true)}
-        />
-        <DatePickerModal
-          mode="single"
-          visible={openDate}
-          onDismiss={onDismissSingle}
-          date={new Date(date)}
-          onConfirm={onConfirmSingle}
-          saveLabel="Confirm"
-          label="Select date"
-          animationType="fade"
-        />
-      </View>
-      {transaction.type === 'expense' && (
-        <View>
-          {image ? (
-            <View>
-              <Image source={{uri: image}} style={styles.image} />
-              <Button
-                icon="camera"
-                mode="contained"
-                onPress={toggleModal}
-                style={styles.button}>
-                Change Image
-              </Button>
-            </View>
-          ) : (
-            <View>
-              <Text style={styles.uploadText}>Image not uploaded</Text>
-              <Button
-                icon="camera"
-                mode="contained"
-                onPress={toggleModal}
-                style={styles.button}>
-                Upload Bill
-              </Button>
-            </View>
-          )}
+      <KeyboardAwareScrollView
+        style={styles.scrollView}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}>
+        <View style={styles.action}>
+          <FontAwesome name="font" color="#333333" size={20} />
+          <TextInput
+            placeholder="Title"
+            placeholderTextColor="#666666"
+            autoCorrect={false}
+            value={title}
+            onChangeText={setTitle}
+            style={styles.textInput}
+          />
         </View>
-      )}
-      <Button mode="contained" onPress={handleSubmit} style={styles.button}>
-        Submit
-      </Button>
+        <View style={styles.action}>
+          <FontAwesome name="pencil" color="#333333" size={20} />
+          <TextInput
+            placeholder="Description"
+            placeholderTextColor="#666666"
+            autoCorrect={false}
+            value={description}
+            onChangeText={setDescription}
+            style={styles.textInput}
+          />
+        </View>
+        <View style={styles.action}>
+          <DropDownPicker
+            placeholder="Category"
+            placeholderStyle={{color: '#666666'}}
+            open={open}
+            value={category}
+            items={transaction.type === 'expense' ? expenseItems : incomeItems}
+            setOpen={setOpen}
+            setValue={setCategory}
+            style={styles.dropdown}
+          />
+        </View>
+        <View style={styles.action}>
+          <FontAwesome name="money" color="#333333" size={20} />
+          <TextInput
+            placeholder="Amount"
+            placeholderTextColor="#666666"
+            keyboardType="numeric"
+            autoCorrect={false}
+            value={amount}
+            onChangeText={setAmount}
+            style={styles.textInput}
+          />
+        </View>
+        <View style={styles.action}>
+          <FontAwesome name="calendar" color="#333333" size={20} />
+          <TextInput
+            placeholder="Date"
+            placeholderTextColor="#666666"
+            autoCorrect={false}
+            value={date}
+            onChangeText={setDate}
+            style={styles.textInput}
+            onFocus={() => setOpenDate(true)}
+          />
+          <DatePickerModal
+            mode="single"
+            visible={openDate}
+            onDismiss={onDismissSingle}
+            date={new Date(date)}
+            onConfirm={onConfirmSingle}
+            saveLabel="Confirm"
+            label="Select date"
+            animationType="fade"
+          />
+        </View>
+        {transaction.type === 'expense' && (
+          <View>
+            {image ? (
+              <View>
+                <Image source={{uri: image}} style={styles.image} />
+                <Button
+                  icon="camera"
+                  mode="contained"
+                  onPress={toggleModal}
+                  style={styles.button}>
+                  Change Image
+                </Button>
+              </View>
+            ) : (
+              <View>
+                <Text style={styles.uploadText}>Image not uploaded</Text>
+                <Button
+                  icon="camera"
+                  mode="contained"
+                  onPress={toggleModal}
+                  style={styles.button}>
+                  Upload Bill
+                </Button>
+              </View>
+            )}
+          </View>
+        )}
+        <Button mode="contained" onPress={handleSubmit} style={styles.button}>
+          Submit
+        </Button>
+      </KeyboardAwareScrollView>
       <Provider>
         <Portal>
           <Modal
@@ -294,8 +301,13 @@ const EditTransactionScreen = ({route, navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: '#fff',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
   },
   action: {
     flexDirection: 'row',
