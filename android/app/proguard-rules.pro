@@ -155,6 +155,43 @@
 -dontwarn com.google.firebase.**
 -dontwarn com.google.android.gms.**
 
+# ===== GOOGLE SIGN-IN =====
+-keep class com.google.android.gms.auth.** { *; }
+-keep class com.google.android.gms.common.** { *; }
+-keep class com.google.android.gms.tasks.** { *; }
+-keep class com.google.android.gms.internal.** { *; }
+-keep class com.google.android.gms.signin.** { *; }
+-keep class com.google.android.gms.identity.** { *; }
+-keep class com.google.android.gms.auth.api.** { *; }
+-keep class com.google.android.gms.auth.api.signin.** { *; }
+-keep class com.google.android.gms.auth.api.signin.internal.** { *; }
+
+# Google Sign-In specific classes
+-keep class com.google.android.gms.auth.api.signin.GoogleSignInAccount { *; }
+-keep class com.google.android.gms.auth.api.signin.GoogleSignInOptions { *; }
+-keep class com.google.android.gms.auth.api.signin.GoogleSignInClient { *; }
+-keep class com.google.android.gms.auth.api.signin.GoogleSignIn { *; }
+-keep class com.google.android.gms.auth.api.signin.GoogleSignInResult { *; }
+
+# Google Sign-In React Native bridge
+-keep class com.reactnativegooglesignin.** { *; }
+-keep class * extends com.reactnativegooglesignin.** { *; }
+
+# Keep Google Sign-In methods
+-keepclassmembers class * {
+    @com.google.android.gms.auth.api.signin.GoogleSignInAccount <methods>;
+    @com.google.android.gms.auth.api.signin.GoogleSignInOptions <methods>;
+}
+
+# Suppress Google Sign-In warnings
+-dontwarn com.google.android.gms.auth.**
+-dontwarn com.google.android.gms.common.**
+-dontwarn com.google.android.gms.tasks.**
+-dontwarn com.google.android.gms.internal.**
+-dontwarn com.google.android.gms.signin.**
+-dontwarn com.google.android.gms.identity.**
+-dontwarn com.reactnativegooglesignin.**
+
 # ===== REACT NATIVE LIBRARIES =====
 # Keep ALL React Native community libraries
 -keep class com.reactnativecommunity.** { *; }
@@ -185,6 +222,10 @@
 
 # Dropdown Picker
 -keep class com.hossein.zaman.dropdownpicker.** { *; }
+
+# React Native Dotenv
+-keep class com.reactnativedotenv.** { *; }
+-keep class * extends com.reactnativedotenv.** { *; }
 
 # Contacts
 -keep class com.rt2zz.reactnativecontacts.** { *; }
@@ -252,3 +293,69 @@
 -dontwarn com.google.j2objc.annotations.**
 -dontwarn afu.org.checkerframework.**
 -dontwarn org.checkerframework.**
+
+# ===== PLAY STORE OPTIMIZATION =====
+# Keep all native methods for JNI
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# Keep all classes that have native methods
+-keepclasseswithmembers class * {
+    native <methods>;
+}
+
+# Keep all classes with @Keep annotation
+-keep @androidx.annotation.Keep class * { *; }
+-keepclassmembers class * {
+    @androidx.annotation.Keep *;
+}
+
+# Keep all classes with @KeepForSdk annotation
+-keep @com.google.android.gms.common.annotation.KeepForSdk class * { *; }
+-keepclassmembers class * {
+    @com.google.android.gms.common.annotation.KeepForSdk *;
+}
+
+# ===== ADDITIONAL GOOGLE SERVICES =====
+# Keep Google Play Services classes
+-keep class com.google.android.gms.** { *; }
+-keep interface com.google.android.gms.** { *; }
+
+# Keep Google API classes
+-keep class com.google.api.** { *; }
+-keep class com.google.protobuf.** { *; }
+
+# Keep Google Auth classes
+-keep class com.google.auth.** { *; }
+-keep class com.google.oauth2.** { *; }
+
+# ===== ENVIRONMENT VARIABLES =====
+# Keep classes that might be used for environment variable access
+-keep class * {
+    public static final java.lang.String *;
+}
+
+# Keep BuildConfig fields
+-keepclassmembers class * {
+    public static final java.lang.String *;
+}
+
+# ===== REACT NATIVE MODULE BRIDGES =====
+# Keep all React Native module bridges
+-keep class * extends com.facebook.react.bridge.ReactContextBaseJavaModule {
+    public <init>(...);
+    <methods>;
+}
+
+# Keep all React Native package implementations
+-keep class * implements com.facebook.react.bridge.ReactPackage {
+    public <init>(...);
+    <methods>;
+}
+
+# Keep all React Native view managers
+-keep class * extends com.facebook.react.uimanager.ViewManager {
+    public <init>(...);
+    <methods>;
+}
