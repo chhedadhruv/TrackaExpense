@@ -12,7 +12,6 @@ import HomeScreen from '../screens/HomeScreen';
 import TransactionScreen from '../screens/TransactionScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
-import AddOrRemoveExpense from '../screens/AddOrRemoveExpense';
 import StatisticScreen from '../screens/StatisticScreen';
 import AddIncome from '../screens/AddIncome';
 import AddExpense from '../screens/AddExpense';
@@ -80,6 +79,8 @@ const HomeStack = () =>
     { name: 'Transaction', component: TransactionScreen, title: 'TrackaExpense' },
     { name: 'TransactionDetail', component: TransactionDetailScreen, title: 'TrackaExpense' },
     { name: 'EditTransaction', component: EditTransactionScreen, title: 'TrackaExpense' },
+    { name: 'AddIncome', component: AddIncome, title: 'Add Income' },
+    { name: 'AddExpense', component: AddExpense, title: 'Add Expense' },
     { name: 'Image', component: ImageScreen, title: '' },
   ]);
 
@@ -107,16 +108,15 @@ const StatisticStack = () =>
     { name: 'Image', component: ImageScreen, title: '' },
   ]);
 
-// Expense Stack
-const AddOrRemoveExpenseStack = () =>
+// Transaction Stack
+const TransactionStack = () =>
   createStack([
-    { name: 'AddOrRemoveExpense', component: AddOrRemoveExpense, title: 'TrackaExpense' },
-    { name: 'AddIncome', component: AddIncome, title: 'TrackaExpense' },
-    { name: 'AddExpense', component: AddExpense, title: 'TrackaExpense' },
+    { name: 'Transaction', component: TransactionScreen, title: 'TrackaExpense' },
     { name: 'TransactionDetail', component: TransactionDetailScreen, title: 'TrackaExpense' },
     { name: 'EditTransaction', component: EditTransactionScreen, title: 'TrackaExpense' },
     { name: 'Image', component: ImageScreen, title: '' },
   ]);
+
 
 // Split Stack
 const SplitStack = () =>
@@ -160,14 +160,14 @@ const AppStack = () => (
       }}
     />
     <Tab.Screen
-      name="AddOrRemoveExpense"
-      component={AddOrRemoveExpenseStack}
+      name="Transaction"
+      component={TransactionStack}
       options={{
         headerShown: false,
-        title: 'Add',
+        title: 'Transactions',
         tabBarIcon: ({ color, size, focused }) => (
-          <FontAwesome5
-            name="plus-circle"
+          <MaterialCommunityIcons
+            name="format-list-bulleted"
             color={focused ? '#677CD2' : color}
             size={size}
           />

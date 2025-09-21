@@ -215,6 +215,35 @@ const HomeScreen = ({navigation}) => {
             </View>
           </View>
         </Card>
+
+        {/* Quick Actions Section */}
+        <View style={styles.quickActionsSection}>
+          <Text style={styles.quickActionsTitle}>Quick Actions</Text>
+          <View style={styles.quickActionsContainer}>
+            <TouchableOpacity
+              style={[styles.quickActionButton, styles.addIncomeButton]}
+              onPress={() => navigation.navigate('AddIncome')}>
+              <MaterialCommunityIcons
+                name="cash-plus"
+                size={20}
+                color="#25B07F"
+              />
+              <Text style={styles.quickActionText}>Add Income</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.quickActionButton, styles.addExpenseButton]}
+              onPress={() => navigation.navigate('AddExpense')}>
+              <MaterialCommunityIcons
+                name="cash-minus"
+                size={20}
+                color="#F64E4E"
+              />
+              <Text style={styles.quickActionText}>Add Expense</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Transactions Section */}
         <View style={styles.transactionsSection}>
           <View style={styles.transactionsHeader}>
@@ -438,6 +467,55 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
     fontFamily: 'Lato-Bold',
+  },
+  quickActionsSection: {
+    marginTop: 20,
+    paddingHorizontal: 20,
+  },
+  quickActionsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    marginBottom: 15,
+    fontFamily: 'Kufam-SemiBoldItalic',
+  },
+  quickActionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  quickActionButton: {
+    flex: 0.48,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 15,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  addIncomeButton: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#25B07F',
+  },
+  addExpenseButton: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#F64E4E',
+  },
+  quickActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
+    marginLeft: 8,
   },
   transactionsSection: {
     marginTop: 10,
