@@ -12,10 +12,14 @@ import FormInput from '../components/FormInput';
 import FormButton from '../components/FormButton';
 import {AuthContext} from '../navigation/AuthProvider';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
-import {GoogleSignin} from '@react-native-google-signin/google-signin';
+import {
+  GoogleSignin,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { configureGoogleSignIn } from '../utils/GoogleSignInConfig';
 
 const SignupScreen = ({navigation}) => {
   const [email, setEmail] = useState('');
@@ -39,9 +43,7 @@ const SignupScreen = ({navigation}) => {
 
   // Configure Google Sign-In
   React.useEffect(() => {
-    GoogleSignin.configure({
-      webClientId: 'YOUR_WEB_CLIENT_ID', // You'll need to replace this with your actual web client ID
-    });
+    configureGoogleSignIn();
   }, []);
 
   const isValidEmail = email => {
@@ -134,35 +136,72 @@ const SignupScreen = ({navigation}) => {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       
       // Get the users ID token
-      const { idToken } = await GoogleSignin.signIn();
+      const response = await GoogleSignin.signIn();
       
-      // Create a Google credential with the token
-      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
-      
-      // Sign-in the user with the credential
-      const userCredential = await auth().signInWithCredential(googleCredential);
-      const user = userCredential.user;
-      
-      // Check if user exists in Firestore, if not create the user document
-      const userDoc = await firestore().collection('users').doc(user.uid).get();
-      
-      if (!userDoc.exists) {
-        // Create user document for new Google sign-up users
-        await firestore().collection('users').doc(user.uid).set({
-          name: user.displayName || 'Google User',
-          email: user.email,
-          phone: user.phoneNumber || '',
-          transactions: [],
-          verified: true,
-          createdAt: firestore.Timestamp.fromDate(new Date()),
-          userImg: user.photoURL || null,
-        });
+      // Check if sign-in was successful
+      if (response.type === 'success') {
+        const { idToken } = response.data;
+        
+        // Create a Google credential with the token
+        const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+        
+        // Sign-in the user with the credential
+        const userCredential = await auth().signInWithCredential(googleCredential);
+        const user = userCredential.user;
+        
+        // Check if user exists in Firestore, if not create the user document
+        const userDoc = await firestore().collection('users').doc(user.uid).get();
+        
+        if (!userDoc.exists) {
+          // Create user document for new Google sign-up users
+          await firestore().collection('users').doc(user.uid).set({
+            name: user.displayName || 'Google User',
+            email: user.email,
+            phone: user.phoneNumber || '',
+            transactions: [],
+            verified: true,
+            createdAt: firestore.Timestamp.fromDate(new Date()),
+            userImg: user.photoURL || null,
+          });
+          console.log('Google Sign-Up: User document created successfully');
+        } else {
+          console.log('Google Sign-Up: User document already exists');
+        }
+        
+        // Verify the document was created successfully
+        const verifyDoc = await firestore().collection('users').doc(user.uid).get();
+        if (!verifyDoc.exists) {
+          throw new Error('Failed to create user document');
+        }
+      } else if (response.type === 'cancelled') {
+        // User cancelled the sign-up process
+        setErrorMessage('Sign-up was cancelled');
+      } else {
+        setErrorMessage('Google sign-up failed. Please try again.');
       }
       
       setLoading(false);
     } catch (error) {
       setLoading(false);
-      if (error.code === 'auth/account-exists-with-different-credential') {
+      
+      if (error.code) {
+        switch (error.code) {
+          case statusCodes.IN_PROGRESS:
+            setErrorMessage('Sign-up is already in progress');
+            break;
+          case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+            setErrorMessage('Google Play Services not available or outdated');
+            break;
+          case statusCodes.SIGN_IN_CANCELLED:
+            setErrorMessage('Sign-up was cancelled');
+            break;
+          case statusCodes.SIGN_IN_REQUIRED:
+            setErrorMessage('Sign-up required');
+            break;
+          default:
+            setErrorMessage('Google sign-up failed. Please try again.');
+        }
+      } else if (error.code === 'auth/account-exists-with-different-credential') {
         setErrorMessage('An account already exists with this email address using a different sign-in method.');
       } else if (error.code === 'auth/invalid-credential') {
         setErrorMessage('The credential received is malformed or has expired.');

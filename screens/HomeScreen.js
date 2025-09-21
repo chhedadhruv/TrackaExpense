@@ -20,9 +20,17 @@ const HomeScreen = ({navigation}) => {
 
   const currentUser = auth().currentUser;
 
-  const getUserData = async () => {
+  const getUserData = async (retryCount = 0) => {
     setLoading(true);
+    setError(null);
+    
     try {
+      if (!currentUser || !currentUser.uid) {
+        setError('No authenticated user found');
+        setLoading(false);
+        return;
+      }
+
       const documentSnapshot = await firestore()
         .collection('users')
         .doc(currentUser.uid)
@@ -30,13 +38,31 @@ const HomeScreen = ({navigation}) => {
 
       if (documentSnapshot.exists) {
         setUserData(documentSnapshot.data());
+        setError(null);
       } else {
-        setError('User data not found');
+        // If user data doesn't exist, wait a bit and retry (for Google Sign-In timing issues)
+        if (retryCount < 3) {
+          console.log(`User data not found, retrying... (${retryCount + 1}/3)`);
+          setTimeout(() => {
+            getUserData(retryCount + 1);
+          }, 1000 * (retryCount + 1)); // Exponential backoff
+        } else {
+          setError('User data not found. Please try signing in again.');
+        }
       }
     } catch (error) {
-      setError('Error fetching user data');
+      console.error('Error fetching user data:', error);
+      if (retryCount < 2) {
+        setTimeout(() => {
+          getUserData(retryCount + 1);
+        }, 1000 * (retryCount + 1));
+      } else {
+        setError('Error fetching user data. Please check your connection and try again.');
+      }
     } finally {
-      setLoading(false);
+      if (retryCount === 0) {
+        setLoading(false);
+      }
     }
   };
 
@@ -133,7 +159,14 @@ const HomeScreen = ({navigation}) => {
   if (error) {
     return (
       <View style={styles.errorContainer}>
+        <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#F64E4E" />
         <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton} 
+          onPress={() => getUserData()}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -559,6 +592,28 @@ const styles = StyleSheet.create({
     color: '#F64E4E',
     textAlign: 'center',
     fontFamily: 'Lato-Regular',
+    marginTop: 15,
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: PRIMARY_COLOR,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Lato-Bold',
   },
 });
 

@@ -62,3 +62,33 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Contact
 - **Dhruv Chheda**: [dhruvchheda.com](https://dhruvchheda.com)
 - **Email**: me@dhruvchheda.com
+
+## Environment Setup
+
+### 1. Environment Variables
+
+Copy the example environment file and configure your variables:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` file with your actual values:
+
+```env
+# Google Sign-In Configuration
+GOOGLE_WEB_CLIENT_ID=your-actual-web-client-id.apps.googleusercontent.com
+```
+
+### 2. Getting Google Web Client ID
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Select your project
+3. Navigate to "APIs & Services" > "Credentials"
+4. Find your "Web application" client (not Android/iOS client)
+5. Copy the Client ID and paste it in your `.env` file
+
+### 3. Firebase Configuration
+
+Make sure your `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) files are properly configured with your SHA-1 fingerprints.
+

@@ -43,8 +43,9 @@ By using TrackaExpense, you agree to the collection and use of information in ac
       content: `We collect the following types of information:
 Personal Information:
 • Name and email address (required for account creation)
-• Phone number (for account verification)
+• Phone number (optional, for account verification)
 • Profile pictures (optional, stored securely)
+• Google account information (when using Google Sign-In)
 Financial Data:
 • Income and expense records (titles, descriptions, amounts, categories, dates)
 • Receipt images and attachments
@@ -54,15 +55,21 @@ Group & Social Data:
 • Group memberships for expense splitting
 • Shared expense details and payment records
 • Split calculations and settlement information
+Authentication Data:
+• Email/password credentials (for traditional sign-in)
+• Google account credentials (for Google Sign-In)
+• Authentication tokens and session data
+• Account verification status
 Technical Information:
 • Device information and operating system
 • App usage patterns and navigation data
-• Authentication tokens and session data
 • Local app preferences and settings
+• Network information for connectivity
 Device Permissions:
 • Camera access (for receipt photos)
 • Photo library access (for receipt images)
-• Contact access (for group expense features, if enabled)`
+• Phone permissions (for device identification and security)
+• Storage access (for saving and retrieving app data)`
     },
     {
       id: 'data_usage',
@@ -76,16 +83,24 @@ Core Functionality:
 • Enable expense splitting with friends and groups
 Account Management:
 • Create and maintain your user account
-• Authenticate your identity and secure your account
+• Authenticate your identity through email/password or Google Sign-In
+• Secure your account with multi-factor authentication options
 • Send important account-related notifications
 • Provide customer support when needed
+Authentication Services:
+• Process Google Sign-In authentication requests
+• Verify user identity through Google's secure authentication system
+• Manage account linking between email and Google accounts
+• Handle account recovery and verification processes
 App Improvement:
 • Analyze usage patterns to improve app functionality
 • Identify and fix technical issues
 • Develop new features based on user needs
+• Optimize performance and user experience
 Communication:
 • Send account verification emails
 • Provide password reset functionality
+• Send notifications about account security
 • Respond to feedback and support requests
 We do NOT use your financial data for advertising or sell your information to third parties.`
     },
@@ -95,7 +110,7 @@ We do NOT use your financial data for advertising or sell your information to th
       icon: 'shield-lock',
       content: `Cloud Storage:
 Your data is securely stored using Google Firebase services:
-• Authentication data is handled by Firebase Auth
+• Authentication data is handled by Firebase Auth (including Google Sign-In)
 • Financial records are stored in Firebase Firestore
 • Receipt images are stored in Firebase Storage
 • All data transmission is encrypted using industry-standard protocols
@@ -104,16 +119,25 @@ Some data is stored locally on your device:
 • App preferences and settings
 • Temporary session information
 • Onboarding status
+• Authentication tokens (encrypted)
 Security Measures:
 • End-to-end encryption for data transmission
-• Secure authentication using Firebase Auth
+• Secure authentication using Firebase Auth and Google Sign-In
+• OAuth 2.0 protocol for Google authentication
 • Regular security updates and monitoring
 • Access controls and user permission systems
 • Secure file storage with user-specific access
+• Phone number verification for enhanced security
+Google Sign-In Security:
+• Uses Google's secure OAuth 2.0 authentication
+• No passwords stored for Google-authenticated accounts
+• Automatic token refresh and session management
+• Google's advanced security features and fraud detection
 Data Retention:
 • Your data is retained while your account is active
 • You can delete your account instantly through the app's "Account Actions" feature
 • Complete data removal includes all transactions, receipts, and associated files
+• Google Sign-In data is managed according to Google's privacy policy
 • Inactive accounts may be deleted after extended periods
 • Individual data elements can be deleted selectively upon request`
     },
@@ -127,10 +151,16 @@ Google Firebase:
 • Firebase Firestore for data storage
 • Firebase Storage for receipt images
 • Subject to Google's Privacy Policy
+Google Sign-In:
+• Google OAuth 2.0 for secure authentication
+• Google account integration for seamless sign-in
+• Google's privacy and security standards
+• Subject to Google's Terms of Service and Privacy Policy
 Device Services:
 • Camera and photo library (with your permission)
-• Contact access (optional, for group features)
+• Phone permissions (for device identification and security)
 • Local storage for app preferences
+• Network access for data synchronization
 No Data Selling:
 We do not sell, trade, or rent your personal information to third parties. Any third-party integrations are solely for app functionality and are governed by their respective privacy policies.
 Analytics:
@@ -146,29 +176,77 @@ Access & Control:
 • Download your transaction data
 • Modify or delete individual transactions
 • Update privacy preferences
+• Manage Google Sign-In account linking
+Authentication Management:
+• Switch between email/password and Google Sign-In
+• Unlink Google account from TrackaExpense
+• Manage authentication preferences
+• Control account recovery options
 Data Portability:
 • Export your financial data in standard formats
 • Transfer your data to other services
 • Request a complete copy of your data
+• Export Google Sign-In related data (subject to Google's policies)
 Deletion Rights:
 • Delete individual transactions or receipts
 • Close your account and delete all associated data
 • Use the in-app account deletion feature for immediate removal
 • Request immediate data removal through customer support
+• Unlink Google account while keeping local data
 Account Deletion Process:
 • Access "Account Actions" in your profile settings
 • Complete the secure deletion process with confirmations
 • All data is permanently removed including transactions, receipts, and group memberships
+• Google Sign-In data is managed according to Google's account settings
 • Account deletion cannot be reversed once completed
 Consent Management:
 • Withdraw consent for data processing at any time
 • Opt out of non-essential data collection
 • Control what information is shared in group features
+• Manage phone permission access
+• Control Google Sign-In data sharing
 Communication:
 • Unsubscribe from promotional emails
 • Control notification preferences
 • Limit communication types
 To exercise any of these rights, please contact us through the app's contact feature or email support.`
+    },
+    {
+      id: 'google_signin',
+      title: 'Google Sign-In & Phone Permissions',
+      icon: 'google',
+      content: `Google Sign-In Integration:
+We offer Google Sign-In as a convenient authentication method. When you choose to sign in with Google:
+• We access your Google account's basic profile information (name, email, profile picture)
+• We do not access your Google Drive, Gmail, or other Google services
+• Your Google account remains under your control and Google's privacy policies
+• You can unlink your Google account from TrackaExpense at any time
+• Google Sign-In uses OAuth 2.0 for secure authentication
+
+Phone Permissions:
+We request phone permissions for the following purposes (all optional):
+• Device identification and security verification
+• Account recovery and verification processes
+• Enhanced security features and fraud prevention
+• Phone number verification for account security (optional)
+
+What We Do NOT Do:
+• We do not access your call logs or text messages
+• We do not make calls or send messages without your permission
+• We do not share your phone number with third parties
+• We do not use phone permissions for advertising or tracking
+
+Managing Permissions:
+• Phone permissions are optional and can be denied
+• You can revoke phone permissions through your device settings
+• Revoking permissions may limit some security features
+• You can still use the app with email/password or Google Sign-In authentication
+
+Data Security:
+• Phone numbers (if provided) are encrypted and stored securely
+• Google Sign-In data follows Google's security standards
+• All authentication data is protected with industry-standard encryption
+• We regularly audit our security practices and update them as needed`
     },
     {
       id: 'children',
@@ -273,8 +351,9 @@ For legal or compliance requests, please include relevant documentation and spec
             <Text style={styles.summaryTitle}>Quick Summary</Text>
             <Text style={styles.summaryText}>
               TrackaExpense collects only the data necessary to provide expense tracking services. 
-              We use secure Firebase infrastructure, don't sell your data, and give you full control 
-              over your information. Tap any section below for detailed information.
+              We use secure Firebase infrastructure with Google Sign-In support, don't sell your data, 
+              and give you full control over your information and permissions. 
+              Tap any section below for detailed information.
             </Text>
           </View>
         </Card>
@@ -305,7 +384,7 @@ For legal or compliance requests, please include relevant documentation and spec
             Last updated: {new Date().toLocaleDateString()}
           </Text>
           <Text style={styles.footerText}>
-            TrackaExpense v1.0.1
+            TrackaExpense v1.0.2 (with Google Sign-In & Phone Permissions)
           </Text>
         </View>
       </ScrollView>
