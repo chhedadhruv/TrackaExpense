@@ -5,6 +5,8 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Alert,
+  Platform,
 } from 'react-native';
 import {Card, Searchbar, ActivityIndicator, Button} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -12,6 +14,9 @@ import firestore from '@react-native-firebase/firestore';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import auth from '@react-native-firebase/auth';
+import Share from 'react-native-share';
+import RNFS from 'react-native-fs';
+import { requestStoragePermission } from '../utils/Permissions';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const TransactionScreen = ({navigation}) => {
@@ -120,6 +125,112 @@ const TransactionScreen = ({navigation}) => {
     setEndDatePickerVisible(false);
     setCustomEndDate(params.date);
   };
+
+
+  const generateCSV = () => {
+    if (filteredTransactions.length === 0) {
+      Alert.alert('No Data', 'No transactions to export');
+      return;
+    }
+
+    const headers = ['Date', 'Title', 'Type', 'Category', 'Amount', 'Description'];
+    const csvRows = [headers.join(',')];
+
+    filteredTransactions.forEach(transaction => {
+      const row = [
+        moment(transaction.createdAt.toDate()).format('YYYY-MM-DD'),
+        `"${transaction.title || ''}"`,
+        transaction.type || '',
+        transaction.category || '',
+        transaction.amount || 0,
+        `"${transaction.description || ''}"`
+      ];
+      csvRows.push(row.join(','));
+    });
+
+    return csvRows.join('\n');
+  };
+
+  const downloadCSV = async () => {
+    try {
+      const csvContent = generateCSV();
+      const fileName = `transactions_${moment().format('YYYY-MM-DD_HH-mm-ss')}.csv`;
+      
+      if (Platform.OS === 'android') {
+        // Request storage permission first
+        const hasPermission = await requestStoragePermission();
+        if (!hasPermission) {
+          Alert.alert('Permission Denied', 'Storage permission is required to save CSV files');
+          return;
+        }
+
+        try {
+          // For Android, try Downloads folder first, fallback to Documents
+          let filePath;
+          try {
+            filePath = `${RNFS.DownloadDirectoryPath}/${fileName}`;
+            await RNFS.writeFile(filePath, csvContent, 'utf8');
+          } catch (downloadError) {
+            // Fallback to Documents directory if Downloads fails
+            console.log('Downloads folder failed, trying Documents:', downloadError);
+            filePath = `${RNFS.DocumentDirectoryPath}/${fileName}`;
+            await RNFS.writeFile(filePath, csvContent, 'utf8');
+          }
+          
+          // Check if file was created successfully
+          const fileExists = await RNFS.exists(filePath);
+          if (fileExists) {
+            Alert.alert(
+              'Success!', 
+              `CSV file saved as ${fileName}`,
+              [
+                {
+                  text: 'Open File',
+                  onPress: () => {
+                    // Open the file with default app
+                    RNFS.openFile(filePath, 'text/csv');
+                  }
+                },
+                {
+                  text: 'OK',
+                  style: 'cancel'
+                }
+              ]
+            );
+          } else {
+            Alert.alert('Error', 'Failed to save CSV file');
+          }
+        } catch (error) {
+          console.error('File save error:', error);
+          Alert.alert('Error', 'Failed to save CSV file. Please try again.');
+        }
+      } else {
+        // For iOS, save to Documents folder and share
+        const filePath = `${RNFS.DocumentDirectoryPath}/${fileName}`;
+        await RNFS.writeFile(filePath, csvContent, 'utf8');
+
+        // Check if file exists before sharing
+        const fileExists = await RNFS.exists(filePath);
+        if (!fileExists) {
+          Alert.alert('Error', 'Failed to create CSV file');
+          return;
+        }
+
+        const shareOptions = {
+          title: 'Export Transactions',
+          message: 'Your transaction data',
+          url: `file://${filePath}`,
+          type: 'text/csv',
+          subject: 'Transaction Export',
+        };
+
+        await Share.open(shareOptions);
+      }
+    } catch (error) {
+      console.error('Error downloading CSV:', error);
+      Alert.alert('Error', 'Failed to export transactions. Please try again.');
+    }
+  };
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -132,10 +243,30 @@ const TransactionScreen = ({navigation}) => {
     <View style={styles.container}>
       {/* Header Section */}
       <View style={styles.headerSection}>
-        <Text style={styles.headerTitle}>All Transactions</Text>
-        <Text style={styles.headerSubtitle}>
-          {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''} found
-        </Text>
+        <View style={styles.headerTop}>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>All Transactions</Text>
+            <Text style={styles.headerSubtitle}>
+              {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''} found
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.downloadButton}
+            onPress={downloadCSV}
+            disabled={filteredTransactions.length === 0}>
+            <MaterialCommunityIcons
+              name="download"
+              size={20}
+              color={filteredTransactions.length === 0 ? '#999' : PRIMARY_COLOR}
+            />
+            <Text style={[
+              styles.downloadButtonText,
+              filteredTransactions.length === 0 && styles.downloadButtonTextDisabled
+            ]}>
+              Download CSV
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {/* Search Bar */}
@@ -417,6 +548,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -428,6 +567,27 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
     fontFamily: 'Lato-Regular',
+  },
+  downloadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+    marginLeft: 15,
+  },
+  downloadButtonText: {
+    fontSize: 14,
+    color: PRIMARY_COLOR,
+    fontWeight: '600',
+    marginLeft: 6,
+    fontFamily: 'Lato-Bold',
+  },
+  downloadButtonTextDisabled: {
+    color: '#999',
   },
   scrollContainer: {
     flex: 1,

@@ -11,6 +11,7 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import FormButton from '../components/FormButton';
+import { requestCameraPermission } from '../utils/Permissions';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const EXPENSE_COLOR = '#F64E4E';
@@ -171,7 +172,12 @@ const AddExpense = ({navigation}) => {
       setIsSubmitting(false);
     }
   };
-  const takePhotoFromCamera = () => {
+  const takePhotoFromCamera = async () => {
+    const hasPermission = await requestCameraPermission();
+    if (!hasPermission) {
+      return;
+    }
+    
     launchCamera(
       {
         mediaType: 'photo',

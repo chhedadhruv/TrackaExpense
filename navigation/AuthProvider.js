@@ -6,6 +6,19 @@ export const AuthContext = createContext();
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
+
+  // Helper function to validate and ensure user data exists in Firestore
+  const validateUserData = async (user) => {
+    if (!user || !user.uid) return false;
+    
+    try {
+      const userDoc = await firestore().collection('users').doc(user.uid).get();
+      return userDoc.exists;
+    } catch (error) {
+      console.error('Error validating user data:', error);
+      return false;
+    }
+  };
   const handleAuthError = (error) => {
     const errorMessages = {
       'auth/user-not-found': {
@@ -53,6 +66,7 @@ const AuthProvider = ({ children }) => {
       value={{
         user,
         setUser,
+        validateUserData,
         login: async (email, password) => {
           if (!email || !password) {
             Alert.alert('Missing Information', 'Please enter both email and password.', [{ text: 'OK' }]);
