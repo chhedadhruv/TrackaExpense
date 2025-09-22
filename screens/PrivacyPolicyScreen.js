@@ -384,7 +384,7 @@ For legal or compliance requests, please include relevant documentation and spec
             Last updated: {new Date().toLocaleDateString()}
           </Text>
           <Text style={styles.footerText}>
-            TrackaExpense v1.0.2 (with Google Sign-In & Phone Permissions)
+            TrackaExpense v1.0.5 (with Google Sign-In & Phone Permissions)
           </Text>
         </View>
       </ScrollView>

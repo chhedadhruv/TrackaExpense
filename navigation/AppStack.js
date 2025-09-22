@@ -108,16 +108,6 @@ const StatisticStack = () =>
     { name: 'Image', component: ImageScreen, title: '' },
   ]);
 
-// Transaction Stack
-const TransactionStack = () =>
-  createStack([
-    { name: 'Transaction', component: TransactionScreen, title: 'TrackaExpense' },
-    { name: 'TransactionDetail', component: TransactionDetailScreen, title: 'TrackaExpense' },
-    { name: 'EditTransaction', component: EditTransactionScreen, title: 'TrackaExpense' },
-    { name: 'Image', component: ImageScreen, title: '' },
-  ]);
-
-
 // Split Stack
 const SplitStack = () =>
   createStack([
@@ -153,21 +143,6 @@ const AppStack = () => (
         tabBarIcon: ({ color, size, focused }) => (
           <FeatherIcons
             name="bar-chart-2"
-            color={focused ? '#677CD2' : color}
-            size={size}
-          />
-        ),
-      }}
-    />
-    <Tab.Screen
-      name="Transaction"
-      component={TransactionStack}
-      options={{
-        headerShown: false,
-        title: 'Transactions',
-        tabBarIcon: ({ color, size, focused }) => (
-          <MaterialCommunityIcons
-            name="format-list-bulleted"
             color={focused ? '#677CD2' : color}
             size={size}
           />

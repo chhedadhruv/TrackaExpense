@@ -180,15 +180,33 @@ const TransactionScreen = ({navigation}) => {
           // Check if file was created successfully
           const fileExists = await RNFS.exists(filePath);
           if (fileExists) {
+            // Share the file instead of trying to open it directly
+            const shareOptions = {
+              title: 'Export Transactions',
+              message: 'Your transaction data',
+              url: `file://${filePath}`,
+              type: 'text/csv',
+              subject: 'Transaction Export',
+            };
+
             Alert.alert(
               'Success!', 
               `CSV file saved as ${fileName}`,
               [
                 {
-                  text: 'Open File',
-                  onPress: () => {
-                    // Open the file with default app
-                    RNFS.openFile(filePath, 'text/csv');
+                  text: 'Share File',
+                  onPress: async () => {
+                    try {
+                      await Share.open(shareOptions);
+                    } catch (shareError) {
+                      console.error('Share error:', shareError);
+                      // Check if user cancelled the share
+                      if (shareError.message === 'User did not share' || shareError.message === 'User cancelled') {
+                        Alert.alert('File Share Cancelled', 'File sharing was cancelled');
+                      } else {
+                        Alert.alert('Error', 'Failed to share file');
+                      }
+                    }
                   }
                 },
                 {
