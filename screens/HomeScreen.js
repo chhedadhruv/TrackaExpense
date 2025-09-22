@@ -5,20 +5,61 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {useFocusEffect} from '@react-navigation/native';
+import DropDownPicker from 'react-native-dropdown-picker';
 
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
+const INCOME_COLOR = '#25B07F';
+const EXPENSE_COLOR = '#F64E4E';
 
 const HomeScreen = ({navigation}) => {
   const [userData, setUserData] = useState(null);
   const [totalExpense, setTotalExpense] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
   const [transactions, setTransactions] = useState([]);
+  const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
   const [error, setError] = useState(null);
+  const [timeRange, setTimeRange] = useState('7days');
+  const [timeRangeOpen, setTimeRangeOpen] = useState(false);
+  const [timeRangeItems] = useState([
+    {label: 'Last 7 Days', value: '7days'},
+    {label: 'Last 30 Days', value: '30days'},
+    {label: 'Last 3 Months', value: '3months'},
+    {label: 'Last 6 Months', value: '6months'},
+    {label: 'Last Year', value: 'year'},
+    {label: 'All Time', value: 'all'},
+  ]);
 
   const currentUser = auth().currentUser;
+
+  const filterTransactionsByTimeRange = (transactions, range) => {
+    const now = new Date();
+    const cutoffDate = new Date();
+    switch (range) {
+      case '7days':
+        cutoffDate.setDate(now.getDate() - 7);
+        break;
+      case '30days':
+        cutoffDate.setDate(now.getDate() - 30);
+        break;
+      case '3months':
+        cutoffDate.setMonth(now.getMonth() - 3);
+        break;
+      case '6months':
+        cutoffDate.setMonth(now.getMonth() - 6);
+        break;
+      case 'year':
+        cutoffDate.setFullYear(now.getFullYear() - 1);
+        break;
+      case 'all':
+        return transactions;
+      default:
+        cutoffDate.setDate(now.getDate() - 7);
+    }
+    return transactions.filter(t => new Date(t.date) >= cutoffDate);
+  };
 
   const getUserData = async (retryCount = 0) => {
     setLoading(true);
@@ -95,24 +136,28 @@ const HomeScreen = ({navigation}) => {
   };
 
   const handleIncome = () => {
-    if (transactions.length > 0) {
-      const income = transactions.reduce((sum, transaction) => {
+    if (filteredTransactions.length > 0) {
+      const income = filteredTransactions.reduce((sum, transaction) => {
         return transaction.type === 'income'
           ? sum + (parseFloat(transaction.amount) || 0)
           : sum;
       }, 0);
       setTotalIncome(income);
+    } else {
+      setTotalIncome(0);
     }
   };
 
   const handleExpense = () => {
-    if (transactions.length > 0) {
-      const expense = transactions.reduce((sum, transaction) => {
+    if (filteredTransactions.length > 0) {
+      const expense = filteredTransactions.reduce((sum, transaction) => {
         return transaction.type === 'expense'
           ? sum + (parseFloat(transaction.amount) || 0)
           : sum;
       }, 0);
       setTotalExpense(expense);
+    } else {
+      setTotalExpense(0);
     }
   };
 
@@ -124,9 +169,16 @@ const HomeScreen = ({navigation}) => {
   }, []);
 
   useEffect(() => {
+    if (transactions.length > 0) {
+      const filtered = filterTransactionsByTimeRange(transactions, timeRange);
+      setFilteredTransactions(filtered);
+    }
+  }, [transactions, timeRange]);
+
+  useEffect(() => {
     handleIncome();
     handleExpense();
-  }, [transactions]);
+  }, [filteredTransactions]);
 
   useFocusEffect(
     useCallback(() => {
@@ -180,41 +232,64 @@ const HomeScreen = ({navigation}) => {
           <Text style={styles.subGreetingText}>Track your expenses today</Text>
         </View>
 
-        {/* Data Card */}
-        <Card style={styles.dataCard}>
-          <View style={styles.dataCardRow}>
-            <View style={styles.cardContentWithIcon}>
-              <View style={styles.Icon}>
-                <MaterialCommunityIcons
-                  name="arrow-down"
-                  size={25}
-                  color="#CBD3EE"
-                />
+        {/* Time Range Picker */}
+        <View style={styles.timeRangeSection}>
+          <DropDownPicker
+            open={timeRangeOpen}
+            value={timeRange}
+            items={timeRangeItems}
+            setOpen={setTimeRangeOpen}
+            setValue={setTimeRange}
+            style={styles.timeRangePicker}
+            textStyle={styles.timeRangePickerText}
+            placeholder="Select Time Range"
+            containerStyle={styles.timeRangePickerContainer}
+            dropDownContainerStyle={styles.dropDownContainer}
+            searchable={true}
+            searchPlaceholder="Search time ranges..."
+            listMode="MODAL"
+            modalTitle="Select Time Range"
+            modalAnimationType="slide"
+          />
+        </View>
+
+        {/* Summary Cards */}
+        <View style={styles.cardSection}>
+          <Card style={styles.incomeCard}>
+            <View style={styles.cardContent}>
+              <View style={styles.cardHeader}>
+                <View style={styles.cardIcon}>
+                  <MaterialCommunityIcons
+                    name="arrow-down"
+                    size={20}
+                    color={INCOME_COLOR}
+                  />
+                </View>
+                <Text style={styles.cardTitle}>Total Income</Text>
               </View>
-              <View style={styles.cardContent}>
-                <Text style={styles.TitleText}>Income</Text>
-                <Text style={styles.ValueText}>
-                  ₹ {totalIncome.toLocaleString()}
-                </Text>
-              </View>
+              <Text style={styles.cardIncomeAmount}>
+                ₹ {totalIncome.toLocaleString()}
+              </Text>
             </View>
-            <View style={styles.cardContentWithIcon}>
-              <View style={styles.Icon}>
-                <MaterialCommunityIcons
-                  name="arrow-up"
-                  size={25}
-                  color="#CBD3EE"
-                />
+          </Card>
+          <Card style={styles.expenseCard}>
+            <View style={styles.cardContent}>
+              <View style={styles.cardHeader}>
+                <View style={styles.cardIcon}>
+                  <MaterialCommunityIcons
+                    name="arrow-up"
+                    size={20}
+                    color={EXPENSE_COLOR}
+                  />
+                </View>
+                <Text style={styles.cardTitle}>Total Expense</Text>
               </View>
-              <View style={styles.cardContent}>
-                <Text style={styles.TitleText}>Expense</Text>
-                <Text style={styles.ValueText}>
-                  ₹ {totalExpense.toLocaleString()}
-                </Text>
-              </View>
+              <Text style={styles.cardExpenseAmount}>
+                ₹ {totalExpense.toLocaleString()}
+              </Text>
             </View>
-          </View>
-        </Card>
+          </Card>
+        </View>
 
         {/* Quick Actions Section */}
         <View style={styles.quickActionsSection}>
@@ -265,9 +340,9 @@ const HomeScreen = ({navigation}) => {
             </TouchableOpacity>
           </View>
           <View style={styles.transactionsList}>
-            {transactions.length > 0 ? (
-              transactions
-                .slice(0, showAll ? transactions.length : 4)
+            {filteredTransactions.length > 0 ? (
+              filteredTransactions
+                .slice(0, showAll ? filteredTransactions.length : 4)
                 .map(transaction => (
                   <Card
                     style={styles.transactionsCard}
@@ -425,47 +500,111 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontFamily: 'Lato-Regular',
   },
-  dataCard: {
+  timeRangeSection: {
     marginHorizontal: 20,
-    backgroundColor: PRIMARY_COLOR,
-    padding: 20,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
+    marginBottom: 20,
+    zIndex: 1000,
   },
-  dataCardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  timeRangePicker: {
+    borderRadius: 16,
+    borderColor: '#E8EBF7',
+    backgroundColor: '#FFFFFF',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
-  cardContent: {
-    flexDirection: 'column',
-    justifyContent: 'center',
-  },
-  cardContentWithIcon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  Icon: {
-    width: 43,
-    height: 43,
-    borderRadius: 12,
-    backgroundColor: '#7A8EE0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  TitleText: {
-    fontSize: 12,
+  timeRangePickerText: {
+    fontSize: 14,
     fontWeight: '500',
-    color: '#CED6EC',
-    marginBottom: 5,
+    color: '#2C2C2C',
     fontFamily: 'Lato-Regular',
   },
-  ValueText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
+  timeRangePickerContainer: {
+    marginBottom: 10,
+  },
+  dropDownContainer: {
+    borderColor: '#E8EBF7',
+    backgroundColor: '#FFFFFF',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  cardSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    zIndex: 1,
+  },
+  incomeCard: {
+    width: '48%',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
+  expenseCard: {
+    width: '48%',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
+  cardContent: {
+    padding: 16,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  cardIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#F4F6FA',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+    fontFamily: 'Lato-Regular',
+  },
+  cardIncomeAmount: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: INCOME_COLOR,
+    fontFamily: 'Lato-Bold',
+  },
+  cardExpenseAmount: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: EXPENSE_COLOR,
     fontFamily: 'Lato-Bold',
   },
   quickActionsSection: {
