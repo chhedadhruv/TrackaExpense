@@ -24,6 +24,8 @@ import CreateSplitScreen from '../screens/SplitScreens/CreateSplitScreen';
 import SplitDetailScreen from '../screens/SplitScreens/SplitDetailScreen';
 import SettleUpScreen from '../screens/SplitScreens/SettleUpScreen';
 import SplitTransactionScreen from '../screens/SplitScreens/SplitTransactionScreen';
+import SplitHistoryScreen from '../screens/SplitScreens/SplitHistoryScreen';
+import InvitationsScreen from '../screens/SplitScreens/InvitationsScreen';
 import ContactUsScreen from '../screens/ContactUsScreen';
 import SavingsScreen from '../screens/SavingsScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
@@ -117,6 +119,8 @@ const SplitStack = () =>
     { name: 'SplitDetail', component: SplitDetailScreen, title: 'TrackaExpense' },
     { name: 'SettleUp', component: SettleUpScreen, title: 'TrackaExpense' },
     { name: 'SplitTransaction', component: SplitTransactionScreen, title: 'TrackaExpense' },
+    { name: 'SplitHistory', component: SplitHistoryScreen, title: 'Split History' },
+    { name: 'Invitations', component: InvitationsScreen, title: 'Invitations' },
   ]);
 
 const AppStack = () => (

@@ -24,6 +24,21 @@ const SplitDetailScreen = ({route, navigation}) => {
         .collection('splits')
         .doc(split.id)
         .delete();
+      try {
+        await firestore()
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('splitHistory')
+          .add({
+            type: 'delete',
+            groupId: group.id,
+            groupName: group.name,
+            splitId: split.id,
+            title: split.title,
+            amount: split.amount,
+            createdAt: firestore.Timestamp.fromDate(new Date()),
+          });
+      } catch (_) {}
       setMenuVisible(false);
       navigation.goBack();
     } catch (error) {
