@@ -20,49 +20,69 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>Google Sign-in URL Scheme</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.790161106297-n9vtbq5iis8bi7smro05goqpbtge7hge</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>Bundle ID URL Scheme</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.dhruvchheda.trackaexpense</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-	  <!-- Do not change NSAllowsArbitraryLoads to true, or you will risk app rejection! -->
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
 	<key>UIAppFonts</key>
 	<array>
-  		<string>Lato-Bold.ttf</string>
-  		<string>Lato-Regular.ttf</string>
-  		<string>Lato-Italic.ttf</string>
-  		<string>Lato-Light.ttf</string>
-  		<string>Lato-Medium.ttf</string>
-  		<string>Lato-SemiBold.ttf</string>
-  		<string>Lato-Thin.ttf</string>
-  		<string>Lato-Black.ttf</string>
-  		<string>Lato-LightItalic.ttf</string>
-  		<string>Lato-MediumItalic.ttf</string>
-  		<string>Lato-SemiBoldItalic.ttf</string>
-  		<string>Lato-BlackItalic.ttf</string>
-  		<string>Lato-ThinItalic.ttf</string>
-  		<string>Lato-BoldItalic.ttf</string>
-  		<string>Lato-RegularItalic.ttf</string>
-  		<string>MaterialIcons.ttf</string>
-  		<string>Ionicons.ttf</string>
-  		<string>AntDesign.ttf</string>
-  		<string>FontAwesome.ttf</string>
-  		<string>FontAwesome5_Brands.ttf</string>
-  		<string>FontAwesome5_Regular.ttf</string>
-  		<string>FontAwesome5_Solid.ttf</string>
-  		<string>FontAwesome6_Brands.ttf</string>
-  		<string>FontAwesome6_Regular.ttf</string>
-  		<string>FontAwesome6_Solid.ttf</string>
-  		<string>MaterialCommunityIcons.ttf</string>
-  		<string>Feather.ttf</string>
+		<string>Lato-Bold.ttf</string>
+		<string>Lato-Regular.ttf</string>
+		<string>Lato-Italic.ttf</string>
+		<string>Lato-Light.ttf</string>
+		<string>Lato-Medium.ttf</string>
+		<string>Lato-SemiBold.ttf</string>
+		<string>Lato-Thin.ttf</string>
+		<string>Lato-Black.ttf</string>
+		<string>Lato-LightItalic.ttf</string>
+		<string>Lato-MediumItalic.ttf</string>
+		<string>Lato-SemiBoldItalic.ttf</string>
+		<string>Lato-BlackItalic.ttf</string>
+		<string>Lato-ThinItalic.ttf</string>
+		<string>Lato-BoldItalic.ttf</string>
+		<string>Lato-RegularItalic.ttf</string>
+		<string>MaterialIcons.ttf</string>
+		<string>Ionicons.ttf</string>
+		<string>AntDesign.ttf</string>
+		<string>FontAwesome.ttf</string>
+		<string>FontAwesome5_Brands.ttf</string>
+		<string>FontAwesome5_Regular.ttf</string>
+		<string>FontAwesome5_Solid.ttf</string>
+		<string>FontAwesome6_Brands.ttf</string>
+		<string>FontAwesome6_Regular.ttf</string>
+		<string>FontAwesome6_Solid.ttf</string>
+		<string>MaterialCommunityIcons.ttf</string>
+		<string>Feather.ttf</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
@@ -73,10 +93,22 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>NSCameraUsageDescription</key>
+	<string>This app uses the camera to capture receipt photos for your transactions.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>This app needs access to save receipt images to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs access to your photo library to let you choose receipt images.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>TrackaExpense does not access your contacts. If prompted, you may deny.</string>
 </dict>
 </plist>

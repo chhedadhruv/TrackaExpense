@@ -16,6 +16,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@invertase/react-native-apple-authentication": "^2.4.1",
     "@react-native-async-storage/async-storage": "^2.1.0",
     "@react-native-firebase/app": "^21.6.1",
     "@react-native-firebase/auth": "^21.6.1",
@@ -30,7 +31,6 @@
     "moment": "^2.30.1",
     "react": "18.3.1",
     "react-native": "0.76.5",
-    "react-native-contacts": "^8.0.4",
     "react-native-dotenv": "^3.4.11",
     "react-native-dropdown-picker": "^5.4.6",
     "react-native-fs": "^2.20.0",

@@ -2,7 +2,7 @@
   "name": "TrackaExpense",
   "displayName": "Tracka Expense",
   "description": "A comprehensive expense tracking app to manage your finances efficiently",
-  "version": "1.0.2",
+  "version": "1.0.6",
   "category": "Finance",
   "author": "TrackaExpense Team",
   "keywords": ["expense", "finance", "tracking", "budget", "money"]

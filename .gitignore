@@ -76,6 +76,8 @@ yarn-error.log
 # firebase
 .env
 android/app/google-services.json
+ios/GoogleService-Info.plist
+ios/**/GoogleService-Info.plist
 
 # Security - keystore properties should never be committed
 android/keystore.properties

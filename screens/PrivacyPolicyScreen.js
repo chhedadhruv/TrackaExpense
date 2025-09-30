@@ -46,6 +46,7 @@ Personal Information:
 • Phone number (optional, for account verification)
 • Profile pictures (optional, stored securely)
 • Google account information (when using Google Sign-In)
+• Apple ID information (when using Apple Sign-In)
 Financial Data:
 • Income and expense records (titles, descriptions, amounts, categories, dates)
 • Receipt images and attachments
@@ -58,6 +59,7 @@ Group & Social Data:
 Authentication Data:
 • Email/password credentials (for traditional sign-in)
 • Google account credentials (for Google Sign-In)
+• Apple ID credentials (for Apple Sign-In)
 • Authentication tokens and session data
 • Account verification status
 Technical Information:
@@ -83,14 +85,15 @@ Core Functionality:
 • Enable expense splitting with friends and groups
 Account Management:
 • Create and maintain your user account
-• Authenticate your identity through email/password or Google Sign-In
+• Authenticate your identity through email/password, Google Sign-In, or Apple Sign-In
 • Secure your account with multi-factor authentication options
 • Send important account-related notifications
 • Provide customer support when needed
 Authentication Services:
 • Process Google Sign-In authentication requests
-• Verify user identity through Google's secure authentication system
-• Manage account linking between email and Google accounts
+• Process Apple Sign-In authentication requests
+• Verify user identity through Google's and Apple's secure authentication systems
+• Manage account linking between email, Google, and Apple accounts
 • Handle account recovery and verification processes
 App Improvement:
 • Analyze usage patterns to improve app functionality
@@ -110,7 +113,7 @@ We do NOT use your financial data for advertising or sell your information to th
       icon: 'shield-lock',
       content: `Cloud Storage:
 Your data is securely stored using Google Firebase services:
-• Authentication data is handled by Firebase Auth (including Google Sign-In)
+• Authentication data is handled by Firebase Auth (including Google Sign-In and Apple Sign-In)
 • Financial records are stored in Firebase Firestore
 • Receipt images are stored in Firebase Storage
 • All data transmission is encrypted using industry-standard protocols
@@ -122,22 +125,29 @@ Some data is stored locally on your device:
 • Authentication tokens (encrypted)
 Security Measures:
 • End-to-end encryption for data transmission
-• Secure authentication using Firebase Auth and Google Sign-In
-• OAuth 2.0 protocol for Google authentication
+• Secure authentication using Firebase Auth, Google Sign-In, and Apple Sign-In
+• OAuth 2.0 protocol for Google and Apple authentication
 • Regular security updates and monitoring
 • Access controls and user permission systems
 • Secure file storage with user-specific access
-• Phone number verification for enhanced security
+• Optional phone number verification for enhanced security
 Google Sign-In Security:
 • Uses Google's secure OAuth 2.0 authentication
 • No passwords stored for Google-authenticated accounts
 • Automatic token refresh and session management
 • Google's advanced security features and fraud detection
+
+Apple Sign-In Security:
+• Uses Apple's secure OAuth 2.0 authentication
+• No passwords stored for Apple-authenticated accounts
+• Automatic token refresh and session management
+• Apple's advanced security features and privacy protection
 Data Retention:
 • Your data is retained while your account is active
 • You can delete your account instantly through the app's "Account Actions" feature
 • Complete data removal includes all transactions, receipts, and associated files
 • Google Sign-In data is managed according to Google's privacy policy
+• Apple Sign-In data is managed according to Apple's privacy policy
 • Inactive accounts may be deleted after extended periods
 • Individual data elements can be deleted selectively upon request`
     },
@@ -156,6 +166,12 @@ Google Sign-In:
 • Google account integration for seamless sign-in
 • Google's privacy and security standards
 • Subject to Google's Terms of Service and Privacy Policy
+
+Apple Sign-In:
+• Apple OAuth 2.0 for secure authentication
+• Apple ID integration for seamless sign-in
+• Apple's privacy and security standards
+• Subject to Apple's Terms of Service and Privacy Policy
 Device Services:
 • Camera and photo library (with your permission)
 • Phone permissions (for device identification and security)
@@ -178,8 +194,8 @@ Access & Control:
 • Update privacy preferences
 • Manage Google Sign-In account linking
 Authentication Management:
-• Switch between email/password and Google Sign-In
-• Unlink Google account from TrackaExpense
+• Switch between email/password, Google Sign-In, and Apple Sign-In
+• Unlink Google or Apple accounts from TrackaExpense
 • Manage authentication preferences
 • Control account recovery options
 Data Portability:
@@ -187,24 +203,26 @@ Data Portability:
 • Transfer your data to other services
 • Request a complete copy of your data
 • Export Google Sign-In related data (subject to Google's policies)
+• Export Apple Sign-In related data (subject to Apple's policies)
 Deletion Rights:
 • Delete individual transactions or receipts
 • Close your account and delete all associated data
 • Use the in-app account deletion feature for immediate removal
 • Request immediate data removal through customer support
-• Unlink Google account while keeping local data
+• Unlink Google or Apple accounts while keeping local data
 Account Deletion Process:
 • Access "Account Actions" in your profile settings
 • Complete the secure deletion process with confirmations
 • All data is permanently removed including transactions, receipts, and group memberships
 • Google Sign-In data is managed according to Google's account settings
+• Apple Sign-In data is managed according to Apple's account settings
 • Account deletion cannot be reversed once completed
 Consent Management:
 • Withdraw consent for data processing at any time
 • Opt out of non-essential data collection
 • Control what information is shared in group features
 • Manage phone permission access
-• Control Google Sign-In data sharing
+• Control Google Sign-In and Apple Sign-In data sharing
 Communication:
 • Unsubscribe from promotional emails
 • Control notification preferences
@@ -213,7 +231,7 @@ To exercise any of these rights, please contact us through the app's contact fea
     },
     {
       id: 'google_signin',
-      title: 'Google Sign-In & Phone Permissions',
+      title: 'Google Sign-In, Apple Sign-In & Phone Permissions',
       icon: 'google',
       content: `Google Sign-In Integration:
 We offer Google Sign-In as a convenient authentication method. When you choose to sign in with Google:
@@ -223,7 +241,15 @@ We offer Google Sign-In as a convenient authentication method. When you choose t
 • You can unlink your Google account from TrackaExpense at any time
 • Google Sign-In uses OAuth 2.0 for secure authentication
 
-Phone Permissions:
+Apple Sign-In Integration:
+We offer Apple Sign-In as a convenient authentication method. When you choose to sign in with Apple:
+• We access your Apple ID's basic profile information (name, email, profile picture)
+• We do not access your iCloud, iMessage, or other Apple services
+• Your Apple ID remains under your control and Apple's privacy policies
+• You can unlink your Apple ID from TrackaExpense at any time
+• Apple Sign-In uses OAuth 2.0 for secure authentication
+
+Phone Permissions (Optional):
 We request phone permissions for the following purposes (all optional):
 • Device identification and security verification
 • Account recovery and verification processes
@@ -240,11 +266,12 @@ Managing Permissions:
 • Phone permissions are optional and can be denied
 • You can revoke phone permissions through your device settings
 • Revoking permissions may limit some security features
-• You can still use the app with email/password or Google Sign-In authentication
+• You can still use the app with email/password, Google Sign-In, or Apple Sign-In authentication
 
 Data Security:
 • Phone numbers (if provided) are encrypted and stored securely
 • Google Sign-In data follows Google's security standards
+• Apple Sign-In data follows Apple's security standards
 • All authentication data is protected with industry-standard encryption
 • We regularly audit our security practices and update them as needed`
     },
@@ -384,7 +411,7 @@ For legal or compliance requests, please include relevant documentation and spec
             Last updated: {new Date().toLocaleDateString()}
           </Text>
           <Text style={styles.footerText}>
-            TrackaExpense v1.0.5 (with Google Sign-In & Phone Permissions)
+            TrackaExpense v1.0.6 (with Google Sign-In, Apple Sign-In & Optional Phone Permissions)
           </Text>
         </View>
       </ScrollView>

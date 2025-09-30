@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
+import { Platform } from 'react-native';
 import {Card} from 'react-native-paper';
 import FormInput from '../components/FormInput';
 import FormButton from '../components/FormButton';
@@ -20,6 +21,7 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { configureGoogleSignIn } from '../utils/GoogleSignInConfig';
+import { configureAppleSignIn, performAppleSignIn } from '../utils/AppleSignInConfig';
 
 const SignupScreen = ({navigation}) => {
   const [email, setEmail] = useState('');
@@ -38,12 +40,14 @@ const SignupScreen = ({navigation}) => {
     lowercase: false,
     uppercase: false,
   });
+  const [isAppleSignInAvailable, setIsAppleSignInAvailable] = useState(false);
 
   const {register} = useContext(AuthContext);
 
-  // Configure Google Sign-In
+  // Configure Sign-In methods
   React.useEffect(() => {
     configureGoogleSignIn();
+    setIsAppleSignInAvailable(configureAppleSignIn());
   }, []);
 
   const isValidEmail = email => {
@@ -106,10 +110,7 @@ const SignupScreen = ({navigation}) => {
     } else if (!isValidName(name)) {
       setErrorMessage('Please enter a valid name');
       setLoading(false);
-    } else if (!phone) {
-      setErrorMessage('Please enter your phone number');
-      setLoading(false);
-    } else if (!isValidPhone(phone)) {
+    } else if (phone && !isValidPhone(phone)) {
       setErrorMessage('Please enter a valid phone number');
       setLoading(false);
     } else {
@@ -132,15 +133,25 @@ const SignupScreen = ({navigation}) => {
       setLoading(true);
       setErrorMessage(null);
       
-      // Check if your device supports Google Play
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      // Android-only: ensure Google Play Services
+      if (Platform.OS === 'android') {
+        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      }
       
-      // Get the users ID token
-      const response = await GoogleSignin.signIn();
+      // Sign-in and get the user's ID token
+      const signInResult = await GoogleSignin.signIn();
       
-      // Check if sign-in was successful
-      if (response.type === 'success') {
-        const { idToken } = response.data;
+      // Extract tokens from the result
+      const idToken = signInResult?.idToken || 
+                     signInResult?.data?.idToken || 
+                     signInResult?.user?.idToken ||
+                     signInResult?.idToken;
+      const accessToken = signInResult?.accessToken || 
+                         signInResult?.data?.accessToken || 
+                         signInResult?.user?.accessToken ||
+                         signInResult?.accessToken;
+      
+      if (idToken) {
         
         // Create a Google credential with the token
         const googleCredential = auth.GoogleAuthProvider.credential(idToken);
@@ -173,9 +184,9 @@ const SignupScreen = ({navigation}) => {
         if (!verifyDoc.exists) {
           throw new Error('Failed to create user document');
         }
-      } else if (response.type === 'cancelled') {
-        // User cancelled the sign-up process
-        setErrorMessage('Sign-up was cancelled');
+        
+        // Wait a moment to ensure Firestore is updated
+        await new Promise(resolve => setTimeout(resolve, 500));
       } else {
         setErrorMessage('Google sign-up failed. Please try again.');
       }
@@ -207,6 +218,80 @@ const SignupScreen = ({navigation}) => {
         setErrorMessage('The credential received is malformed or has expired.');
       } else {
         setErrorMessage('Google sign-up failed. Please try again.');
+      }
+    }
+  };
+
+  const handleAppleSignUp = async () => {
+    try {
+      setLoading(true);
+      setErrorMessage(null);
+      
+      const result = await performAppleSignIn();
+      
+      if (result.success) {
+        // Create Apple credential using the official Firebase format
+        const appleCredential = auth.AppleAuthProvider.credential(
+          result.identityToken,
+          result.nonce
+        );
+        
+        // Sign-in the user with the credential
+        const userCredential = await auth().signInWithCredential(appleCredential);
+        const user = userCredential.user;
+        
+        // Check if user exists in Firestore, if not create the user document
+        const userDoc = await firestore().collection('users').doc(user.uid).get();
+        
+        if (!userDoc.exists) {
+          // Create user document for new Apple sign-up users
+          const displayName = result.fullName ? 
+            `${result.fullName.givenName || ''} ${result.fullName.familyName || ''}`.trim() : 
+            'Apple User';
+          
+          await firestore().collection('users').doc(user.uid).set({
+            name: displayName || 'Apple User',
+            email: result.email || user.email || '',
+            phone: '', // Apple Sign-In doesn't provide phone number
+            transactions: [],
+            verified: true,
+            createdAt: firestore.Timestamp.fromDate(new Date()),
+            userImg: null, // Apple Sign-In doesn't provide profile image
+          });
+          console.log('Apple Sign-Up: User document created successfully');
+        } else {
+          console.log('Apple Sign-Up: User document already exists');
+        }
+        
+        // Verify the document was created successfully
+        const verifyDoc = await firestore().collection('users').doc(user.uid).get();
+        if (!verifyDoc.exists) {
+          throw new Error('Failed to create user document');
+        }
+        
+        // Wait a moment to ensure Firestore is updated
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } else {
+        // Handle specific error cases
+        if (result.error && result.error.includes('revoked')) {
+          setErrorMessage('Your Apple ID authorization has been revoked. Please try signing up again, or use a different sign-in method.');
+        } else {
+          setErrorMessage(result.error || 'Apple sign-up failed. Please try again.');
+        }
+      }
+      
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      
+      if (error.code === 'auth/account-exists-with-different-credential') {
+        setErrorMessage('An account already exists with this email address using a different sign-in method.');
+      } else if (error.code === 'auth/invalid-credential') {
+        setErrorMessage('The credential received is malformed or has expired.');
+      } else if (error.message && error.message.includes('revoked')) {
+        setErrorMessage('Your Apple ID authorization has been revoked. Please try signing up again, or use a different sign-in method.');
+      } else {
+        setErrorMessage(error.message || 'Apple sign-up failed. Please try again.');
       }
     }
   };
@@ -255,7 +340,7 @@ const SignupScreen = ({navigation}) => {
                 <FormInput
                   labelValue={phone}
                   onChangeText={setPhone}
-                  placeholderText="Phone Number"
+                  placeholderText="Phone Number (Optional)"
                   iconType="phone"
                   keyboardType="numeric"
                   autoCapitalize="none"
@@ -359,18 +444,33 @@ const SignupScreen = ({navigation}) => {
                 <View style={styles.dividerLine} />
               </View>
 
-              <TouchableOpacity
-                style={styles.googleButton}
-                onPress={handleGoogleSignUp}
-                disabled={loading}>
-                <Image
-                  source={{
-                    uri: 'https://developers.google.com/identity/images/g-logo.png',
-                  }}
-                  style={styles.googleIcon}
-                />
-                <Text style={styles.googleButtonText}>Sign up with Google</Text>
-              </TouchableOpacity>
+              {Platform.OS === 'ios' && isAppleSignInAvailable ? (
+                <TouchableOpacity
+                  style={styles.appleButton}
+                  onPress={handleAppleSignUp}
+                  disabled={loading}>
+                  <MaterialCommunityIcons
+                    name="apple"
+                    size={20}
+                    color="#FFFFFF"
+                    style={styles.appleIcon}
+                  />
+                  <Text style={styles.appleButtonText}>Sign up with Apple</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.googleButton}
+                  onPress={handleGoogleSignUp}
+                  disabled={loading}>
+                  <Image
+                    source={{
+                      uri: 'https://developers.google.com/identity/images/g-logo.png',
+                    }}
+                    style={styles.googleIcon}
+                  />
+                  <Text style={styles.googleButtonText}>Sign up with Google</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </Card>
 
@@ -567,6 +667,33 @@ const styles = StyleSheet.create({
   googleButtonText: {
     fontSize: 16,
     color: '#333',
+    fontFamily: 'Lato-Regular',
+    fontWeight: '500',
+  },
+  appleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#000000',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  appleIcon: {
+    marginRight: 12,
+  },
+  appleButtonText: {
+    fontSize: 16,
+    color: '#FFFFFF',
     fontFamily: 'Lato-Regular',
     fontWeight: '500',
   },
