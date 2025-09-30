@@ -654,29 +654,29 @@ const SplitScreen = ({navigation, route}) => {
           {/* Create Group Card */}
           <Card style={styles.createGroupCard}>
             <View style={styles.cardContent}>
-              <View style={styles.createGroupHeader}>
+              <TouchableOpacity
+                style={styles.createGroupHeader}
+                activeOpacity={0.7}
+                onPress={() => {
+                  if (!isFormVisible) {
+                    // When opening form for new group creation, ensure we're not in edit mode
+                    setEditingGroupId(null);
+                    setGroupName('');
+                    setCategory(null);
+                    setSelectedUsers([]);
+                  }
+                  setIsFormVisible(!isFormVisible);
+                }}
+              >
                 <Text style={styles.createGroupTitle}>
                   {editingGroupId ? 'Edit Group' : 'Create New Group'}
                 </Text>
-                <TouchableOpacity
-                  style={styles.toggleButton}
-                  onPress={() => {
-                    if (!isFormVisible) {
-                      // When opening form for new group creation, ensure we're not in edit mode
-                      setEditingGroupId(null);
-                      setGroupName('');
-                      setCategory(null);
-                      setSelectedUsers([]);
-                    }
-                    setIsFormVisible(!isFormVisible);
-                  }}>
-                  <MaterialCommunityIcons
-                    name={isFormVisible ? 'chevron-up' : 'chevron-down'}
-                    size={24}
-                    color={PRIMARY_COLOR}
-                  />
-                </TouchableOpacity>
-              </View>
+                <MaterialCommunityIcons
+                  name={isFormVisible ? 'chevron-up' : 'chevron-down'}
+                  size={24}
+                  color={PRIMARY_COLOR}
+                />
+              </TouchableOpacity>
               {isFormVisible && (
                 <View style={styles.formContainer}>
                   <View style={styles.inputContainer}>
