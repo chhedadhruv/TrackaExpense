@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useContext} from 'react';
 import {
   View,
   Text,
@@ -15,12 +15,14 @@ import firestore from '@react-native-firebase/firestore';
 import moment from 'moment';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
+import {AuthContext} from '../../navigation/AuthProvider';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
 const SplitGroupDetailScreen = ({route, navigation}) => {
   const {group} = route.params || {};
+  const {user} = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
   const [splits, setSplits] = useState([]);
   const [totalSplitAmount, setTotalSplitAmount] = useState(0);
@@ -372,6 +374,14 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
     if (detailedLendingInfo.length === 0) {
       return null;
     }
+    const currentEmail = user?.email?.toLowerCase();
+    const hasActionableSuggestion = detailedLendingInfo.some(detail => {
+      const payerEmail = detail.borrower.email?.toLowerCase();
+      const receiverEmail = detail.lender.email?.toLowerCase();
+      return (
+        currentEmail && (currentEmail === payerEmail || currentEmail === receiverEmail)
+      );
+    });
     return (
       <View style={styles.lendingSummaryContainer}>
         <Text style={styles.sectionHeaderText}>Settlement Suggestions</Text>
@@ -388,22 +398,45 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
                 />
                 <UserAvatar size={40} name={detail.lender.name} />
               </View>
-              <Text style={styles.lendingDetailText}>
-                {detail.borrower.name} should pay ₹
-                {detail.amount.toLocaleString()} to {detail.lender.name}
-              </Text>
-              <Button
-                mode="contained"
-                onPress={() =>
-                  handleSettleUp(detail.lender, detail.borrower, detail.amount)
+              {(() => {
+                const currentEmail = user?.email?.toLowerCase();
+                const payerEmail = detail.borrower.email?.toLowerCase();
+                const receiverEmail = detail.lender.email?.toLowerCase();
+                const viewerPays = currentEmail && currentEmail === payerEmail;
+                const viewerReceives = currentEmail && currentEmail === receiverEmail;
+                const amountStr = `₹${detail.amount.toLocaleString()}`;
+                if (viewerPays) {
+                  return (
+                    <Text style={styles.lendingDetailText}>
+                      You pay {detail.lender.name} <Text style={[styles.amountStrongText, {color: EXPENSE_COLOR}]}>{amountStr}</Text>
+                    </Text>
+                  );
                 }
-                style={styles.settleButton}
-                textColor="#fff">
-                Settle Up
-              </Button>
+                if (viewerReceives) {
+                  return (
+                    <Text style={styles.lendingDetailText}>
+                      You receive <Text style={[styles.amountStrongText, {color: SUCCESS_COLOR}]}>{amountStr}</Text> from {detail.borrower.name}
+                    </Text>
+                  );
+                }
+                return (
+                  <Text style={styles.lendingDetailText}>
+                    {detail.borrower.name} pays {detail.lender.name} <Text style={styles.amountStrongText}>{amountStr}</Text>
+                  </Text>
+                );
+              })()}
             </View>
           </Card>
         ))}
+        {hasActionableSuggestion && (
+          <Button
+            mode="contained"
+            onPress={() => handleSettleUp()}
+            style={styles.settleAllButton}
+            textColor="#fff">
+            Settle Up
+          </Button>
+        )}
       </View>
     );
   };
@@ -425,29 +458,25 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
           style={styles.scrollView}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          {/* Header Section */}
-          <View style={styles.headerSection}>
-            <View style={styles.headerTitleRow}>
-              <MaterialCommunityIcons name="account-group" size={32} color={PRIMARY_COLOR} />
-              <Text style={styles.headerTitle}>{group.name}</Text>
-            </View>
-            <Text style={styles.headerSubtitle}>Group expense details and settlements</Text>
-          </View>
+          {/* Header removed as per design update */}
           {renderGroupSummaryCard()}
           {renderDetailedLendingSummary()}
           {/* Recent Splits Section */}
           <View style={styles.splitsSection}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionHeaderText}>Recent Splits</Text>
-              <TouchableOpacity
-                style={styles.addButton}
-                onPress={() => navigation.navigate('CreateSplit', {group})}>
-                <MaterialCommunityIcons name="plus" size={20} color="#fff" />
-              </TouchableOpacity>
             </View>
             {renderSplitsList()}
           </View>
         </KeyboardAwareScrollView>
+        {/* Floating Action Button for adding a new split */}
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => navigation.navigate('CreateSplit', {group})}
+          accessibilityLabel="Add split"
+          accessibilityRole="button">
+          <MaterialCommunityIcons name="plus" size={28} color="#fff" />
+        </TouchableOpacity>
       </View>
     </SafeAreaProvider>
   );
@@ -657,13 +686,36 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   lendingDetailText: {
-    fontSize: 14,
-    color: '#959698',
+    fontSize: 14, // important content >= 12px
+    color: '#3A3B3E',
     marginBottom: 5,
+  },
+  lendingDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 5,
+  },
+  nameText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  positiveText: {
+    color: SUCCESS_COLOR,
+  },
+  negativeText: {
+    color: EXPENSE_COLOR,
+  },
+  amountStrongText: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+    color: '#2C2C2C',
   },
   groupSummaryCard: {
     backgroundColor: PRIMARY_COLOR,
     padding: 20,
+    marginTop: 20,
     marginBottom: 15,
   },
   cardContent: {
@@ -741,6 +793,26 @@ const styles = StyleSheet.create({
     marginTop: 10,
     backgroundColor: PRIMARY_COLOR,
     color: '#fff',
+  },
+  settleAllButton: {
+    marginTop: 10,
+    backgroundColor: PRIMARY_COLOR,
+  },
+  fab: {
+    position: 'absolute',
+    right: 24,
+    bottom: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: PRIMARY_COLOR,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 8,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
   modalContainer: {
     flex: 1,
