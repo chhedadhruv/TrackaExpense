@@ -80,28 +80,27 @@ const HomeScreen = ({navigation}) => {
       if (documentSnapshot.exists) {
         setUserData(documentSnapshot.data());
         setError(null);
+        setLoading(false);
       } else {
-        // If user data doesn't exist, wait a bit and retry (for Google Sign-In timing issues)
-        if (retryCount < 3) {
-          console.log(`User data not found, retrying... (${retryCount + 1}/3)`);
+        // If user data doesn't exist, wait a bit and retry (for social sign-in timing issues)
+        if (retryCount < 2) {
+          console.log(`User data not found, retrying... (${retryCount + 1}/2)`);
           setTimeout(() => {
             getUserData(retryCount + 1);
-          }, 1000 * (retryCount + 1)); // Exponential backoff
+          }, 2000 * (retryCount + 1)); // Longer wait times
         } else {
           setError('User data not found. Please try signing in again.');
+          setLoading(false);
         }
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
-      if (retryCount < 2) {
+      if (retryCount < 1) {
         setTimeout(() => {
           getUserData(retryCount + 1);
-        }, 1000 * (retryCount + 1));
+        }, 2000);
       } else {
         setError('Error fetching user data. Please check your connection and try again.');
-      }
-    } finally {
-      if (retryCount === 0) {
         setLoading(false);
       }
     }
@@ -195,6 +194,31 @@ const HomeScreen = ({navigation}) => {
 
     return unsubscribe;
   }, [navigation]);
+
+  // Add real-time listener for user data changes
+  useEffect(() => {
+    if (!currentUser || !currentUser.uid) return;
+
+    const unsubscribe = firestore()
+      .collection('users')
+      .doc(currentUser.uid)
+      .onSnapshot(
+        (doc) => {
+          if (doc.exists) {
+            setUserData(doc.data());
+            setError(null);
+            setLoading(false);
+          }
+        },
+        (error) => {
+          console.error('Error listening to user data:', error);
+          setError('Error fetching user data. Please check your connection and try again.');
+          setLoading(false);
+        }
+      );
+
+    return () => unsubscribe();
+  }, [currentUser]);
 
   const toggleShowAll = () => {
     setShowAll(!showAll);

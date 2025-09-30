@@ -23,10 +23,7 @@ export const configureGoogleSignIn = () => {
     googleServicePlistPath: GOOGLE_SERVICE_PLIST_PATH || '', // [iOS] if you renamed your GoogleService-Info file, new name here
     openIdRealm: GOOGLE_OPENID_REALM || '', // [iOS] The OpenID2 realm of the home web server
     profileImageSize: parseInt(GOOGLE_PROFILE_IMAGE_SIZE) || 120, // [iOS] The desired height (and width) of the profile image. Defaults to 120px
-    scopes: [
-      // what APIs you want to access on behalf of the user, default is email and profile
-      // Add additional scopes here if needed
-    ],
+    scopes: ['email', 'profile'], // Required scopes for getting user info
   });
 };
 
