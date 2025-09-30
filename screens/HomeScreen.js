@@ -325,7 +325,7 @@ const HomeScreen = ({navigation}) => {
               <MaterialCommunityIcons
                 name="cash-plus"
                 size={20}
-                color="#25B07F"
+                color="#FFFFFF"
               />
               <Text style={styles.quickActionText}>Add Income</Text>
             </TouchableOpacity>
@@ -336,7 +336,7 @@ const HomeScreen = ({navigation}) => {
               <MaterialCommunityIcons
                 name="cash-minus"
                 size={20}
-                color="#F64E4E"
+                color="#FFFFFF"
               />
               <Text style={styles.quickActionText}>Add Expense</Text>
             </TouchableOpacity>
@@ -649,34 +649,24 @@ const styles = StyleSheet.create({
   },
   quickActionButton: {
     flex: 0.48,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 15,
+    borderRadius: 14,
+    paddingVertical: 14,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    // button style (no shadows)
   },
   addIncomeButton: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#25B07F',
+    backgroundColor: '#25B07F',
   },
   addExpenseButton: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#F64E4E',
+    backgroundColor: '#F64E4E',
   },
   quickActionText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2C2C2C',
+    color: '#FFFFFF',
     fontFamily: 'Lato-Bold',
     marginLeft: 8,
   },
