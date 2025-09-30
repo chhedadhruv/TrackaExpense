@@ -127,6 +127,7 @@ const SplitScreen = ({navigation, route}) => {
   const [editingGroupId, setEditingGroupId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [unregisteredName, setUnregisteredName] = useState('');
+  const [splitHistory, setSplitHistory] = useState([]);
   const currentUser = auth().currentUser;
   // Fetch user's groups
   useEffect(() => {
@@ -208,6 +209,26 @@ const SplitScreen = ({navigation, route}) => {
       navigation.setParams({ editGroup: undefined });
     }
   }, [route?.params?.editGroup, loading, groups.length]);
+  // Fetch split recent activity
+  useEffect(() => {
+    const fetchSplitHistory = async () => {
+      try {
+        if (!currentUser) return;
+        const historySnapshot = await firestore()
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('splitHistory')
+          .orderBy('createdAt', 'desc')
+          .limit(20)
+          .get();
+        const history = historySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setSplitHistory(history);
+      } catch (e) {
+        // non-blocking
+      }
+    };
+    fetchSplitHistory();
+  }, [currentUser]);
   // Fetch user by email or phone
   const fetchUserByEmailOrPhone = async query => {
     try {
@@ -313,6 +334,7 @@ const SplitScreen = ({navigation, route}) => {
       return;
     }
     try {
+      const prevGroup = editingGroupId ? groups.find(g => g.id === editingGroupId) : null;
       const memberNames = selectedUsers.reduce((acc, u) => {
         if (u.email && u.name) {
           acc[u.email] = u.name;
@@ -349,6 +371,32 @@ const SplitScreen = ({navigation, route}) => {
               }
             : group
         ));
+        // Log update activity
+        try {
+          await firestore()
+            .collection('users')
+            .doc(currentUser.uid)
+            .collection('splitHistory')
+            .add({
+              type: 'update',
+              groupId: editingGroupId,
+              groupName: groupName,
+              previousGroupName: prevGroup?.name,
+              category,
+              membersCount: groupData.members?.length || 0,
+              createdAt: firestore.Timestamp.fromDate(new Date()),
+            });
+          // refresh list
+          const historySnapshot = await firestore()
+            .collection('users')
+            .doc(currentUser.uid)
+            .collection('splitHistory')
+            .orderBy('createdAt', 'desc')
+            .limit(20)
+            .get();
+          const history = historySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setSplitHistory(history);
+        } catch (_) {}
         Alert.alert('Success', 'Group updated successfully');
       } else {
         // Create new group
@@ -379,6 +427,30 @@ const SplitScreen = ({navigation, route}) => {
             memberDetails,
           },
         ]);
+        // Log create activity
+        try {
+          await firestore()
+            .collection('users')
+            .doc(currentUser.uid)
+            .collection('splitHistory')
+            .add({
+              type: 'create',
+              groupId: groupRef.id,
+              groupName: groupName,
+              category,
+              membersCount: groupData.members?.length || 0,
+              createdAt: firestore.Timestamp.fromDate(new Date()),
+            });
+          const historySnapshot = await firestore()
+            .collection('users')
+            .doc(currentUser.uid)
+            .collection('splitHistory')
+            .orderBy('createdAt', 'desc')
+            .limit(20)
+            .get();
+          const history = historySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setSplitHistory(history);
+        } catch (_) {}
         Alert.alert('Success', 'Group created successfully');
       }
     } catch (error) {
@@ -406,8 +478,35 @@ const SplitScreen = ({navigation, route}) => {
             text: 'Delete',
             style: 'destructive',
             onPress: async () => {
+              // Try to fetch the group first for logging
+              let groupDoc;
+              try {
+                groupDoc = await firestore().collection('groups').doc(groupId).get();
+              } catch (_) {}
               await firestore().collection('groups').doc(groupId).delete();
               setGroups(prev => prev.filter(group => group.id !== groupId));
+              // Log delete activity
+              try {
+                await firestore()
+                  .collection('users')
+                  .doc(currentUser.uid)
+                  .collection('splitHistory')
+                  .add({
+                    type: 'delete',
+                    groupId,
+                    groupName: groupDoc?.data()?.name || 'Group',
+                    createdAt: firestore.Timestamp.fromDate(new Date()),
+                  });
+                const historySnapshot = await firestore()
+                  .collection('users')
+                  .doc(currentUser.uid)
+                  .collection('splitHistory')
+                  .orderBy('createdAt', 'desc')
+                  .limit(20)
+                  .get();
+                const history = historySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setSplitHistory(history);
+              } catch (_) {}
               Alert.alert('Success', 'Group deleted successfully');
             },
           },
@@ -671,7 +770,29 @@ const SplitScreen = ({navigation, route}) => {
           </Card>
           {/* Groups List */}
           <View style={styles.groupsSection}>
-            <Text style={styles.sectionTitle}>Your Groups</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <Text
+                style={[styles.sectionTitle, { marginBottom: 0, flexShrink: 1 }]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                Your Groups
+              </Text>
+              <View style={styles.groupsHeaderActions}>
+                <TouchableOpacity
+                  style={styles.iconActionButton}
+                  onPress={() => navigation.navigate('Invitations')}
+                >
+                  <MaterialCommunityIcons name="account-multiple-plus-outline" size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.iconActionButton}
+                  onPress={() => navigation.navigate('SplitHistory')}
+                >
+                  <MaterialCommunityIcons name="history" size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+            </View>
             {groups.length === 0 ? (
               <Card style={styles.emptyStateCard}>
                 <View style={styles.emptyState}>
@@ -688,6 +809,7 @@ const SplitScreen = ({navigation, route}) => {
               groups.map(renderGroupCard)
             )}
           </View>
+        
         </KeyboardAwareScrollView>
       </View>
     </SafeAreaProvider>
@@ -1143,6 +1265,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginHorizontal: 8,
     fontFamily: 'Lato-Bold',
+  },
+  groupsHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconActionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: PRIMARY_COLOR,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
   },
   emptyStateCard: {
     backgroundColor: '#FFFFFF',
