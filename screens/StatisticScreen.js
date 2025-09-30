@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useMemo} from 'react';
 import {Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import {BarChart} from 'react-native-gifted-charts';
+import {BarChart, PieChart} from 'react-native-gifted-charts';
 import {useFocusEffect} from '@react-navigation/native';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
@@ -28,6 +28,7 @@ const StatisticScreen = ({navigation}) => {
   const [timeRangeOpen, setTimeRangeOpen] = useState(false);
   const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [selectedBtn, setSelectedBtn] = useState('Income');
+  const [categoryPieData, setCategoryPieData] = useState([]);
   const [timeRangeItems] = useState([
     {label: 'Last 7 Days', value: '7days'},
     {label: 'Last 30 Days', value: '30days'},
@@ -77,22 +78,26 @@ const StatisticScreen = ({navigation}) => {
         return 'daily';
     }
   };
-  const formatDateForGrouping = (date, interval) => {
+  const getGroupingKeyAndLabel = (date, interval) => {
     const d = new Date(date);
-    switch (interval) {
-      case 'daily':
-        return d.toLocaleDateString(undefined, {
-          month: 'short',
-          day: 'numeric',
-        });
-      case 'weekly':
-        const week = Math.ceil(d.getDate() / 7);
-        return `W${week}`;
-      case 'monthly':
-        return d.toLocaleString('default', {month: 'short'});
-      default:
-        return d.toLocaleDateString();
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const day = d.getDate();
+    if (interval === 'daily') {
+      const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const label = d.toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
+      return {key, label, ts: new Date(year, month, day).getTime()};
     }
+    if (interval === 'weekly') {
+      const firstOfMonth = new Date(year, month, 1);
+      const week = Math.ceil(day / 7);
+      const ts = new Date(year, month, (week - 1) * 7 + 1).getTime();
+      return {key: `${year}-${month}-W${week}`, label: `W${week}`, ts};
+    }
+    // monthly
+    const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const label = d.toLocaleString('default', {month: 'short'});
+    return {key, label, ts: new Date(year, month, 1).getTime()};
   };
   const getUser = async () => {
     try {
@@ -144,57 +149,89 @@ const StatisticScreen = ({navigation}) => {
     }
   }, [userData, timeRange]);
   const [barData, setBarData] = useState([]);
+  const chartWidth = useMemo(() => {
+    const baseWidth = Dimensions.get('window').width - 80;
+    const labelGroups = barData.filter(item => item.showLabel).length;
+    const groupWidth = 70; // space for label + bars
+    const computed = Math.max(baseWidth, labelGroups * groupWidth);
+    return computed;
+  }, [barData]);
   const handleBarData = useCallback(() => {
     if (!filteredTransactions?.length) return;
     const interval = getGroupingInterval(timeRange);
-    let aggregatedData = {};
+    const aggregatedMap = new Map();
     filteredTransactions.forEach(transaction => {
-      const groupKey = formatDateForGrouping(transaction.date, interval);
+      const {key, label, ts} = getGroupingKeyAndLabel(transaction.date, interval);
       const value = parseFloat(transaction.amount) || 0;
-      if (!aggregatedData[groupKey]) {
-        aggregatedData[groupKey] = {income: 0, expense: 0};
+      if (!aggregatedMap.has(key)) {
+        aggregatedMap.set(key, {label, ts, income: 0, expense: 0});
       }
+      const entry = aggregatedMap.get(key);
       if (transaction.type === 'income') {
-        aggregatedData[groupKey].income += value;
+        entry.income += value;
       } else {
-        aggregatedData[groupKey].expense += value;
+        entry.expense += value;
       }
+      aggregatedMap.set(key, entry);
     });
-    const barData = [];
-    const entries = Object.entries(aggregatedData);
-    entries.sort((a, b) => new Date(a[0]) - new Date(b[0]));
-    // Take only last 6 entries to prevent overcrowding
-    const lastEntries = entries.slice(-6);
-    lastEntries.forEach(([label, values]) => {
-      // Add placeholder bar with zero height for centered label
-      barData.push({
+    const sorted = Array.from(aggregatedMap.values()).sort((a, b) => a.ts - b.ts);
+    const last = sorted.slice(-8); // limit labels to reduce overlap
+    const built = [];
+    last.forEach((item, index) => {
+      const showLabel = index % 2 === 0; // show every other label
+      built.push({
         value: 0,
-        label,
+        label: item.label,
         frontColor: 'transparent',
         spacing: 2,
-        showLabel: true,
+        showLabel,
       });
-      // Add income bar
-      if (values.income > 0) {
-        barData.push({
-          value: values.income,
-          label: '',
-          frontColor: '#677CD2',
-          spacing: 2,
-        });
+      if (item.income > 0) {
+        built.push({value: item.income, label: '', frontColor: '#677CD2', spacing: 2});
       }
-      // Add expense bar
-      if (values.expense > 0) {
-        barData.push({
-          value: values.expense,
-          label: '',
-          frontColor: '#E98852',
-          spacing: 30,
-        });
+      if (item.expense > 0) {
+        built.push({value: item.expense, label: '', frontColor: '#E98852', spacing: 30});
       }
     });
-    setBarData(barData);
+    setBarData(built);
   }, [filteredTransactions, timeRange]);
+  // Build category pie data (Income/Expense based on selection)
+  useEffect(() => {
+    if (!filteredTransactions?.length) {
+      setCategoryPieData([]);
+      return;
+    }
+    const typeKey = selectedBtn === 'Income' ? 'income' : 'expense';
+    const tx = filteredTransactions.filter(t => t.type === typeKey);
+    const total = tx.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+    if (total <= 0) {
+      setCategoryPieData([]);
+      return;
+    }
+    const byCategory = tx.reduce((acc, t) => {
+      const key = t.category || 'Others';
+      acc[key] = (acc[key] || 0) + (parseFloat(t.amount) || 0);
+      return acc;
+    }, {});
+    const palette = ['#677CD2', '#E98852', '#25B07F', '#F6C84E', '#9B59B6', '#2E86C1', '#16A085', '#D35400'];
+    const entries = Object.entries(byCategory)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6);
+    const pie = entries.map(([label, amountValue], idx) => {
+      const percentage = Math.round((amountValue / total) * 100);
+      const color = palette[idx % palette.length];
+      // Show label on slice only for larger portions (>= 10%) to avoid clutter
+      return {
+        value: percentage,
+        color,
+        text: percentage >= 10 ? `${label}` : '',
+        label,
+        percent: percentage,
+        amount: amountValue,
+      };
+    });
+    setCategoryPieData(pie);
+  }, [filteredTransactions, selectedBtn]);
   useEffect(() => {
     handleBarData();
   }, [filteredTransactions, handleBarData]);
@@ -246,7 +283,7 @@ const StatisticScreen = ({navigation}) => {
                 <Text style={styles.cardTitle}>Total Income</Text>
               </View>
               <Text style={styles.cardIncomeAmount}>
-                ₹ {totalIncome.toLocaleString()}
+                ₹{totalIncome.toLocaleString()}
               </Text>
             </View>
           </Card>
@@ -263,7 +300,7 @@ const StatisticScreen = ({navigation}) => {
                 <Text style={styles.cardTitle}>Total Expense</Text>
               </View>
               <Text style={styles.cardExpenseAmount}>
-                ₹ {totalExpense.toLocaleString()}
+                ₹{totalExpense.toLocaleString()}
               </Text>
             </View>
           </Card>
@@ -277,6 +314,7 @@ const StatisticScreen = ({navigation}) => {
             </Text>
           </View>
           <View style={styles.chartContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <BarChart
               data={barData}
               height={220}
@@ -288,10 +326,10 @@ const StatisticScreen = ({navigation}) => {
               yAxisTextStyle={{color: '#888', fontFamily: 'Lato-Regular'}}
               xAxisLabelTextStyle={{
                 color: '#888',
-                fontSize: 11,
+                fontSize: 10,
                 textAlign: 'center',
-                width: 60,
-                marginTop: 15,
+                width: 50,
+                marginTop: 12,
                 fontFamily: 'Lato-Regular',
               }}
               noOfSections={3}
@@ -300,8 +338,8 @@ const StatisticScreen = ({navigation}) => {
               yAxisLabelFormatter={value => `₹${value}`}
               yAxisLabelWidth={50}
               yAxisLabelPrefix={'₹'}
-              width={Dimensions.get('window').width - 80}
-              xAxisLabelsHeight={40}
+              width={chartWidth}
+              xAxisLabelsHeight={32}
               horizontalRulesStyle={{color: '#ECECEC'}}
               rulesColor="#ECECEC"
               maxValue={
@@ -318,12 +356,67 @@ const StatisticScreen = ({navigation}) => {
               showFractionalValue={false}
               hideDataPoints={true}
             />
+            </ScrollView>
             {selectedBar && (
               <View style={styles.selectedBarContainer}>
                 <Text style={styles.selectedBarText}>
                   {selectedBar.frontColor === '#677CD2' ? 'Income' : 'Expense'}: ₹{' '}
                   {selectedBar.value.toFixed(2)}
                 </Text>
+              </View>
+            )}
+          </View>
+        </Card>
+
+        {/* Category Breakdown Pie */
+        }
+        <Card style={styles.statisticCard}>
+          <View style={styles.statisticHeader}>
+            <Text style={styles.statisticHeaderText}>
+              {selectedBtn === 'Income' ? 'Income by Category' : 'Spending by Category'}
+            </Text>
+            <Text style={styles.statisticHeaderSubText}>
+              {selectedBtn === 'Income' ? 'Income distribution' : 'Expenses distribution'}
+            </Text>
+          </View>
+          <View style={[styles.chartContainer, {alignItems: 'center'}]}>
+            {categoryPieData.length > 0 ? (
+              <PieChart
+                donut
+                innerRadius={70}
+                radius={100}
+                focusOnPress
+                showText={false}
+                data={categoryPieData}
+                centerLabelComponent={() => (
+                  <View style={{alignItems: 'center'}}>
+                    <Text style={{fontFamily: 'Lato-Bold', fontSize: 16, color: '#2C2C2C'}}>₹{(selectedBtn === 'Income' ? totalIncome : totalExpense).toLocaleString()}</Text>
+                    <Text style={{fontFamily: 'Lato-Regular', fontSize: 12, color: '#666'}}>
+                      {selectedBtn === 'Income' ? 'Total Income' : 'Total Expense'}
+                    </Text>
+                  </View>
+                )}
+              />
+            ) : (
+              <View style={styles.emptyState}>
+                <MaterialCommunityIcons name="chart-pie" size={48} color="#CBD3EE" />
+                <Text style={styles.emptyStateText}>No {selectedBtn.toLowerCase()} data</Text>
+                <Text style={styles.emptyStateSubText}>No {selectedBtn.toLowerCase()}s in the selected period</Text>
+              </View>
+            )}
+            {categoryPieData.length > 0 && (
+              <View style={styles.legendContainer}>
+                {categoryPieData.map(item => (
+                  <View key={item.label} style={styles.legendRow}>
+                    <View style={[styles.legendDot, {backgroundColor: item.color}]} />
+                    <Text style={styles.legendLabel} numberOfLines={1}>
+                      {item.label}
+                    </Text>
+                    <Text style={styles.legendValue}>
+                      {item.percent}% · ₹{Math.round(item.amount).toLocaleString()}
+                    </Text>
+                  </View>
+                ))}
               </View>
             )}
           </View>
@@ -422,7 +515,7 @@ const StatisticScreen = ({navigation}) => {
                               ? styles.transactionsCardAmountIncomeText
                               : styles.transactionsCardAmountExpenseText
                           }>
-                          {transaction.type === 'income' ? '+ ₹' : '- ₹'}
+                          {transaction.type === 'income' ? '+₹' : '-₹'}
                           {parseInt(transaction.amount, 10).toLocaleString()}
                         </Text>
                       </View>
@@ -787,6 +880,34 @@ const styles = StyleSheet.create({
     color: '#888',
     textAlign: 'center',
     marginTop: 8,
+    fontFamily: 'Lato-Regular',
+  },
+  legendContainer: {
+    width: '100%',
+    marginTop: 16,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 10,
+  },
+  legendLabel: {
+    flex: 1,
+    fontSize: 14,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
+  },
+  legendValue: {
+    fontSize: 13,
+    color: '#666',
+    marginLeft: 10,
     fontFamily: 'Lato-Regular',
   },
 });
