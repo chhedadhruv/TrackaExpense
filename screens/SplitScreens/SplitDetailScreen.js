@@ -16,6 +16,17 @@ const SplitDetailScreen = ({route, navigation}) => {
   const currentUser = auth().currentUser;
   const isSettlement = split.type === 'settlement';
   const [menuVisible, setMenuVisible] = React.useState(false);
+  const confirmAndDelete = () => {
+    Alert.alert(
+      'Delete Split',
+      'Are you sure you want to delete this split?',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {text: 'Delete', style: 'destructive', onPress: handleDeleteSplit},
+      ],
+      {cancelable: true},
+    );
+  };
   const handleDeleteSplit = async () => {
     try {
       await firestore()
@@ -25,6 +36,12 @@ const SplitDetailScreen = ({route, navigation}) => {
         .doc(split.id)
         .delete();
       try {
+        let actorName = currentUser?.email?.split('@')[0] || 'Someone';
+        try {
+          const userDoc = await firestore().collection('users').doc(currentUser.uid).get();
+          const profileName = userDoc.data()?.name;
+          if (profileName && profileName.toLowerCase() !== 'me') actorName = profileName;
+        } catch (_) {}
         await firestore()
           .collection('users')
           .doc(currentUser.uid)
@@ -34,12 +51,51 @@ const SplitDetailScreen = ({route, navigation}) => {
             groupId: group.id,
             groupName: group.name,
             splitId: split.id,
-            title: split.title,
+            splitTitle: split.title,
             amount: split.amount,
-            createdAt: firestore.Timestamp.fromDate(new Date()),
+            category: split.category || null,
+            date: split.date || split.createdAt || null,
+            paidBy: split.paidBy || null,
+            splitType: split.type === 'settlement' ? 'settlement' : (split.splitType || (split.splitUsers?.some(u => u.percentage) ? 'percentage' : 'equal')),
+            settlement: split.type === 'settlement' ? (split.settlement || {
+              from: split.paidBy,
+              to: split.splitUsers?.[0],
+              amount: split.amount,
+            }) : undefined,
+            actorUid: currentUser?.uid || null,
+            actorEmail: currentUser?.email || null,
+            actorName,
+            createdAt: firestore.FieldValue.serverTimestamp(),
+          });
+        // Also write to group-level history so all members can see
+        await firestore()
+          .collection('groups')
+          .doc(group.id)
+          .collection('splitHistory')
+          .add({
+            type: 'delete',
+            groupId: group.id,
+            groupName: group.name,
+            splitId: split.id,
+            splitTitle: split.title,
+            amount: split.amount,
+            category: split.category || null,
+            date: split.date || split.createdAt || null,
+            paidBy: split.paidBy || null,
+            splitType: split.type === 'settlement' ? 'settlement' : (split.splitType || (split.splitUsers?.some(u => u.percentage) ? 'percentage' : 'equal')),
+            settlement: split.type === 'settlement' ? (split.settlement || {
+              from: split.paidBy,
+              to: split.splitUsers?.[0],
+              amount: split.amount,
+            }) : undefined,
+            actorUid: currentUser?.uid || null,
+            actorEmail: currentUser?.email || null,
+            actorName,
+            createdAt: firestore.FieldValue.serverTimestamp(),
           });
       } catch (_) {}
       setMenuVisible(false);
+      Alert.alert('Deleted', 'Split deleted successfully');
       navigation.goBack();
     } catch (error) {
       Alert.alert('Error', 'Failed to delete split');
@@ -229,7 +285,7 @@ const SplitDetailScreen = ({route, navigation}) => {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.deleteButton}
-              onPress={handleDeleteSplit}>
+              onPress={confirmAndDelete}>
               <MaterialCommunityIcons name="trash-can" size={20} color="#FFFFFF" />
               <Text style={styles.buttonText}>Delete</Text>
             </TouchableOpacity>

@@ -40,6 +40,12 @@ const SettleUpScreen = ({route, navigation}) => {
       setLoading(true);
       const currentUser = auth().currentUser;
       const currentUserEmail = currentUser.email;
+      let actorNameResolved = currentUserEmail?.split('@')[0] || 'Someone';
+      try {
+        const userDoc = await firestore().collection('users').doc(currentUser.uid).get();
+        const profileName = userDoc.data()?.name;
+        if (profileName && profileName.toLowerCase() !== 'me') actorNameResolved = profileName;
+      } catch (_) {}
       // Create settlement record
       const settlementData = {
         from: selectedBorrower,
@@ -77,6 +83,62 @@ const SettleUpScreen = ({route, navigation}) => {
         .collection('splits')
         .add(settlementSplit);
       // Only update balance if the current user is involved (no transaction creation)
+      try {
+        const actorName = actorNameResolved;
+        await firestore()
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('splitHistory')
+          .add({
+            type: 'settlement_create',
+            groupId: group.id,
+            groupName: group.name,
+            splitId: splitRef.id,
+            splitTitle: settlementSplit.title,
+            amount: settlementAmount,
+            category: 'Settlement',
+            date: settlementSplit.createdAt || firestore.FieldValue.serverTimestamp(),
+            paidBy: selectedBorrower,
+            splitType: 'settlement',
+            settlement: {
+              from: selectedBorrower,
+              to: selectedLender,
+              amount: settlementAmount,
+              note: note.trim(),
+            },
+            actorUid: currentUser.uid,
+            actorEmail: currentUserEmail,
+            actorName,
+            createdAt: firestore.FieldValue.serverTimestamp(),
+          });
+        // Also write to group-level history so all members can see
+        await firestore()
+          .collection('groups')
+          .doc(group.id)
+          .collection('splitHistory')
+          .add({
+            type: 'settlement_create',
+            groupId: group.id,
+            groupName: group.name,
+            splitId: splitRef.id,
+            splitTitle: settlementSplit.title,
+            amount: settlementAmount,
+            category: 'Settlement',
+            date: settlementSplit.createdAt || firestore.FieldValue.serverTimestamp(),
+            paidBy: selectedBorrower,
+            splitType: 'settlement',
+            settlement: {
+              from: selectedBorrower,
+              to: selectedLender,
+              amount: settlementAmount,
+              note: note.trim(),
+            },
+            actorUid: currentUser.uid,
+            actorEmail: currentUserEmail,
+            actorName,
+            createdAt: firestore.FieldValue.serverTimestamp(),
+          });
+      } catch (_) {}
       if (selectedBorrower.email === currentUserEmail) {
         // Update user's balance without creating a transaction
         await firestore().runTransaction(async transaction => {
