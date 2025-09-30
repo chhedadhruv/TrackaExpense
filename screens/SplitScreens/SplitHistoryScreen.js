@@ -23,15 +23,34 @@ const SplitHistoryScreen = () => {
           setLoading(false);
           return;
         }
-        const snapshot = await firestore()
-          .collection('users')
-          .doc(currentUser.uid)
-          .collection('splitHistory')
-          .orderBy('createdAt', 'desc')
-          .limit(50)
+        // Fetch groups user belongs to (by membership email)
+        const userEmail = currentUser.email;
+        const groupsSnapshot = await firestore()
+          .collection('groups')
+          .where('members', 'array-contains', userEmail)
           .get();
-        const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        setHistory(items);
+        const groupIds = groupsSnapshot.docs.map(d => ({ id: d.id, name: d.data()?.name }));
+        // Fetch history from all groups in parallel
+        const historySnapshots = await Promise.all(
+          groupIds.map(g =>
+            firestore()
+              .collection('groups')
+              .doc(g.id)
+              .collection('splitHistory')
+              .orderBy('createdAt', 'desc')
+              .limit(50)
+              .get()
+              .then(s => s.docs.map(d => ({ id: `${g.id}:${d.id}`, groupId: g.id, groupName: g.name, ...d.data() })))
+          )
+        );
+        const merged = historySnapshots.flat();
+        // Sort by createdAt desc
+        merged.sort((a, b) => {
+          const ta = a.createdAt?.toMillis?.() || a.createdAt?.seconds || 0;
+          const tb = b.createdAt?.toMillis?.() || b.createdAt?.seconds || 0;
+          return tb - ta;
+        });
+        setHistory(merged);
       } catch (e) {
         setHistory([]);
       } finally {
@@ -45,11 +64,82 @@ const SplitHistoryScreen = () => {
     switch (type) {
       case 'create':
         return <MaterialCommunityIcons name="plus" size={20} color={PRIMARY_COLOR} />;
+      case 'settlement_create':
+        return <MaterialCommunityIcons name="bank-transfer" size={20} color={PRIMARY_COLOR} />;
       case 'delete':
         return <MaterialCommunityIcons name="delete" size={20} color={EXPENSE_COLOR} />;
       default:
         return <MaterialCommunityIcons name="pencil" size={20} color={PRIMARY_COLOR} />;
     }
+  };
+
+  const resolveActor = (item) => {
+    const raw = (item.actorName || '').trim();
+    if (raw && raw.toLowerCase() !== 'me') return raw;
+    if (item.actorEmail) {
+      try { return item.actorEmail.split('@')[0]; } catch (_) {}
+    }
+    if (item.actorUid) {
+      // Try to infer from settlement/paidBy if available
+      if (item.settlement?.from?.userId === item.actorUid) {
+        return item.settlement.from.name || item.settlement.from.email || 'Someone';
+      }
+      if (item.paidBy?.userId === item.actorUid) {
+        return item.paidBy.name || item.paidBy.email || 'Someone';
+      }
+    }
+    if (item.settlement?.from?.name) return item.settlement.from.name;
+    if (item.paidBy?.name) return item.paidBy.name;
+    return 'Someone';
+  };
+
+  const renderDescription = (item) => {
+    const actor = resolveActor(item);
+    const groupName = item.groupName || 'group';
+    const splitTitle = item.splitTitle || item.title || 'split';
+    if (item.type === 'create') {
+      return `${actor} created split "${splitTitle}" in "${groupName}"`;
+    }
+    if (item.type === 'settlement_create') {
+      const fromName = item.settlement?.from?.name || item.settlement?.from?.email || 'Someone';
+      const toName = item.settlement?.to?.name || item.settlement?.to?.email || 'Someone';
+      return `${actor} recorded settlement ₹${Number(item.amount || 0).toLocaleString()} from ${fromName} to ${toName} in "${groupName}"`;
+    }
+    if (item.type === 'delete') {
+      return `${actor} deleted split "${splitTitle}" from "${groupName}"`;
+    }
+    // update
+    return `${actor} updated split "${splitTitle}" in "${groupName}"`;
+  };
+
+  const renderChanges = (item) => {
+    const changes = Array.isArray(item.changes) ? item.changes : [];
+    if (item.type !== 'update' || changes.length === 0) return null;
+    return (
+      <View style={styles.changeList}>
+        {changes.map((c, idx) => (
+          <Text key={idx} style={styles.changeItem}>
+            {`${c.field}: ${formatValue(c.before)} → ${formatValue(c.after)}`}
+          </Text>
+        ))}
+      </View>
+    );
+  };
+
+  const formatValue = (val) => {
+    if (val === null || val === undefined) return '—';
+    if (typeof val === 'object') {
+      // date or paidBy
+      if (val.toDate) {
+        try { return val.toDate().toLocaleString(); } catch (_) {}
+      }
+      if (val.email || val.name) {
+        return val.name || val.email;
+      }
+      return JSON.stringify(val);
+    }
+    if (typeof val === 'number') return `${val}`;
+    return String(val);
   };
 
   return (
@@ -70,13 +160,8 @@ const SplitHistoryScreen = () => {
                     <View key={item.id} style={styles.historyItem}>
                       <View style={styles.historyIcon}>{renderIcon(item.type)}</View>
                       <View style={styles.historyDetails}>
-                        <Text style={styles.historyDescription}>
-                          {item.type === 'create'
-                            ? `Created group: ${item.groupName || 'group'}`
-                            : item.type === 'delete'
-                            ? `Deleted group: ${item.groupName || 'group'}`
-                            : `Updated ${item.groupName || 'group'}`}
-                        </Text>
+                        <Text style={styles.historyDescription}>{renderDescription(item)}</Text>
+                        {renderChanges(item)}
                         <Text style={styles.historyDate}>
                           {item.createdAt ? item.createdAt.toDate().toLocaleString() : 'Unknown date'}
                         </Text>

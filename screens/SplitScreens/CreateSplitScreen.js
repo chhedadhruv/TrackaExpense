@@ -278,6 +278,12 @@ const CreateSplitScreen = ({route, navigation}) => {
     try {
       const currentUser = auth().currentUser;
       const currentUserEmail = currentUser.email;
+      let actorNameResolved = currentUserEmail?.split('@')[0] || 'Someone';
+      try {
+        const userDoc = await firestore().collection('users').doc(currentUser.uid).get();
+        const profileName = userDoc.data()?.name;
+        if (profileName && profileName.toLowerCase() !== 'me') actorNameResolved = profileName;
+      } catch (_) {}
       const splitAmount = parseFloat(amount);
       const splitDate = firestore.Timestamp.fromDate(date);
       const splitData = {
@@ -311,6 +317,64 @@ const CreateSplitScreen = ({route, navigation}) => {
         splitRef = splitsCollection.doc(split.id);
         await splitRef.update(splitData);
         try {
+          // Build change set for audit
+          const changeItems = [];
+          if (split.title !== splitData.title) {
+            changeItems.push({field: 'title', before: split.title, after: splitData.title});
+          }
+          if (parseFloat(split.amount) !== splitData.amount) {
+            changeItems.push({field: 'amount', before: parseFloat(split.amount), after: splitData.amount});
+          }
+          if ((split.category || null) !== (splitData.category || null)) {
+            changeItems.push({field: 'category', before: split.category || null, after: splitData.category || null});
+          }
+          const prevDate = split.date?.toDate?.() || split.createdAt?.toDate?.();
+          const newDate = splitData.date?.toDate?.() || null;
+          if ((prevDate?.getTime?.() || null) !== (newDate?.getTime?.() || null)) {
+            changeItems.push({field: 'date', before: prevDate ? prevDate.toISOString() : null, after: newDate ? newDate.toISOString() : null});
+          }
+          if ((split.paidBy?.email || null) !== (splitData.paidBy?.email || null)) {
+            changeItems.push({field: 'paidBy', before: split.paidBy?.email || null, after: splitData.paidBy?.email || null});
+          }
+          if ((split.splitType || 'equal') !== (splitData.splitType || 'equal')) {
+            changeItems.push({field: 'splitType', before: split.splitType || 'equal', after: splitData.splitType || 'equal'});
+          }
+          // Compare split users only if members/percentages truly changed
+          const hasSplitUsersChanged = (prev, next) => {
+            const prevUsers = Array.isArray(prev?.splitUsers) ? prev.splitUsers : [];
+            const nextUsers = Array.isArray(next?.splitUsers) ? next.splitUsers : [];
+            // Quick length check
+            if (prevUsers.length !== nextUsers.length) return true;
+            // Build maps by email
+            const toKey = u => (u.email || u.name || '').toLowerCase();
+            const prevMap = new Map(prevUsers.map(u => [toKey(u), u]));
+            for (const u of nextUsers) {
+              const key = toKey(u);
+              const pu = prevMap.get(key);
+              if (!pu) return true; // member added/removed
+              const prevPct = pu.percentage != null ? Number(pu.percentage).toFixed(2) : null;
+              const nextPct = u.percentage != null ? Number(u.percentage).toFixed(2) : null;
+              if (prevPct !== nextPct) return true; // percentage changed
+            }
+            return false;
+          };
+          const summarizeUsers = s => {
+            const isPct = (s.splitType || split.splitType || 'equal') === 'percentage' ||
+              (s.splitUsers || []).some(u => u.percentage != null);
+            const users = (s.splitUsers || []).slice().sort((a,b)=>{
+              const ka = (a.email || a.name || '').toLowerCase();
+              const kb = (b.email || b.name || '').toLowerCase();
+              return ka.localeCompare(kb);
+            }).map(u => isPct ? `${u.name || u.email}(${Number(u.percentage).toFixed(2)}%)` : `${u.name || u.email}`);
+            return users.join(', ');
+          };
+          if (hasSplitUsersChanged(split, splitData)) {
+            const beforeUsersSummary = summarizeUsers(split);
+            const afterUsersSummary = summarizeUsers(splitData);
+            changeItems.push({field: 'splitUsers', before: beforeUsersSummary, after: afterUsersSummary});
+          }
+
+          const actorName = actorNameResolved;
           await firestore()
             .collection('users')
             .doc(currentUser.uid)
@@ -320,9 +384,39 @@ const CreateSplitScreen = ({route, navigation}) => {
               groupId: group.id,
               groupName: group.name,
               splitId: split.id,
-              title,
+              splitTitle: title,
               amount: splitAmount,
-              createdAt: firestore.Timestamp.fromDate(new Date()),
+              category,
+              date: splitData.date,
+              paidBy: splitData.paidBy,
+              splitType: splitData.splitType,
+              changes: changeItems,
+              actorUid: currentUser.uid,
+              actorEmail: currentUserEmail,
+              actorName,
+              createdAt: firestore.FieldValue.serverTimestamp(),
+            });
+          // Also write to group-level history so all members can see
+          await firestore()
+            .collection('groups')
+            .doc(group.id)
+            .collection('splitHistory')
+            .add({
+              type: 'update',
+              groupId: group.id,
+              groupName: group.name,
+              splitId: split.id,
+              splitTitle: title,
+              amount: splitAmount,
+              category,
+              date: splitData.date,
+              paidBy: splitData.paidBy,
+              splitType: splitData.splitType,
+              changes: changeItems,
+              actorUid: currentUser.uid,
+              actorEmail: currentUserEmail,
+              actorName,
+              createdAt: firestore.FieldValue.serverTimestamp(),
             });
         } catch (_) {}
         Alert.alert('Success', 'Split updated successfully');
@@ -330,6 +424,7 @@ const CreateSplitScreen = ({route, navigation}) => {
         // Add new split
         splitRef = await splitsCollection.add(splitData);
         try {
+          const actorName = actorNameResolved;
           await firestore()
             .collection('users')
             .doc(currentUser.uid)
@@ -339,9 +434,37 @@ const CreateSplitScreen = ({route, navigation}) => {
               groupId: group.id,
               groupName: group.name,
               splitId: splitRef.id,
-              title,
+              splitTitle: title,
               amount: splitAmount,
-              createdAt: firestore.Timestamp.fromDate(new Date()),
+              category,
+              date: splitData.date,
+              paidBy: splitData.paidBy,
+              splitType: splitData.splitType,
+              actorUid: currentUser.uid,
+              actorEmail: currentUserEmail,
+              actorName,
+              createdAt: firestore.FieldValue.serverTimestamp(),
+            });
+          // Also write to group-level history so all members can see
+          await firestore()
+            .collection('groups')
+            .doc(group.id)
+            .collection('splitHistory')
+            .add({
+              type: 'create',
+              groupId: group.id,
+              groupName: group.name,
+              splitId: splitRef.id,
+              splitTitle: title,
+              amount: splitAmount,
+              category,
+              date: splitData.date,
+              paidBy: splitData.paidBy,
+              splitType: splitData.splitType,
+              actorUid: currentUser.uid,
+              actorEmail: currentUserEmail,
+              actorName,
+              createdAt: firestore.FieldValue.serverTimestamp(),
             });
         } catch (_) {}
         Alert.alert('Success', 'Split added successfully');
