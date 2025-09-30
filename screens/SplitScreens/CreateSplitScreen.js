@@ -310,10 +310,40 @@ const CreateSplitScreen = ({route, navigation}) => {
         // Update existing split
         splitRef = splitsCollection.doc(split.id);
         await splitRef.update(splitData);
+        try {
+          await firestore()
+            .collection('users')
+            .doc(currentUser.uid)
+            .collection('splitHistory')
+            .add({
+              type: 'update',
+              groupId: group.id,
+              groupName: group.name,
+              splitId: split.id,
+              title,
+              amount: splitAmount,
+              createdAt: firestore.Timestamp.fromDate(new Date()),
+            });
+        } catch (_) {}
         Alert.alert('Success', 'Split updated successfully');
       } else {
         // Add new split
         splitRef = await splitsCollection.add(splitData);
+        try {
+          await firestore()
+            .collection('users')
+            .doc(currentUser.uid)
+            .collection('splitHistory')
+            .add({
+              type: 'create',
+              groupId: group.id,
+              groupName: group.name,
+              splitId: splitRef.id,
+              title,
+              amount: splitAmount,
+              createdAt: firestore.Timestamp.fromDate(new Date()),
+            });
+        } catch (_) {}
         Alert.alert('Success', 'Split added successfully');
       }
       navigation.goBack();
