@@ -248,24 +248,123 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
         <Text style={styles.titleText}>{group.name}</Text>
         <View style={styles.groupMemberAvatars}>
           {groupMembers.slice(0, 4).map((member, index) => (
-            <UserAvatar
-              key={member.email}
-              size={40}
-              name={member.name}
-              src={member.avatar}
-              style={[
-                styles.groupMemberAvatar,
-                {zIndex: 4 - index, marginLeft: index > 0 ? -10 : 0},
-              ]}
-            />
+            <View key={member.email} style={styles.memberWrapper}>
+              <UserAvatar
+                size={40}
+                name={member.name}
+                src={member.avatar}
+                style={styles.groupMemberAvatar}
+              />
+              <Text
+                style={styles.memberName}
+                numberOfLines={1}
+                ellipsizeMode="tail">
+                {member.name}
+              </Text>
+            </View>
           ))}
           {groupMembers.length > 4 && (
-            <View style={[styles.groupMemberAvatar, styles.extraMembersAvatar]}>
+            <View style={[styles.memberWrapper, styles.extraMembersAvatar]}>
               <Text style={styles.extraMembersText}>
                 +{groupMembers.length - 4}
               </Text>
             </View>
           )}
+        </View>
+        <View style={styles.actionButtonsRow}>
+          <Button
+            mode="contained"
+            icon="pencil"
+            textColor={PRIMARY_COLOR}
+            contentStyle={styles.buttonContent}
+            style={[styles.actionButton, styles.editButton]}
+            onPress={() => navigation.navigate('Split', {editGroup: group})}
+          >
+            Edit
+          </Button>
+          <Button
+            mode="contained"
+            icon="exit-to-app"
+            style={[styles.actionButton, styles.leaveButton]}
+            textColor={EXPENSE_COLOR}
+            contentStyle={styles.buttonContent}
+            onPress={async () => {
+              try {
+                Alert.alert(
+                  'Leave Group',
+                  'Are you sure you want to leave this group? You will be removed from future splits.',
+                  [
+                    {text: 'Cancel', style: 'cancel'},
+                    {
+                      text: 'Leave',
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          const userEmail = (user?.email || '').toLowerCase();
+                          if (!userEmail) {
+                            Alert.alert('Error', 'User not found');
+                            return;
+                          }
+                          const groupRef = firestore().collection('groups').doc(group.id);
+                          await groupRef.update({
+                            members: firestore.FieldValue.arrayRemove(userEmail),
+                            [`memberNames.${userEmail}`]: firestore.FieldValue.delete(),
+                          });
+                          Alert.alert('Left Group', 'You have left the group.');
+                          navigation.goBack();
+                        } catch (err) {
+                          Alert.alert('Error', 'Failed to leave group');
+                        }
+                      },
+                    },
+                  ],
+                );
+              } catch (e) {}
+            }}
+          >
+            Leave
+          </Button>
+          <Button
+            mode="contained"
+            icon="delete-outline"
+            style={[styles.actionButton, styles.deleteButton]}
+            textColor="#fff"
+            contentStyle={styles.buttonContent}
+            onPress={() => {
+              Alert.alert(
+                'Delete Group',
+                'Are you sure you want to delete this group and its splits? This cannot be undone.',
+                [
+                  {text: 'Cancel', style: 'cancel'},
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        // delete all splits under the group first
+                        const splitsRef = firestore()
+                          .collection('groups')
+                          .doc(group.id)
+                          .collection('splits');
+                        const snapshot = await splitsRef.get();
+                        const batch = firestore().batch();
+                        snapshot.forEach(doc => batch.delete(doc.ref));
+                        await batch.commit();
+                        // delete the group document
+                        await firestore().collection('groups').doc(group.id).delete();
+                        Alert.alert('Deleted', 'Group deleted successfully');
+                        navigation.goBack();
+                      } catch (err) {
+                        Alert.alert('Error', 'Failed to delete group');
+                      }
+                    },
+                  },
+                ],
+              );
+            }}
+          >
+            Delete
+          </Button>
         </View>
       </View>
     </Card>
@@ -729,11 +828,25 @@ const styles = StyleSheet.create({
   },
   groupMemberAvatars: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
     marginBottom: 10,
   },
   groupMemberAvatar: {
     borderWidth: 2,
     borderColor: '#fff',
+  },
+  memberWrapper: {
+    alignItems: 'center',
+    width: 64,
+    marginHorizontal: 4,
+  },
+  memberName: {
+    color: '#fff',
+    fontSize: 10,
+    marginTop: 4,
+    maxWidth: 56,
+    textAlign: 'center',
   },
   extraMembersAvatar: {
     backgroundColor: 'rgba(255,255,255,0.3)',
@@ -759,6 +872,29 @@ const styles = StyleSheet.create({
   lendingSummaryContent: {
     alignItems: 'center',
     padding: 15,
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  actionButton: {
+    flex: 1,
+    marginHorizontal: 8,
+    borderRadius: 12,
+  },
+  buttonContent: {
+    height: 44,
+  },
+  editButton: {
+    backgroundColor: '#fff',
+  },
+  leaveButton: {
+    backgroundColor: '#fff',
+  },
+  deleteButton: {
+    backgroundColor: '#2E3E8B',
   },
   lendingUserContainer: {
     flexDirection: 'row',
