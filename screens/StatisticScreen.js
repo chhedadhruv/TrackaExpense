@@ -177,6 +177,7 @@ const StatisticScreen = ({navigation}) => {
     const sorted = Array.from(aggregatedMap.values()).sort((a, b) => a.ts - b.ts);
     const last = sorted.slice(-8); // limit labels to reduce overlap
     const built = [];
+    const groupGap = 10;
     last.forEach((item, index) => {
       const showLabel = index % 2 === 0; // show every other label
       built.push({
@@ -190,8 +191,10 @@ const StatisticScreen = ({navigation}) => {
         built.push({value: item.income, label: '', frontColor: '#677CD2', spacing: 2});
       }
       if (item.expense > 0) {
-        built.push({value: item.expense, label: '', frontColor: '#E98852', spacing: 30});
+        built.push({value: item.expense, label: '', frontColor: '#E98852', spacing: 2});
       }
+      // add an invisible spacer bar to create margin between label groups
+      built.push({value: 0, label: '', frontColor: 'transparent', spacing: groupGap, showLabel: false});
     });
     setBarData(built);
   }, [filteredTransactions, timeRange]);
@@ -328,8 +331,9 @@ const StatisticScreen = ({navigation}) => {
                 color: '#888',
                 fontSize: 10,
                 textAlign: 'center',
-                width: 50,
-                marginTop: 12,
+                width: 46,
+                marginTop: 10,
+                marginHorizontal: 2,
                 fontFamily: 'Lato-Regular',
               }}
               noOfSections={3}
