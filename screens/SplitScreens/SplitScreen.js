@@ -114,7 +114,7 @@ const GROUP_CATEGORIES = [
     ),
   },
 ];
-const SplitScreen = ({navigation}) => {
+const SplitScreen = ({navigation, route}) => {
   const [groupName, setGroupName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [userDetails, setUserDetails] = useState(null);
@@ -123,9 +123,10 @@ const SplitScreen = ({navigation}) => {
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [category, setCategory] = useState(null);
   const [openCategoryDropdown, setOpenCategoryDropdown] = useState(false);
-  const [expandedGroupId, setExpandedGroupId] = useState(null);
+  
   const [editingGroupId, setEditingGroupId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [unregisteredName, setUnregisteredName] = useState('');
   const currentUser = auth().currentUser;
   // Fetch user's groups
   useEffect(() => {
@@ -146,7 +147,16 @@ const SplitScreen = ({navigation}) => {
                 .collection('users')
                 .where('email', '==', email)
                 .get();
-              return userSnapshot.docs[0]?.data() || {email};
+              if (!userSnapshot.empty) {
+                const userData = userSnapshot.docs[0].data();
+                return {
+                  email,
+                  name: userData.name || userData.displayName || groupData.memberNames?.[email] || null,
+                  userId: userSnapshot.docs[0].id,
+                  ...userData,
+                };
+              }
+              return {email, name: groupData.memberNames?.[email] || null};
             });
             const memberDetails = await Promise.all(memberPromises);
             return {
@@ -165,6 +175,39 @@ const SplitScreen = ({navigation}) => {
     };
     fetchGroups();
   }, [currentUser]);
+  // Handle deep-link edit from SplitGroupDetailScreen
+  useEffect(() => {
+    if (route?.params?.editGroupId && groups.length > 0) {
+      const target = groups.find(g => g.id === route.params.editGroupId);
+      if (target) {
+        handleEditGroup(target);
+        // clear param so it doesn't re-trigger
+        navigation.setParams({ editGroupId: undefined });
+      }
+    }
+  }, [route?.params?.editGroupId, groups]);
+
+  // Handle editGroup parameter from SplitGroupDetailScreen
+  useEffect(() => {
+    if (route?.params?.editGroup && groups.length > 0) {
+      const editGroup = route.params.editGroup;
+      handleEditGroup(editGroup);
+      // clear param so it doesn't re-trigger
+      navigation.setParams({ editGroup: undefined });
+    }
+  }, [route?.params?.editGroup, groups]);
+
+  // Handle editGroup parameter when it's passed but groups haven't loaded yet
+  useEffect(() => {
+    if (route?.params?.editGroup && !loading && groups.length === 0) {
+      // If we have editGroup param but no groups loaded, it means we're editing a group
+      // that might not be in the current user's groups list, so handle it directly
+      const editGroup = route.params.editGroup;
+      handleEditGroup(editGroup);
+      // clear param so it doesn't re-trigger
+      navigation.setParams({ editGroup: undefined });
+    }
+  }, [route?.params?.editGroup, loading, groups.length]);
   // Fetch user by email or phone
   const fetchUserByEmailOrPhone = async query => {
     try {
@@ -201,6 +244,19 @@ const SplitScreen = ({navigation}) => {
       Alert.alert('Cannot Add Yourself', 'You cannot add yourself to the group. You are automatically included as the group creator.');
       return;
     }
+    // If user is not registered, require a name before adding
+    const isUnregistered = user.name === 'Not Registered';
+    if (isUnregistered) {
+      const trimmed = (unregisteredName || '').trim();
+      if (!trimmed) {
+        Alert.alert('Name required', 'Please enter a name for this contact before adding.');
+        return;
+      }
+      user = { ...user, name: trimmed };
+    }
+    
+    const wasAdded = !selectedUsers.some(selected => selected.email === user.email);
+    
     setSelectedUsers(prev => {
       const isSelected = prev.some(selected => selected.email === user.email);
       if (isSelected) {
@@ -209,7 +265,17 @@ const SplitScreen = ({navigation}) => {
         return [...prev, user];
       }
     });
+    
+    // Clear search and user details after adding
+    if (wasAdded) {
+      setSearchQuery('');
+      setUserDetails(null);
+      setUnregisteredName('');
+    }
   };
+  
+  // (name edit functionality removed per revert)
+  
   // Edit group members
   const handleEditGroup = async (group) => {
     try {
@@ -247,6 +313,15 @@ const SplitScreen = ({navigation}) => {
       return;
     }
     try {
+      const memberNames = selectedUsers.reduce((acc, u) => {
+        if (u.email && u.name) {
+          acc[u.email] = u.name;
+        }
+        return acc;
+      }, {});
+      if (currentUser?.email && (currentUser.displayName || currentUser.email)) {
+        memberNames[currentUser.email] = currentUser.displayName || 'You';
+      }
       const groupData = {
         name: groupName,
         category: category,
@@ -256,6 +331,7 @@ const SplitScreen = ({navigation}) => {
         ],
         createdBy: currentUser.uid,
         updatedAt: firestore.FieldValue.serverTimestamp(),
+        memberNames,
       };
       if (editingGroupId) {
         // Update existing group
@@ -266,7 +342,11 @@ const SplitScreen = ({navigation}) => {
         // Update local state
         setGroups(prev => prev.map(group => 
           group.id === editingGroupId 
-            ? { ...group, ...groupData, memberDetails: [...selectedUsers, { email: currentUser.email, name: currentUser.displayName || 'You' }] }
+            ? { 
+                ...group, 
+                ...groupData, 
+                memberDetails: [...selectedUsers, { email: currentUser.email, name: currentUser.displayName || 'You' }]
+              }
             : group
         ));
         Alert.alert('Success', 'Group updated successfully');
@@ -283,7 +363,11 @@ const SplitScreen = ({navigation}) => {
               .collection('users')
               .where('email', '==', user.email)
               .get();
-            return userSnapshot.docs[0]?.data() || user;
+            const data = userSnapshot.docs[0]?.data();
+            if (data) {
+              return { email: user.email, name: data.name || data.displayName || null, ...data };
+            }
+            return { email: user.email, name: memberNames[user.email] || user.name || null };
           },
         );
         const memberDetails = await Promise.all(memberPromises);
@@ -343,6 +427,17 @@ const SplitScreen = ({navigation}) => {
         {user.email === currentUser.email && (
           <Text style={styles.youLabel}>(You - Group Creator)</Text>
         )}
+        {user.name === 'Not Registered' && (
+          <View style={styles.nameInputContainer}>
+            <TextInput
+              style={styles.nameInput}
+              placeholder="Enter name for this contact"
+              placeholderTextColor="#999"
+              value={unregisteredName}
+              onChangeText={setUnregisteredName}
+            />
+          </View>
+        )}
       </View>
       {withCheckbox && user.email !== currentUser.email && (
         <Checkbox
@@ -361,7 +456,6 @@ const SplitScreen = ({navigation}) => {
     const categoryItem = GROUP_CATEGORIES.find(
       cat => cat.value === group.category,
     );
-    const isExpanded = expandedGroupId === group.id;
     const GroupCardIcon = () => {
       if (categoryItem) {
         // Get the icon name from the category item based on the label
@@ -404,7 +498,17 @@ const SplitScreen = ({navigation}) => {
       <Card key={group.id} style={styles.groupCard}>
         <TouchableOpacity
           style={styles.groupCardContent}
-          onPress={() => setExpandedGroupId(isExpanded ? null : group.id)}>
+          onPress={() =>
+            navigation.navigate('SplitGroupDetail', {
+              group: {
+                id: group.id,
+                name: group.name,
+                category: group.category,
+                members: group.members,
+                memberDetails: group.memberDetails,
+              },
+            })
+          }>
           <View style={styles.groupCardHeader}>
             <View style={styles.groupCardLeft}>
               <View style={styles.categoryIconContainer}>
@@ -420,102 +524,7 @@ const SplitScreen = ({navigation}) => {
                 </View>
               </View>
             </View>
-            <View style={styles.groupCardRight}>
-              <TouchableOpacity
-                style={styles.editGroupButton}
-                onPress={e => {
-                  e.stopPropagation();
-                  handleEditGroup(group);
-                }}>
-                <MaterialCommunityIcons
-                  name="pencil"
-                  size={18}
-                  color={PRIMARY_COLOR}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.deleteGroupButton}
-                onPress={e => {
-                  e.stopPropagation();
-                  deleteGroup(group.id);
-                }}>
-                <MaterialCommunityIcons
-                  name="trash-can-outline"
-                  size={18}
-                  color={EXPENSE_COLOR}
-                />
-              </TouchableOpacity>
-              <MaterialCommunityIcons
-                name={isExpanded ? "chevron-up" : "chevron-down"}
-                size={24}
-                color="#666"
-              />
-            </View>
           </View>
-          {isExpanded && (
-            <View style={styles.expandedGroupDetails}>
-              <View style={styles.membersSection}>
-                <Text style={styles.expandedDetailTitle}>Members</Text>
-                <View style={styles.memberAvatarsContainer}>
-                  {group.memberDetails.slice(0, 4).map((member, index) => (
-                    <View key={member.email} style={styles.memberAvatarWrapper}>
-                      <UserAvatar 
-                        size={36} 
-                        name={member.name || member.email} 
-                        bgColor={PRIMARY_COLOR}
-                        style={styles.memberAvatar}
-                      />
-                      <Text style={styles.memberNameText} numberOfLines={1}>
-                        {member.name || member.email.split('@')[0]}
-                      </Text>
-                    </View>
-                  ))}
-                  {group.memberDetails.length > 4 && (
-                    <View style={styles.moreMembersIndicator}>
-                      <Text style={styles.moreMembersText}>
-                        +{group.memberDetails.length - 4}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-              <View style={styles.groupMetaInfo}>
-                <View style={styles.metaItem}>
-                  <MaterialCommunityIcons name="tag" size={16} color="#666" />
-                  <Text style={styles.metaText}>{group.category}</Text>
-                </View>
-                <View style={styles.metaItem}>
-                  <MaterialCommunityIcons name="calendar" size={16} color="#666" />
-                  <Text style={styles.metaText}>
-                    {group.createdAt
-                      ? new Date(group.createdAt.seconds * 1000).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric'
-                        })
-                      : 'Unknown Date'}
-                  </Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={styles.viewGroupButton}
-                onPress={() =>
-                  navigation.navigate('SplitGroupDetail', {
-                    group: {
-                      id: group.id,
-                      name: group.name,
-                      category: group.category,
-                      members: group.members,
-                      memberDetails: group.memberDetails,
-                    },
-                  })
-                }>
-                <MaterialCommunityIcons name="eye" size={18} color="#FFFFFF" />
-                <Text style={styles.viewGroupButtonText}>View Group Details</Text>
-                <MaterialCommunityIcons name="arrow-right" size={16} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
-          )}
         </TouchableOpacity>
       </Card>
     );
@@ -834,6 +843,20 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: 14,
     color: '#666',
+    fontFamily: 'Lato-Regular',
+  },
+  nameInputContainer: {
+    marginTop: 8,
+  },
+  nameInput: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#2C2C2C',
     fontFamily: 'Lato-Regular',
   },
   addUserButton: {
