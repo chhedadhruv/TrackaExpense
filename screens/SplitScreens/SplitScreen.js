@@ -128,6 +128,7 @@ const SplitScreen = ({navigation, route}) => {
   const [loading, setLoading] = useState(true);
   const [unregisteredName, setUnregisteredName] = useState('');
   const [splitHistory, setSplitHistory] = useState([]);
+  const [invitationsCount, setInvitationsCount] = useState(0);
   const currentUser = auth().currentUser;
   // Fetch user's groups
   useEffect(() => {
@@ -176,6 +177,24 @@ const SplitScreen = ({navigation, route}) => {
     };
     fetchGroups();
   }, [currentUser]);
+
+  // Subscribe to pending invitations count for badge
+  useEffect(() => {
+    if (!currentUser?.email) return;
+    const unsub = firestore()
+      .collection('invitations')
+      .where('email', '==', currentUser.email)
+      .where('status', '==', 'pending')
+      .onSnapshot(
+        snapshot => {
+          setInvitationsCount(snapshot.size);
+        },
+        () => {
+          // non-blocking: ignore errors
+        },
+      );
+    return () => unsub && unsub();
+  }, [currentUser?.email]);
   // Handle deep-link edit from SplitGroupDetailScreen
   useEffect(() => {
     if (route?.params?.editGroupId && groups.length > 0) {
@@ -233,26 +252,29 @@ const SplitScreen = ({navigation, route}) => {
   const fetchUserByEmailOrPhone = async query => {
     try {
       // Check if query is a phone number (contains only digits)
-      const isPhoneNumber = /^\d+$/.test(query);
+      const trimmed = (query || '').trim();
+      const isPhoneNumber = /^\d+$/.test(trimmed);
       let userSnapshot;
       if (isPhoneNumber) {
         // Search by phone number with exact match
         userSnapshot = await firestore()
           .collection('users')
-          .where('phone', '==', query)
+          .where('phone', '==', trimmed)
           .get();
-      } else if (query.includes('@')) {
+      } else if (trimmed.includes('@')) {
         // Search by email
+        const lowerEmail = trimmed.toLowerCase();
         userSnapshot = await firestore()
           .collection('users')
-          .where('email', '==', query.trim())
+          .where('email', '==', lowerEmail)
           .get();
       }
       if (!userSnapshot.empty) {
         const user = userSnapshot.docs[0].data();
         setUserDetails(user);
       } else {
-        setUserDetails({name: 'Not Registered', email: query});
+        const fallbackEmail = trimmed.includes('@') ? trimmed.toLowerCase() : trimmed;
+        setUserDetails({name: 'Not Registered', email: fallbackEmail});
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to fetch user');
@@ -344,16 +366,18 @@ const SplitScreen = ({navigation, route}) => {
       if (currentUser?.email && (currentUser.displayName || currentUser.email)) {
         memberNames[currentUser.email] = currentUser.displayName || 'You';
       }
+      const inviteeEmails = selectedUsers.map(user => user.email);
       const groupData = {
         name: groupName,
         category: category,
         members: [
-          ...selectedUsers.map(user => user.email),
+          // only creator is immediately a member; others join on accept
           currentUser.email,
         ],
         createdBy: currentUser.uid,
         updatedAt: firestore.FieldValue.serverTimestamp(),
         memberNames,
+        pendingInvites: inviteeEmails,
       };
       if (editingGroupId) {
         // Update existing group
@@ -404,8 +428,26 @@ const SplitScreen = ({navigation, route}) => {
         const groupRef = await firestore()
           .collection('groups')
           .add(groupData);
+        // Create invitations for each selected user (by email)
+        const inviterName = currentUser.displayName || currentUser.email;
+        const batch = firestore().batch();
+        inviteeEmails.forEach(email => {
+          const inviteRef = firestore().collection('invitations').doc();
+          batch.set(inviteRef, {
+            email,
+            groupId: groupRef.id,
+            groupName: groupName,
+            category,
+            inviterUid: currentUser.uid,
+            inviterEmail: currentUser.email,
+            inviterName,
+            status: 'pending',
+            createdAt: firestore.Timestamp.fromDate(new Date()),
+          });
+        });
+        await batch.commit();
         // Fetch member details for the new group
-        const memberPromises = [...selectedUsers, {email: currentUser.email}].map(
+        const memberPromises = [{email: currentUser.email}].map(
           async user => {
             const userSnapshot = await firestore()
               .collection('users')
@@ -784,6 +826,24 @@ const SplitScreen = ({navigation, route}) => {
                   onPress={() => navigation.navigate('Invitations')}
                 >
                   <MaterialCommunityIcons name="account-multiple-plus-outline" size={20} color="#FFFFFF" />
+                  {invitationsCount > 0 && (
+                    <View style={{
+                      position: 'absolute',
+                      top: -6,
+                      right: -6,
+                      minWidth: 18,
+                      height: 18,
+                      borderRadius: 9,
+                      backgroundColor: '#FF3B30',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      paddingHorizontal: 3,
+                    }}>
+                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }} numberOfLines={1}>
+                        {invitationsCount > 99 ? '99+' : String(invitationsCount)}
+                      </Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.iconActionButton}
