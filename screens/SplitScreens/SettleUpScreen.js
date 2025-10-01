@@ -200,7 +200,14 @@ const SettleUpScreen = ({route, navigation}) => {
                     selectedUser?.email === user.email &&
                       styles.selectedUserItem,
                   ]}
-                  onPress={() => onSelect(user)}>
+                  onPress={() => {
+                    // If user is already selected, unselect them; otherwise select them
+                    if (selectedUser?.email === user.email) {
+                      onSelect(null);
+                    } else {
+                      onSelect(user);
+                    }
+                  }}>
                   <UserAvatar
                     size={50}
                     name={user.name}

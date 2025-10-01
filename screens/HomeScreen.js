@@ -349,7 +349,7 @@ const HomeScreen = ({navigation}) => {
             <View>
               <Text style={styles.transactionsHeaderText}>Recent Transactions</Text>
               <Text style={styles.transactionsSubHeaderText}>
-                {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
+                {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}
               </Text>
             </View>
             <TouchableOpacity
@@ -365,9 +365,7 @@ const HomeScreen = ({navigation}) => {
           </View>
           <View style={styles.transactionsList}>
             {filteredTransactions.length > 0 ? (
-              filteredTransactions
-                .slice(0, showAll ? filteredTransactions.length : 4)
-                .map(transaction => (
+              filteredTransactions.map(transaction => (
                   <Card
                     style={styles.transactionsCard}
                     key={transaction.id}
@@ -482,8 +480,17 @@ const HomeScreen = ({navigation}) => {
             ) : (
               <View style={styles.emptyState}>
                 <MaterialCommunityIcons name="receipt-text-outline" size={48} color="#CBD3EE" />
-                <Text style={styles.emptyStateText}>No transactions yet</Text>
-                <Text style={styles.emptyStateSubText}>Add your first transaction to get started</Text>
+                {transactions.length === 0 ? (
+                  <>
+                    <Text style={styles.emptyStateText}>No transactions yet</Text>
+                    <Text style={styles.emptyStateSubText}>Add your first transaction to get started</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.emptyStateText}>No transactions in this time range</Text>
+                    <Text style={styles.emptyStateSubText}>Try changing the time range above to see older transactions</Text>
+                  </>
+                )}
               </View>
             )}
           </View>

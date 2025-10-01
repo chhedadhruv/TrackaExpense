@@ -445,18 +445,32 @@ const SignupScreen = ({navigation}) => {
               </View>
 
               {Platform.OS === 'ios' && isAppleSignInAvailable ? (
-                <TouchableOpacity
-                  style={styles.appleButton}
-                  onPress={handleAppleSignUp}
-                  disabled={loading}>
-                  <MaterialCommunityIcons
-                    name="apple"
-                    size={20}
-                    color="#FFFFFF"
-                    style={styles.appleIcon}
-                  />
-                  <Text style={styles.appleButtonText}>Sign up with Apple</Text>
-                </TouchableOpacity>
+                <>
+                  <TouchableOpacity
+                    style={styles.appleButton}
+                    onPress={handleAppleSignUp}
+                    disabled={loading}>
+                    <MaterialCommunityIcons
+                      name="apple"
+                      size={20}
+                      color="#FFFFFF"
+                      style={styles.appleIcon}
+                    />
+                    <Text style={styles.appleButtonText}>Sign up with Apple</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.googleButton}
+                    onPress={handleGoogleSignUp}
+                    disabled={loading}>
+                    <Image
+                      source={{
+                        uri: 'https://developers.google.com/identity/images/g-logo.png',
+                      }}
+                      style={styles.googleIcon}
+                    />
+                    <Text style={styles.googleButtonText}>Sign up with Google</Text>
+                  </TouchableOpacity>
+                </>
               ) : (
                 <TouchableOpacity
                   style={styles.googleButton}
