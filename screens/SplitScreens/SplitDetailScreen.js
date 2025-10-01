@@ -7,6 +7,7 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
+import SplitNotificationService from '../../services/SplitNotificationService';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
@@ -35,13 +36,15 @@ const SplitDetailScreen = ({route, navigation}) => {
         .collection('splits')
         .doc(split.id)
         .delete();
+      
+      let actorName = currentUser?.email?.split('@')[0] || 'Someone';
       try {
-        let actorName = currentUser?.email?.split('@')[0] || 'Someone';
-        try {
-          const userDoc = await firestore().collection('users').doc(currentUser.uid).get();
-          const profileName = userDoc.data()?.name;
-          if (profileName && profileName.toLowerCase() !== 'me') actorName = profileName;
-        } catch (_) {}
+        const userDoc = await firestore().collection('users').doc(currentUser.uid).get();
+        const profileName = userDoc.data()?.name;
+        if (profileName && profileName.toLowerCase() !== 'me') actorName = profileName;
+      } catch (_) {}
+      
+      try {
         await firestore()
           .collection('users')
           .doc(currentUser.uid)
@@ -94,6 +97,28 @@ const SplitDetailScreen = ({route, navigation}) => {
             createdAt: firestore.FieldValue.serverTimestamp(),
           });
       } catch (_) {}
+      
+      // Send notification to group members
+      try {
+        // Fetch group data to get members list
+        const groupDoc = await firestore().collection('groups').doc(group.id).get();
+        const groupData = groupDoc.data();
+        
+        if (groupData && groupData.members) {
+          await SplitNotificationService.notifySplitDeleted(
+            split,
+            { 
+              id: group.id, 
+              name: group.name || groupData.name, 
+              members: groupData.members 
+            },
+            actorName
+          );
+        }
+      } catch (error) {
+        console.error('Failed to send split deleted notification:', error);
+      }
+      
       setMenuVisible(false);
       Alert.alert('Deleted', 'Split deleted successfully');
       navigation.goBack();
