@@ -1,8 +1,10 @@
 import messaging from '@react-native-firebase/messaging';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
-import notifee, {AndroidImportance} from '@notifee/react-native';
+import notifee, {AndroidImportance, EventType} from '@notifee/react-native';
 import {Platform, PermissionsAndroid, Alert} from 'react-native';
+import * as RootNavigation from '../navigation/Routes';
+import {NOTIFICATION_SERVER_URL, EXPO_PUBLIC_NOTIFICATION_SERVER_URL} from '@env';
 
 class NotificationService {
   constructor() {
@@ -18,6 +20,7 @@ class NotificationService {
       await this.requestPermission();
       await this.getFCMToken();
       await this.setupMessageHandlers();
+      await this.setupNotifeeEventHandlers();
       await this.saveTokenToFirestore();
       this.isInitialized = true;
       console.log('NotificationService initialized successfully');
@@ -100,7 +103,7 @@ class NotificationService {
 
     // Handle notification tap
     messaging().onNotificationOpenedApp(remoteMessage => {
-      this.handleNotificationTap(remoteMessage);
+      this.handleNotificationTap(remoteMessage.data);
     });
 
     // Handle notification tap when app is closed
@@ -108,9 +111,26 @@ class NotificationService {
       .getInitialNotification()
       .then(remoteMessage => {
         if (remoteMessage) {
-          this.handleNotificationTap(remoteMessage);
+          this.handleNotificationTap(remoteMessage.data);
         }
       });
+  }
+
+  // Setup notifee event handlers for local notifications
+  setupNotifeeEventHandlers() {
+    // Handle notification press events
+    notifee.onForegroundEvent(({ type, detail }) => {
+      if (type === EventType.PRESS) {
+        this.handleNotificationTap(detail.notification?.data);
+      }
+    });
+
+    // Handle background notification press
+    notifee.onBackgroundEvent(async ({ type, detail }) => {
+      if (type === EventType.PRESS) {
+        this.handleNotificationTap(detail.notification?.data);
+      }
+    });
   }
 
   // Display a local notification when app is in foreground
@@ -155,27 +175,86 @@ class NotificationService {
   }
 
   // Handle notification tap
-  handleNotificationTap(remoteMessage) {
-    const {data} = remoteMessage;
-    if (data) {
+  handleNotificationTap(data) {
+    if (!data) return;
+
+    try {
       // Navigate based on notification type
       switch (data.type) {
+        case 'split_invite':
+        case 'group_created':
+          // Navigate to Invitations screen for new group invites
+          RootNavigation.navigate('Split', {
+            screen: 'Invitations',
+          });
+          break;
+
         case 'split_created':
         case 'split_updated':
         case 'split_deleted':
-        case 'split_invite':
+        case 'settlement_made':
+          // Navigate to split group detail if we have groupId
+          if (data.groupId) {
+            // First navigate to Split tab, then to the group detail
+            RootNavigation.navigate('Split', {
+              screen: 'SplitGroupDetail',
+              params: {
+                group: {
+                  id: data.groupId,
+                  name: data.groupName || 'Split Group',
+                },
+              },
+            });
+          }
+          break;
+
+        case 'user_joined_group':
+        case 'user_left_group':
+        case 'group_updated':
           // Navigate to split group detail
-          // This will be handled by the navigation system
+          if (data.groupId) {
+            RootNavigation.navigate('Split', {
+              screen: 'SplitGroupDetail',
+              params: {
+                group: {
+                  id: data.groupId,
+                  name: data.groupName || 'Split Group',
+                },
+              },
+            });
+          }
           break;
+
+        case 'group_deleted':
+          // Navigate to main split screen
+          RootNavigation.navigate('Split', {
+            screen: 'Split',
+          });
+          break;
+
         case 'reminder':
-          // Navigate to add expense/income screen
+          // Navigate to home screen
+          RootNavigation.navigate('Home', {
+            screen: 'Home',
+          });
           break;
+
         case 'fun_notification':
           // Navigate to home screen
+          RootNavigation.navigate('Home', {
+            screen: 'Home',
+          });
           break;
+
         default:
+          // Default to home screen
+          RootNavigation.navigate('Home', {
+            screen: 'Home',
+          });
           break;
       }
+    } catch (error) {
+      console.error('Failed to handle notification tap:', error);
     }
   }
 
@@ -254,7 +333,7 @@ class NotificationService {
   // Attempt to send push via backend endpoint; returns true on success
   async trySendPushViaBackend(tokens, notificationData) {
     try {
-      const endpoint = process.env.NOTIFICATION_SERVER_URL || process.env.EXPO_PUBLIC_NOTIFICATION_SERVER_URL || '';
+      const endpoint = NOTIFICATION_SERVER_URL || EXPO_PUBLIC_NOTIFICATION_SERVER_URL || '';
       if (!endpoint) {
         return false;
       }
@@ -273,6 +352,7 @@ class NotificationService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+      
       if (!res.ok) {
         return false;
       }

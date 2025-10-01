@@ -109,7 +109,7 @@ const AuthProvider = ({ children }) => {
           }
         },
         register: async (email, password, name, phone) => {
-          if (!email || !password || !name || !phone) {
+          if (!email || !password || !name) {
             Alert.alert('Missing Information', 'All fields are required to create your account.', [{ text: 'OK' }]);
             return;
           }
