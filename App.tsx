@@ -17,7 +17,6 @@ const App: React.FC = () => {
         const token = await NotificationService.getFCMToken();
         if (token) {
           console.log('FCM token:', token);
-          Alert.alert('FCM Token', token);
         }
       } catch (e) {
         console.log('FCM setup error:', e);
