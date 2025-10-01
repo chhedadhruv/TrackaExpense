@@ -16,6 +16,7 @@ import moment from 'moment';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {AuthContext} from '../../navigation/AuthProvider';
+import SplitNotificationService from '../../services/SplitNotificationService';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
@@ -124,6 +125,17 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
         .collection('splits')
         .doc(split.id)
         .delete();
+        try {
+          console.log('Sending split deleted notification...');
+          await SplitNotificationService.notifySplitDeleted(
+            split,
+            { id: group.id, name: group.name, members: groupMembers.map(m => m.email) },
+            user?.displayName || user?.email?.split('@')[0] || 'Someone'
+          );
+          console.log('Split deleted notification sent successfully');
+        } catch (error) {
+          console.log('Failed to send split deleted notification:', error);
+        }
       // Refresh splits after deletion
       fetchGroupSplits();
       setMenuVisibleForSplit(null);
