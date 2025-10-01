@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Platform, Alert } from 'react-native';
+import { Platform } from 'react-native';
 import Providers from './navigation';
 import { checkAllPermissions } from './utils/Permissions';
 import NotificationService from './services/NotificationService';
@@ -14,12 +14,9 @@ const App: React.FC = () => {
     (async () => {
       try {
         await NotificationService.initialize();
-        const token = await NotificationService.getFCMToken();
-        if (token) {
-          console.log('FCM token:', token);
-        }
+        await NotificationService.getFCMToken();
       } catch (e) {
-        console.log('FCM setup error:', e);
+        // Silent error handling
       }
     })();
   }, []);
