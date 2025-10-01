@@ -7,16 +7,47 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
+import {useFocusEffect} from '@react-navigation/native';
 import SplitNotificationService from '../../services/SplitNotificationService';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
 const SplitDetailScreen = ({route, navigation}) => {
-  const {split, group, transaction} = route.params;
+  const {split: initialSplit, group, transaction} = route.params;
   const currentUser = auth().currentUser;
+  const [split, setSplit] = React.useState(initialSplit);
+  const [loading, setLoading] = React.useState(false);
   const isSettlement = split.type === 'settlement';
   const [menuVisible, setMenuVisible] = React.useState(false);
+  // Fetch the latest split data from Firestore
+  const fetchSplitData = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const splitDoc = await firestore()
+        .collection('groups')
+        .doc(group.id)
+        .collection('splits')
+        .doc(initialSplit.id)
+        .get();
+      
+      if (splitDoc.exists) {
+        setSplit({id: splitDoc.id, ...splitDoc.data()});
+      }
+    } catch (error) {
+      console.error('Failed to fetch split data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [group.id, initialSplit.id]);
+
+  // Refetch split data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchSplitData();
+    }, [fetchSplitData])
+  );
+
   const confirmAndDelete = () => {
     Alert.alert(
       'Delete Split',
