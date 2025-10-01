@@ -13,6 +13,7 @@ import UserAvatar from 'react-native-user-avatar';
 import firestore from '@react-native-firebase/firestore';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import auth from '@react-native-firebase/auth';
+import SplitNotificationService from '../../services/SplitNotificationService';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 const PRIMARY_COLOR = '#677CD2';
@@ -82,6 +83,13 @@ const SettleUpScreen = ({route, navigation}) => {
         .doc(group.id)
         .collection('splits')
         .add(settlementSplit);
+      try {
+        await SplitNotificationService.notifySettlementMade(
+          { id: group.id, name: group.name, members: (group.members || groupMembers || []).map(m => m.email || m) },
+          { id: splitRef.id, amount: settlementAmount },
+          actorNameResolved
+        );
+      } catch (_) {}
       // Only update balance if the current user is involved (no transaction creation)
       try {
         const actorName = actorNameResolved;

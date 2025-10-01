@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 import Providers from './navigation';
 import { checkAllPermissions } from './utils/Permissions';
+import NotificationService from './services/NotificationService';
 
 const App: React.FC = () => {
   useEffect(() => {
@@ -9,6 +10,19 @@ const App: React.FC = () => {
     if (Platform.OS === 'android') {
       checkAllPermissions();
     }
+
+    (async () => {
+      try {
+        await NotificationService.initialize();
+        const token = await NotificationService.getFCMToken();
+        if (token) {
+          console.log('FCM token:', token);
+          Alert.alert('FCM Token', token);
+        }
+      } catch (e) {
+        console.log('FCM setup error:', e);
+      }
+    })();
   }, []);
 
   return <Providers />;

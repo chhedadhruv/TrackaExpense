@@ -17,6 +17,7 @@ import UserAvatar from 'react-native-user-avatar';
 import DropDownPicker from 'react-native-dropdown-picker';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
+import SplitNotificationService from '../../services/SplitNotificationService';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
@@ -421,6 +422,13 @@ const SplitScreen = ({navigation, route}) => {
           const history = historySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setSplitHistory(history);
         } catch (_) {}
+        try {
+          await SplitNotificationService.notifyGroupUpdated(
+            { id: editingGroupId, name: groupName, category, members: [currentUser.email, ...inviteeEmails] },
+            currentUser.displayName || currentUser.email?.split('@')[0] || 'Someone',
+            {}
+          );
+        } catch (_) {}
         Alert.alert('Success', 'Group updated successfully');
       } else {
         // Create new group
@@ -446,6 +454,19 @@ const SplitScreen = ({navigation, route}) => {
           });
         });
         await batch.commit();
+        try {
+          await SplitNotificationService.notifyGroupCreated(
+            { id: groupRef.id, name: groupName, category, pendingInvites: inviteeEmails },
+            currentUser.displayName || currentUser.email?.split('@')[0] || 'Someone'
+          );
+          for (const email of inviteeEmails) {
+            await SplitNotificationService.notifySplitInvite(
+              { id: groupRef.id, name: groupName, category },
+              currentUser.displayName || currentUser.email?.split('@')[0] || 'Someone',
+              email
+            );
+          }
+        } catch (_) {}
         // Fetch member details for the new group
         const memberPromises = [{email: currentUser.email}].map(
           async user => {

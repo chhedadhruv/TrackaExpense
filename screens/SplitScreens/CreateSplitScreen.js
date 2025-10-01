@@ -18,6 +18,7 @@ import {DatePickerModal} from 'react-native-paper-dates';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
+import SplitNotificationService from '../../services/SplitNotificationService';
 const {width} = Dimensions.get('window');
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
@@ -317,6 +318,21 @@ const CreateSplitScreen = ({route, navigation}) => {
         splitRef = splitsCollection.doc(split.id);
         await splitRef.update(splitData);
         try {
+          const groupDataForNotify = {
+            id: group.id,
+            name: group.name,
+            members: groupMembers.map(m => m.email),
+          };
+          await SplitNotificationService.notifySplitUpdated(
+            { id: split.id, ...splitData },
+            groupDataForNotify,
+            actorNameResolved,
+            {}
+          );
+        } catch (error) {
+          console.log('Failed to send split updated notification:', error);
+        }
+        try {
           // Build change set for audit
           const changeItems = [];
           if (split.title !== splitData.title) {
@@ -423,6 +439,20 @@ const CreateSplitScreen = ({route, navigation}) => {
       } else {
         // Add new split
         splitRef = await splitsCollection.add(splitData);
+        try {
+          const groupDataForNotify = {
+            id: group.id,
+            name: group.name,
+            members: groupMembers.map(m => m.email),
+          };
+          await SplitNotificationService.notifySplitCreated(
+            { id: splitRef.id, ...splitData },
+            groupDataForNotify,
+            actorNameResolved
+          );
+        } catch (error) {
+          console.log('Failed to send split created notification:', error);
+        }
         try {
           const actorName = actorNameResolved;
           await firestore()

@@ -1174,6 +1174,9 @@ PODS:
   - Firebase/Firestore (11.5.0):
     - Firebase/CoreOnly
     - FirebaseFirestore (~> 11.5.0)
+  - Firebase/Messaging (11.5.0):
+    - Firebase/CoreOnly
+    - FirebaseMessaging (~> 11.5.0)
   - Firebase/Storage (11.5.0):
     - Firebase/CoreOnly
     - FirebaseStorage (~> 11.5.0)
@@ -1216,6 +1219,20 @@ PODS:
     - gRPC-Core (~> 1.65.0)
     - leveldb-library (~> 1.22)
     - nanopb (~> 3.30910.0)
+  - FirebaseInstallations (11.5.0):
+    - FirebaseCore (= 11.5)
+    - GoogleUtilities/Environment (~> 8.0)
+    - GoogleUtilities/UserDefaults (~> 8.0)
+    - PromisesObjC (~> 2.4)
+  - FirebaseMessaging (11.5.0):
+    - FirebaseCore (= 11.5)
+    - FirebaseInstallations (~> 11.0)
+    - GoogleDataTransport (~> 10.0)
+    - GoogleUtilities/AppDelegateSwizzler (~> 8.0)
+    - GoogleUtilities/Environment (~> 8.0)
+    - GoogleUtilities/Reachability (~> 8.0)
+    - GoogleUtilities/UserDefaults (~> 8.0)
+    - nanopb (~> 3.30910.0)
   - FirebaseSharedSwift (11.15.0)
   - FirebaseStorage (11.5.0):
     - FirebaseAppCheckInterop (~> 11.0)
@@ -1226,6 +1243,9 @@ PODS:
     - GTMSessionFetcher/Core (< 5.0, >= 3.4)
   - fmt (9.1.0)
   - glog (0.3.5)
+  - GoogleDataTransport (10.1.0):
+    - nanopb (~> 3.30910.0)
+    - PromisesObjC (~> 2.4)
   - GoogleSignIn (9.0.0):
     - AppAuth (~> 2.0)
     - AppCheckCore (~> 11.0)
@@ -2921,6 +2941,11 @@ PODS:
     - Firebase/Firestore (= 11.5.0)
     - React-Core
     - RNFBApp
+  - RNFBMessaging (21.6.1):
+    - Firebase/Messaging (= 11.5.0)
+    - FirebaseCoreExtension
+    - React-Core
+    - RNFBApp
   - RNFBStorage (21.6.1):
     - Firebase/Storage (= 11.5.0)
     - React-Core
@@ -2950,6 +2975,11 @@ PODS:
     - Yoga
   - RNGoogleSignin (16.0.0):
     - GoogleSignIn (~> 9.0)
+    - React-Core
+  - RNNotifee (9.1.8):
+    - React-Core
+    - RNNotifee/NotifeeCore (= 9.1.8)
+  - RNNotifee/NotifeeCore (9.1.8):
     - React-Core
   - RNScreens (4.3.0):
     - DoubleConversion
@@ -3094,10 +3124,12 @@ DEPENDENCIES:
   - "RNFBApp (from `../node_modules/@react-native-firebase/app`)"
   - "RNFBAuth (from `../node_modules/@react-native-firebase/auth`)"
   - "RNFBFirestore (from `../node_modules/@react-native-firebase/firestore`)"
+  - "RNFBMessaging (from `../node_modules/@react-native-firebase/messaging`)"
   - "RNFBStorage (from `../node_modules/@react-native-firebase/storage`)"
   - RNFS (from `../node_modules/react-native-fs`)
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - "RNGoogleSignin (from `../node_modules/@react-native-google-signin/google-signin`)"
+  - "RNNotifee (from `../node_modules/@notifee/react-native`)"
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNShare (from `../node_modules/react-native-share`)
   - RNSVG (from `../node_modules/react-native-svg`)
@@ -3119,8 +3151,11 @@ SPEC REPOS:
     - FirebaseCoreInternal
     - FirebaseFirestore
     - FirebaseFirestoreInternal
+    - FirebaseInstallations
+    - FirebaseMessaging
     - FirebaseSharedSwift
     - FirebaseStorage
+    - GoogleDataTransport
     - GoogleSignIn
     - GoogleUtilities
     - "gRPC-C++"
@@ -3277,6 +3312,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-firebase/auth"
   RNFBFirestore:
     :path: "../node_modules/@react-native-firebase/firestore"
+  RNFBMessaging:
+    :path: "../node_modules/@react-native-firebase/messaging"
   RNFBStorage:
     :path: "../node_modules/@react-native-firebase/storage"
   RNFS:
@@ -3285,6 +3322,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-gesture-handler"
   RNGoogleSignin:
     :path: "../node_modules/@react-native-google-signin/google-signin"
+  RNNotifee:
+    :path: "../node_modules/@notifee/react-native"
   RNScreens:
     :path: "../node_modules/react-native-screens"
   RNShare:
@@ -3314,10 +3353,13 @@ SPEC CHECKSUMS:
   FirebaseCoreInternal: f47dd28ae7782e6a4738aad3106071a8fe0af604
   FirebaseFirestore: 3f59cb7b6f62b362886743d4c92e83a66b5e0a5d
   FirebaseFirestoreInternal: d8d71a7f27834573404834172886183f1cd48c3d
+  FirebaseInstallations: d8063d302a426d114ac531cd82b1e335a0565745
+  FirebaseMessaging: 9f4e42053241bd45ce8565c881bfdd9c1df2f7da
   FirebaseSharedSwift: e17c654ef1f1a616b0b33054e663ad1035c8fd40
   FirebaseStorage: 4e521b5c833f0f3d488dcbde0c72044d02c59146
   fmt: 10c6e61f4be25dc963c36bd73fc7b1705fe975be
   glog: 08b301085f15bcbb6ff8632a8ebaf239aae04e6a
+  GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
   GoogleSignIn: c7f09cfbc85a1abf69187be091997c317cc33b77
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
   "gRPC-C++": 2fa52b3141e7789a28a737f251e0c45b4cb20a87
@@ -3393,10 +3435,12 @@ SPEC CHECKSUMS:
   RNFBApp: 72b96921c64702d51eca9f3ed579c1777efd0d7e
   RNFBAuth: db39dbf0c9f10c50da349519551149a09dbb3656
   RNFBFirestore: d13b3429d574c8bb69867f08a8411b7c789bb492
+  RNFBMessaging: 2ad5a47bd81da9f2d65188292d24115f40cbba74
   RNFBStorage: dcb4de202231f31ce5782732ccb725b302de54a3
   RNFS: 89de7d7f4c0f6bafa05343c578f61118c8282ed8
   RNGestureHandler: fc04a2ca677e1d661d94716ef96a441aa98d6c68
   RNGoogleSignin: 2792145770d2bbd5656bf91c5c83db4cadb5ebe0
+  RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
   RNScreens: f770034511e60c71feee26f9f50a6e1cc617ef9e
   RNShare: 4a81e399088ed400c3e05c201ee48008d695beb9
   RNSVG: 3421710ac15f4f2dc47e5c122f2c2e4282116830

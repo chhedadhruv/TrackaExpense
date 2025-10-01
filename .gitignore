@@ -81,3 +81,12 @@ ios/**/GoogleService-Info.plist
 
 # Security - keystore properties should never be committed
 android/keystore.properties
+
+# Documentation - implementation guides should not be committed
+NOTIFICATION_IMPLEMENTATION_GUIDE.md
+
+# Deployment guide
+DEPLOYMENT_GUIDE.md
+
+# Notification environment variables
+NOTIFICATION_ENV.md
