@@ -406,6 +406,7 @@ const TransactionScreen = ({navigation}) => {
               onDismiss={onDismissStartDatePicker}
               date={customStartDate}
               onConfirm={onConfirmStartDate}
+              presentationStyle="pageSheet"
             />
             <DatePickerModal
               locale="en"
@@ -414,6 +415,7 @@ const TransactionScreen = ({navigation}) => {
               onDismiss={onDismissEndDatePicker}
               date={customEndDate}
               onConfirm={onConfirmEndDate}
+              presentationStyle="pageSheet"
             />
           </View>
         )}

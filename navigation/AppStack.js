@@ -77,10 +77,10 @@ const createStack = (screens) => (
 // Home Stack
 const HomeStack = () =>
   createStack([
-    { name: 'Home', component: HomeScreen, title: 'TrackaExpense' },
-    { name: 'Transaction', component: TransactionScreen, title: 'TrackaExpense' },
-    { name: 'TransactionDetail', component: TransactionDetailScreen, title: 'TrackaExpense' },
-    { name: 'EditTransaction', component: EditTransactionScreen, title: 'TrackaExpense' },
+    { name: 'Home', component: HomeScreen, title: 'Home' },
+    { name: 'Transaction', component: TransactionScreen, title: 'Transactions' },
+    { name: 'TransactionDetail', component: TransactionDetailScreen, title: 'Transaction Details' },
+    { name: 'EditTransaction', component: EditTransactionScreen, title: 'Edit Transaction' },
     { name: 'AddIncome', component: AddIncome, title: 'Add Income' },
     { name: 'AddExpense', component: AddExpense, title: 'Add Expense' },
     { name: 'Image', component: ImageScreen, title: '' },
@@ -89,8 +89,8 @@ const HomeStack = () =>
 // Profile Stack
 const ProfileStack = () =>
   createStack([
-    { name: 'Profile', component: ProfileScreen, title: 'TrackaExpense' },
-    { name: 'EditProfile', component: EditProfileScreen, title: 'TrackaExpense' },
+    { name: 'Profile', component: ProfileScreen, title: 'Profile' },
+    { name: 'EditProfile', component: EditProfileScreen, title: 'Edit Profile' },
     { name: 'ContactUs', component: ContactUsScreen, title: 'Contact Us' },
     { name: 'PrivacyPolicy', component: PrivacyPolicyScreen, title: 'Privacy Policy' },
   ]);
@@ -98,27 +98,27 @@ const ProfileStack = () =>
 // Savings Stack
 const SavingsStack = () =>
   createStack([
-    { name: 'Savings', component: SavingsScreen, title: 'TrackaExpense' },
+    { name: 'Savings', component: SavingsScreen, title: 'Savings' },
   ]);
 
 // Statistic Stack
 const StatisticStack = () =>
   createStack([
-    { name: 'Statistic', component: StatisticScreen, title: 'TrackaExpense' },
-    { name: 'TransactionDetail', component: TransactionDetailScreen, title: 'TrackaExpense' },
-    { name: 'EditTransaction', component: EditTransactionScreen, title: 'TrackaExpense' },
+    { name: 'Statistic', component: StatisticScreen, title: 'Statistics' },
+    { name: 'TransactionDetail', component: TransactionDetailScreen, title: 'Transaction Details' },
+    { name: 'EditTransaction', component: EditTransactionScreen, title: 'Edit Transaction' },
     { name: 'Image', component: ImageScreen, title: '' },
   ]);
 
 // Split Stack
 const SplitStack = () =>
   createStack([
-    { name: 'Split', component: SplitScreen, title: 'TrackaExpense' },
-    { name: 'SplitGroupDetail', component: SplitGroupDetailScreen, title: 'TrackaExpense' },
-    { name: 'CreateSplit', component: CreateSplitScreen, title: 'TrackaExpense' },
-    { name: 'SplitDetail', component: SplitDetailScreen, title: 'TrackaExpense' },
-    { name: 'SettleUp', component: SettleUpScreen, title: 'TrackaExpense' },
-    { name: 'SplitTransaction', component: SplitTransactionScreen, title: 'TrackaExpense' },
+    { name: 'Split', component: SplitScreen, title: 'Split Bills' },
+    { name: 'SplitGroupDetail', component: SplitGroupDetailScreen, title: 'Group Details' },
+    { name: 'CreateSplit', component: CreateSplitScreen, title: 'Create Split' },
+    { name: 'SplitDetail', component: SplitDetailScreen, title: 'Split Details' },
+    { name: 'SettleUp', component: SettleUpScreen, title: 'Settle Up' },
+    { name: 'SplitTransaction', component: SplitTransactionScreen, title: 'Transactions' },
     { name: 'SplitHistory', component: SplitHistoryScreen, title: 'Split History' },
     { name: 'Invitations', component: InvitationsScreen, title: 'Invitations' },
   ]);

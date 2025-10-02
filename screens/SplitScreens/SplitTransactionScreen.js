@@ -285,6 +285,7 @@ const SplitTransactionScreen = ({route, navigation}) => {
                     onDismiss={onDismissStartDatePicker}
                     date={customStartDate}
                     onConfirm={onConfirmStartDate}
+                    presentationStyle="pageSheet"
                   />
                   <DatePickerModal
                     locale="en"
@@ -293,6 +294,7 @@ const SplitTransactionScreen = ({route, navigation}) => {
                     onDismiss={onDismissEndDatePicker}
                     date={customEndDate}
                     onConfirm={onConfirmEndDate}
+                    presentationStyle="pageSheet"
                   />
                   <TouchableOpacity
                     style={styles.applyButton}

@@ -11,6 +11,7 @@ import {
 import {Text, Provider, Checkbox, Card, ActivityIndicator} from 'react-native-paper';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import {useFocusEffect} from '@react-navigation/native';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import UserAvatar from 'react-native-user-avatar';
@@ -131,53 +132,58 @@ const SplitScreen = ({navigation, route}) => {
   const [splitHistory, setSplitHistory] = useState([]);
   const [invitationsCount, setInvitationsCount] = useState(0);
   const currentUser = auth().currentUser;
+  
   // Fetch user's groups
-  useEffect(() => {
-    const fetchGroups = async () => {
-      try {
-        setLoading(true);
-        if (!currentUser) return;
-        const groupSnapshot = await firestore()
-          .collection('groups')
-          .where('members', 'array-contains', currentUser.email)
-          .get();
-        const fetchedGroups = await Promise.all(
-          groupSnapshot.docs.map(async doc => {
-            const groupData = doc.data();
-            // Fetch member details
-            const memberPromises = groupData.members.map(async email => {
-              const userSnapshot = await firestore()
-                .collection('users')
-                .where('email', '==', email)
-                .get();
-              if (!userSnapshot.empty) {
-                const userData = userSnapshot.docs[0].data();
-                return {
-                  email,
-                  name: userData.name || userData.displayName || groupData.memberNames?.[email] || null,
-                  userId: userSnapshot.docs[0].id,
-                  ...userData,
-                };
-              }
-              return {email, name: groupData.memberNames?.[email] || null};
-            });
-            const memberDetails = await Promise.all(memberPromises);
-            return {
-              id: doc.id,
-              ...groupData,
-              memberDetails,
-            };
-          }),
-        );
-        setGroups(fetchedGroups);
-      } catch (error) {
-        Alert.alert('Error', 'Failed to fetch groups');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchGroups();
-  }, [currentUser]);
+  const fetchGroups = async () => {
+    try {
+      setLoading(true);
+      if (!currentUser) return;
+      const groupSnapshot = await firestore()
+        .collection('groups')
+        .where('members', 'array-contains', currentUser.email)
+        .get();
+      const fetchedGroups = await Promise.all(
+        groupSnapshot.docs.map(async doc => {
+          const groupData = doc.data();
+          // Fetch member details
+          const memberPromises = groupData.members.map(async email => {
+            const userSnapshot = await firestore()
+              .collection('users')
+              .where('email', '==', email)
+              .get();
+            if (!userSnapshot.empty) {
+              const userData = userSnapshot.docs[0].data();
+              return {
+                email,
+                name: userData.name || userData.displayName || groupData.memberNames?.[email] || null,
+                userId: userSnapshot.docs[0].id,
+                ...userData,
+              };
+            }
+            return {email, name: groupData.memberNames?.[email] || null};
+          });
+          const memberDetails = await Promise.all(memberPromises);
+          return {
+            id: doc.id,
+            ...groupData,
+            memberDetails,
+          };
+        }),
+      );
+      setGroups(fetchedGroups);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to fetch groups');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Refresh groups when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchGroups();
+    }, [currentUser]),
+  );
 
   // Subscribe to pending invitations count for badge
   useEffect(() => {

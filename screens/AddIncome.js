@@ -271,6 +271,7 @@ const AddIncome = ({navigation}) => {
                 </TouchableOpacity>
               </View>
               <DatePickerModal
+                locale="en"
                 mode="single"
                 visible={openDate}
                 onDismiss={onDismissSingle}
@@ -279,6 +280,7 @@ const AddIncome = ({navigation}) => {
                 saveLabel="Confirm"
                 label="Select date"
                 animationType="fade"
+                presentationStyle="pageSheet"
               />
               {/* Submit Button */}
               <View style={styles.buttonContainer}>
