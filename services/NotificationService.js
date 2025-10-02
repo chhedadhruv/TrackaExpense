@@ -9,10 +9,22 @@ import {NOTIFICATION_SERVER_URL, EXPO_PUBLIC_NOTIFICATION_SERVER_URL} from '@env
 // Register background notification event handler at top level (for when notification is tapped)
 notifee.onBackgroundEvent(async ({ type, detail }) => {
   if (type === EventType.PRESS && detail.notification?.data) {
-    // Delay navigation to ensure app is ready
-    setTimeout(() => {
-      handleNotificationNavigation(detail.notification?.data);
-    }, 1000);
+    // If app is being opened from quit state, store the notification to handle after navigation is ready
+    import('../navigation/Routes').then((module) => {
+      if (module.setPendingNotification) {
+        module.setPendingNotification(detail.notification?.data);
+      } else {
+        // Fallback: delay navigation to ensure app is ready
+        setTimeout(() => {
+          handleNotificationNavigation(detail.notification?.data);
+        }, 1000);
+      }
+    }).catch(() => {
+      // Fallback if import fails
+      setTimeout(() => {
+        handleNotificationNavigation(detail.notification?.data);
+      }, 1000);
+    });
   }
 });
 
@@ -216,11 +228,15 @@ class NotificationService {
     });
 
     // Handle notification tap when app is closed/killed
+    // Store it to be handled after navigation is ready
     messaging()
       .getInitialNotification()
       .then(remoteMessage => {
         if (remoteMessage) {
-          this.handleNotificationTap(remoteMessage.data);
+          // Import and set pending notification
+          import('../navigation/Routes').then((module) => {
+            module.setPendingNotification(remoteMessage.data);
+          });
         }
       });
   }
