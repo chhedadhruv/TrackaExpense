@@ -6,6 +6,119 @@ import {Platform, PermissionsAndroid, Alert} from 'react-native';
 import * as RootNavigation from '../navigation/Routes';
 import {NOTIFICATION_SERVER_URL, EXPO_PUBLIC_NOTIFICATION_SERVER_URL} from '@env';
 
+// Register background notification event handler at top level (for when notification is tapped)
+notifee.onBackgroundEvent(async ({ type, detail }) => {
+  if (type === EventType.PRESS && detail.notification?.data) {
+    // Delay navigation to ensure app is ready
+    setTimeout(() => {
+      handleNotificationNavigation(detail.notification?.data);
+    }, 1000);
+  }
+});
+
+// Helper function for handling notification navigation (used by background handler)
+function handleNotificationNavigation(data) {
+  if (!data) return;
+
+  try {
+    // Navigate based on notification type
+    switch (data.type) {
+      case 'split_invite':
+      case 'group_created':
+        RootNavigation.navigate('Split', {
+          screen: 'Invitations',
+        });
+        break;
+
+      case 'split_created':
+      case 'split_updated':
+      case 'split_deleted':
+      case 'settlement_made':
+        if (data.groupId) {
+          RootNavigation.navigate('Split', {
+            screen: 'SplitGroupDetail',
+            params: {
+              group: {
+                id: data.groupId,
+                name: data.groupName || 'Split Group',
+              },
+            },
+          });
+        }
+        break;
+
+      case 'user_joined_group':
+      case 'user_left_group':
+      case 'group_updated':
+        if (data.groupId) {
+          RootNavigation.navigate('Split', {
+            screen: 'SplitGroupDetail',
+            params: {
+              group: {
+                id: data.groupId,
+                name: data.groupName || 'Split Group',
+              },
+            },
+          });
+        }
+        break;
+
+      case 'group_deleted':
+        RootNavigation.navigate('Split', {
+          screen: 'Split',
+        });
+        break;
+
+      case 'reminder':
+        if (data.action === 'add_income') {
+          RootNavigation.navigate('Home', {
+            screen: 'AddIncome',
+          });
+        } else if (data.action === 'add_expense') {
+          RootNavigation.navigate('Home', {
+            screen: 'AddExpense',
+          });
+        } else if (data.action === 'add_savings') {
+          RootNavigation.navigate('Savings', {
+            screen: 'Savings',
+          });
+        } else {
+          RootNavigation.navigate('Home', {
+            screen: 'Home',
+          });
+        }
+        break;
+
+      case 'achievement':
+        if (data.action === 'view_achievements') {
+          RootNavigation.navigate('Statistic', {
+            screen: 'Statistic',
+          });
+        } else {
+          RootNavigation.navigate('Home', {
+            screen: 'Home',
+          });
+        }
+        break;
+
+      case 'weekly_summary':
+      case 'monthly_goal':
+        RootNavigation.navigate('Statistic', {
+          screen: 'Statistic',
+        });
+        break;
+
+      default:
+        RootNavigation.navigate('Home', {
+          screen: 'Home',
+        });
+        break;
+    }
+  } catch (error) {
+    console.error('Failed to handle notification navigation:', error);
+  }
+}
+
 class NotificationService {
   constructor() {
     this.fcmToken = null;
@@ -89,24 +202,20 @@ class NotificationService {
 
   // Setup message handlers
   setupMessageHandlers() {
-    // Handle background messages
-    messaging().setBackgroundMessageHandler(async remoteMessage => {
-      // Don't show local notification - let OS handle server notifications
-      // This prevents duplicates when server sends notification payload
-    });
-
+    // Note: Background message handler is registered at the top level of the module
+    
     // Handle foreground messages
     messaging().onMessage(async remoteMessage => {
       // Always show local notification when app is open (OS doesn't show server notifications in foreground)
       await this.showLocalNotification(remoteMessage);
     });
 
-    // Handle notification tap
+    // Handle notification tap when app is in background
     messaging().onNotificationOpenedApp(remoteMessage => {
       this.handleNotificationTap(remoteMessage.data);
     });
 
-    // Handle notification tap when app is closed
+    // Handle notification tap when app is closed/killed
     messaging()
       .getInitialNotification()
       .then(remoteMessage => {
@@ -118,19 +227,14 @@ class NotificationService {
 
   // Setup notifee event handlers for local notifications
   setupNotifeeEventHandlers() {
-    // Handle notification press events
+    // Handle notification press events in foreground
     notifee.onForegroundEvent(({ type, detail }) => {
       if (type === EventType.PRESS) {
         this.handleNotificationTap(detail.notification?.data);
       }
     });
-
-    // Handle background notification press
-    notifee.onBackgroundEvent(async ({ type, detail }) => {
-      if (type === EventType.PRESS) {
-        this.handleNotificationTap(detail.notification?.data);
-      }
-    });
+    
+    // Note: Background event handler is registered at the top level of the module
   }
 
   // Display a local notification when app is in foreground
@@ -233,14 +337,77 @@ class NotificationService {
           break;
 
         case 'reminder':
-          // Navigate to home screen
-          RootNavigation.navigate('Home', {
-            screen: 'Home',
-          });
+          // Navigate based on reminder type action
+          if (data.action === 'add_income') {
+            RootNavigation.navigate('Home', {
+              screen: 'AddIncome',
+            });
+          } else if (data.action === 'add_expense') {
+            RootNavigation.navigate('Home', {
+              screen: 'AddExpense',
+            });
+          } else if (data.action === 'add_savings') {
+            RootNavigation.navigate('Savings', {
+              screen: 'Savings',
+            });
+          } else if (data.action === 'view_dashboard') {
+            RootNavigation.navigate('Home', {
+              screen: 'Home',
+            });
+          } else {
+            // Default to home for general reminders
+            RootNavigation.navigate('Home', {
+              screen: 'Home',
+            });
+          }
           break;
 
+        case 'positive_reminder':
         case 'fun_notification':
-          // Navigate to home screen
+        case 'motivational':
+        case 'funny':
+        case 'playful':
+          // Navigate to home dashboard for positive/fun notifications
+          if (data.action === 'view_dashboard') {
+            RootNavigation.navigate('Home', {
+              screen: 'Home',
+            });
+          } else {
+            RootNavigation.navigate('Home', {
+              screen: 'Home',
+            });
+          }
+          break;
+
+        case 'achievement':
+          // Navigate to statistics screen for achievements
+          if (data.action === 'view_achievements') {
+            RootNavigation.navigate('Statistic', {
+              screen: 'Statistic',
+            });
+          } else {
+            RootNavigation.navigate('Home', {
+              screen: 'Home',
+            });
+          }
+          break;
+
+        case 'weekly_summary':
+        case 'monthly_goal':
+          // Navigate to statistics for summaries and goals
+          if (data.action === 'view_goals') {
+            RootNavigation.navigate('Statistic', {
+              screen: 'Statistic',
+            });
+          } else {
+            RootNavigation.navigate('Statistic', {
+              screen: 'Statistic',
+            });
+          }
+          break;
+
+        case 'seasonal':
+          // Navigate to home for seasonal notifications
           RootNavigation.navigate('Home', {
             screen: 'Home',
           });
