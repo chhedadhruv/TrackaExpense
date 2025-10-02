@@ -672,6 +672,7 @@ const CreateSplitScreen = ({route, navigation}) => {
                   onDismiss={onDismissDatePicker}
                   date={date}
                   onConfirm={onConfirmDate}
+                  presentationStyle="pageSheet"
                 />
               </View>
               <View style={styles.inputContainer}>

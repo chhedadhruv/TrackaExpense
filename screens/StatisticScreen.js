@@ -317,55 +317,67 @@ const StatisticScreen = ({navigation}) => {
             </Text>
           </View>
           <View style={styles.chartContainer}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <BarChart
-              data={barData}
-              height={220}
-              barWidth={15}
-              spacing={2}
-              roundedTop
-              xAxisThickness={0}
-              yAxisThickness={0}
-              yAxisTextStyle={{color: '#888', fontFamily: 'Lato-Regular'}}
-              xAxisLabelTextStyle={{
-                color: '#888',
-                fontSize: 10,
-                textAlign: 'center',
-                width: 46,
-                marginTop: 10,
-                marginHorizontal: 2,
-                fontFamily: 'Lato-Regular',
-              }}
-              noOfSections={3}
-              isAnimated
-              onPress={handleBarPress}
-              yAxisLabelFormatter={value => `₹${value}`}
-              yAxisLabelWidth={50}
-              yAxisLabelPrefix={'₹'}
-              width={chartWidth}
-              xAxisLabelsHeight={32}
-              horizontalRulesStyle={{color: '#ECECEC'}}
-              rulesColor="#ECECEC"
-              maxValue={
-                Math.max(
-                  ...barData
-                    .filter(item => item.value > 0)
-                    .map(item => item.value),
-                ) * 1.1
-              }
-              initialSpacing={20}
-              endSpacing={20}
-              hideRules={true}
-              barBorderRadius={4}
-              showFractionalValue={false}
-              hideDataPoints={true}
-            />
-            </ScrollView>
-            {selectedBar && (
-              <View style={styles.selectedBarContainer}>
-                <Text style={styles.selectedBarText}>
-                  {selectedBar.frontColor === '#677CD2' ? 'Income' : 'Expense'}: ₹{' '}
-                  {selectedBar.value.toFixed(2)}
+            {barData.filter(item => item.value > 0).length > 0 ? (
+              <>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <BarChart
+                    data={barData}
+                    height={220}
+                    barWidth={15}
+                    spacing={2}
+                    roundedTop
+                    xAxisThickness={0}
+                    yAxisThickness={0}
+                    yAxisTextStyle={{color: '#888', fontFamily: 'Lato-Regular'}}
+                    xAxisLabelTextStyle={{
+                      color: '#888',
+                      fontSize: 10,
+                      textAlign: 'center',
+                      width: 46,
+                      marginTop: 10,
+                      marginHorizontal: 2,
+                      fontFamily: 'Lato-Regular',
+                    }}
+                    noOfSections={3}
+                    isAnimated
+                    onPress={handleBarPress}
+                    yAxisLabelFormatter={value => `₹${value}`}
+                    yAxisLabelWidth={50}
+                    yAxisLabelPrefix={'₹'}
+                    width={chartWidth}
+                    xAxisLabelsHeight={32}
+                    horizontalRulesStyle={{color: '#ECECEC'}}
+                    rulesColor="#ECECEC"
+                    maxValue={
+                      Math.max(
+                        ...barData
+                          .filter(item => item.value > 0)
+                          .map(item => item.value),
+                      ) * 1.1
+                    }
+                    initialSpacing={20}
+                    endSpacing={20}
+                    hideRules={true}
+                    barBorderRadius={4}
+                    showFractionalValue={false}
+                    hideDataPoints={true}
+                  />
+                </ScrollView>
+                {selectedBar && (
+                  <View style={styles.selectedBarContainer}>
+                    <Text style={styles.selectedBarText}>
+                      {selectedBar.frontColor === '#677CD2' ? 'Income' : 'Expense'}: ₹{' '}
+                      {selectedBar.value.toFixed(2)}
+                    </Text>
+                  </View>
+                )}
+              </>
+            ) : (
+              <View style={styles.emptyState}>
+                <MaterialCommunityIcons name="chart-bar" size={48} color="#CBD3EE" />
+                <Text style={styles.emptyStateText}>No data available</Text>
+                <Text style={styles.emptyStateSubText}>
+                  No transactions found in this time period.{'\n'}Try changing the date range above.
                 </Text>
               </View>
             )}
@@ -404,8 +416,10 @@ const StatisticScreen = ({navigation}) => {
             ) : (
               <View style={styles.emptyState}>
                 <MaterialCommunityIcons name="chart-pie" size={48} color="#CBD3EE" />
-                <Text style={styles.emptyStateText}>No {selectedBtn.toLowerCase()} data</Text>
-                <Text style={styles.emptyStateSubText}>No {selectedBtn.toLowerCase()}s in the selected period</Text>
+                <Text style={styles.emptyStateText}>No {selectedBtn.toLowerCase()} data available</Text>
+                <Text style={styles.emptyStateSubText}>
+                  No {selectedBtn.toLowerCase()}s found in this time period.{'\n'}Try changing the date range above.
+                </Text>
               </View>
             )}
             {categoryPieData.length > 0 && (
@@ -535,7 +549,7 @@ const StatisticScreen = ({navigation}) => {
                 />
                 <Text style={styles.emptyStateText}>No {selectedBtn.toLowerCase()} transactions</Text>
                 <Text style={styles.emptyStateSubText}>
-                  No {selectedBtn.toLowerCase()} data available for the selected period
+                  No {selectedBtn.toLowerCase()} data available for the selected period.{'\n'}Try changing the date range above.
                 </Text>
               </View>
             )}

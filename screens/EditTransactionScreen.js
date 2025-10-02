@@ -372,6 +372,7 @@ const EditTransactionScreen = ({route, navigation}) => {
                   </TouchableOpacity>
                 </View>
                 <DatePickerModal
+                  locale="en"
                   mode="single"
                   visible={openDate}
                   onDismiss={onDismissSingle}
@@ -380,6 +381,7 @@ const EditTransactionScreen = ({route, navigation}) => {
                   saveLabel="Confirm"
                   label="Select date"
                   animationType="fade"
+                  presentationStyle="pageSheet"
                 />
                 {/* Image Upload Section - Only for expenses */}
                 {transaction.type === 'expense' && (

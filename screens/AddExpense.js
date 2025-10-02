@@ -374,6 +374,7 @@ const AddExpense = ({navigation}) => {
                   </TouchableOpacity>
                 </View>
                 <DatePickerModal
+                  locale="en"
                   mode="single"
                   visible={openDate}
                   onDismiss={onDismissSingle}
@@ -382,6 +383,7 @@ const AddExpense = ({navigation}) => {
                   saveLabel="Confirm"
                   label="Select date"
                   animationType="fade"
+                  presentationStyle="pageSheet"
                 />
                 {/* Image Upload Section */}
                 <View style={styles.inputContainer}>
