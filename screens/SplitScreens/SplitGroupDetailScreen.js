@@ -284,22 +284,16 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
           )}
         </View>
         <View style={styles.actionButtonsRow}>
-          <Button
-            mode="contained"
-            icon="pencil"
-            textColor={PRIMARY_COLOR}
-            contentStyle={styles.buttonContent}
-            style={[styles.actionButton, styles.editButton]}
+          <TouchableOpacity
+            style={[styles.iconButton, styles.editButton]}
             onPress={() => navigation.navigate('Split', {editGroup: group})}
+            accessibilityLabel="Edit group"
+            accessibilityRole="button"
           >
-            Edit
-          </Button>
-          <Button
-            mode="contained"
-            icon="exit-to-app"
-            style={[styles.actionButton, styles.leaveButton]}
-            textColor={EXPENSE_COLOR}
-            contentStyle={styles.buttonContent}
+            <MaterialCommunityIcons name="pencil" size={24} color={PRIMARY_COLOR} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.iconButton, styles.leaveButton]}
             onPress={async () => {
               try {
                 Alert.alert(
@@ -333,15 +327,13 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
                 );
               } catch (e) {}
             }}
+            accessibilityLabel="Leave group"
+            accessibilityRole="button"
           >
-            Leave
-          </Button>
-          <Button
-            mode="contained"
-            icon="delete-outline"
-            style={[styles.actionButton, styles.deleteButton]}
-            textColor="#fff"
-            contentStyle={styles.buttonContent}
+            <MaterialCommunityIcons name="exit-to-app" size={24} color={EXPENSE_COLOR} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.iconButton, styles.deleteButton]}
             onPress={() => {
               Alert.alert(
                 'Delete Group',
@@ -374,9 +366,11 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
                 ],
               );
             }}
+            accessibilityLabel="Delete group"
+            accessibilityRole="button"
           >
-            Delete
-          </Button>
+            <MaterialCommunityIcons name="delete-outline" size={24} color="#fff" />
+          </TouchableOpacity>
         </View>
       </View>
     </Card>
@@ -888,8 +882,24 @@ const styles = StyleSheet.create({
   actionButtonsRow: {
     flexDirection: 'row',
     width: '100%',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginTop: 10,
+    gap: 20,
+  },
+  iconButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
   },
   actionButton: {
     flex: 1,

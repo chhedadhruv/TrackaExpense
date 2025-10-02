@@ -5,6 +5,24 @@ import AppStack from './AppStack'; // Screens for authenticated users
 import { AuthContext } from './AuthProvider';
 import auth from '@react-native-firebase/auth';
 
+// Create a navigation reference to use outside of React components
+export const navigationRef = React.createRef();
+
+// Helper function to navigate from outside React components
+export function navigate(name, params) {
+  if (navigationRef.current) {
+    navigationRef.current.navigate(name, params);
+  }
+}
+
+// Helper to get current route name
+export function getCurrentRoute() {
+  if (navigationRef.current) {
+    return navigationRef.current.getCurrentRoute()?.name;
+  }
+  return null;
+}
+
 const Routes = () => {
   const { user, setUser } = useContext(AuthContext);
   const [initializing, setInitializing] = useState(true);
@@ -26,7 +44,7 @@ const Routes = () => {
 
   // Render navigation stacks based on user authentication
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       {user ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   );
