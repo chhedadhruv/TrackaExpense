@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   TextInput,
   ScrollView,
+  Platform,
 } from 'react-native';
 import {Text, Provider, Checkbox, Card, ActivityIndicator} from 'react-native-paper';
 import firestore from '@react-native-firebase/firestore';
@@ -294,16 +295,6 @@ const SplitScreen = ({navigation, route}) => {
       Alert.alert('Cannot Add Yourself', 'You cannot add yourself to the group. You are automatically included as the group creator.');
       return;
     }
-    // If user is not registered, require a name before adding
-    const isUnregistered = user.name === 'Not Registered';
-    if (isUnregistered) {
-      const trimmed = (unregisteredName || '').trim();
-      if (!trimmed) {
-        Alert.alert('Name required', 'Please enter a name for this contact before adding.');
-        return;
-      }
-      user = { ...user, name: trimmed };
-    }
     
     const wasAdded = !selectedUsers.some(selected => selected.email === user.email);
     
@@ -586,39 +577,46 @@ const SplitScreen = ({navigation, route}) => {
     }
   };
   // Render user card
-  const renderUserCard = (user, withCheckbox = false) => (
-    <View style={styles.userCard} key={user.email}>
-      <UserAvatar size={50} name={user.name || user.email} />
-      <View style={styles.userInfo}>
-        <Text style={styles.userName}>{user.name || user.email}</Text>
-        <Text style={styles.userEmail}>{user.email}</Text>
-        {user.email === currentUser.email && (
-          <Text style={styles.youLabel}>(You - Group Creator)</Text>
-        )}
-        {user.name === 'Not Registered' && (
-          <View style={styles.nameInputContainer}>
-            <TextInput
-              style={styles.nameInput}
-              placeholder="Enter name for this contact"
-              placeholderTextColor="#999"
-              value={unregisteredName}
-              onChangeText={setUnregisteredName}
+  const renderUserCard = (user, withCheckbox = false) => {
+    const isSelected = selectedUsers.some(selected => selected.email === user.email);
+    return (
+      <View style={styles.userCard} key={user.email}>
+        <UserAvatar size={50} name={user.name || user.email} />
+        <View style={styles.userInfo}>
+          <Text style={styles.userName}>{user.name || user.email}</Text>
+          <Text style={styles.userEmail}>{user.email}</Text>
+          {user.email === currentUser.email && (
+            <Text style={styles.youLabel}>(You - Group Creator)</Text>
+          )}
+        </View>
+        {withCheckbox && user.email !== currentUser.email && (
+          Platform.OS === 'ios' ? (
+            <TouchableOpacity 
+              onPress={() => toggleUserSelection(user)}
+              activeOpacity={0.7}>
+              <View style={[
+                styles.customCheckboxIOS,
+                isSelected && styles.customCheckboxIOSSelected
+              ]}>
+                {isSelected && (
+                  <MaterialCommunityIcons 
+                    name="check" 
+                    size={18} 
+                    color="#FFFFFF" 
+                  />
+                )}
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <Checkbox
+              status={isSelected ? 'checked' : 'unchecked'}
+              onPress={() => toggleUserSelection(user)}
             />
-          </View>
+          )
         )}
       </View>
-      {withCheckbox && user.email !== currentUser.email && (
-        <Checkbox
-          status={
-            selectedUsers.some(selected => selected.email === user.email)
-              ? 'checked'
-              : 'unchecked'
-          }
-          onPress={() => toggleUserSelection(user)}
-        />
-      )}
-    </View>
-  );
+    );
+  };
   // Render group card
   const renderGroupCard = group => {
     const categoryItem = GROUP_CATEGORIES.find(
@@ -1053,6 +1051,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     fontFamily: 'Lato-Regular',
+  },
+  customCheckboxIOS: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#999',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+  customCheckboxIOSSelected: {
+    backgroundColor: PRIMARY_COLOR,
+    borderColor: PRIMARY_COLOR,
   },
   nameInputContainer: {
     marginTop: 8,

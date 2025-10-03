@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  Platform,
 } from 'react-native';
 import React, {useState, useEffect, useCallback, useMemo} from 'react';
 import {Card} from 'react-native-paper';
@@ -13,7 +14,8 @@ import {BarChart, PieChart} from 'react-native-gifted-charts';
 import {useFocusEffect} from '@react-navigation/native';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
-import DropDownPicker from 'react-native-dropdown-picker';
+import moment from 'moment';
+import {DatePickerModal} from 'react-native-paper-dates';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const INCOME_COLOR = '#25B07F';
@@ -25,18 +27,13 @@ const StatisticScreen = ({navigation}) => {
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
   const [timeRange, setTimeRange] = useState('7days');
-  const [timeRangeOpen, setTimeRangeOpen] = useState(false);
   const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [selectedBtn, setSelectedBtn] = useState('Income');
   const [categoryPieData, setCategoryPieData] = useState([]);
-  const [timeRangeItems] = useState([
-    {label: 'Last 7 Days', value: '7days'},
-    {label: 'Last 30 Days', value: '30days'},
-    {label: 'Last 3 Months', value: '3months'},
-    {label: 'Last 6 Months', value: '6months'},
-    {label: 'Last Year', value: 'year'},
-    {label: 'All Time', value: 'all'},
-  ]);
+  const [customStartDate, setCustomStartDate] = useState(null);
+  const [customEndDate, setCustomEndDate] = useState(null);
+  const [startDatePickerVisible, setStartDatePickerVisible] = useState(false);
+  const [endDatePickerVisible, setEndDatePickerVisible] = useState(false);
   const filterTransactionsByTimeRange = (transactions, range) => {
     const now = new Date();
     const cutoffDate = new Date();
@@ -56,6 +53,14 @@ const StatisticScreen = ({navigation}) => {
       case 'year':
         cutoffDate.setFullYear(now.getFullYear() - 1);
         break;
+      case 'custom':
+        if (customStartDate && customEndDate) {
+          return transactions.filter(t => {
+            const transactionDate = moment(t.date);
+            return transactionDate.isBetween(customStartDate, customEndDate, undefined, '[]');
+          });
+        }
+        return transactions;
       case 'all':
         return transactions;
       default:
@@ -147,7 +152,25 @@ const StatisticScreen = ({navigation}) => {
       setTotalIncome(income);
       setTotalExpense(expense);
     }
-  }, [userData, timeRange]);
+  }, [userData, timeRange, customStartDate, customEndDate]);
+  
+  const onDismissStartDatePicker = () => {
+    setStartDatePickerVisible(false);
+  };
+  
+  const onConfirmStartDate = params => {
+    setStartDatePickerVisible(false);
+    setCustomStartDate(params.date);
+  };
+  
+  const onDismissEndDatePicker = () => {
+    setEndDatePickerVisible(false);
+  };
+  
+  const onConfirmEndDate = params => {
+    setEndDatePickerVisible(false);
+    setCustomEndDate(params.date);
+  };
   const [barData, setBarData] = useState([]);
   const chartWidth = useMemo(() => {
     const baseWidth = Dimensions.get('window').width - 80;
@@ -245,8 +268,16 @@ const StatisticScreen = ({navigation}) => {
     setSelectedBtn(btn);
   };
   const getTimeRangeLabel = () => {
-    const item = timeRangeItems.find(item => item.value === timeRange);
-    return item ? item.label : 'Selected Period';
+    const labels = {
+      'all': 'All Time',
+      '7days': 'Last 7 Days',
+      '30days': 'Last 30 Days',
+      '3months': 'Last 3 Months',
+      '6months': 'Last 6 Months',
+      'year': 'Last Year',
+      'custom': 'Custom Range',
+    };
+    return labels[timeRange] || 'Selected Period';
   };
   return (
     <View style={styles.container}>
@@ -256,21 +287,163 @@ const StatisticScreen = ({navigation}) => {
           <Text style={styles.headerText}>Statistics</Text>
           <Text style={styles.subHeaderText}>Track your financial insights</Text>
         </View>
-        {/* Time Range Picker */}
-        <View style={styles.timeRangeSection}>
-          <DropDownPicker
-            open={timeRangeOpen}
-            value={timeRange}
-            items={timeRangeItems}
-            setOpen={setTimeRangeOpen}
-            setValue={setTimeRange}
-            style={styles.timeRangePicker}
-            textStyle={styles.timeRangePickerText}
-            placeholder="Select Time Range"
-            containerStyle={styles.timeRangePickerContainer}
-            dropDownContainerStyle={styles.dropDownContainer}
-          />
+        {/* Time Range Filter Section */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterSectionTitle}>Filter by period</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScrollView}>
+            <TouchableOpacity
+              onPress={() => setTimeRange('all')}
+              style={[styles.filterButton, timeRange === 'all' && styles.filterButtonActive]}>
+              <MaterialCommunityIcons
+                name="format-list-bulleted"
+                size={16}
+                color={timeRange === 'all' ? '#FFFFFF' : PRIMARY_COLOR}
+              />
+              <Text style={timeRange === 'all' ? styles.filterButtonTextActive : styles.filterButtonText}>
+                All Time
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setTimeRange('7days')}
+              style={[styles.filterButton, timeRange === '7days' && styles.filterButtonActive]}>
+              <MaterialCommunityIcons
+                name="calendar-week"
+                size={16}
+                color={timeRange === '7days' ? '#FFFFFF' : PRIMARY_COLOR}
+              />
+              <Text style={timeRange === '7days' ? styles.filterButtonTextActive : styles.filterButtonText}>
+                Last 7 Days
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setTimeRange('30days')}
+              style={[styles.filterButton, timeRange === '30days' && styles.filterButtonActive]}>
+              <MaterialCommunityIcons
+                name="calendar-month"
+                size={16}
+                color={timeRange === '30days' ? '#FFFFFF' : PRIMARY_COLOR}
+              />
+              <Text style={timeRange === '30days' ? styles.filterButtonTextActive : styles.filterButtonText}>
+                Last 30 Days
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setTimeRange('3months')}
+              style={[styles.filterButton, timeRange === '3months' && styles.filterButtonActive]}>
+              <MaterialCommunityIcons
+                name="calendar-range"
+                size={16}
+                color={timeRange === '3months' ? '#FFFFFF' : PRIMARY_COLOR}
+              />
+              <Text style={timeRange === '3months' ? styles.filterButtonTextActive : styles.filterButtonText}>
+                Last 3 Months
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setTimeRange('6months')}
+              style={[styles.filterButton, timeRange === '6months' && styles.filterButtonActive]}>
+              <MaterialCommunityIcons
+                name="calendar-clock"
+                size={16}
+                color={timeRange === '6months' ? '#FFFFFF' : PRIMARY_COLOR}
+              />
+              <Text style={timeRange === '6months' ? styles.filterButtonTextActive : styles.filterButtonText}>
+                Last 6 Months
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setTimeRange('year')}
+              style={[styles.filterButton, timeRange === 'year' && styles.filterButtonActive]}>
+              <MaterialCommunityIcons
+                name="calendar"
+                size={16}
+                color={timeRange === 'year' ? '#FFFFFF' : PRIMARY_COLOR}
+              />
+              <Text style={timeRange === 'year' ? styles.filterButtonTextActive : styles.filterButtonText}>
+                Last Year
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setTimeRange('custom')}
+              style={[styles.filterButton, timeRange === 'custom' && styles.filterButtonActive]}>
+              <MaterialCommunityIcons
+                name="calendar-range"
+                size={16}
+                color={timeRange === 'custom' ? '#FFFFFF' : PRIMARY_COLOR}
+              />
+              <Text style={timeRange === 'custom' ? styles.filterButtonTextActive : styles.filterButtonText}>
+                Custom Range
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
+        {/* Custom Date Range Section */}
+        {timeRange === 'custom' && (
+          <View style={styles.customDateSection}>
+            <Text style={styles.customDateTitle}>Select Date Range</Text>
+            <View style={styles.customDateContainer}>
+              <TouchableOpacity
+                style={styles.dateInput}
+                onPress={() => setStartDatePickerVisible(true)}>
+                <View style={styles.dateInputContent}>
+                  <MaterialCommunityIcons
+                    name="calendar-start"
+                    size={20}
+                    color={PRIMARY_COLOR}
+                  />
+                  <Text style={[styles.dateInputText, !customStartDate && styles.dateInputPlaceholder]}>
+                    {customStartDate
+                      ? moment(customStartDate).format('MMM DD, YYYY')
+                      : 'Start Date'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              <View style={styles.dateSeparator}>
+                <Text style={styles.dateSeparatorText}>to</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.dateInput}
+                onPress={() => setEndDatePickerVisible(true)}>
+                <View style={styles.dateInputContent}>
+                  <MaterialCommunityIcons
+                    name="calendar-end"
+                    size={20}
+                    color={PRIMARY_COLOR}
+                  />
+                  <Text style={[styles.dateInputText, !customEndDate && styles.dateInputPlaceholder]}>
+                    {customEndDate
+                      ? moment(customEndDate).format('MMM DD, YYYY')
+                      : 'End Date'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+        <DatePickerModal
+          locale="en"
+          mode="single"
+          visible={startDatePickerVisible}
+          onDismiss={onDismissStartDatePicker}
+          date={customStartDate || new Date()}
+          onConfirm={onConfirmStartDate}
+          saveLabel="Confirm"
+          label="Select start date"
+          uppercase={false}
+          {...(Platform.OS === 'ios' && { presentationStyle: 'pageSheet' })}
+        />
+        <DatePickerModal
+          locale="en"
+          mode="single"
+          visible={endDatePickerVisible}
+          onDismiss={onDismissEndDatePicker}
+          date={customEndDate || new Date()}
+          onConfirm={onConfirmEndDate}
+          saveLabel="Confirm"
+          label="Select end date"
+          uppercase={false}
+          {...(Platform.OS === 'ios' && { presentationStyle: 'pageSheet' })}
+        />
         {/* Summary Cards */}
         <View style={styles.cardSection}>
           <Card style={styles.incomeCard}>
@@ -439,32 +612,32 @@ const StatisticScreen = ({navigation}) => {
             )}
           </View>
         </Card>
-        {/* Filter Buttons */}
+        {/* Income/Expense Filter Buttons */}
         <View style={styles.buttonSection}>
           <TouchableOpacity
             style={[
-              styles.filterButton,
-              selectedBtn === 'Income' && styles.selectedFilterButton
+              styles.incomeExpenseButton,
+              selectedBtn === 'Income' && styles.selectedIncomeExpenseButton
             ]}
             onPress={() => handleBtnPress('Income')}>
             <Text
               style={[
-                styles.filterButtonText,
-                selectedBtn === 'Income' && styles.selectedFilterButtonText
+                styles.incomeExpenseButtonText,
+                selectedBtn === 'Income' && styles.selectedIncomeExpenseButtonText
               ]}>
               Income
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
-              styles.filterButton,
-              selectedBtn === 'Expense' && styles.selectedFilterButton
+              styles.incomeExpenseButton,
+              selectedBtn === 'Expense' && styles.selectedIncomeExpenseButton
             ]}
             onPress={() => handleBtnPress('Expense')}>
             <Text
               style={[
-                styles.filterButtonText,
-                selectedBtn === 'Expense' && styles.selectedFilterButtonText
+                styles.incomeExpenseButtonText,
+                selectedBtn === 'Expense' && styles.selectedIncomeExpenseButtonText
               ]}>
               Expense
             </Text>
@@ -601,16 +774,64 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontFamily: 'Lato-Regular',
   },
-  timeRangeSection: {
+  filterSection: {
     marginHorizontal: 20,
     marginBottom: 20,
-    zIndex: 1000,
   },
-  timeRangePicker: {
-    borderRadius: 16,
-    borderColor: '#E8EBF7',
+  filterSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 12,
+    fontFamily: 'Lato-Bold',
+  },
+  filterScrollView: {
+    flexGrow: 0,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
     backgroundColor: '#FFFFFF',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
     elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  filterButtonActive: {
+    backgroundColor: PRIMARY_COLOR,
+    borderColor: PRIMARY_COLOR,
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: PRIMARY_COLOR,
+    marginLeft: 6,
+    fontFamily: 'Lato-Bold',
+  },
+  filterButtonTextActive: {
+    color: '#FFFFFF',
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Lato-Bold',
+  },
+  customDateSection: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -619,33 +840,53 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
   },
-  timeRangePickerText: {
+  customDateTitle: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
+    marginBottom: 12,
+    fontFamily: 'Lato-Bold',
   },
-  timeRangePickerContainer: {
-    marginBottom: 10,
+  customDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  dropDownContainer: {
+  dateInput: {
+    flex: 1,
+    backgroundColor: '#F4F6FA',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
     borderColor: '#E8EBF7',
-    backgroundColor: '#FFFFFF',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+  },
+  dateInputContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateInputText: {
+    fontSize: 14,
+    color: '#2C2C2C',
+    marginLeft: 8,
+    fontFamily: 'Lato-Regular',
+    fontWeight: '500',
+  },
+  dateInputPlaceholder: {
+    color: '#999',
+  },
+  dateSeparator: {
+    marginHorizontal: 10,
+  },
+  dateSeparatorText: {
+    fontSize: 12,
+    color: '#999',
+    fontFamily: 'Lato-Regular',
   },
   cardSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginHorizontal: 20,
     marginBottom: 20,
-    zIndex: 1,
   },
   incomeCard: {
     width: '48%',
@@ -721,7 +962,6 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 4,
-    zIndex: 1,
   },
   statisticHeader: {
     padding: 20,
@@ -764,9 +1004,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginHorizontal: 20,
     marginBottom: 20,
-    zIndex: 1,
   },
-  filterButton: {
+  incomeExpenseButton: {
     width: '48%',
     height: 44,
     borderRadius: 16,
@@ -784,17 +1023,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
   },
-  selectedFilterButton: {
+  selectedIncomeExpenseButton: {
     backgroundColor: PRIMARY_COLOR,
     borderColor: PRIMARY_COLOR,
   },
-  filterButtonText: {
+  incomeExpenseButtonText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#666',
     fontFamily: 'Lato-Bold',
   },
-  selectedFilterButtonText: {
+  selectedIncomeExpenseButtonText: {
     color: '#FFFFFF',
   },
   transactionsSection: {
@@ -815,7 +1054,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Lato-Regular',
   },
   transactionsList: {
-    zIndex: 1,
   },
   transactionsCard: {
     marginVertical: 6,
