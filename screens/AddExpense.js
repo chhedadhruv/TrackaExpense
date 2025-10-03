@@ -1,4 +1,4 @@
-import {View, StyleSheet, TextInput, Image, Text, TouchableOpacity} from 'react-native';
+import {View, StyleSheet, TextInput, Image, Text, TouchableOpacity, Platform} from 'react-native';
 import React, {useState, useEffect} from 'react';
 import {Card, ActivityIndicator, Modal, Portal, Provider} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
@@ -382,8 +382,8 @@ const AddExpense = ({navigation}) => {
                   onConfirm={onConfirmSingle}
                   saveLabel="Confirm"
                   label="Select date"
-                  animationType="fade"
-                  presentationStyle="pageSheet"
+                  uppercase={false}
+                  {...(Platform.OS === 'ios' && { presentationStyle: 'pageSheet' })}
                 />
                 {/* Image Upload Section */}
                 <View style={styles.inputContainer}>

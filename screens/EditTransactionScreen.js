@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react';
-import {View, Text, StyleSheet, TextInput, Image, TouchableOpacity} from 'react-native';
+import {View, Text, StyleSheet, TextInput, Image, TouchableOpacity, Platform} from 'react-native';
 import {Card, Modal, Portal, Provider, ActivityIndicator} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import {DatePickerModal} from 'react-native-paper-dates';
@@ -380,8 +380,8 @@ const EditTransactionScreen = ({route, navigation}) => {
                   onConfirm={onConfirmSingle}
                   saveLabel="Confirm"
                   label="Select date"
-                  animationType="fade"
-                  presentationStyle="pageSheet"
+                  uppercase={false}
+                  {...(Platform.OS === 'ios' && { presentationStyle: 'pageSheet' })}
                 />
                 {/* Image Upload Section - Only for expenses */}
                 {transaction.type === 'expense' && (

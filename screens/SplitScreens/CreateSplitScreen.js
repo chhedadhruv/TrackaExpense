@@ -8,6 +8,7 @@ import {
   Alert,
   TouchableOpacity,
   Dimensions,
+  Platform,
 } from 'react-native';
 import {Card, Checkbox, ActivityIndicator, Switch} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
@@ -548,6 +549,15 @@ const CreateSplitScreen = ({route, navigation}) => {
     const isCurrentUser = member.email === currentUser?.email;
     const isSelected = selectedUsers[member.email];
     const handleCardPress = () => {
+      // Prevent adding yourself to the split
+      if (isCurrentUser && !isSelected) {
+        Alert.alert(
+          'Cannot Add Yourself',
+          'You cannot add yourself to the split. You are the one creating/paying for this expense.',
+        );
+        return;
+      }
+      
       const selectedCount =
         Object.values(selectedUsers).filter(Boolean).length;
       if (!isSelected || selectedCount > 1) {
@@ -571,10 +581,26 @@ const CreateSplitScreen = ({route, navigation}) => {
           <View style={styles.memberCheckboxContainer}>
             <View style={styles.memberInfo}>
               <View style={styles.memberNameContainer}>
-                <Checkbox
-                  status={isSelected ? 'checked' : 'unchecked'}
-                  color={PRIMARY_COLOR}
-                />
+                {Platform.OS === 'ios' ? (
+                  // Custom checkbox for iOS with better visibility
+                  <View style={[
+                    styles.customCheckboxIOS,
+                    isSelected && styles.customCheckboxIOSSelected
+                  ]}>
+                    {isSelected && (
+                      <MaterialCommunityIcons 
+                        name="check" 
+                        size={18} 
+                        color="#FFFFFF" 
+                      />
+                    )}
+                  </View>
+                ) : (
+                  <Checkbox
+                    status={isSelected ? 'checked' : 'unchecked'}
+                    color={PRIMARY_COLOR}
+                  />
+                )}
                 <Text style={styles.memberName}>
                   {member.name}
                   {isCurrentUser && ' (You)'}
@@ -672,7 +698,10 @@ const CreateSplitScreen = ({route, navigation}) => {
                   onDismiss={onDismissDatePicker}
                   date={date}
                   onConfirm={onConfirmDate}
-                  presentationStyle="pageSheet"
+                  saveLabel="Confirm"
+                  label="Select date"
+                  uppercase={false}
+                  {...(Platform.OS === 'ios' && { presentationStyle: 'pageSheet' })}
                 />
               </View>
               <View style={styles.inputContainer}>
@@ -975,6 +1004,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  customCheckboxIOS: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#999',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+  customCheckboxIOSSelected: {
+    backgroundColor: PRIMARY_COLOR,
+    borderColor: PRIMARY_COLOR,
   },
   memberName: {
     fontSize: 16,

@@ -5,6 +5,7 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import {Card, Searchbar, ActivityIndicator, Button} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -285,7 +286,10 @@ const SplitTransactionScreen = ({route, navigation}) => {
                     onDismiss={onDismissStartDatePicker}
                     date={customStartDate}
                     onConfirm={onConfirmStartDate}
-                    presentationStyle="pageSheet"
+                    saveLabel="Confirm"
+                    label="Select start date"
+                    uppercase={false}
+                    {...(Platform.OS === 'ios' && { presentationStyle: 'pageSheet' })}
                   />
                   <DatePickerModal
                     locale="en"
@@ -294,7 +298,10 @@ const SplitTransactionScreen = ({route, navigation}) => {
                     onDismiss={onDismissEndDatePicker}
                     date={customEndDate}
                     onConfirm={onConfirmEndDate}
-                    presentationStyle="pageSheet"
+                    saveLabel="Confirm"
+                    label="Select end date"
+                    uppercase={false}
+                    {...(Platform.OS === 'ios' && { presentationStyle: 'pageSheet' })}
                   />
                   <TouchableOpacity
                     style={styles.applyButton}
