@@ -89,12 +89,3 @@ export const requestCameraPermission = async () => {
   }
   return true;
 };
-
-export const checkAllPermissions = async () => {
-  const permissions = {
-    storage: await requestStoragePermission(),
-    camera: await requestCameraPermission(),
-  };
-  
-  return permissions;
-};
