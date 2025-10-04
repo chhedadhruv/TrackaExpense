@@ -2,16 +2,11 @@ import React, { useEffect } from 'react';
 import { Platform, StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Providers from './navigation';
-import { checkAllPermissions } from './utils/Permissions';
 import NotificationService from './services/NotificationService';
 
 const App: React.FC = () => {
   useEffect(() => {
-    // Request permissions when app starts
-    if (Platform.OS === 'android') {
-      checkAllPermissions();
-    }
-
+    // Initialize notification service
     (async () => {
       try {
         await NotificationService.initialize();

@@ -4,13 +4,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     
-    <!-- Camera and storage permissions -->
+    <!-- Camera permission for taking receipt photos -->
     <uses-permission android:name="android.permission.CAMERA" />
+    
+    <!-- Storage permissions for Android 12 and below -->
+    <!-- Android 13+ will use the system photo picker (no permission required) -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    
-    <!-- Media access for newer Android versions -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     
     <!-- Vibration for notifications -->
     <uses-permission android:name="android.permission.VIBRATE" />
