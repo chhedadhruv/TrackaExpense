@@ -146,7 +146,7 @@ android {
     // Support for 16 KB page sizes
     packagingOptions {
         jniLibs {
-            useLegacyPackaging = false
+            useLegacyPackaging = true
         }
     }
 }

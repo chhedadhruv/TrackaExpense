@@ -341,20 +341,6 @@
     public static final java.lang.String *;
 }
 
-# ===== COIL IMAGE LOADING LIBRARY =====
-# Keep all Coil classes
--keep class coil3.** { *; }
--keep class coil.** { *; }
--keep class coil3.PlatformContext { *; }
--keep class coil3.network.** { *; }
--keep class coil3.network.okhttp.** { *; }
--keep class coil3.network.ConnectivityChecker { *; }
--keep class coil3.network.okhttp.OkHttpNetworkFetcher** { *; }
-
-# Suppress Coil warnings
--dontwarn coil3.**
--dontwarn coil.**
-
 # ===== REACT NATIVE MODULE BRIDGES =====
 # Keep all React Native module bridges
 -keep class * extends com.facebook.react.bridge.ReactContextBaseJavaModule {
