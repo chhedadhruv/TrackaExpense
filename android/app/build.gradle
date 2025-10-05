@@ -85,10 +85,15 @@ android {
         applicationId "com.trackaexpense"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 14
-        versionName "1.2.2"
+        versionCode 15
+        versionName "1.2.3"
         multiDexEnabled true
         vectorDrawables.useSupportLibrary = true
+        
+        // Support for 16 KB page sizes
+        ndk {
+            abiFilters "arm64-v8a", "x86_64"
+        }
     }
     signingConfigs {
         debug {
@@ -135,6 +140,13 @@ android {
         }
         abi {
             enableSplit = true
+        }
+    }
+    
+    // Support for 16 KB page sizes
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
         }
     }
 }
