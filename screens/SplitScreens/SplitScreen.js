@@ -661,7 +661,7 @@ const SplitScreen = ({navigation, route}) => {
       return <MaterialCommunityIcons name="account-group" size={24} color="#fff" />;
     };
     return (
-      <Card key={group.id} style={styles.groupCard}>
+      <Card key={group.id} style={styles.groupCard} elevation={4}>
         <TouchableOpacity
           style={styles.groupCardContent}
           onPress={() =>
@@ -719,7 +719,7 @@ const SplitScreen = ({navigation, route}) => {
             <Text style={styles.headerSubtitle}>Manage your expense groups</Text>
           </View>
           {/* Create Group Card */}
-          <Card style={styles.createGroupCard}>
+          <Card style={styles.createGroupCard} elevation={4}>
             <View style={styles.cardContent}>
               <TouchableOpacity
                 style={styles.createGroupHeader}
@@ -879,7 +879,7 @@ const SplitScreen = ({navigation, route}) => {
               </View>
             </View>
             {groups.length === 0 ? (
-              <Card style={styles.emptyStateCard}>
+              <Card style={styles.emptyStateCard} elevation={2}>
                 <View style={styles.emptyState}>
                   <MaterialCommunityIcons name="account-group-outline" size={64} color="#CBD3EE" />
                   <Text style={styles.emptyStateText}>
@@ -947,14 +947,6 @@ const styles = StyleSheet.create({
   createGroupCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    elevation: 8,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
     marginHorizontal: 20,
     marginBottom: 20,
   },
@@ -1182,14 +1174,6 @@ const styles = StyleSheet.create({
   groupCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    elevation: 8,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
     marginBottom: 15,
   },
   groupCardContent: {
@@ -1383,14 +1367,6 @@ const styles = StyleSheet.create({
   emptyStateCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
   emptyState: {
     alignItems: 'center',

@@ -94,7 +94,7 @@ const InvitationsScreen = () => {
             ) : (
               <View style={{ width: '100%', paddingHorizontal: 16, marginTop: 12 }}>
                 {invitations.map(invite => (
-                  <Card key={invite.id} style={styles.inviteCard}>
+                  <Card key={invite.id} style={styles.inviteCard} elevation={2}>
                     <View style={styles.inviteRow}>
                       <View style={styles.inviteLeft}>
                         <View style={styles.inviteIconWrap}>
@@ -142,11 +142,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     marginBottom: 12,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
   inviteRow: {
     flexDirection: 'row',

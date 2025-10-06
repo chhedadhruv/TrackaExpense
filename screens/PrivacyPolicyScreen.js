@@ -317,7 +317,7 @@ For legal or compliance requests, please include relevant documentation and spec
   const ExpandableSection = ({section}) => {
     const isExpanded = expandedSections[section.id];
     return (
-      <Card style={styles.sectionCard} key={section.id}>
+      <Card style={styles.sectionCard} key={section.id} elevation={2}>
         <TouchableOpacity
           style={styles.sectionHeader}
           onPress={() => toggleSection(section.id)}
@@ -373,7 +373,7 @@ For legal or compliance requests, please include relevant documentation and spec
           </Text>
         </View>
         {/* Quick Summary */}
-        <Card style={styles.summaryCard}>
+        <Card style={styles.summaryCard} elevation={3}>
           <View style={styles.summaryContent}>
             <Text style={styles.summaryTitle}>Quick Summary</Text>
             <Text style={styles.summaryText}>
@@ -457,14 +457,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginHorizontal: 20,
     marginBottom: 20,
-    elevation: 6,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
   },
   summaryContent: {
     padding: 20,
@@ -489,14 +481,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     marginBottom: 12,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
   sectionHeader: {
     flexDirection: 'row',

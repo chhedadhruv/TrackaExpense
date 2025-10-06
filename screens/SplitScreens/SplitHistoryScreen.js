@@ -152,7 +152,7 @@ const SplitHistoryScreen = () => {
           </View>
         ) : (
           <KeyboardAwareScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-            <Card style={styles.historyCard}>
+            <Card style={styles.historyCard} elevation={4}>
               <View style={styles.cardContent}>
                 <Text style={styles.historyTitle}>Split History</Text>
                 {history.length > 0 ? (
@@ -207,14 +207,6 @@ const styles = StyleSheet.create({
   historyCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    elevation: 8,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
     marginHorizontal: 20,
     marginTop: 20,
     marginBottom: 40,

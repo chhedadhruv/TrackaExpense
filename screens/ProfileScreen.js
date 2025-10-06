@@ -218,7 +218,7 @@ const ProfileScreen = ({navigation, route}) => {
         </View>
 
         {/* Profile Card */}
-        <Card style={styles.profileCard}>
+        <Card style={styles.profileCard} elevation={2}>
           <View style={styles.profileCardContent}>
             <View style={styles.profileRow}>
               <View style={styles.avatarSection}>
@@ -277,7 +277,7 @@ const ProfileScreen = ({navigation, route}) => {
         <View style={styles.settingsSection}>
           <Text style={styles.sectionHeader}>Account Settings</Text>
           
-          <Card style={styles.settingsCard}>
+          <Card style={styles.settingsCard} elevation={2}>
 
 
             <TouchableOpacity
@@ -331,7 +331,7 @@ const ProfileScreen = ({navigation, route}) => {
 
         {/* Account Actions Section - Collapsible */}
         <View style={styles.settingsSection}>
-          <Card style={styles.settingsCard}>
+          <Card style={styles.settingsCard} elevation={2}>
             <TouchableOpacity
               style={styles.collapsibleHeader}
               onPress={() => setAccountActionsExpanded(!accountActionsExpanded)}
@@ -469,14 +469,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 20,
     borderRadius: 16,
-    elevation: 8,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
     backgroundColor: '#FFFFFF',
   },
   profileCardContent: {
@@ -569,14 +561,6 @@ const styles = StyleSheet.create({
   },
   settingsCard: {
     borderRadius: 16,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
     backgroundColor: '#FFFFFF',
   },
   settingsItem: {

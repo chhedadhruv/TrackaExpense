@@ -310,7 +310,7 @@ const SignupScreen = ({navigation}) => {
             </Text>
           </View>
 
-          <Card style={styles.formCard}>
+          <Card style={styles.formCard} elevation={4}>
             <View style={styles.cardContent}>
               {errorMessage && (
                 <View style={styles.errorContainer}>
@@ -488,7 +488,7 @@ const SignupScreen = ({navigation}) => {
             </View>
           </Card>
 
-          <Card style={styles.termsCard}>
+          <Card style={styles.termsCard} elevation={2}>
             <View style={styles.termsContent}>
               <Text style={styles.termsText}>
                 By creating an account, you agree to our{' '}
@@ -549,14 +549,6 @@ const styles = StyleSheet.create({
   formCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    elevation: 8,
-    shadowColor: '#677CD2',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
     marginBottom: 20,
   },
   cardContent: {
@@ -595,14 +587,6 @@ const styles = StyleSheet.create({
   termsCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 15,
-    elevation: 4,
-    shadowColor: '#677CD2',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
     marginBottom: 20,
   },
   termsContent: {

@@ -62,7 +62,7 @@ const ForgotPasswordScreen = ({navigation}) => {
             </Text>
           </View>
 
-          <Card style={styles.formCard}>
+          <Card style={styles.formCard} elevation={4}>
             <View style={styles.cardContent}>
               {errorMessage && (
                 <View style={styles.errorContainer}>
@@ -102,7 +102,7 @@ const ForgotPasswordScreen = ({navigation}) => {
             </View>
           </Card>
 
-          <Card style={styles.infoCard}>
+          <Card style={styles.infoCard} elevation={2}>
             <View style={styles.infoCardContent}>
               <MaterialCommunityIcons name="information" size={24} color="#677CD2" />
               <View style={styles.infoTextContainer}>
@@ -173,14 +173,6 @@ const styles = StyleSheet.create({
   formCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    elevation: 8,
-    shadowColor: '#677CD2',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
     marginBottom: 20,
   },
   cardContent: {
@@ -245,14 +237,6 @@ const styles = StyleSheet.create({
   infoCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 15,
-    elevation: 4,
-    shadowColor: '#677CD2',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
     marginBottom: 20,
   },
   infoCardContent: {

@@ -359,3 +359,6 @@
     public <init>(...);
     <methods>;
 }
+
+# Suppress warnings for Coil3 (optional image loading library)
+-dontwarn coil3.PlatformContext

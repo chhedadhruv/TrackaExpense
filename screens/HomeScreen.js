@@ -1,11 +1,12 @@
-import {View, Text, ScrollView, StyleSheet, TouchableOpacity} from 'react-native';
+import {View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform} from 'react-native';
 import React, {useState, useEffect, useCallback} from 'react';
 import {ActivityIndicator, Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {useFocusEffect} from '@react-navigation/native';
-import DropDownPicker from 'react-native-dropdown-picker';
+import moment from 'moment';
+import {DatePickerModal} from 'react-native-paper-dates';
 
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
@@ -22,15 +23,10 @@ const HomeScreen = ({navigation}) => {
   const [showAll, setShowAll] = useState(false);
   const [error, setError] = useState(null);
   const [timeRange, setTimeRange] = useState('7days');
-  const [timeRangeOpen, setTimeRangeOpen] = useState(false);
-  const [timeRangeItems] = useState([
-    {label: 'Last 7 Days', value: '7days'},
-    {label: 'Last 30 Days', value: '30days'},
-    {label: 'Last 3 Months', value: '3months'},
-    {label: 'Last 6 Months', value: '6months'},
-    {label: 'Last Year', value: 'year'},
-    {label: 'All Time', value: 'all'},
-  ]);
+  const [customStartDate, setCustomStartDate] = useState(null);
+  const [customEndDate, setCustomEndDate] = useState(null);
+  const [startDatePickerVisible, setStartDatePickerVisible] = useState(false);
+  const [endDatePickerVisible, setEndDatePickerVisible] = useState(false);
 
   const currentUser = auth().currentUser;
 
@@ -53,6 +49,14 @@ const HomeScreen = ({navigation}) => {
       case 'year':
         cutoffDate.setFullYear(now.getFullYear() - 1);
         break;
+      case 'custom':
+        if (customStartDate && customEndDate) {
+          return transactions.filter(t => {
+            const transactionDate = moment(t.date);
+            return transactionDate.isBetween(customStartDate, customEndDate, undefined, '[]');
+          });
+        }
+        return transactions;
       case 'all':
         return transactions;
       default:
@@ -172,7 +176,7 @@ const HomeScreen = ({navigation}) => {
       const filtered = filterTransactionsByTimeRange(transactions, timeRange);
       setFilteredTransactions(filtered);
     }
-  }, [transactions, timeRange]);
+  }, [transactions, timeRange, customStartDate, customEndDate]);
 
   useEffect(() => {
     handleIncome();
@@ -224,6 +228,24 @@ const HomeScreen = ({navigation}) => {
     setShowAll(!showAll);
   };
 
+  const onDismissStartDatePicker = () => {
+    setStartDatePickerVisible(false);
+  };
+  
+  const onConfirmStartDate = params => {
+    setStartDatePickerVisible(false);
+    setCustomStartDate(params.date);
+  };
+  
+  const onDismissEndDatePicker = () => {
+    setEndDatePickerVisible(false);
+  };
+  
+  const onConfirmEndDate = params => {
+    setEndDatePickerVisible(false);
+    setCustomEndDate(params.date);
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -256,30 +278,167 @@ const HomeScreen = ({navigation}) => {
           <Text style={styles.subGreetingText}>Track your expenses today</Text>
         </View>
 
-        {/* Time Range Picker */}
-        <View style={styles.timeRangeSection}>
-          <DropDownPicker
-            open={timeRangeOpen}
-            value={timeRange}
-            items={timeRangeItems}
-            setOpen={setTimeRangeOpen}
-            setValue={setTimeRange}
-            style={styles.timeRangePicker}
-            textStyle={styles.timeRangePickerText}
-            placeholder="Select Time Range"
-            containerStyle={styles.timeRangePickerContainer}
-            dropDownContainerStyle={styles.dropDownContainer}
-            searchable={true}
-            searchPlaceholder="Search time ranges..."
-            listMode="MODAL"
-            modalTitle="Select Time Range"
-            modalAnimationType="slide"
-          />
+        {/* Time Range Filter Section */}
+        <View style={styles.filterSection}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScrollView}>
+            <TouchableOpacity
+              onPress={() => setTimeRange('all')}
+              style={[styles.filterButton, timeRange === 'all' && styles.filterButtonActive]}>
+              <MaterialCommunityIcons
+                name="format-list-bulleted"
+                size={16}
+                color={timeRange === 'all' ? '#FFFFFF' : PRIMARY_COLOR}
+              />
+              <Text style={timeRange === 'all' ? styles.filterButtonTextActive : styles.filterButtonText}>
+                All Time
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setTimeRange('7days')}
+              style={[styles.filterButton, timeRange === '7days' && styles.filterButtonActive]}>
+              <MaterialCommunityIcons
+                name="calendar-week"
+                size={16}
+                color={timeRange === '7days' ? '#FFFFFF' : PRIMARY_COLOR}
+              />
+              <Text style={timeRange === '7days' ? styles.filterButtonTextActive : styles.filterButtonText}>
+                Last 7 Days
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setTimeRange('30days')}
+              style={[styles.filterButton, timeRange === '30days' && styles.filterButtonActive]}>
+              <MaterialCommunityIcons
+                name="calendar-month"
+                size={16}
+                color={timeRange === '30days' ? '#FFFFFF' : PRIMARY_COLOR}
+              />
+              <Text style={timeRange === '30days' ? styles.filterButtonTextActive : styles.filterButtonText}>
+                Last 30 Days
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setTimeRange('3months')}
+              style={[styles.filterButton, timeRange === '3months' && styles.filterButtonActive]}>
+              <MaterialCommunityIcons
+                name="calendar-range"
+                size={16}
+                color={timeRange === '3months' ? '#FFFFFF' : PRIMARY_COLOR}
+              />
+              <Text style={timeRange === '3months' ? styles.filterButtonTextActive : styles.filterButtonText}>
+                Last 3 Months
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setTimeRange('6months')}
+              style={[styles.filterButton, timeRange === '6months' && styles.filterButtonActive]}>
+              <MaterialCommunityIcons
+                name="calendar-clock"
+                size={16}
+                color={timeRange === '6months' ? '#FFFFFF' : PRIMARY_COLOR}
+              />
+              <Text style={timeRange === '6months' ? styles.filterButtonTextActive : styles.filterButtonText}>
+                Last 6 Months
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setTimeRange('year')}
+              style={[styles.filterButton, timeRange === 'year' && styles.filterButtonActive]}>
+              <MaterialCommunityIcons
+                name="calendar"
+                size={16}
+                color={timeRange === 'year' ? '#FFFFFF' : PRIMARY_COLOR}
+              />
+              <Text style={timeRange === 'year' ? styles.filterButtonTextActive : styles.filterButtonText}>
+                Last Year
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setTimeRange('custom')}
+              style={[styles.filterButton, timeRange === 'custom' && styles.filterButtonActive]}>
+              <MaterialCommunityIcons
+                name="calendar-range"
+                size={16}
+                color={timeRange === 'custom' ? '#FFFFFF' : PRIMARY_COLOR}
+              />
+              <Text style={timeRange === 'custom' ? styles.filterButtonTextActive : styles.filterButtonText}>
+                Custom Range
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
+
+        {/* Custom Date Range Section */}
+        {timeRange === 'custom' && (
+          <View style={styles.customDateSection}>
+            <Text style={styles.customDateTitle}>Select Date Range</Text>
+            <View style={styles.customDateContainer}>
+              <TouchableOpacity
+                style={styles.dateInput}
+                onPress={() => setStartDatePickerVisible(true)}>
+                <View style={styles.dateInputContent}>
+                  <MaterialCommunityIcons
+                    name="calendar-start"
+                    size={20}
+                    color={PRIMARY_COLOR}
+                  />
+                  <Text style={[styles.dateInputText, !customStartDate && styles.dateInputPlaceholder]}>
+                    {customStartDate
+                      ? moment(customStartDate).format('MMM DD, YYYY')
+                      : 'Start Date'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              <View style={styles.dateSeparator}>
+                <Text style={styles.dateSeparatorText}>to</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.dateInput}
+                onPress={() => setEndDatePickerVisible(true)}>
+                <View style={styles.dateInputContent}>
+                  <MaterialCommunityIcons
+                    name="calendar-end"
+                    size={20}
+                    color={PRIMARY_COLOR}
+                  />
+                  <Text style={[styles.dateInputText, !customEndDate && styles.dateInputPlaceholder]}>
+                    {customEndDate
+                      ? moment(customEndDate).format('MMM DD, YYYY')
+                      : 'End Date'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+        <DatePickerModal
+          locale="en"
+          mode="single"
+          visible={startDatePickerVisible}
+          onDismiss={onDismissStartDatePicker}
+          date={customStartDate || new Date()}
+          onConfirm={onConfirmStartDate}
+          saveLabel="Confirm"
+          label="Select start date"
+          uppercase={false}
+          {...(Platform.OS === 'ios' && { presentationStyle: 'pageSheet' })}
+        />
+        <DatePickerModal
+          locale="en"
+          mode="single"
+          visible={endDatePickerVisible}
+          onDismiss={onDismissEndDatePicker}
+          date={customEndDate || new Date()}
+          onConfirm={onConfirmEndDate}
+          saveLabel="Confirm"
+          label="Select end date"
+          uppercase={false}
+          {...(Platform.OS === 'ios' && { presentationStyle: 'pageSheet' })}
+        />
 
         {/* Summary Cards */}
         <View style={styles.cardSection}>
-          <Card style={styles.incomeCard}>
+          <Card style={styles.incomeCard} elevation={2}>
             <View style={styles.cardContent}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardIcon}>
@@ -296,7 +455,7 @@ const HomeScreen = ({navigation}) => {
               </Text>
             </View>
           </Card>
-          <Card style={styles.expenseCard}>
+          <Card style={styles.expenseCard} elevation={2}>
             <View style={styles.cardContent}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardIcon}>
@@ -369,6 +528,7 @@ const HomeScreen = ({navigation}) => {
                   <Card
                     style={styles.transactionsCard}
                     key={transaction.id}
+                    elevation={2}
                     onPress={() =>
                       navigation.navigate('TransactionDetail', {
                         transaction,
@@ -531,77 +691,116 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontFamily: 'Lato-Regular',
   },
-  timeRangeSection: {
+  filterSection: {
     marginHorizontal: 20,
     marginBottom: 20,
-    zIndex: 1000,
   },
-  timeRangePicker: {
-    borderRadius: 16,
-    borderColor: '#E8EBF7',
+  filterScrollView: {
+    flexGrow: 0,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
     backgroundColor: '#FFFFFF',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
-  timeRangePickerText: {
+  filterButtonActive: {
+    backgroundColor: PRIMARY_COLOR,
+    borderColor: PRIMARY_COLOR,
+  },
+  filterButtonText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
+    fontWeight: '600',
+    color: PRIMARY_COLOR,
+    marginLeft: 6,
+    fontFamily: 'Lato-Bold',
   },
-  timeRangePickerContainer: {
-    marginBottom: 10,
+  filterButtonTextActive: {
+    color: '#FFFFFF',
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Lato-Bold',
   },
-  dropDownContainer: {
-    borderColor: '#E8EBF7',
+  customDateSection: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 16,
     backgroundColor: '#FFFFFF',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+    // elevation: 3,
+    // shadowColor: '#ccc',
+    // shadowOffset: {
+    //   width: 0,
+    //   height: 2,
+    // },
+    // shadowOpacity: 0.01,
+    // shadowRadius: 4,
+  },
+  customDateTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    marginBottom: 12,
+    fontFamily: 'Lato-Bold',
+  },
+  customDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateInput: {
+    flex: 1,
+    backgroundColor: '#F4F6FA',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+  },
+  dateInputContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateInputText: {
+    fontSize: 14,
+    color: '#2C2C2C',
+    marginLeft: 8,
+    fontFamily: 'Lato-Regular',
+    fontWeight: '500',
+  },
+  dateInputPlaceholder: {
+    color: '#999',
+  },
+  dateSeparator: {
+    marginHorizontal: 10,
+  },
+  dateSeparatorText: {
+    fontSize: 12,
+    color: '#999',
+    fontFamily: 'Lato-Regular',
   },
   cardSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginHorizontal: 20,
     marginBottom: 20,
-    zIndex: 1,
   },
   incomeCard: {
     width: '48%',
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
   expenseCard: {
     width: '48%',
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
   cardContent: {
     padding: 16,
@@ -724,14 +923,6 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
   transactionsCardIcon: {
     width: 50,

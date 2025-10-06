@@ -255,7 +255,7 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
     }
   }, [splits]);
   const renderGroupSummaryCard = () => (
-    <Card style={styles.groupSummaryCard}>
+    <Card style={styles.groupSummaryCard} elevation={4}>
       <View style={styles.cardContent}>
         <Text style={styles.titleText}>{group.name}</Text>
         <View style={styles.groupMemberAvatars}>
@@ -421,7 +421,7 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
         {filteredSplits.length > 0 ? (
           <>
             {splitsToShow.map(split => (
-              <Card key={split.id} style={styles.splitCard}>
+              <Card key={split.id} style={styles.splitCard} elevation={2}>
                 <TouchableOpacity
                   style={styles.splitCardContent}
                   onPress={() =>
@@ -491,7 +491,7 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
       <View style={styles.lendingSummaryContainer}>
         <Text style={styles.sectionHeaderText}>Settlement Suggestions</Text>
         {detailedLendingInfo.map((detail, index) => (
-          <Card key={index} style={styles.lendingSummaryCard}>
+          <Card key={index} style={styles.lendingSummaryCard} elevation={2}>
             <View style={styles.lendingSummaryContent}>
               <View style={styles.lendingUserContainer}>
                 <UserAvatar size={40} name={detail.borrower.name} />
@@ -637,14 +637,6 @@ const styles = StyleSheet.create({
   groupSummaryCard: {
     backgroundColor: PRIMARY_COLOR,
     borderRadius: 20,
-    elevation: 8,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
     marginHorizontal: 20,
     marginBottom: 20,
   },
@@ -892,14 +884,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
   },
   actionButton: {
     flex: 1,
