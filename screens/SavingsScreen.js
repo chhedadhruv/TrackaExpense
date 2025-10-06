@@ -534,7 +534,7 @@ const SavingsScreen = ({navigation}) => {
           {/* Savings Goals List */}
           {savingsGoals.length > 0 ? (
             savingsGoals.map((goal, index) => (
-              <Card key={goal.id} style={styles.savingsCard}>
+              <Card key={goal.id} style={styles.savingsCard} elevation={2}>
                 <View style={styles.cardContent}>
                   <View style={styles.savingsHeader}>
                     <View style={styles.goalInfo}>
@@ -698,7 +698,7 @@ const SavingsScreen = ({navigation}) => {
               </Card>
             ))
           ) : (
-            <Card style={styles.emptyStateCard}>
+            <Card style={styles.emptyStateCard} elevation={2}>
               <View style={styles.emptyState}>
                 <MaterialCommunityIcons name="piggy-bank-outline" size={64} color="#CBD3EE" />
                 <Text style={styles.emptyStateTitle}>No Savings Goals Yet</Text>
@@ -1005,14 +1005,6 @@ const styles = StyleSheet.create({
   savingsCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    elevation: 8,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
     marginHorizontal: 20,
     marginBottom: 20,
   },
@@ -1432,14 +1424,6 @@ const styles = StyleSheet.create({
   emptyStateCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    elevation: 8,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
     marginHorizontal: 20,
     marginBottom: 20,
   },

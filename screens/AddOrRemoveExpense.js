@@ -174,6 +174,7 @@ const AddOrRemoveExpense = ({navigation}) => {
               <Card
                 style={styles.transactionsCard}
                 key={transaction.id || index}
+                elevation={2}
                 onPress={() =>
                   navigation.navigate('TransactionDetail', {
                     transaction,
@@ -368,14 +369,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
   transactionsCardContent: {
     flexDirection: 'row',

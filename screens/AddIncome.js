@@ -158,7 +158,7 @@ const AddIncome = ({navigation}) => {
             <Text style={styles.headerSubtitle}>Record your income to track your finances</Text>
           </View>
           {/* Form Card */}
-          <Card style={styles.formCard}>
+          <Card style={styles.formCard} elevation={4}>
             <View style={styles.cardContent}>
               {errorMessage && (
                 <View style={styles.errorContainer}>
@@ -356,14 +356,6 @@ const styles = StyleSheet.create({
   formCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    elevation: 8,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
     marginHorizontal: 20,
     marginBottom: 40,
   },

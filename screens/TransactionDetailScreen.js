@@ -104,7 +104,7 @@ const TransactionDetailScreen = ({route, navigation}) => {
       </View>
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {/* Transaction Details Card */}
-        <Card style={styles.detailsCard}>
+        <Card style={styles.detailsCard} elevation={2}>
           <View style={styles.detailsCardContent}>
             <Text style={styles.sectionTitle}>Transaction Details</Text>
             <View style={styles.detailRow}>
@@ -157,7 +157,7 @@ const TransactionDetailScreen = ({route, navigation}) => {
         </Card>
         {/* Receipt Image Card */}
         {transaction.imageUrl && (
-          <Card style={styles.imageCard}>
+          <Card style={styles.imageCard} elevation={2}>
             <TouchableOpacity onPress={onImagePress} style={styles.imageCardContent}>
               <View style={styles.imageContainer}>
                 <Image
@@ -258,14 +258,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     margin: 20,
     borderRadius: 16,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
   detailsCardContent: {
     padding: 25,
@@ -321,14 +313,6 @@ const styles = StyleSheet.create({
   imageCard: {
     margin: 20,
     borderRadius: 16,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
   imageCardContent: {
     flexDirection: 'row',

@@ -289,7 +289,6 @@ const StatisticScreen = ({navigation}) => {
         </View>
         {/* Time Range Filter Section */}
         <View style={styles.filterSection}>
-          <Text style={styles.filterSectionTitle}>Filter by period</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScrollView}>
             <TouchableOpacity
               onPress={() => setTimeRange('all')}
@@ -446,7 +445,7 @@ const StatisticScreen = ({navigation}) => {
         />
         {/* Summary Cards */}
         <View style={styles.cardSection}>
-          <Card style={styles.incomeCard}>
+          <Card style={styles.incomeCard} elevation={2}>
             <View style={styles.cardContent}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardIcon}>
@@ -463,7 +462,7 @@ const StatisticScreen = ({navigation}) => {
               </Text>
             </View>
           </Card>
-          <Card style={styles.expenseCard}>
+          <Card style={styles.expenseCard} elevation={2}>
             <View style={styles.cardContent}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardIcon}>
@@ -482,7 +481,7 @@ const StatisticScreen = ({navigation}) => {
           </Card>
         </View>
         {/* Statistics Chart Section */}
-        <Card style={styles.statisticCard}>
+        <Card style={styles.statisticCard} elevation={3}>
           <View style={styles.statisticHeader}>
             <Text style={styles.statisticHeaderText}>Financial Overview</Text>
             <Text style={styles.statisticHeaderSubText}>
@@ -559,7 +558,7 @@ const StatisticScreen = ({navigation}) => {
 
         {/* Category Breakdown Pie */
         }
-        <Card style={styles.statisticCard}>
+        <Card style={styles.statisticCard} elevation={3}>
           <View style={styles.statisticHeader}>
             <Text style={styles.statisticHeaderText}>
               {selectedBtn === 'Income' ? 'Income by Category' : 'Spending by Category'}
@@ -671,6 +670,7 @@ const StatisticScreen = ({navigation}) => {
                   <Card
                     style={styles.transactionsCard}
                     key={transaction.id}
+                    elevation={2}
                     onPress={() =>
                       navigation.navigate('TransactionDetail', {
                         transaction,
@@ -778,13 +778,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 20,
   },
-  filterSectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 12,
-    fontFamily: 'Lato-Bold',
-  },
   filterScrollView: {
     flexGrow: 0,
   },
@@ -798,14 +791,6 @@ const styles = StyleSheet.create({
     marginRight: 10,
     borderWidth: 1,
     borderColor: '#E8EBF7',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
   },
   filterButtonActive: {
     backgroundColor: PRIMARY_COLOR,
@@ -831,14 +816,8 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
   customDateTitle: {
     fontSize: 14,
@@ -892,27 +871,11 @@ const styles = StyleSheet.create({
     width: '48%',
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
   expenseCard: {
     width: '48%',
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
   cardContent: {
     padding: 16,
@@ -954,14 +917,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
   statisticHeader: {
     padding: 20,
@@ -1014,14 +969,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E8EBF7',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
   },
   selectedIncomeExpenseButton: {
     backgroundColor: PRIMARY_COLOR,
@@ -1059,14 +1006,6 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
   transactionsCardContent: {
     flexDirection: 'row',

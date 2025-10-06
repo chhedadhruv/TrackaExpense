@@ -284,7 +284,7 @@ const LoginScreen = ({navigation}) => {
             <Text style={styles.subtitleText}>Sign in to continue tracking your expenses</Text>
           </View>
 
-          <Card style={styles.formCard}>
+          <Card style={styles.formCard} elevation={4}>
             <View style={styles.cardContent}>
               {errorMessage && (
                 <View style={styles.errorContainer}>
@@ -475,14 +475,6 @@ const styles = StyleSheet.create({
   formCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    elevation: 8,
-    shadowColor: '#677CD2',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
     marginBottom: 20,
   },
   cardContent: {

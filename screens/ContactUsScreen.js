@@ -126,7 +126,7 @@ const ContactUsScreen = ({navigation}) => {
           </Text>
         </View>
         {/* Quick Contact Options */}
-        <Card style={styles.quickContactCard}>
+        <Card style={styles.quickContactCard} elevation={2}>
           <View style={styles.cardContent}>
             <Text style={styles.sectionTitle}>Quick Contact</Text>
             <TouchableOpacity
@@ -163,7 +163,7 @@ const ContactUsScreen = ({navigation}) => {
           </View>
         </Card>
         {/* Message Form Card */}
-        <Card style={styles.formCard}>
+        <Card style={styles.formCard} elevation={3}>
           <View style={styles.cardContent}>
             <Text style={styles.sectionTitle}>Send us a Message</Text>
             {errorMessage && (
@@ -313,27 +313,11 @@ const styles = StyleSheet.create({
   quickContactCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    elevation: 6,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
     marginBottom: 20,
   },
   formCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    elevation: 8,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
     marginBottom: 20,
   },
   cardContent: {

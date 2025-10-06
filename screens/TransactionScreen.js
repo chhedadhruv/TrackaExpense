@@ -432,6 +432,7 @@ const TransactionScreen = ({navigation}) => {
               <Card
                 key={transaction.id}
                 style={styles.transactionsCard}
+                elevation={2}
                 onPress={() =>
                   navigation.navigate('TransactionDetail', {transaction})
                 }>

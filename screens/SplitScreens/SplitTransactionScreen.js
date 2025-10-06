@@ -165,7 +165,7 @@ const SplitTransactionScreen = ({route, navigation}) => {
             />
           </View>
           {/* Filter Section */}
-          <Card style={styles.filterCard}>
+          <Card style={styles.filterCard} elevation={3}>
             <View style={styles.cardContent}>
               <Text style={styles.filterTitle}>Filter by Date</Text>
               <ScrollView 
@@ -321,6 +321,7 @@ const SplitTransactionScreen = ({route, navigation}) => {
                 <Card
                   key={transaction.id}
                   style={styles.transactionsCard}
+                  elevation={2}
                   onPress={() =>
                     navigation.navigate('SplitDetail', {group, split: transaction})
                   }>
@@ -352,7 +353,7 @@ const SplitTransactionScreen = ({route, navigation}) => {
                 </Card>
               ))
             ) : (
-              <Card style={styles.emptyStateCard}>
+              <Card style={styles.emptyStateCard} elevation={2}>
                 <View style={styles.emptyState}>
                   <MaterialCommunityIcons name="history" size={64} color="#CBD3EE" />
                   <Text style={styles.emptyStateText}>No transactions found</Text>
@@ -419,14 +420,6 @@ const styles = StyleSheet.create({
   filterCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    elevation: 6,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
     marginHorizontal: 20,
     marginBottom: 20,
   },
@@ -651,14 +644,6 @@ const styles = StyleSheet.create({
   emptyStateCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
   emptyState: {
     alignItems: 'center',

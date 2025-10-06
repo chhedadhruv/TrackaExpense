@@ -273,7 +273,7 @@ const SplitDetailScreen = ({route, navigation}) => {
             </Text>
           </View>
           {/* Summary Card */}
-          <Card style={styles.summaryCard}>
+          <Card style={styles.summaryCard} elevation={4}>
             <View style={styles.cardContent}>
               <View style={styles.summaryHeader}>
                 <View style={styles.summaryIcon}>
@@ -387,14 +387,6 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    elevation: 8,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
     marginHorizontal: 20,
     marginBottom: 20,
   },

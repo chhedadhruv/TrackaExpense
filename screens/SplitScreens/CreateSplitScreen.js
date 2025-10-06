@@ -577,7 +577,7 @@ const CreateSplitScreen = ({route, navigation}) => {
         <Card style={[
           styles.memberCard,
           isSelected && styles.memberCardSelected
-        ]}>
+        ]} elevation={isSelected ? 2 : 1}>
           <View style={styles.memberCheckboxContainer}>
             <View style={styles.memberInfo}>
               <View style={styles.memberNameContainer}>
@@ -656,7 +656,7 @@ const CreateSplitScreen = ({route, navigation}) => {
             </Text>
           </View>
           {/* Form Card */}
-          <Card style={styles.formCard}>
+          <Card style={styles.formCard} elevation={4}>
             <View style={styles.cardContent}>
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Split Title</Text>
@@ -734,7 +734,7 @@ const CreateSplitScreen = ({route, navigation}) => {
             </View>
           </Card>
           {/* Paid By Card */}
-          <Card style={styles.sectionCard}>
+          <Card style={styles.sectionCard} elevation={3}>
             <View style={styles.cardContent}>
               <Text style={styles.sectionTitle}>Paid By</Text>
               <View style={styles.paidByContainer}>
@@ -760,14 +760,14 @@ const CreateSplitScreen = ({route, navigation}) => {
             </View>
           </Card>
           {/* Split Type Card */}
-          <Card style={styles.sectionCard}>
+          <Card style={styles.sectionCard} elevation={3}>
             <View style={styles.cardContent}>
               <Text style={styles.sectionTitle}>Split Type</Text>
               {renderSplitTypeButtons()}
             </View>
           </Card>
           {/* Split With Card */}
-          <Card style={styles.sectionCard}>
+          <Card style={styles.sectionCard} elevation={3}>
             <View style={styles.cardContent}>
               <View style={styles.splitWithHeader}>
                 <Text style={styles.sectionTitle}>Split With</Text>
@@ -853,28 +853,12 @@ const styles = StyleSheet.create({
   formCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    elevation: 8,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
     marginHorizontal: 20,
     marginBottom: 20,
   },
   sectionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    elevation: 6,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
     marginHorizontal: 20,
     marginBottom: 15,
   },
@@ -977,20 +961,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     backgroundColor: '#fff',
     borderRadius: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
   },
   memberCardSelected: {
     borderWidth: 1,
     borderColor: PRIMARY_COLOR + '30',
-    elevation: 4,
-    shadowOpacity: 0.1,
   },
   memberCheckboxContainer: {
     flexDirection: 'row',

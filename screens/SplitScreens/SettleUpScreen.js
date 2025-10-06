@@ -185,7 +185,7 @@ const SettleUpScreen = ({route, navigation}) => {
     onSelect,
     excludeUser,
   ) => (
-    <Card style={styles.sectionCard}>
+    <Card style={styles.sectionCard} elevation={3}>
       <View style={styles.cardContent}>
         <Text style={styles.sectionTitle}>{title}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -270,7 +270,7 @@ const SettleUpScreen = ({route, navigation}) => {
             selectedBorrower,
           )}
           {/* Amount section */}
-          <Card style={styles.sectionCard}>
+          <Card style={styles.sectionCard} elevation={3}>
             <View style={styles.cardContent}>
               <Text style={styles.sectionTitle}>Amount</Text>
               <TextInput
@@ -284,7 +284,7 @@ const SettleUpScreen = ({route, navigation}) => {
             </View>
           </Card>
           {/* Note section */}
-          <Card style={styles.sectionCard}>
+          <Card style={styles.sectionCard} elevation={3}>
             <View style={styles.cardContent}>
               <Text style={styles.sectionTitle}>Add a note (optional)</Text>
               <TextInput
@@ -301,7 +301,7 @@ const SettleUpScreen = ({route, navigation}) => {
           </Card>
           {/* Summary section */}
           {selectedLender && selectedBorrower && amount && (
-            <Card style={styles.sectionCard}>
+            <Card style={styles.sectionCard} elevation={3}>
               <View style={styles.cardContent}>
                 <Text style={styles.sectionTitle}>Summary</Text>
                 <View style={styles.summaryContent}>
@@ -369,14 +369,6 @@ const styles = StyleSheet.create({
   sectionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    elevation: 6,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
     marginHorizontal: 20,
     marginBottom: 15,
   },
