@@ -59,12 +59,24 @@ const AddIncome = ({navigation}) => {
       setErrorMessage('Please enter a title for your income');
       return false;
     }
+    if (title.trim().length > 100) {
+      setErrorMessage('Title must be 100 characters or less');
+      return false;
+    }
+    if (description.trim().length > 500) {
+      setErrorMessage('Description must be 500 characters or less');
+      return false;
+    }
     if (!amount.trim()) {
       setErrorMessage('Please enter an amount');
       return false;
     }
     if (isNaN(amount) || parseFloat(amount) <= 0) {
       setErrorMessage('Please enter a valid amount');
+      return false;
+    }
+    if (parseFloat(amount) > 999999999) {
+      setErrorMessage('Amount must be less than 999,999,999');
       return false;
     }
     if (!category) {
@@ -187,8 +199,10 @@ const AddIncome = ({navigation}) => {
                     onChangeText={setTitle}
                     style={styles.textInput}
                     editable={!isSubmitting}
+                    maxLength={100}
                   />
                 </View>
+                <Text style={styles.characterCount}>{title.length}/100</Text>
               </View>
               {/* Description Input */}
               <View style={styles.inputContainer}>
@@ -205,8 +219,10 @@ const AddIncome = ({navigation}) => {
                     multiline
                     numberOfLines={2}
                     editable={!isSubmitting}
+                    maxLength={500}
                   />
                 </View>
+                <Text style={styles.characterCount}>{description.length}/500</Text>
               </View>
               {/* Category Dropdown */}
               <View style={styles.inputContainer}>
@@ -512,6 +528,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: PRIMARY_COLOR,
     marginLeft: 10,
+    fontFamily: 'Lato-Regular',
+  },
+  characterCount: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+    textAlign: 'right',
     fontFamily: 'Lato-Regular',
   },
 });

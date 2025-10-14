@@ -34,9 +34,17 @@ const SettleUpScreen = ({route, navigation}) => {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
+    if (note.trim().length > 200) {
+      Alert.alert('Error', 'Note must be 200 characters or less');
+      return;
+    }
     const settlementAmount = parseFloat(amount);
     if (isNaN(settlementAmount) || settlementAmount <= 0) {
       Alert.alert('Error', 'Please enter a valid amount');
+      return;
+    }
+    if (settlementAmount > 999999999) {
+      Alert.alert('Error', 'Amount must be less than 999,999,999');
       return;
     }
     try {
@@ -298,7 +306,9 @@ const SettleUpScreen = ({route, navigation}) => {
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
+                maxLength={200}
               />
+              <Text style={styles.characterCount}>{note.length}/200</Text>
             </View>
           </Card>
           {/* Summary section */}
@@ -499,6 +509,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
     fontFamily: 'Lato-Bold',
+  },
+  characterCount: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+    textAlign: 'right',
+    fontFamily: 'Lato-Regular',
   },
 });
 export default SettleUpScreen;

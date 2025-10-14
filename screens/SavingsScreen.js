@@ -145,6 +145,14 @@ const SavingsScreen = ({navigation}) => {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
+    if (editValues.name.trim().length > 50) {
+      Alert.alert('Error', 'Goal name must be 50 characters or less');
+      return;
+    }
+    if (editValues.description.trim().length > 200) {
+      Alert.alert('Error', 'Description must be 200 characters or less');
+      return;
+    }
     const current = parseFloat(editValues.current);
     const target = parseFloat(editValues.target);
     const monthly = parseFloat(editValues.monthly);
@@ -390,6 +398,14 @@ const SavingsScreen = ({navigation}) => {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
+    if (editValues.name.trim().length > 50) {
+      Alert.alert('Error', 'Goal name must be 50 characters or less');
+      return;
+    }
+    if (editValues.description.trim().length > 200) {
+      Alert.alert('Error', 'Description must be 200 characters or less');
+      return;
+    }
     const current = parseFloat(editValues.current);
     const target = parseFloat(editValues.target);
     const monthly = parseFloat(editValues.monthly);
@@ -569,7 +585,9 @@ const SavingsScreen = ({navigation}) => {
                           onChangeText={(text) => setEditValues({...editValues, name: text})}
                           placeholder="Enter goal name"
                           placeholderTextColor="#999"
+                          maxLength={50}
                         />
+                        <Text style={styles.characterCount}>{editValues.name.length}/50</Text>
                       </View>
                       <View style={styles.inputContainer}>
                         <Text style={styles.inputLabel}>Description (Optional)</Text>
@@ -579,7 +597,11 @@ const SavingsScreen = ({navigation}) => {
                           onChangeText={(text) => setEditValues({...editValues, description: text})}
                           placeholder="Enter description"
                           placeholderTextColor="#999"
+                          maxLength={200}
+                          multiline
+                          numberOfLines={2}
                         />
+                        <Text style={styles.characterCount}>{editValues.description.length}/200</Text>
                       </View>
                       <View style={styles.inputContainer}>
                         <Text style={styles.inputLabel}>Current Amount ({currency.symbol})</Text>
@@ -848,7 +870,9 @@ const SavingsScreen = ({navigation}) => {
                   onChangeText={(text) => setEditValues({...editValues, name: text})}
                   placeholder="e.g., Emergency Fund, Vacation"
                   placeholderTextColor="#999"
+                  maxLength={50}
                 />
+                <Text style={styles.characterCount}>{editValues.name.length}/50</Text>
               </View>
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Description (Optional)</Text>
@@ -858,7 +882,11 @@ const SavingsScreen = ({navigation}) => {
                   onChangeText={(text) => setEditValues({...editValues, description: text})}
                   placeholder="Describe your savings goal"
                   placeholderTextColor="#999"
+                  maxLength={200}
+                  multiline
+                  numberOfLines={2}
                 />
+                <Text style={styles.characterCount}>{editValues.description.length}/200</Text>
               </View>
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Current Amount ({currency.symbol}) *</Text>
@@ -1471,6 +1499,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'Lato-Bold',
+  },
+  characterCount: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+    textAlign: 'right',
+    fontFamily: 'Lato-Regular',
   },
 });
 export default SavingsScreen; 
