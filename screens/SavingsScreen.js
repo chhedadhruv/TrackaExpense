@@ -16,11 +16,13 @@ import auth from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import FormButton from '../components/FormButton';
+import {useCurrency} from '../utils/CurrencyUtil';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
 const SavingsScreen = ({navigation}) => {
+  const {currency, formatAmount: formatCurrencyAmount} = useCurrency();
   const [loading, setLoading] = useState(true);
   const [savingsGoals, setSavingsGoals] = useState([]);
   const [savingsHistory, setSavingsHistory] = useState([]);
@@ -267,7 +269,7 @@ const SavingsScreen = ({navigation}) => {
       });
       
       setSavingsGoals(updatedGoals);
-      Alert.alert('Success', `₹${formatCurrency(amount)} added to ${savingsGoals.find(g => g.id === selectedGoalId)?.name}`);
+      Alert.alert('Success', `${formatCurrencyAmount(amount)} added to ${savingsGoals.find(g => g.id === selectedGoalId)?.name}`);
     } catch (error) {
       console.error('Error adding to savings:', error);
       Alert.alert('Error', `Failed to add to savings: ${error.message}`);
@@ -335,7 +337,7 @@ const SavingsScreen = ({navigation}) => {
       });
       
       setSavingsGoals(updatedGoals);
-      Alert.alert('Success', `₹${formatCurrency(amount)} withdrawn from ${selectedGoal.name}`);
+      Alert.alert('Success', `${formatCurrencyAmount(amount)} withdrawn from ${selectedGoal.name}`);
     } catch (error) {
       console.error('Error withdrawing from savings:', error);
       Alert.alert('Error', `Failed to withdraw from savings: ${error.message}`);
@@ -580,7 +582,7 @@ const SavingsScreen = ({navigation}) => {
                         />
                       </View>
                       <View style={styles.inputContainer}>
-                        <Text style={styles.inputLabel}>Current Amount (₹)</Text>
+                        <Text style={styles.inputLabel}>Current Amount ({currency.symbol})</Text>
                         <TextInput
                           style={styles.textInput}
                           value={editValues.current}
@@ -591,7 +593,7 @@ const SavingsScreen = ({navigation}) => {
                         />
                       </View>
                       <View style={styles.inputContainer}>
-                        <Text style={styles.inputLabel}>Target Amount (₹)</Text>
+                        <Text style={styles.inputLabel}>Target Amount ({currency.symbol})</Text>
                         <TextInput
                           style={styles.textInput}
                           value={editValues.target}
@@ -602,7 +604,7 @@ const SavingsScreen = ({navigation}) => {
                         />
                       </View>
                       <View style={styles.inputContainer}>
-                        <Text style={styles.inputLabel}>Monthly Goal (₹)</Text>
+                        <Text style={styles.inputLabel}>Monthly Goal ({currency.symbol})</Text>
                         <TextInput
                           style={styles.textInput}
                           value={editValues.monthly}
@@ -633,15 +635,15 @@ const SavingsScreen = ({navigation}) => {
                     </View>
                   ) : (
                     <>
-                      <Text style={styles.savingsAmount}>₹{formatCurrency(goal.current)}</Text>
+                      <Text style={styles.savingsAmount}>{formatCurrency(goal.current)}</Text>
                       <View style={styles.savingsInfo}>
                         <View style={styles.infoRow}>
                           <Text style={styles.infoLabel}>Target:</Text>
-                          <Text style={styles.infoValue}>₹{formatCurrency(goal.target)}</Text>
+                          <Text style={styles.infoValue}>{formatCurrency(goal.target)}</Text>
                         </View>
                         <View style={styles.infoRow}>
                           <Text style={styles.infoLabel}>Monthly Goal:</Text>
-                          <Text style={styles.infoValue}>₹{formatCurrency(goal.monthly)}</Text>
+                          <Text style={styles.infoValue}>{formatCurrency(goal.monthly)}</Text>
                         </View>
                       </View>
 
@@ -761,7 +763,7 @@ const SavingsScreen = ({navigation}) => {
                         styles.historyAmount,
                         item.type === 'deposit' ? styles.positiveAmount : styles.negativeAmount
                       ]}>
-                        {item.type === 'deposit' ? '+' : '-'}₹{formatCurrency(item.amount)}
+                        {item.type === 'deposit' ? '+' : '-'}{formatCurrency(item.amount)}
                       </Text>
                     )}
                   </View>
@@ -859,7 +861,7 @@ const SavingsScreen = ({navigation}) => {
                 />
               </View>
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Current Amount (₹) *</Text>
+                <Text style={styles.inputLabel}>Current Amount ({currency.symbol}) *</Text>
                 <TextInput
                   style={styles.textInput}
                   value={editValues.current}
@@ -870,7 +872,7 @@ const SavingsScreen = ({navigation}) => {
                 />
               </View>
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Target Amount (₹) *</Text>
+                <Text style={styles.inputLabel}>Target Amount ({currency.symbol}) *</Text>
                 <TextInput
                   style={styles.textInput}
                   value={editValues.target}
@@ -881,7 +883,7 @@ const SavingsScreen = ({navigation}) => {
                 />
               </View>
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Monthly Goal (₹) *</Text>
+                <Text style={styles.inputLabel}>Monthly Goal ({currency.symbol}) *</Text>
                 <TextInput
                   style={styles.textInput}
                   value={editValues.monthly}

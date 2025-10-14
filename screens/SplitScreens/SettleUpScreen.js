@@ -16,11 +16,13 @@ import auth from '@react-native-firebase/auth';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
+import {useCurrency} from '../../utils/CurrencyUtil';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
 const SettleUpScreen = ({route, navigation}) => {
+  const {currency, formatAmount} = useCurrency();
   const {group, lendingDetails} = route.params;
   const [loading, setLoading] = useState(false);
   const [selectedLender, setSelectedLender] = useState(null);
@@ -185,7 +187,7 @@ const SettleUpScreen = ({route, navigation}) => {
     onSelect,
     excludeUser,
   ) => (
-    <Card style={styles.sectionCard} elevation={3}>
+    <Card style={styles.sectionCard} elevation={1}>
       <View style={styles.cardContent}>
         <Text style={styles.sectionTitle}>{title}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -270,7 +272,7 @@ const SettleUpScreen = ({route, navigation}) => {
             selectedBorrower,
           )}
           {/* Amount section */}
-          <Card style={styles.sectionCard} elevation={3}>
+          <Card style={styles.sectionCard} elevation={1}>
             <View style={styles.cardContent}>
               <Text style={styles.sectionTitle}>Amount</Text>
               <TextInput
@@ -278,13 +280,13 @@ const SettleUpScreen = ({route, navigation}) => {
                 value={amount}
                 onChangeText={setAmount}
                 keyboardType="numeric"
-                placeholder="₹0"
+                placeholder={`${currency.symbol}0`}
                 placeholderTextColor="#999"
               />
             </View>
           </Card>
           {/* Note section */}
-          <Card style={styles.sectionCard} elevation={3}>
+          <Card style={styles.sectionCard} elevation={1}>
             <View style={styles.cardContent}>
               <Text style={styles.sectionTitle}>Add a note (optional)</Text>
               <TextInput
@@ -301,7 +303,7 @@ const SettleUpScreen = ({route, navigation}) => {
           </Card>
           {/* Summary section */}
           {selectedLender && selectedBorrower && amount && (
-            <Card style={styles.sectionCard} elevation={3}>
+            <Card style={styles.sectionCard} elevation={1}>
               <View style={styles.cardContent}>
                 <Text style={styles.sectionTitle}>Summary</Text>
                 <View style={styles.summaryContent}>
@@ -311,7 +313,7 @@ const SettleUpScreen = ({route, navigation}) => {
                     <UserAvatar size={40} name={selectedLender.name} bgColor={SUCCESS_COLOR} />
                   </View>
                   <Text style={styles.summaryText}>
-                    {selectedBorrower.name} pays ₹{parseFloat(amount).toLocaleString()} to {selectedLender.name}
+                    {selectedBorrower.name} pays {formatAmount(amount)} to {selectedLender.name}
                   </Text>
                 </View>
               </View>
@@ -424,14 +426,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 2,
-    elevation: 3,
+    elevation: 1,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 1,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
   },
   textInput: {
     backgroundColor: '#F8F9FA',
@@ -477,14 +479,14 @@ const styles = StyleSheet.create({
     backgroundColor: SUCCESS_COLOR,
     paddingVertical: 15,
     borderRadius: 12,
-    elevation: 3,
+    elevation: 1,
     shadowColor: SUCCESS_COLOR,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
   },
   disabledButton: {
     backgroundColor: '#CBD3EE',

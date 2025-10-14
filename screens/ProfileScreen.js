@@ -12,6 +12,7 @@ import {
   ScrollView,
   SafeAreaView,
   Alert,
+  Modal,
 } from 'react-native';
 import {
   Avatar,
@@ -22,17 +23,20 @@ import {
 } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useCurrency, CURRENCIES} from '../utils/CurrencyUtil';
 
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 
 const ProfileScreen = ({navigation, route}) => {
   const {logout} = useContext(AuthContext);
+  const {currency, setCurrency} = useCurrency();
   const [userData, setUserData] = useState(null);
   const [verified, setVerified] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [accountActionsExpanded, setAccountActionsExpanded] = useState(false);
+  const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
 
   const user = auth().currentUser;
 
@@ -188,6 +192,16 @@ const ProfileScreen = ({navigation, route}) => {
     }
   };
 
+  const handleCurrencyChange = async (currencyCode) => {
+    try {
+      await setCurrency(currencyCode);
+      setCurrencyModalVisible(false);
+      Alert.alert('Success', 'Currency updated successfully!');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update currency. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -279,6 +293,24 @@ const ProfileScreen = ({navigation, route}) => {
           
           <Card style={styles.settingsCard} elevation={2}>
 
+            <TouchableOpacity
+              style={styles.settingsItem}
+              onPress={() => setCurrencyModalVisible(true)}>
+              <View style={styles.settingsItemLeft}>
+                <View style={[styles.settingsIcon, {backgroundColor: '#FFF9E1'}]}>
+                  <MaterialCommunityIcons name="currency-usd" size={24} color="#FFC107" />
+                </View>
+                <View style={styles.settingsTextContainer}>
+                  <Text style={styles.settingsItemTitle}>Currency</Text>
+                  <Text style={styles.settingsItemSubtitle}>
+                    {currency.name} ({currency.symbol})
+                  </Text>
+                </View>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={24} color="#CBD3EE" />
+            </TouchableOpacity>
+
+            <Divider style={styles.divider} />
 
             <TouchableOpacity
               style={styles.settingsItem}
@@ -401,6 +433,50 @@ const ProfileScreen = ({navigation, route}) => {
           </Card>
         </View>
       </ScrollView>
+
+      {/* Currency Selection Modal */}
+      <Modal
+        visible={currencyModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setCurrencyModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Currency</Text>
+              <TouchableOpacity onPress={() => setCurrencyModalVisible(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.currencyList} showsVerticalScrollIndicator={false}>
+              {CURRENCIES.map((curr) => (
+                <TouchableOpacity
+                  key={curr.code}
+                  style={[
+                    styles.currencyItem,
+                    currency.code === curr.code && styles.currencyItemSelected
+                  ]}
+                  onPress={() => handleCurrencyChange(curr.code)}>
+                  <View style={styles.currencyInfo}>
+                    <Text style={styles.currencySymbol}>{curr.symbol}</Text>
+                    <View style={styles.currencyDetails}>
+                      <Text style={styles.currencyName}>{curr.name}</Text>
+                      <Text style={styles.currencyCode}>{curr.code}</Text>
+                    </View>
+                  </View>
+                  {currency.code === curr.code && (
+                    <MaterialCommunityIcons
+                      name="check-circle"
+                      size={24}
+                      color={PRIMARY_COLOR}
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -629,5 +705,79 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     flex: 1,
     lineHeight: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    paddingBottom: 20,
+    height: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    fontFamily: 'Kufam-SemiBoldItalic',
+  },
+  currencyList: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  currencyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginVertical: 4,
+    backgroundColor: '#F8F9FA',
+  },
+  currencyItemSelected: {
+    backgroundColor: '#E8EBF7',
+    borderWidth: 2,
+    borderColor: PRIMARY_COLOR,
+  },
+  currencyInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  currencySymbol: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: PRIMARY_COLOR,
+    marginRight: 16,
+    width: 40,
+    textAlign: 'center',
+  },
+  currencyDetails: {
+    flex: 1,
+  },
+  currencyName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
+  },
+  currencyCode: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+    fontFamily: 'Lato-Regular',
   },
 });

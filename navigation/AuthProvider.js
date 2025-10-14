@@ -108,7 +108,7 @@ const AuthProvider = ({ children }) => {
             setErrorMessage(error.message);
           }
         },
-        register: async (email, password, name, phone) => {
+        register: async (email, password, name, phone, currency = 'INR') => {
           if (!email || !password || !name) {
             Alert.alert('Missing Information', 'All fields are required to create your account.', [{ text: 'OK' }]);
             return;
@@ -121,6 +121,7 @@ const AuthProvider = ({ children }) => {
               name,
               email,
               phone,
+              currency,
               transactions: [],
               verified: false,
               createdAt: firestore.Timestamp.fromDate(new Date()),

@@ -14,11 +14,13 @@ import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
+import {useCurrency} from '../../utils/CurrencyUtil';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
 const SplitTransactionScreen = ({route, navigation}) => {
+  const {currency, formatAmount} = useCurrency();
   const {group} = route.params;
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
@@ -165,7 +167,7 @@ const SplitTransactionScreen = ({route, navigation}) => {
             />
           </View>
           {/* Filter Section */}
-          <Card style={styles.filterCard} elevation={3}>
+          <Card style={styles.filterCard} elevation={1}>
             <View style={styles.cardContent}>
               <Text style={styles.filterTitle}>Filter by Date</Text>
               <ScrollView 
@@ -321,7 +323,7 @@ const SplitTransactionScreen = ({route, navigation}) => {
                 <Card
                   key={transaction.id}
                   style={styles.transactionsCard}
-                  elevation={2}
+                  elevation={1}
                   onPress={() =>
                     navigation.navigate('SplitDetail', {group, split: transaction})
                   }>
@@ -347,13 +349,13 @@ const SplitTransactionScreen = ({route, navigation}) => {
                       </View>
                     </View>
                     <Text style={styles.transactionsCardAmount}>
-                      ₹{transaction.amount}
+                      {formatAmount(transaction.amount)}
                     </Text>
                   </View>
                 </Card>
               ))
             ) : (
-              <Card style={styles.emptyStateCard} elevation={2}>
+              <Card style={styles.emptyStateCard} elevation={1}>
                 <View style={styles.emptyState}>
                   <MaterialCommunityIcons name="history" size={64} color="#CBD3EE" />
                   <Text style={styles.emptyStateText}>No transactions found</Text>
@@ -436,14 +438,14 @@ const styles = StyleSheet.create({
   searchBar: {
     marginBottom: 15,
     backgroundColor: '#FFFFFF',
-    elevation: 2,
+    elevation: 1,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 1,
     },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowRadius: 1,
     borderRadius: 12,
     fontFamily: 'Lato-Regular',
     fontSize: 16,
@@ -522,14 +524,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
   },
   dateInputText: {
     fontSize: 14,
@@ -547,14 +541,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 12,
-    elevation: 3,
+    elevation: 1,
     shadowColor: PRIMARY_COLOR,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
   },
   applyButtonText: {
     color: '#FFFFFF',

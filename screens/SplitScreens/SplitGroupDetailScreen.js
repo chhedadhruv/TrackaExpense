@@ -17,11 +17,13 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {AuthContext} from '../../navigation/AuthProvider';
 import SplitNotificationService from '../../services/SplitNotificationService';
+import {useCurrency} from '../../utils/CurrencyUtil';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
 const SplitGroupDetailScreen = ({route, navigation}) => {
+  const {currency, formatAmount} = useCurrency();
   const {group} = route.params || {};
   const {user} = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
@@ -255,7 +257,7 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
     }
   }, [splits]);
   const renderGroupSummaryCard = () => (
-    <Card style={styles.groupSummaryCard} elevation={4}>
+    <Card style={styles.groupSummaryCard} elevation={2}>
       <View style={styles.cardContent}>
         <Text style={styles.titleText}>{group.name}</Text>
         <View style={styles.groupMemberAvatars}>
@@ -421,7 +423,7 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
         {filteredSplits.length > 0 ? (
           <>
             {splitsToShow.map(split => (
-              <Card key={split.id} style={styles.splitCard} elevation={2}>
+              <Card key={split.id} style={styles.splitCard} elevation={1}>
                 <TouchableOpacity
                   style={styles.splitCardContent}
                   onPress={() =>
@@ -445,7 +447,7 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
                   </View>
                   <View style={styles.splitCardRight}>
                     <Text style={styles.splitAmount}>
-                      ₹{parseFloat(split.amount).toLocaleString()}
+                      {formatAmount(split.amount)}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -491,7 +493,7 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
       <View style={styles.lendingSummaryContainer}>
         <Text style={styles.sectionHeaderText}>Settlement Suggestions</Text>
         {detailedLendingInfo.map((detail, index) => (
-          <Card key={index} style={styles.lendingSummaryCard} elevation={2}>
+          <Card key={index} style={styles.lendingSummaryCard} elevation={1}>
             <View style={styles.lendingSummaryContent}>
               <View style={styles.lendingUserContainer}>
                 <UserAvatar size={40} name={detail.borrower.name} />
@@ -509,7 +511,7 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
                 const receiverEmail = detail.lender.email?.toLowerCase();
                 const viewerPays = currentEmail && currentEmail === payerEmail;
                 const viewerReceives = currentEmail && currentEmail === receiverEmail;
-                const amountStr = `₹${detail.amount.toLocaleString()}`;
+                const amountStr = formatAmount(detail.amount);
                 if (viewerPays) {
                   return (
                     <Text style={styles.lendingDetailText}>
@@ -950,11 +952,11 @@ const styles = StyleSheet.create({
     backgroundColor: PRIMARY_COLOR,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 8,
+    elevation: 3,
     shadowColor: PRIMARY_COLOR,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
   },
   modalContainer: {
     flex: 1,

@@ -6,6 +6,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   Image,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import { Platform } from 'react-native';
 import {Card} from 'react-native-paper';
@@ -22,6 +24,9 @@ import firestore from '@react-native-firebase/firestore';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { configureGoogleSignIn } from '../utils/GoogleSignInConfig';
 import { configureAppleSignIn, performAppleSignIn } from '../utils/AppleSignInConfig';
+import {CURRENCIES} from '../utils/CurrencyUtil';
+
+const PRIMARY_COLOR = '#677CD2';
 
 const SignupScreen = ({navigation}) => {
   const [email, setEmail] = useState('');
@@ -41,6 +46,8 @@ const SignupScreen = ({navigation}) => {
     uppercase: false,
   });
   const [isAppleSignInAvailable, setIsAppleSignInAvailable] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState('INR');
+  const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
 
   const {register} = useContext(AuthContext);
 
@@ -115,7 +122,7 @@ const SignupScreen = ({navigation}) => {
       setLoading(false);
     } else {
       try {
-        await register(email, password, name, phone);
+        await register(email, password, name, phone, selectedCurrency);
         setLoading(false);
       } catch (error) {
         if (error.code === 'auth/email-already-in-use') {
@@ -126,6 +133,10 @@ const SignupScreen = ({navigation}) => {
         setLoading(false);
       }
     }
+  };
+
+  const getSelectedCurrencyInfo = () => {
+    return CURRENCIES.find(c => c.code === selectedCurrency) || CURRENCIES[0];
   };
 
   const handleGoogleSignUp = async () => {
@@ -348,6 +359,24 @@ const SignupScreen = ({navigation}) => {
                 />
               </View>
 
+              {/* Currency Selection */}
+              <View style={styles.inputSection}>
+                <Text style={styles.sectionTitle}>Preferences</Text>
+                <TouchableOpacity
+                  style={styles.currencySelector}
+                  onPress={() => setCurrencyModalVisible(true)}>
+                  <View style={styles.currencySelectorLeft}>
+                    <MaterialCommunityIcons name="currency-usd" size={20} color={PRIMARY_COLOR} />
+                    <View style={styles.currencySelectorText}>
+                      <Text style={styles.currencyLabel}>Currency</Text>
+                      <Text style={styles.currencyValue}>
+                        {getSelectedCurrencyInfo().name} ({getSelectedCurrencyInfo().symbol})
+                      </Text>
+                    </View>
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
+                </TouchableOpacity>
+              </View>
 
               <View style={styles.inputSection}>
                 <Text style={styles.sectionTitle}>Security</Text>
@@ -512,6 +541,53 @@ const SignupScreen = ({navigation}) => {
           </View>
         </View>
       </KeyboardAwareScrollView>
+
+      {/* Currency Selection Modal */}
+      <Modal
+        visible={currencyModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setCurrencyModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Currency</Text>
+              <TouchableOpacity onPress={() => setCurrencyModalVisible(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.currencyList} showsVerticalScrollIndicator={false}>
+              {CURRENCIES.map((curr) => (
+                <TouchableOpacity
+                  key={curr.code}
+                  style={[
+                    styles.currencyItem,
+                    selectedCurrency === curr.code && styles.currencyItemSelected
+                  ]}
+                  onPress={() => {
+                    setSelectedCurrency(curr.code);
+                    setCurrencyModalVisible(false);
+                  }}>
+                  <View style={styles.currencyInfo}>
+                    <Text style={styles.currencySymbol}>{curr.symbol}</Text>
+                    <View style={styles.currencyDetails}>
+                      <Text style={styles.currencyName}>{curr.name}</Text>
+                      <Text style={styles.currencyCode}>{curr.code}</Text>
+                    </View>
+                  </View>
+                  {selectedCurrency === curr.code && (
+                    <MaterialCommunityIcons
+                      name="check-circle"
+                      size={24}
+                      color="#677CD2"
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -732,5 +808,109 @@ const styles = StyleSheet.create({
   validText: {
     color: '#4CAF50',
     fontWeight: '600',
+  },
+  currencySelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+  },
+  currencySelectorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  currencySelectorText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  currencyLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontFamily: 'Lato-Regular',
+    marginBottom: 2,
+  },
+  currencyValue: {
+    fontSize: 16,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    paddingBottom: 20,
+    height: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    fontFamily: 'Kufam-SemiBoldItalic',
+  },
+  currencyList: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  currencyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginVertical: 4,
+    backgroundColor: '#F8F9FA',
+  },
+  currencyItemSelected: {
+    backgroundColor: '#E8EBF7',
+    borderWidth: 2,
+    borderColor: '#677CD2',
+  },
+  currencyInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  currencySymbol: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#677CD2',
+    marginRight: 16,
+    width: 40,
+    textAlign: 'center',
+  },
+  currencyDetails: {
+    flex: 1,
+  },
+  currencyName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
+  },
+  currencyCode: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+    fontFamily: 'Lato-Regular',
   },
 });

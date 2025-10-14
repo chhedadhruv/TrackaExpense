@@ -12,6 +12,7 @@ import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import FormButton from '../components/FormButton';
 import { requestCameraPermission } from '../utils/Permissions';
+import {useCurrency} from '../utils/CurrencyUtil';
 
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
@@ -19,6 +20,7 @@ const EXPENSE_COLOR = '#F64E4E';
 const SUCCESS_COLOR = '#25B07F';
 
 const EditTransactionScreen = ({route, navigation}) => {
+  const {currency, formatAmount} = useCurrency();
   const {transaction} = route.params;
   const [title, setTitle] = useState(transaction.title);
   const [description, setDescription] = useState(transaction.description);
@@ -342,7 +344,7 @@ const EditTransactionScreen = ({route, navigation}) => {
                 </View>
                 {/* Amount Input */}
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Amount (₹)</Text>
+                  <Text style={styles.inputLabel}>Amount ({currency.symbol})</Text>
                   <View style={styles.inputWrapper}>
                     <MaterialCommunityIcons name="currency-inr" size={20} color={PRIMARY_COLOR} style={styles.inputIcon} />
                     <TextInput

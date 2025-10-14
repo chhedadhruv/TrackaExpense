@@ -7,6 +7,7 @@ import firestore from '@react-native-firebase/firestore';
 import {useFocusEffect} from '@react-navigation/native';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
+import {useCurrency} from '../utils/CurrencyUtil';
 
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
@@ -14,6 +15,7 @@ const INCOME_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
 
 const HomeScreen = ({navigation}) => {
+  const {currency, formatAmount} = useCurrency();
   const [userData, setUserData] = useState(null);
   const [totalExpense, setTotalExpense] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
@@ -451,7 +453,7 @@ const HomeScreen = ({navigation}) => {
                 <Text style={styles.cardTitle}>Total Income</Text>
               </View>
               <Text style={styles.cardIncomeAmount}>
-                ₹ {totalIncome.toLocaleString()}
+                {formatAmount(totalIncome)}
               </Text>
             </View>
           </Card>
@@ -468,7 +470,7 @@ const HomeScreen = ({navigation}) => {
                 <Text style={styles.cardTitle}>Total Expense</Text>
               </View>
               <Text style={styles.cardExpenseAmount}>
-                ₹ {totalExpense.toLocaleString()}
+                {formatAmount(totalExpense)}
               </Text>
             </View>
           </Card>
@@ -630,8 +632,8 @@ const HomeScreen = ({navigation}) => {
                               ? styles.transactionsCardAmountIncomeText
                               : styles.transactionsCardAmountExpenseText
                           }>
-                          {transaction.type === 'income' ? '+ ₹' : '- ₹'}
-                          {parseInt(transaction.amount, 10).toLocaleString()}
+                          {transaction.type === 'income' ? '+ ' : '- '}
+                          {formatAmount(transaction.amount)}
                         </Text>
                       </View>
                     </View>
