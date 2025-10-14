@@ -12,11 +12,13 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {useFocusEffect} from '@react-navigation/native';
+import {useCurrency} from '../utils/CurrencyUtil';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const INCOME_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
 const AddOrRemoveExpense = ({navigation}) => {
+  const {currency, formatAmount} = useCurrency();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
@@ -221,7 +223,7 @@ const AddOrRemoveExpense = ({navigation}) => {
                           ? styles.transactionsCardAmountIncomeText
                           : styles.transactionsCardAmountExpenseText
                       }>
-                      {transaction.type === 'income' ? '+ ₹' : '- ₹'}
+                      {transaction.type === 'income' ? '+ ' : '- '}{currency.symbol}
                       {parseInt(transaction.amount, 10).toLocaleString()}
                     </Text>
                   </View>

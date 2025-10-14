@@ -17,9 +17,11 @@ import auth from '@react-native-firebase/auth';
 import Share from 'react-native-share';
 import RNFS from 'react-native-fs';
 import { requestStoragePermission } from '../utils/Permissions';
+import {useCurrency} from '../utils/CurrencyUtil';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const TransactionScreen = ({navigation}) => {
+  const {currency, formatAmount} = useCurrency();
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
   const [filteredTransactions, setFilteredTransactions] = useState([]);
@@ -530,8 +532,8 @@ const TransactionScreen = ({navigation}) => {
                         ? styles.transactionsCardAmountIncomeText
                         : styles.transactionsCardAmountExpenseText
                     }>
-                    {transaction.type === 'income' ? '+ ₹' : '- ₹'}
-                    {parseInt(transaction.amount, 10).toLocaleString()}
+                    {transaction.type === 'income' ? '+ ' : '- '}
+                    {formatAmount(transaction.amount)}
                   </Text>
                 </View>
               </Card>

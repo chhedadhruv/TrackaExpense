@@ -94,7 +94,7 @@ const InvitationsScreen = () => {
             ) : (
               <View style={{ width: '100%', paddingHorizontal: 16, marginTop: 12 }}>
                 {invitations.map(invite => (
-                  <Card key={invite.id} style={styles.inviteCard} elevation={2}>
+                  <Card key={invite.id} style={styles.inviteCard} elevation={1}>
                     <View style={styles.inviteRow}>
                       <View style={styles.inviteLeft}>
                         <View style={styles.inviteIconWrap}>

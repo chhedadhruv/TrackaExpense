@@ -9,10 +9,12 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import FormButton from '../components/FormButton';
+import {useCurrency} from '../utils/CurrencyUtil';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const AddIncome = ({navigation}) => {
+  const {currency, formatAmount} = useCurrency();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -239,11 +241,11 @@ const AddIncome = ({navigation}) => {
                   />
                 </View>
               </View>
-              {/* Amount Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Amount (₹)</Text>
+                {/* Amount Input */}
+                <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Amount ({currency.symbol})</Text>
                 <View style={styles.inputWrapper}>
-                  <MaterialCommunityIcons name="currency-inr" size={20} color={PRIMARY_COLOR} style={styles.inputIcon} />
+                  <Text style={styles.currencySymbol}>{currency.symbol}</Text>
                   <TextInput
                     placeholder="Enter amount"
                     placeholderTextColor="#999"
@@ -255,7 +257,7 @@ const AddIncome = ({navigation}) => {
                     editable={!isSubmitting}
                   />
                 </View>
-              </View>
+                </View>
               {/* Date Input */}
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Date</Text>
@@ -424,6 +426,13 @@ const styles = StyleSheet.create({
   },
   inputIcon: {
     marginRight: 12,
+  },
+  currencySymbol: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: PRIMARY_COLOR,
+    marginRight: 12,
+    fontFamily: 'Lato-Bold',
   },
   textInput: {
     flex: 1,

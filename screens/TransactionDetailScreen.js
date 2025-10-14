@@ -12,9 +12,11 @@ import {Text, Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
+import {useCurrency} from '../utils/CurrencyUtil';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const TransactionDetailScreen = ({route, navigation}) => {
+  const {currency, formatAmount} = useCurrency();
   const {transaction} = route.params;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -97,7 +99,7 @@ const TransactionDetailScreen = ({route, navigation}) => {
           <View style={styles.headerInfo}>
             <Text style={styles.headerTitle}>{transaction.title}</Text>
             <Text style={styles.headerAmount}>
-              {transaction.type === 'income' ? '+ ' : '- '}₹{parseInt(transaction.amount).toLocaleString()}
+              {transaction.type === 'income' ? '+ ' : '- '}{formatAmount(transaction.amount)}
             </Text>
           </View>
         </View>

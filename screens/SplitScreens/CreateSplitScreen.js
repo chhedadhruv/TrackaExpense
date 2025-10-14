@@ -20,6 +20,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import SplitNotificationService from '../../services/SplitNotificationService';
+import {useCurrency} from '../../utils/CurrencyUtil';
 const {width} = Dimensions.get('window');
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
@@ -59,6 +60,7 @@ const CATEGORY_OPTIONS = [
   },
 ];
 const CreateSplitScreen = ({route, navigation}) => {
+  const {currency, formatAmount} = useCurrency();
   const [isSplitByPercentage, setIsSplitByPercentage] = useState(false);
   const {group, split} = route.params || {};
   const [title, setTitle] = useState('');
@@ -656,7 +658,7 @@ const CreateSplitScreen = ({route, navigation}) => {
             </Text>
           </View>
           {/* Form Card */}
-          <Card style={styles.formCard} elevation={4}>
+          <Card style={styles.formCard} elevation={2}>
             <View style={styles.cardContent}>
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Split Title</Text>
@@ -669,15 +671,18 @@ const CreateSplitScreen = ({route, navigation}) => {
                 />
               </View>
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Amount (₹)</Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Enter total amount"
-                  keyboardType="numeric"
-                  value={amount}
-                  onChangeText={setAmount}
-                  placeholderTextColor="#999"
-                />
+                <Text style={styles.inputLabel}>Amount ({currency.symbol})</Text>
+                <View style={styles.amountInputContainer}>
+                  <Text style={styles.currencySymbol}>{currency.symbol}</Text>
+                  <TextInput
+                    style={styles.textInputAmount}
+                    placeholder="Enter total amount"
+                    keyboardType="numeric"
+                    value={amount}
+                    onChangeText={setAmount}
+                    placeholderTextColor="#999"
+                  />
+                </View>
               </View>
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Date</Text>
@@ -734,7 +739,7 @@ const CreateSplitScreen = ({route, navigation}) => {
             </View>
           </Card>
           {/* Paid By Card */}
-          <Card style={styles.sectionCard} elevation={3}>
+          <Card style={styles.sectionCard} elevation={1}>
             <View style={styles.cardContent}>
               <Text style={styles.sectionTitle}>Paid By</Text>
               <View style={styles.paidByContainer}>
@@ -760,14 +765,14 @@ const CreateSplitScreen = ({route, navigation}) => {
             </View>
           </Card>
           {/* Split Type Card */}
-          <Card style={styles.sectionCard} elevation={3}>
+          <Card style={styles.sectionCard} elevation={1}>
             <View style={styles.cardContent}>
               <Text style={styles.sectionTitle}>Split Type</Text>
               {renderSplitTypeButtons()}
             </View>
           </Card>
           {/* Split With Card */}
-          <Card style={styles.sectionCard} elevation={3}>
+          <Card style={styles.sectionCard} elevation={1}>
             <View style={styles.cardContent}>
               <View style={styles.splitWithHeader}>
                 <Text style={styles.sectionTitle}>Split With</Text>
@@ -886,6 +891,29 @@ const styles = StyleSheet.create({
     color: '#2C2C2C',
     fontFamily: 'Lato-Regular',
   },
+  amountInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+  },
+  currencySymbol: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: PRIMARY_COLOR,
+    marginRight: 12,
+    fontFamily: 'Lato-Bold',
+  },
+  textInputAmount: {
+    flex: 1,
+    fontSize: 16,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
+  },
   dateInput: {
     backgroundColor: '#F8F9FA',
     borderRadius: 12,
@@ -961,6 +989,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     backgroundColor: '#fff',
     borderRadius: 12,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   memberCardSelected: {
     borderWidth: 1,
@@ -1115,14 +1151,14 @@ const styles = StyleSheet.create({
     backgroundColor: PRIMARY_COLOR,
     paddingVertical: 15,
     borderRadius: 12,
-    elevation: 3,
+    elevation: 1,
     shadowColor: PRIMARY_COLOR,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
   },
   submitButtonText: {
     color: '#FFFFFF',

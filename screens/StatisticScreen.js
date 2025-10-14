@@ -16,11 +16,13 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
+import {useCurrency} from '../utils/CurrencyUtil';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const INCOME_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
 const StatisticScreen = ({navigation}) => {
+  const {currency, formatAmount} = useCurrency();
   const [selectedBar, setSelectedBar] = useState(null);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -458,7 +460,7 @@ const StatisticScreen = ({navigation}) => {
                 <Text style={styles.cardTitle}>Total Income</Text>
               </View>
               <Text style={styles.cardIncomeAmount}>
-                ₹{totalIncome.toLocaleString()}
+                {formatAmount(totalIncome)}
               </Text>
             </View>
           </Card>
@@ -475,7 +477,7 @@ const StatisticScreen = ({navigation}) => {
                 <Text style={styles.cardTitle}>Total Expense</Text>
               </View>
               <Text style={styles.cardExpenseAmount}>
-                ₹{totalExpense.toLocaleString()}
+                {formatAmount(totalExpense)}
               </Text>
             </View>
           </Card>
@@ -513,9 +515,9 @@ const StatisticScreen = ({navigation}) => {
                     noOfSections={3}
                     isAnimated
                     onPress={handleBarPress}
-                    yAxisLabelFormatter={value => `₹${value}`}
+                    yAxisLabelFormatter={value => formatAmount(value)}
                     yAxisLabelWidth={50}
-                    yAxisLabelPrefix={'₹'}
+                    yAxisLabelPrefix={currency.symbol}
                     width={chartWidth}
                     xAxisLabelsHeight={32}
                     horizontalRulesStyle={{color: '#ECECEC'}}
@@ -538,7 +540,7 @@ const StatisticScreen = ({navigation}) => {
                 {selectedBar && (
                   <View style={styles.selectedBarContainer}>
                     <Text style={styles.selectedBarText}>
-                      {selectedBar.frontColor === '#677CD2' ? 'Income' : 'Expense'}: ₹{' '}
+                      {selectedBar.frontColor === '#677CD2' ? 'Income' : 'Expense'}: 
                       {selectedBar.value.toFixed(2)}
                     </Text>
                   </View>
@@ -578,7 +580,7 @@ const StatisticScreen = ({navigation}) => {
                 data={categoryPieData}
                 centerLabelComponent={() => (
                   <View style={{alignItems: 'center'}}>
-                    <Text style={{fontFamily: 'Lato-Bold', fontSize: 16, color: '#2C2C2C'}}>₹{(selectedBtn === 'Income' ? totalIncome : totalExpense).toLocaleString()}</Text>
+                    <Text style={{fontFamily: 'Lato-Bold', fontSize: 16, color: '#2C2C2C'}}>{formatAmount(selectedBtn === 'Income' ? totalIncome : totalExpense)}</Text>
                     <Text style={{fontFamily: 'Lato-Regular', fontSize: 12, color: '#666'}}>
                       {selectedBtn === 'Income' ? 'Total Income' : 'Total Expense'}
                     </Text>
@@ -603,7 +605,7 @@ const StatisticScreen = ({navigation}) => {
                       {item.label}
                     </Text>
                     <Text style={styles.legendValue}>
-                      {item.percent}% · ₹{Math.round(item.amount).toLocaleString()}
+                      {item.percent}% · {formatAmount(Math.round(item.amount))}
                     </Text>
                   </View>
                 ))}
@@ -706,7 +708,7 @@ const StatisticScreen = ({navigation}) => {
                               ? styles.transactionsCardAmountIncomeText
                               : styles.transactionsCardAmountExpenseText
                           }>
-                          {transaction.type === 'income' ? '+₹' : '-₹'}
+                          {transaction.type === 'income' ? '+' : '-'}{currency.symbol}
                           {parseInt(transaction.amount, 10).toLocaleString()}
                         </Text>
                       </View>

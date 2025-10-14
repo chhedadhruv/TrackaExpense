@@ -9,11 +9,13 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {useFocusEffect} from '@react-navigation/native';
 import SplitNotificationService from '../../services/SplitNotificationService';
+import {useCurrency} from '../../utils/CurrencyUtil';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
 const SplitDetailScreen = ({route, navigation}) => {
+  const {currency, formatAmount} = useCurrency();
   const {split: initialSplit, group, transaction} = route.params;
   const currentUser = auth().currentUser;
   const [split, setSplit] = React.useState(initialSplit);
@@ -188,7 +190,7 @@ const SplitDetailScreen = ({route, navigation}) => {
                 </Text>
                 <Text style={styles.roleText}>Paid</Text>
                 <Text style={[styles.splitAmount, styles.negativeAmount]}>
-                  -₹{parseFloat(split.amount).toFixed(2)}
+                  -{formatAmount(split.amount)}
                 </Text>
               </View>
             </View>
@@ -210,7 +212,7 @@ const SplitDetailScreen = ({route, navigation}) => {
                 </Text>
                 <Text style={styles.roleText}>Received</Text>
                 <Text style={[styles.splitAmount, styles.positiveAmount]}>
-                  +₹{parseFloat(split.amount).toFixed(2)}
+                  +{formatAmount(split.amount)}
                 </Text>
               </View>
             </View>
@@ -222,8 +224,8 @@ const SplitDetailScreen = ({route, navigation}) => {
       const isCurrentUser = user.email === currentUser?.email;
       const splitAmount =
         split.splitType === 'percentage'
-          ? `₹${(split.amount * (user.percentage / 100)).toFixed(2)}`
-          : `₹${(split.amount / split.splitUsers.length).toFixed(2)}`;
+          ? formatAmount(split.amount * (user.percentage / 100))
+          : formatAmount(split.amount / split.splitUsers.length);
       return (
         <View key={user.email} style={styles.transactionsCard}>
           <UserAvatar
@@ -273,7 +275,7 @@ const SplitDetailScreen = ({route, navigation}) => {
             </Text>
           </View>
           {/* Summary Card */}
-          <Card style={styles.summaryCard} elevation={4}>
+          <Card style={styles.summaryCard} elevation={2}>
             <View style={styles.cardContent}>
               <View style={styles.summaryHeader}>
                 <View style={styles.summaryIcon}>
@@ -288,7 +290,7 @@ const SplitDetailScreen = ({route, navigation}) => {
                     {isSettlement ? 'Settlement' : split.title}
                   </Text>
                   <Text style={styles.summaryAmount}>
-                    ₹{parseFloat(split.amount).toLocaleString()}
+                    {formatAmount(split.amount)}
                   </Text>
                 </View>
               </View>
@@ -518,14 +520,14 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    elevation: 6,
-    shadowColor: PRIMARY_COLOR,
+    elevation: 1,
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 3,
+      height: 1,
     },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   transactionsCardImage: {
     borderRadius: 10,
@@ -581,14 +583,14 @@ const styles = StyleSheet.create({
     backgroundColor: PRIMARY_COLOR,
     paddingVertical: 15,
     borderRadius: 12,
-    elevation: 3,
+    elevation: 1,
     shadowColor: PRIMARY_COLOR,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
   },
   deleteButton: {
     flex: 1,
@@ -598,14 +600,14 @@ const styles = StyleSheet.create({
     backgroundColor: EXPENSE_COLOR,
     paddingVertical: 15,
     borderRadius: 12,
-    elevation: 3,
+    elevation: 1,
     shadowColor: EXPENSE_COLOR,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
   },
   buttonText: {
     color: '#FFFFFF',

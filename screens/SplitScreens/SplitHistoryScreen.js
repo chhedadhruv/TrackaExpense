@@ -6,12 +6,14 @@ import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
+import {useCurrency} from '../../utils/CurrencyUtil';
 
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const EXPENSE_COLOR = '#F64E4E';
 
 const SplitHistoryScreen = () => {
+  const {currency, formatAmount} = useCurrency();
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState([]);
 
@@ -103,7 +105,7 @@ const SplitHistoryScreen = () => {
     if (item.type === 'settlement_create') {
       const fromName = item.settlement?.from?.name || item.settlement?.from?.email || 'Someone';
       const toName = item.settlement?.to?.name || item.settlement?.to?.email || 'Someone';
-      return `${actor} recorded settlement ₹${Number(item.amount || 0).toLocaleString()} from ${fromName} to ${toName} in "${groupName}"`;
+      return `${actor} recorded settlement ${formatAmount(item.amount || 0)} from ${fromName} to ${toName} in "${groupName}"`;
     }
     if (item.type === 'delete') {
       return `${actor} deleted split "${splitTitle}" from "${groupName}"`;
@@ -152,7 +154,7 @@ const SplitHistoryScreen = () => {
           </View>
         ) : (
           <KeyboardAwareScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-            <Card style={styles.historyCard} elevation={4}>
+            <Card style={styles.historyCard} elevation={2}>
               <View style={styles.cardContent}>
                 <Text style={styles.historyTitle}>Split History</Text>
                 {history.length > 0 ? (

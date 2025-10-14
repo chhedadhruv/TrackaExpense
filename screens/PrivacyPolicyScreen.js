@@ -411,7 +411,7 @@ For legal or compliance requests, please include relevant documentation and spec
             Last updated: {new Date().toLocaleDateString()}
           </Text>
           <Text style={styles.footerText}>
-            TrackaExpense v1.2.6
+            TrackaExpense v1.2.7
           </Text>
         </View>
       </ScrollView>
