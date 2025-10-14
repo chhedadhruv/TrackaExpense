@@ -237,8 +237,20 @@ const CreateSplitScreen = ({route, navigation}) => {
       Alert.alert('Validation Error', 'Please enter a split title');
       return;
     }
+    if (title.trim().length > 100) {
+      Alert.alert('Validation Error', 'Title must be 100 characters or less');
+      return;
+    }
     if (!amount || isNaN(parseFloat(amount))) {
       Alert.alert('Validation Error', 'Please enter a valid amount');
+      return;
+    }
+    if (parseFloat(amount) <= 0) {
+      Alert.alert('Validation Error', 'Amount must be greater than 0');
+      return;
+    }
+    if (parseFloat(amount) > 999999999) {
+      Alert.alert('Validation Error', 'Amount must be less than 999,999,999');
       return;
     }
     if (!paidBy) {
@@ -668,7 +680,9 @@ const CreateSplitScreen = ({route, navigation}) => {
                   value={title}
                   onChangeText={setTitle}
                   placeholderTextColor="#999"
+                  maxLength={100}
                 />
+                <Text style={styles.characterCount}>{title.length}/100</Text>
               </View>
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Amount ({currency.symbol})</Text>
@@ -1166,6 +1180,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginRight: 8,
     fontFamily: 'Lato-Bold',
+  },
+  characterCount: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+    textAlign: 'right',
+    fontFamily: 'Lato-Regular',
   },
 });
 export default CreateSplitScreen;

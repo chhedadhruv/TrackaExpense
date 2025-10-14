@@ -345,6 +345,10 @@ const SplitScreen = ({navigation, route}) => {
       Alert.alert('Validation Error', 'Group name is required');
       return;
     }
+    if (groupName.trim().length > 50) {
+      Alert.alert('Validation Error', 'Group name must be 50 characters or less');
+      return;
+    }
     if (!category) {
       Alert.alert('Validation Error', 'Please select a category');
       return;
@@ -754,7 +758,9 @@ const SplitScreen = ({navigation, route}) => {
                       placeholderTextColor="#999"
                       value={groupName}
                       onChangeText={setGroupName}
+                      maxLength={50}
                     />
+                    <Text style={styles.characterCount}>{groupName.length}/50</Text>
                   </View>
                   <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Category</Text>
@@ -1409,6 +1415,20 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     marginRight: 10,
+  },
+  characterCount: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+    textAlign: 'right',
+    fontFamily: 'Lato-Regular',
+  },
+  youLabel: {
+    fontSize: 12,
+    color: PRIMARY_COLOR,
+    fontStyle: 'italic',
+    marginTop: 2,
+    fontFamily: 'Lato-Regular',
   },
 });
 export default SplitScreen;
