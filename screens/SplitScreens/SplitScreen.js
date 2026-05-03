@@ -20,6 +20,7 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import SplitNotificationService from '../../services/SplitNotificationService';
+import ReminderNotificationService from '../../services/ReminderNotificationService';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
@@ -183,6 +184,7 @@ const SplitScreen = ({navigation, route}) => {
   useFocusEffect(
     React.useCallback(() => {
       fetchGroups();
+      ReminderNotificationService.processRecurringSplits().catch(() => {});
     }, [currentUser]),
   );
 
@@ -721,6 +723,20 @@ const SplitScreen = ({navigation, route}) => {
               <Text style={styles.headerTitle}>Split Groups</Text>
             </View>
             <Text style={styles.headerSubtitle}>Manage your expense groups</Text>
+          </View>
+          <View style={styles.quickAccessRow}>
+            <TouchableOpacity
+              style={styles.quickAccessButton}
+              onPress={() => navigation.navigate('FriendsBalance')}>
+              <MaterialCommunityIcons name="account-multiple" size={22} color={PRIMARY_COLOR} />
+              <Text style={styles.quickAccessText}>Friends</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.quickAccessButton}
+              onPress={() => navigation.navigate('IOU')}>
+              <MaterialCommunityIcons name="handshake" size={22} color={PRIMARY_COLOR} />
+              <Text style={styles.quickAccessText}>IOUs</Text>
+            </TouchableOpacity>
           </View>
           {/* Create Group Card */}
           <Card style={[styles.createGroupCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
@@ -1429,6 +1445,30 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 2,
     fontFamily: 'Lato-Regular',
+  },
+  quickAccessRow: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 15,
+    gap: 12,
+  },
+  quickAccessButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+  },
+  quickAccessText: {
+    fontSize: 14,
+    color: '#677CD2',
+    fontFamily: 'Lato-Bold',
   },
 });
 export default SplitScreen;

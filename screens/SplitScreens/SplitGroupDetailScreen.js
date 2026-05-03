@@ -473,6 +473,12 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
                         </Text>
                       </View>
                     )}
+                    {split.recurring?.enabled && (
+                      <View style={styles.recurringTag}>
+                        <MaterialCommunityIcons name="repeat" size={11} color="#677CD2" />
+                        <Text style={styles.recurringTagText}>{split.recurring.frequency === 'weekly' ? 'Weekly' : 'Monthly'}</Text>
+                      </View>
+                    )}
                   </View>
                   <View style={styles.splitCardRight}>
                     <Text style={[styles.splitAmount, {color: splitColor}]}>
@@ -588,9 +594,35 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
                 }
                 if (viewerReceives) {
                   return (
-                    <Text style={styles.lendingDetailText}>
-                      You receive <Text style={[styles.amountStrongText, {color: SUCCESS_COLOR}]}>{amountStr}</Text> from {detail.borrower.name}
-                    </Text>
+                    <View>
+                      <Text style={styles.lendingDetailText}>
+                        You receive <Text style={[styles.amountStrongText, {color: SUCCESS_COLOR}]}>{amountStr}</Text> from {detail.borrower.name}
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.remindButton}
+                        onPress={async () => {
+                          try {
+                            const lenderDoc = await firestore().collection('users').where('email', '==', user?.email).get();
+                            const lenderName = lenderDoc.docs[0]?.data()?.name || user?.email?.split('@')[0] || 'Someone';
+                            const result = await SplitNotificationService.notifyPaymentReminder(
+                              group,
+                              detail.borrower,
+                              {name: lenderName, email: user?.email},
+                              amountStr,
+                            );
+                            if (result?.reason === 'cooldown') {
+                              Alert.alert('Already Reminded', 'You already sent a reminder in the last 24 hours.');
+                            } else if (result?.success) {
+                              Alert.alert('Reminder Sent', `${detail.borrower.name} has been reminded to pay you.`);
+                            }
+                          } catch (_) {
+                            Alert.alert('Error', 'Failed to send reminder');
+                          }
+                        }}>
+                        <MaterialCommunityIcons name="bell-outline" size={14} color={PRIMARY_COLOR} />
+                        <Text style={styles.remindButtonText}>Remind</Text>
+                      </TouchableOpacity>
+                    </View>
                   );
                 }
                 return (
@@ -1096,6 +1128,38 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '45%',
+  },
+  remindButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: '#EEF0FB',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  remindButtonText: {
+    fontSize: 12,
+    color: '#677CD2',
+    fontFamily: 'Lato-Bold',
+  },
+  recurringTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#EEF0FB',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  recurringTagText: {
+    fontSize: 11,
+    color: '#677CD2',
+    fontFamily: 'Lato-Regular',
   },
   cardAndroid: {
     borderWidth: 1,

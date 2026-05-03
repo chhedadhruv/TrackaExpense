@@ -154,7 +154,7 @@ const HomeScreen = ({navigation}) => {
   const handleIncome = () => {
     if (filteredTransactions.length > 0) {
       const income = filteredTransactions.reduce((sum, transaction) => {
-        return transaction.type === 'income'
+        return transaction.type === 'income' && transaction.source !== 'split'
           ? sum + (parseFloat(transaction.amount) || 0)
           : sum;
       }, 0);
@@ -167,7 +167,7 @@ const HomeScreen = ({navigation}) => {
   const handleExpense = () => {
     if (filteredTransactions.length > 0) {
       const expense = filteredTransactions.reduce((sum, transaction) => {
-        return transaction.type === 'expense'
+        return transaction.type === 'expense' && transaction.source !== 'split'
           ? sum + (parseFloat(transaction.amount) || 0)
           : sum;
       }, 0);
@@ -686,6 +686,22 @@ const HomeScreen = ({navigation}) => {
                               color="#677CD2"
                             />
                           )}
+                          {transaction.source === 'split' &&
+                            transaction.category !== 'Settlement' && (
+                              <MaterialCommunityIcons
+                                name="account-group"
+                                size={25}
+                                color="#677CD2"
+                              />
+                            )}
+                          {transaction.source === 'split' &&
+                            transaction.category === 'Settlement' && (
+                              <MaterialCommunityIcons
+                                name="handshake"
+                                size={25}
+                                color="#677CD2"
+                              />
+                            )}
                         </View>
                         <View style={{flexDirection: 'column', marginLeft: 5}}>
                           <Text style={styles.transactionsCardTitle} numberOfLines={1}>
@@ -698,6 +714,15 @@ const HomeScreen = ({navigation}) => {
                               {transaction.date}
                             </Text>
                           </View>
+                          {transaction.source === 'split' && (
+                            <Text style={styles.splitRoleLabel}>
+                              {transaction.splitRole === 'payer'
+                                ? 'Given'
+                                : transaction.splitRole === 'participant'
+                                ? 'Taken'
+                                : 'Settled'}
+                            </Text>
+                          )}
                         </View>
                       </View>
                       <View style={styles.transactionsCardAmount}>
@@ -781,6 +806,12 @@ const HomeScreen = ({navigation}) => {
 };
 
 const styles = StyleSheet.create({
+  splitRoleLabel: {
+    fontSize: 10,
+    color: '#677CD2',
+    fontWeight: '600',
+    marginTop: 1,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

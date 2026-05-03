@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
+  Share,
 } from 'react-native';
 import {Card, Searchbar, ActivityIndicator, Button} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -156,6 +157,43 @@ const SplitTransactionScreen = ({route, navigation}) => {
   const onConfirmEndDate = params => {
     setEndDatePickerVisible(false);
     setCustomEndDate(params.date);
+  };
+  const handleExportCSV = async () => {
+    if (filteredTransactions.length === 0) {
+      return;
+    }
+    const groupName = group.name || 'Group';
+    const exportDate = new Date().toLocaleDateString();
+    const currentEmail = user?.email?.toLowerCase() || '';
+    const header = `# ${groupName} splits export - ${exportDate}`;
+    const csvHeader = 'Title,Amount,Paid By,Category,Date,Split Type,Your Share';
+    const rows = filteredTransactions.map(t => {
+      const date = moment((t.date || t.createdAt).toDate()).format('YYYY-MM-DD');
+      const paidBy = t.paidBy?.name || t.paidBy?.email || '';
+      const category = t.category || '';
+      const splitType = t.splitType || 'equal';
+      let yourShare = '';
+      if (t.type !== 'settlement' && !t.isSettlement) {
+        const isParticipant = t.splitUsers?.some(u => u.email?.toLowerCase() === currentEmail);
+        if (isParticipant) {
+          if (splitType === 'percentage') {
+            const entry = t.splitUsers.find(u => u.email?.toLowerCase() === currentEmail);
+            yourShare = entry ? (parseFloat(t.amount) * (entry.percentage / 100)).toFixed(2) : '';
+          } else {
+            yourShare = (parseFloat(t.amount) / (t.splitUsers?.length || 1)).toFixed(2);
+          }
+        }
+      }
+      const escapeCSV = val => {
+        const str = String(val);
+        return str.includes(',') || str.includes('"') || str.includes('\n') ? `"${str.replace(/"/g, '""')}"` : str;
+      };
+      return [escapeCSV(t.title), t.amount, escapeCSV(paidBy), escapeCSV(category), date, splitType, yourShare].join(',');
+    });
+    const csvContent = [header, csvHeader, ...rows].join('\n');
+    try {
+      await Share.share({ message: csvContent, title: `${groupName} Splits` });
+    } catch (_) {}
   };
   if (loading) {
     return (
@@ -343,7 +381,14 @@ const SplitTransactionScreen = ({route, navigation}) => {
           </Card>
           {/* Transactions List */}
           <View style={styles.transactionsSection}>
-            <Text style={styles.sectionTitle}>Transactions</Text>
+            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15}}>
+              <Text style={[styles.sectionTitle, {marginBottom: 0}]}>Transactions</Text>
+              {filteredTransactions.length > 0 && (
+                <TouchableOpacity onPress={handleExportCSV} style={{padding: 4}}>
+                  <MaterialCommunityIcons name="export" size={24} color="#677CD2" />
+                </TouchableOpacity>
+              )}
+            </View>
             {filteredTransactions.length > 0 ? (
               filteredTransactions.map(transaction => {
                 const txColor = getSplitCardColor(transaction, currentUserEmail);

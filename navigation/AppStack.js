@@ -26,6 +26,9 @@ import SettleUpScreen from '../screens/SplitScreens/SettleUpScreen';
 import SplitTransactionScreen from '../screens/SplitScreens/SplitTransactionScreen';
 import SplitHistoryScreen from '../screens/SplitScreens/SplitHistoryScreen';
 import InvitationsScreen from '../screens/SplitScreens/InvitationsScreen';
+import FriendsBalanceScreen from '../screens/SplitScreens/FriendsBalanceScreen';
+import IOUScreen from '../screens/SplitScreens/IOUScreen';
+import CreateIOUScreen from '../screens/SplitScreens/CreateIOUScreen';
 import ContactUsScreen from '../screens/ContactUsScreen';
 import SavingsScreen from '../screens/SavingsScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
@@ -121,6 +124,9 @@ const SplitStack = () =>
     { name: 'SplitTransaction', component: SplitTransactionScreen, title: 'Transactions' },
     { name: 'SplitHistory', component: SplitHistoryScreen, title: 'Split History' },
     { name: 'Invitations', component: InvitationsScreen, title: 'Invitations' },
+    { name: 'FriendsBalance', component: FriendsBalanceScreen, title: 'Friends & Balances' },
+    { name: 'IOU', component: IOUScreen, title: 'IOUs' },
+    { name: 'CreateIOU', component: CreateIOUScreen, title: 'New IOU' },
   ]);
 
 const AppStack = () => (

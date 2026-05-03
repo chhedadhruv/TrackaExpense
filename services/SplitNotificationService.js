@@ -302,6 +302,44 @@ class SplitNotificationService {
       console.error('Failed to send group deleted notification:', error);
     }
   }
+
+  async notifyPaymentReminder(group, borrower, lender, amount) {
+    try {
+      const cooldownRef = firestore()
+        .collection('groups')
+        .doc(group.id)
+        .collection('reminders')
+        .doc(borrower.email.replace(/[.@]/g, '_'));
+      const cooldownDoc = await cooldownRef.get();
+      if (cooldownDoc.exists) {
+        const lastSent = cooldownDoc.data()?.lastSentAt?.toMillis?.() || 0;
+        const hoursSince = (Date.now() - lastSent) / (1000 * 60 * 60);
+        if (hoursSince < 24) {
+          return { success: false, reason: 'cooldown' };
+        }
+      }
+      await cooldownRef.set({ lastSentAt: firestore.FieldValue.serverTimestamp() });
+      const notificationData = {
+        type: 'payment_reminder',
+        title: 'Payment Reminder 💸',
+        body: `${lender.name} is reminding you to pay ${amount} for "${group.name}"`,
+        data: {
+          type: 'payment_reminder',
+          groupId: group.id,
+          groupName: group.name,
+          amount: amount,
+          lenderName: lender.name,
+        },
+        icon: '💸',
+        priority: 'high',
+      };
+      await this.notificationService.sendNotificationToUsers([borrower.email], notificationData);
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to send payment reminder:', error);
+      return { success: false, reason: 'error' };
+    }
+  }
 }
 
 export default new SplitNotificationService();
