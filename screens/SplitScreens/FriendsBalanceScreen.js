@@ -16,7 +16,12 @@ const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
 
 const FriendsBalanceScreen = () => {
-  const {formatAmount} = useCurrency();
+  const {currency} = useCurrency();
+  const fmtAmt = amount => {
+    const num = Math.abs(parseFloat(amount) || 0);
+    const formatted = num.toLocaleString(currency.locale, {minimumFractionDigits: 0, maximumFractionDigits: 2});
+    return `${currency.symbol}${formatted}`;
+  };
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [balances, setBalances] = useState([]);
@@ -137,6 +142,33 @@ const FriendsBalanceScreen = () => {
             </View>
             <Text style={styles.headerSubtitle}>Net balances across all your groups</Text>
           </View>
+          {balances.length > 0 && (() => {
+            const totalOwed = balances.filter(b => b.net > 0).reduce((s, b) => s + b.net, 0);
+            const totalOwe = balances.filter(b => b.net < 0).reduce((s, b) => s + Math.abs(b.net), 0);
+            const net = totalOwed - totalOwe;
+            const isPositive = net >= 0;
+            return (
+              <Card style={[styles.totalCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
+                <View style={styles.totalCardContent}>
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>Overall you receive</Text>
+                    <Text style={[styles.totalValue, {color: SUCCESS_COLOR}]}>{fmtAmt(totalOwed)}</Text>
+                  </View>
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>Overall you owe</Text>
+                    <Text style={[styles.totalValue, {color: EXPENSE_COLOR}]}>{fmtAmt(totalOwe)}</Text>
+                  </View>
+                  <View style={[styles.totalDivider]} />
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalNetLabel}>Net balance</Text>
+                    <Text style={[styles.totalNetValue, {color: isPositive ? SUCCESS_COLOR : EXPENSE_COLOR}]}>
+                      {isPositive ? '+ ' : '- '}{fmtAmt(Math.abs(net))}
+                    </Text>
+                  </View>
+                </View>
+              </Card>
+            );
+          })()}
           {balances.length === 0 ? (
             <Card style={[styles.emptyCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
               <View style={styles.emptyState}>
@@ -158,10 +190,12 @@ const FriendsBalanceScreen = () => {
                       <Text style={styles.balanceName}>{b.name}</Text>
                       <Text style={[styles.balanceLabel, {color}]}>{label}</Text>
                       {b.groups.filter(g => Math.abs(g.amount) > 0.009).map((g, i) => (
-                        <Text key={i} style={styles.groupBreakdown}>{g.name}: {g.amount > 0 ? '+' : ''}{formatAmount(g.amount)}</Text>
+                        <Text key={i} style={styles.groupBreakdown}>
+                          {g.name}: {g.amount > 0 ? '+ ' : '- '}{fmtAmt(g.amount)}
+                        </Text>
                       ))}
                     </View>
-                    <Text style={[styles.balanceAmount, {color}]}>{formatAmount(Math.abs(b.net))}</Text>
+                    <Text style={[styles.balanceAmount, {color}]}>{fmtAmt(b.net)}</Text>
                   </View>
                 </Card>
               );
@@ -187,6 +221,14 @@ const styles = StyleSheet.create({
   emptyState: {alignItems: 'center', paddingVertical: 50},
   emptyTitle: {fontSize: 18, fontWeight: '600', color: '#666', marginTop: 15, fontFamily: 'Lato-Bold'},
   emptySubtitle: {fontSize: 14, color: '#888', textAlign: 'center', marginTop: 5, fontFamily: 'Lato-Regular'},
+  totalCard: {backgroundColor: '#FFFFFF', borderRadius: 16, marginHorizontal: 20, marginBottom: 16},
+  totalCardContent: {padding: 16},
+  totalRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4},
+  totalLabel: {fontSize: 14, color: '#666', fontFamily: 'Lato-Regular'},
+  totalValue: {fontSize: 14, fontWeight: '600', fontFamily: 'Lato-Bold'},
+  totalDivider: {height: 1, backgroundColor: '#E8EBF7', marginVertical: 8},
+  totalNetLabel: {fontSize: 15, fontWeight: '700', color: '#2C2C2C', fontFamily: 'Lato-Bold'},
+  totalNetValue: {fontSize: 16, fontWeight: 'bold', fontFamily: 'Kufam-SemiBoldItalic'},
   balanceCard: {backgroundColor: '#FFFFFF', borderRadius: 16, marginHorizontal: 20, marginBottom: 12},
   balanceCardContent: {flexDirection: 'row', alignItems: 'center', padding: 16},
   balanceInfo: {flex: 1, marginLeft: 14},
