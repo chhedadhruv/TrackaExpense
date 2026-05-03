@@ -85,7 +85,7 @@ android {
         applicationId "com.trackaexpense"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 26050114
+        versionCode 26050314
         versionName "1.3.0"
         multiDexEnabled true
         vectorDrawables.useSupportLibrary = true
