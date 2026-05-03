@@ -13,6 +13,14 @@ import {useCurrency} from '../utils/CurrencyUtil';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
+const formatInputAmount = (value) => {
+  if (!value && value !== 0) return '';
+  const str = value.toString().replace(/,/g, '');
+  const [integer, decimal] = str.split('.');
+  const formattedInteger = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return decimal !== undefined ? `${formattedInteger}.${decimal}` : formattedInteger;
+};
+
 const AddIncome = ({navigation}) => {
   const {currency, formatAmount} = useCurrency();
   const [title, setTitle] = useState('');
@@ -112,6 +120,9 @@ const AddIncome = ({navigation}) => {
         const incomeDocRef = await transactionRef.add(incomeData);
         incomeData.documentId = incomeDocRef.id;
         transaction.update(incomeDocRef, {documentId: incomeDocRef.id});
+        transaction.update(userDocRef, {
+          balance: firestore.FieldValue.increment(parseFloat(amount)),
+        });
       });
       setAmount('');
       setTitle('');
@@ -172,7 +183,7 @@ const AddIncome = ({navigation}) => {
             <Text style={styles.headerSubtitle}>Record your income to track your finances</Text>
           </View>
           {/* Form Card */}
-          <Card style={styles.formCard} elevation={4}>
+          <Card style={[styles.formCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 4}>
             <View style={styles.cardContent}>
               {errorMessage && (
                 <View style={styles.errorContainer}>
@@ -267,8 +278,8 @@ const AddIncome = ({navigation}) => {
                     placeholderTextColor="#999"
                     keyboardType="numeric"
                     autoCorrect={false}
-                    value={amount}
-                    onChangeText={setAmount}
+                    value={formatInputAmount(amount)}
+                    onChangeText={text => setAmount(text.replace(/,/g, ''))}
                     style={styles.textInput}
                     editable={!isSubmitting}
                   />
@@ -463,7 +474,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E8EBF7',
-    elevation: 5,
+    elevation: Platform.OS === 'android' ? 0 : 5,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -536,5 +547,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'right',
     fontFamily: 'Lato-Regular',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });

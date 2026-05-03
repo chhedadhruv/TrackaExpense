@@ -1,4 +1,4 @@
-import {View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform} from 'react-native';
+import {View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform, Modal, TextInput, Image, KeyboardAvoidingView} from 'react-native';
 import React, {useState, useEffect, useCallback} from 'react';
 import {ActivityIndicator, Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -14,6 +14,14 @@ const BACKGROUND_COLOR = '#F4F6FA';
 const INCOME_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
 
+const formatBalanceInput = value => {
+  if (!value && value !== 0) return '';
+  const str = value.toString().replace(/,/g, '');
+  const [integer, decimal] = str.split('.');
+  const formatted = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return decimal !== undefined ? `${formatted}.${decimal}` : formatted;
+};
+
 const HomeScreen = ({navigation}) => {
   const {currency, formatAmount} = useCurrency();
   const [userData, setUserData] = useState(null);
@@ -24,11 +32,14 @@ const HomeScreen = ({navigation}) => {
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
   const [error, setError] = useState(null);
-  const [timeRange, setTimeRange] = useState('7days');
+  const [timeRange, setTimeRange] = useState('all');
   const [customStartDate, setCustomStartDate] = useState(null);
   const [customEndDate, setCustomEndDate] = useState(null);
   const [startDatePickerVisible, setStartDatePickerVisible] = useState(false);
   const [endDatePickerVisible, setEndDatePickerVisible] = useState(false);
+  const [editBalanceVisible, setEditBalanceVisible] = useState(false);
+  const [newBalanceInput, setNewBalanceInput] = useState('');
+  const [balanceSaving, setBalanceSaving] = useState(false);
 
   const currentUser = auth().currentUser;
 
@@ -130,7 +141,7 @@ const HomeScreen = ({navigation}) => {
       });
 
       const sortedTransactions = transactionsArray.sort(
-        (a, b) => b.createdAt - a.createdAt,
+        (a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0),
       );
       setTransactions(sortedTransactions);
     } catch (error) {
@@ -230,6 +241,28 @@ const HomeScreen = ({navigation}) => {
     setShowAll(!showAll);
   };
 
+  const openEditBalance = () => {
+    setNewBalanceInput(String(userData?.balance ?? 0));
+    setEditBalanceVisible(true);
+  };
+
+  const handleSaveBalance = async () => {
+    const parsed = parseFloat(newBalanceInput);
+    if (isNaN(parsed) || parsed > 999999999) return;
+    setBalanceSaving(true);
+    try {
+      await firestore()
+        .collection('users')
+        .doc(currentUser.uid)
+        .update({balance: parsed});
+      setEditBalanceVisible(false);
+    } catch (e) {
+      // onSnapshot will keep displaying the old value if save fails
+    } finally {
+      setBalanceSaving(false);
+    }
+  };
+
   const onDismissStartDatePicker = () => {
     setStartDatePickerVisible(false);
   };
@@ -274,10 +307,90 @@ const HomeScreen = ({navigation}) => {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
-        {/* Header Section */}
-        <View style={styles.headerSection}>
-          <Text style={styles.greetingText}>Hello, {userData?.name || 'User'}!</Text>
-          <Text style={styles.subGreetingText}>Track your expenses today</Text>
+        {/* Hero Section */}
+        <View style={styles.heroSection}>
+          <View style={styles.heroTopRow}>
+            <View>
+              <Text style={styles.heroGreeting}>
+                Hello, {userData?.name?.split(' ')[0] || 'User'}!
+              </Text>
+              <Text style={styles.heroSubGreeting}>Track your expenses today</Text>
+            </View>
+            {userData?.userImg ? (
+              <Image source={{uri: userData.userImg}} style={styles.heroAvatar} />
+            ) : (
+              <View style={styles.heroAvatarInitials}>
+                <Text style={styles.heroAvatarInitialsText}>
+                  {(userData?.name || 'U')[0].toUpperCase()}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.balanceHeroCard}>
+            <Text style={styles.balanceHeroLabel}>Total Balance</Text>
+            <View style={styles.balanceHeroRow}>
+              <Text
+                style={[
+                  styles.balanceHeroAmount,
+                  {
+                    color:
+                      (userData?.balance ?? 0) >= 0 ? INCOME_COLOR : EXPENSE_COLOR,
+                  },
+                ]}>
+                {(userData?.balance ?? 0) < 0 ? '- ' : ''}
+                {formatAmount(Math.abs(userData?.balance ?? 0))}
+              </Text>
+              <TouchableOpacity
+                onPress={openEditBalance}
+                style={styles.balanceEditBtn}
+                hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+                <MaterialCommunityIcons
+                  name="pencil-outline"
+                  size={18}
+                  color="#677CD2"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* Summary Cards */}
+        <View style={styles.cardSection}>
+          <Card style={[styles.incomeCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
+            <View style={styles.cardContent}>
+              <View style={styles.cardHeader}>
+                <View style={styles.cardIcon}>
+                  <MaterialCommunityIcons
+                    name="arrow-down"
+                    size={20}
+                    color={INCOME_COLOR}
+                  />
+                </View>
+                <Text style={styles.cardTitle}>Total Income</Text>
+              </View>
+              <Text style={styles.cardIncomeAmount}>
+                {formatAmount(totalIncome)}
+              </Text>
+            </View>
+          </Card>
+          <Card style={[styles.expenseCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
+            <View style={styles.cardContent}>
+              <View style={styles.cardHeader}>
+                <View style={styles.cardIcon}>
+                  <MaterialCommunityIcons
+                    name="arrow-up"
+                    size={20}
+                    color={EXPENSE_COLOR}
+                  />
+                </View>
+                <Text style={styles.cardTitle}>Total Expense</Text>
+              </View>
+              <Text style={styles.cardExpenseAmount}>
+                {formatAmount(totalExpense)}
+              </Text>
+            </View>
+          </Card>
         </View>
 
         {/* Time Range Filter Section */}
@@ -438,44 +551,6 @@ const HomeScreen = ({navigation}) => {
           {...(Platform.OS === 'ios' && { presentationStyle: 'pageSheet' })}
         />
 
-        {/* Summary Cards */}
-        <View style={styles.cardSection}>
-          <Card style={styles.incomeCard} elevation={2}>
-            <View style={styles.cardContent}>
-              <View style={styles.cardHeader}>
-                <View style={styles.cardIcon}>
-                  <MaterialCommunityIcons
-                    name="arrow-down"
-                    size={20}
-                    color={INCOME_COLOR}
-                  />
-                </View>
-                <Text style={styles.cardTitle}>Total Income</Text>
-              </View>
-              <Text style={styles.cardIncomeAmount}>
-                {formatAmount(totalIncome)}
-              </Text>
-            </View>
-          </Card>
-          <Card style={styles.expenseCard} elevation={2}>
-            <View style={styles.cardContent}>
-              <View style={styles.cardHeader}>
-                <View style={styles.cardIcon}>
-                  <MaterialCommunityIcons
-                    name="arrow-up"
-                    size={20}
-                    color={EXPENSE_COLOR}
-                  />
-                </View>
-                <Text style={styles.cardTitle}>Total Expense</Text>
-              </View>
-              <Text style={styles.cardExpenseAmount}>
-                {formatAmount(totalExpense)}
-              </Text>
-            </View>
-          </Card>
-        </View>
-
         {/* Quick Actions Section */}
         <View style={styles.quickActionsSection}>
           <Text style={styles.quickActionsTitle}>Quick Actions</Text>
@@ -528,9 +603,9 @@ const HomeScreen = ({navigation}) => {
             {filteredTransactions.length > 0 ? (
               filteredTransactions.map(transaction => (
                   <Card
-                    style={styles.transactionsCard}
+                    style={[styles.transactionsCard, Platform.OS === 'android' && styles.cardAndroid]}
                     key={transaction.id}
-                    elevation={2}
+                    elevation={Platform.OS === 'android' ? 0 : 2}
                     onPress={() =>
                       navigation.navigate('TransactionDetail', {
                         transaction,
@@ -658,6 +733,49 @@ const HomeScreen = ({navigation}) => {
           </View>
         </View>
       </ScrollView>
+
+      {/* Edit Balance Modal */}
+      <Modal
+        visible={editBalanceVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setEditBalanceVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>Edit Balance</Text>
+              <Text style={styles.modalSubtitle}>
+                Set your current account balance
+              </Text>
+              <TextInput
+                style={styles.modalInput}
+                value={formatBalanceInput(newBalanceInput)}
+                onChangeText={text => setNewBalanceInput(text.replace(/,/g, ''))}
+                keyboardType="numeric"
+                placeholder="Enter balance"
+                placeholderTextColor="#999"
+                autoFocus={true}
+              />
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={() => setEditBalanceVisible(false)}>
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalSaveBtn}
+                  onPress={handleSaveBalance}
+                  disabled={balanceSaving}>
+                  <Text style={styles.modalSaveText}>
+                    {balanceSaving ? 'Saving...' : 'Save'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -676,22 +794,150 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flex: 1,
   },
-  headerSection: {
+  heroSection: {
+    backgroundColor: PRIMARY_COLOR,
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 15,
+    paddingBottom: 28,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    marginBottom: 20,
   },
-  greetingText: {
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  heroGreeting: {
     fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontFamily: 'Kufam-SemiBoldItalic',
+  },
+  heroSubGreeting: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.75)',
+    marginTop: 4,
+    fontFamily: 'Lato-Regular',
+  },
+  heroAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.6)',
+  },
+  heroAvatarInitials: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.5)',
+  },
+  heroAvatarInitialsText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontFamily: 'Lato-Bold',
+  },
+  balanceHeroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  balanceHeroLabel: {
+    fontSize: 13,
+    color: '#666',
+    fontFamily: 'Lato-Regular',
+    marginBottom: 6,
+  },
+  balanceHeroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  balanceHeroAmount: {
+    fontSize: 30,
+    fontWeight: 'bold',
+    fontFamily: 'Lato-Bold',
+  },
+  balanceEditBtn: {
+    backgroundColor: '#F4F6FA',
+    borderRadius: 8,
+    padding: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+  },
+  modalTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#2C2C2C',
     fontFamily: 'Kufam-SemiBoldItalic',
+    marginBottom: 4,
   },
-  subGreetingText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 4,
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#888',
     fontFamily: 'Lato-Regular',
+    marginBottom: 20,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 18,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
+    backgroundColor: '#F4F6FA',
+    marginBottom: 20,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  modalCancelBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+  },
+  modalCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#666',
+    fontFamily: 'Lato-Bold',
+  },
+  modalSaveBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: PRIMARY_COLOR,
+  },
+  modalSaveText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    fontFamily: 'Lato-Bold',
   },
   filterSection: {
     marginHorizontal: 20,
@@ -1031,7 +1277,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
-    elevation: 2,
+    elevation: Platform.OS === 'android' ? 0 : 2,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1045,6 +1291,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'Lato-Bold',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });
 

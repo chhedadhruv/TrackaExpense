@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import {Text, Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -106,7 +107,7 @@ const TransactionDetailScreen = ({route, navigation}) => {
       </View>
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {/* Transaction Details Card */}
-        <Card style={styles.detailsCard} elevation={2}>
+        <Card style={[styles.detailsCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
           <View style={styles.detailsCardContent}>
             <Text style={styles.sectionTitle}>Transaction Details</Text>
             <View style={styles.detailRow}>
@@ -159,7 +160,7 @@ const TransactionDetailScreen = ({route, navigation}) => {
         </Card>
         {/* Receipt Image Card */}
         {transaction.imageUrl && (
-          <Card style={styles.imageCard} elevation={2}>
+          <Card style={[styles.imageCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
             <TouchableOpacity onPress={onImagePress} style={styles.imageCardContent}>
               <View style={styles.imageContainer}>
                 <Image
@@ -356,7 +357,7 @@ const styles = StyleSheet.create({
     backgroundColor: PRIMARY_COLOR,
     paddingVertical: 16,
     borderRadius: 12,
-    elevation: 4,
+    elevation: Platform.OS === 'android' ? 0 : 4,
     shadowColor: PRIMARY_COLOR,
     shadowOffset: {
       width: 0,
@@ -379,7 +380,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F64E4E',
     paddingVertical: 16,
     borderRadius: 12,
-    elevation: 4,
+    elevation: Platform.OS === 'android' ? 0 : 4,
     shadowColor: '#F64E4E',
     shadowOffset: {
       width: 0,
@@ -412,6 +413,10 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     flex: 1,
     fontFamily: 'Lato-Regular',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });
 export default TransactionDetailScreen;

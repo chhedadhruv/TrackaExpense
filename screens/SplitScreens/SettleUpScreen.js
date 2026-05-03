@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
+  Platform,
 } from 'react-native';
 import {Button, Card} from 'react-native-paper';
 import UserAvatar from 'react-native-user-avatar';
@@ -79,6 +80,7 @@ const SettleUpScreen = ({route, navigation}) => {
         category: 'Settlement',
         paidBy: selectedBorrower,
         splitUsers: [selectedLender], // Only include the lender to avoid splitting the amount
+        date: firestore.Timestamp.now(),
         createdAt: firestore.FieldValue.serverTimestamp(),
         type: 'settlement',
         isSettlement: true, // Add flag to identify settlement splits
@@ -195,7 +197,7 @@ const SettleUpScreen = ({route, navigation}) => {
     onSelect,
     excludeUser,
   ) => (
-    <Card style={styles.sectionCard} elevation={1}>
+    <Card style={[styles.sectionCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
       <View style={styles.cardContent}>
         <Text style={styles.sectionTitle}>{title}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -280,7 +282,7 @@ const SettleUpScreen = ({route, navigation}) => {
             selectedBorrower,
           )}
           {/* Amount section */}
-          <Card style={styles.sectionCard} elevation={1}>
+          <Card style={[styles.sectionCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
             <View style={styles.cardContent}>
               <Text style={styles.sectionTitle}>Amount</Text>
               <TextInput
@@ -294,7 +296,7 @@ const SettleUpScreen = ({route, navigation}) => {
             </View>
           </Card>
           {/* Note section */}
-          <Card style={styles.sectionCard} elevation={1}>
+          <Card style={[styles.sectionCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
             <View style={styles.cardContent}>
               <Text style={styles.sectionTitle}>Add a note (optional)</Text>
               <TextInput
@@ -313,7 +315,7 @@ const SettleUpScreen = ({route, navigation}) => {
           </Card>
           {/* Summary section */}
           {selectedLender && selectedBorrower && amount && (
-            <Card style={styles.sectionCard} elevation={1}>
+            <Card style={[styles.sectionCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
               <View style={styles.cardContent}>
                 <Text style={styles.sectionTitle}>Summary</Text>
                 <View style={styles.summaryContent}>
@@ -436,7 +438,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 2,
-    elevation: 1,
+    elevation: Platform.OS === 'android' ? 0 : 1,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -489,7 +491,7 @@ const styles = StyleSheet.create({
     backgroundColor: SUCCESS_COLOR,
     paddingVertical: 15,
     borderRadius: 12,
-    elevation: 1,
+    elevation: Platform.OS === 'android' ? 0 : 1,
     shadowColor: SUCCESS_COLOR,
     shadowOffset: {
       width: 0,
@@ -516,6 +518,10 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'right',
     fontFamily: 'Lato-Regular',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });
 export default SettleUpScreen;

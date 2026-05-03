@@ -22,6 +22,27 @@ const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
+
+const getSplitCardColor = (split, currentEmail) => {
+  if (!currentEmail) return PRIMARY_COLOR;
+  if (split.type === 'settlement' || split.isSettlement) {
+    const payerEmail = split.paidBy?.email?.toLowerCase();
+    const isReceiver =
+      split.splitUsers?.some(u => u.email?.toLowerCase() === currentEmail) &&
+      payerEmail !== currentEmail;
+    if (isReceiver) return SUCCESS_COLOR;
+    if (payerEmail === currentEmail) return EXPENSE_COLOR;
+    return PRIMARY_COLOR;
+  }
+  const isPayer = split.paidBy?.email?.toLowerCase() === currentEmail;
+  const isInSplitUsers = split.splitUsers?.some(
+    u => u.email?.toLowerCase() === currentEmail,
+  );
+  if (isPayer && split.splitUsers?.length > 1) return SUCCESS_COLOR;
+  if (!isPayer && isInSplitUsers) return EXPENSE_COLOR;
+  return PRIMARY_COLOR;
+};
+
 const SplitGroupDetailScreen = ({route, navigation}) => {
   const {currency, formatAmount} = useCurrency();
   const {group} = route.params || {};
@@ -95,12 +116,14 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
         .collection('groups')
         .doc(group.id)
         .collection('splits')
-        .orderBy('createdAt', 'desc')
         .get();
-      const fetchedSplits = splitsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const fetchedSplits = splitsSnapshot.docs
+        .map(doc => ({id: doc.id, ...doc.data()}))
+        .sort((a, b) => {
+          const aTs = (a.date || a.createdAt)?.toMillis?.() ?? 0;
+          const bTs = (b.date || b.createdAt)?.toMillis?.() ?? 0;
+          return bTs - aTs;
+        });
       const totalAmount = fetchedSplits.reduce(
         (sum, split) => sum + parseFloat(split.amount),
         0,
@@ -256,8 +279,9 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
       setDetailedLendingInfo(netLendingBalances);
     }
   }, [splits]);
-  const renderGroupSummaryCard = () => (
-    <Card style={styles.groupSummaryCard} elevation={2}>
+  const renderGroupSummaryCard = () => {
+    return (
+    <Card style={[styles.groupSummaryCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
       <View style={styles.cardContent}>
         <Text style={styles.titleText}>{group.name}</Text>
         <View style={styles.groupMemberAvatars}>
@@ -376,7 +400,8 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
         </View>
       </View>
     </Card>
-  );
+    );
+  };
   const handleSearch = query => {
     setSearchQuery(query);
     if (!query.trim()) {
@@ -388,7 +413,7 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
       const matchTitle = split.title
         .toLowerCase()
         .includes(query.toLowerCase());
-      const matchDate = moment(split.createdAt.toDate())
+      const matchDate = moment((split.date || split.createdAt).toDate())
         .format('MMM D, YYYY')
         .toLowerCase()
         .includes(query.toLowerCase());
@@ -418,24 +443,28 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
     const splitsToShow = showAllSplits
       ? filteredSplits
       : filteredSplits.slice(0, RECENT_SPLITS_LIMIT);
+    const currentEmail = user?.email?.toLowerCase();
     return (
       <View style={styles.splitsList}>
         {filteredSplits.length > 0 ? (
           <>
-            {splitsToShow.map(split => (
-              <Card key={split.id} style={styles.splitCard} elevation={1}>
+            {splitsToShow.map(split => {
+              const splitColor = getSplitCardColor(split, currentEmail);
+              return (
+              <Card key={split.id} style={[styles.splitCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
                 <TouchableOpacity
                   style={styles.splitCardContent}
                   onPress={() =>
                     navigation.navigate('SplitDetail', {group, split})
                   }>
+                  <View style={[styles.splitColorBar, {backgroundColor: splitColor}]} />
                   <View style={styles.splitCardDetails}>
                     <Text style={styles.splitTitle}>{split.title}</Text>
                     <Text style={styles.splitSubtitle}>
                       Paid by {split.paidBy.name || split.paidBy.email}
                     </Text>
                     <Text style={styles.splitDate}>
-                      {moment(split.createdAt.toDate()).format('MMM D, YYYY')}
+                      {moment((split.date || split.createdAt).toDate()).format('MMM D, YYYY')}
                     </Text>
                     {split.category && (
                       <View style={styles.categoryTag}>
@@ -446,13 +475,14 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
                     )}
                   </View>
                   <View style={styles.splitCardRight}>
-                    <Text style={styles.splitAmount}>
+                    <Text style={[styles.splitAmount, {color: splitColor}]}>
                       {formatAmount(split.amount)}
                     </Text>
                   </View>
                 </TouchableOpacity>
               </Card>
-            ))}
+              );
+            })}
             {filteredSplits.length > 3 && (
               <TouchableOpacity
                 onPress={() => navigation.navigate('SplitTransaction', {group})}
@@ -476,13 +506,50 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
       </View>
     );
   };
+  const renderStatsSummary = () => {
+    const currentEmail = user?.email?.toLowerCase();
+    const myShare = splits.reduce((total, split) => {
+      if (split.type === 'settlement' || split.isSettlement) return total;
+      const splitUsers = split.splitUsers || [];
+      const isParticipant = splitUsers.some(u => u.email?.toLowerCase() === currentEmail);
+      if (!isParticipant) return total;
+      if (split.splitType === 'percentage') {
+        const entry = splitUsers.find(u => u.email?.toLowerCase() === currentEmail);
+        return total + parseFloat(split.amount) * ((entry?.percentage || 0) / 100);
+      }
+      return total + parseFloat(split.amount) / splitUsers.length;
+    }, 0);
+    return (
+      <View style={styles.statsRow}>
+        <Card style={[styles.statCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
+          <View style={styles.statCardContent}>
+            <View style={[styles.statIconCircle, {backgroundColor: PRIMARY_COLOR + '18'}]}>
+              <MaterialCommunityIcons name="receipt" size={18} color={PRIMARY_COLOR} />
+            </View>
+            <Text style={styles.statCardLabel}>Total Spent</Text>
+            <Text style={[styles.statCardValue, {color: PRIMARY_COLOR}]}>{formatAmount(totalSplitAmount)}</Text>
+          </View>
+        </Card>
+        <Card style={[styles.statCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
+          <View style={styles.statCardContent}>
+            <View style={[styles.statIconCircle, {backgroundColor: EXPENSE_COLOR + '18'}]}>
+              <MaterialCommunityIcons name="account-cash" size={18} color={EXPENSE_COLOR} />
+            </View>
+            <Text style={styles.statCardLabel}>Your Share</Text>
+            <Text style={[styles.statCardValue, {color: EXPENSE_COLOR}]}>{formatAmount(myShare)}</Text>
+          </View>
+        </Card>
+      </View>
+    );
+  };
   // Render detailed lending summary
   const renderDetailedLendingSummary = () => {
-    if (detailedLendingInfo.length === 0) {
+    const visibleDetails = detailedLendingInfo.filter(d => d.amount > 0.009);
+    if (visibleDetails.length === 0) {
       return null;
     }
     const currentEmail = user?.email?.toLowerCase();
-    const hasActionableSuggestion = detailedLendingInfo.some(detail => {
+    const hasActionableSuggestion = visibleDetails.some(detail => {
       const payerEmail = detail.borrower.email?.toLowerCase();
       const receiverEmail = detail.lender.email?.toLowerCase();
       return (
@@ -492,8 +559,8 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
     return (
       <View style={styles.lendingSummaryContainer}>
         <Text style={styles.sectionHeaderText}>Settlement Suggestions</Text>
-        {detailedLendingInfo.map((detail, index) => (
-          <Card key={index} style={styles.lendingSummaryCard} elevation={1}>
+        {visibleDetails.map((detail, index) => (
+          <Card key={index} style={[styles.lendingSummaryCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
             <View style={styles.lendingSummaryContent}>
               <View style={styles.lendingUserContainer}>
                 <UserAvatar size={40} name={detail.borrower.name} />
@@ -567,6 +634,7 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
           showsVerticalScrollIndicator={false}>
           {/* Header removed as per design update */}
           {renderGroupSummaryCard()}
+          {renderStatsSummary()}
           {renderDetailedLendingSummary()}
           {/* Recent Splits Section */}
           <View style={styles.splitsSection}>
@@ -720,16 +788,22 @@ const styles = StyleSheet.create({
   },
   splitCard: {
     marginBottom: 10,
-    padding: 15,
     backgroundColor: '#fff',
+    overflow: 'hidden',
   },
   splitCardContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'stretch',
+  },
+  splitColorBar: {
+    width: 4,
+    alignSelf: 'stretch',
   },
   splitCardDetails: {
     flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
   },
   splitTitle: {
     fontSize: 16,
@@ -865,6 +939,7 @@ const styles = StyleSheet.create({
   splitCardRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingRight: 12,
   },
   menuAnchor: {
     marginLeft: 10,
@@ -914,7 +989,7 @@ const styles = StyleSheet.create({
   },
   searchBar: {
     marginBottom: 15,
-    elevation: 2,
+    elevation: Platform.OS === 'android' ? 0 : 2,
   },
   splitDate: {
     fontSize: 12,
@@ -952,7 +1027,7 @@ const styles = StyleSheet.create({
     backgroundColor: PRIMARY_COLOR,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 3,
+    elevation: Platform.OS === 'android' ? 0 : 3,
     shadowColor: PRIMARY_COLOR,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
@@ -1021,6 +1096,47 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '45%',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    marginBottom: 15,
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    overflow: 'hidden',
+  },
+  statCardContent: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+  },
+  statIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  statCardLabel: {
+    fontSize: 11,
+    color: '#888',
+    marginBottom: 3,
+    fontFamily: 'Lato-Regular',
+    textAlign: 'center',
+  },
+  statCardValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: 'Lato-Bold',
+    textAlign: 'center',
   },
 });
 export default SplitGroupDetailScreen;

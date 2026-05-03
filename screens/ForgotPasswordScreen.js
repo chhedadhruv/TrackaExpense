@@ -1,4 +1,4 @@
-import {View, Text, StyleSheet, ActivityIndicator, TouchableOpacity} from 'react-native';
+import {View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Platform} from 'react-native';
 import React, {useState, useContext} from 'react';
 import {Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -62,7 +62,7 @@ const ForgotPasswordScreen = ({navigation}) => {
             </Text>
           </View>
 
-          <Card style={styles.formCard} elevation={4}>
+          <Card style={[styles.formCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 4}>
             <View style={styles.cardContent}>
               {errorMessage && (
                 <View style={styles.errorContainer}>
@@ -102,7 +102,7 @@ const ForgotPasswordScreen = ({navigation}) => {
             </View>
           </Card>
 
-          <Card style={styles.infoCard} elevation={2}>
+          <Card style={[styles.infoCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
             <View style={styles.infoCardContent}>
               <MaterialCommunityIcons name="information" size={24} color="#677CD2" />
               <View style={styles.infoTextContainer}>
@@ -277,5 +277,9 @@ const styles = StyleSheet.create({
   loginLinkText: {
     color: '#677CD2',
     fontWeight: '600',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });

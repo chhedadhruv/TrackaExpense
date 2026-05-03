@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   TouchableOpacity,
   Linking,
+  Platform,
 } from 'react-native';
 import {Card, Text, ActivityIndicator, Divider} from 'react-native-paper';
 import firestore from '@react-native-firebase/firestore';
@@ -126,7 +127,7 @@ const ContactUsScreen = ({navigation}) => {
           </Text>
         </View>
         {/* Quick Contact Options */}
-        <Card style={styles.quickContactCard} elevation={2}>
+        <Card style={[styles.quickContactCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
           <View style={styles.cardContent}>
             <Text style={styles.sectionTitle}>Quick Contact</Text>
             <TouchableOpacity
@@ -163,7 +164,7 @@ const ContactUsScreen = ({navigation}) => {
           </View>
         </Card>
         {/* Message Form Card */}
-        <Card style={styles.formCard} elevation={3}>
+        <Card style={[styles.formCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 3}>
           <View style={styles.cardContent}>
             <Text style={styles.sectionTitle}>Send us a Message</Text>
             {errorMessage && (
@@ -461,7 +462,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
-    elevation: 3,
+    elevation: Platform.OS === 'android' ? 0 : 3,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -481,6 +482,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Lato-Regular',
     marginLeft: 12,
     flex: 1,
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });
 export default ContactUsScreen;

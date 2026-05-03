@@ -142,6 +142,8 @@ const LoginScreen = ({navigation}) => {
             verified: true,
             createdAt: firestore.Timestamp.fromDate(new Date()),
             userImg: user.photoURL || null,
+            balance: 0,
+            currency: 'INR',
           });
           console.log('Google Sign-In: User document created successfully');
         } else {
@@ -227,11 +229,13 @@ const LoginScreen = ({navigation}) => {
           await firestore().collection('users').doc(user.uid).set({
             name: displayName || 'Apple User',
             email: result.email || user.email || '',
-            phone: '', // Apple Sign-In doesn't provide phone number
+            phone: '',
             transactions: [],
             verified: true,
             createdAt: firestore.Timestamp.fromDate(new Date()),
-            userImg: null, // Apple Sign-In doesn't provide profile image
+            userImg: null,
+            balance: 0,
+            currency: 'INR',
           });
           console.log('Apple Sign-In: User document created successfully');
         } else {
@@ -284,7 +288,7 @@ const LoginScreen = ({navigation}) => {
             <Text style={styles.subtitleText}>Sign in to continue tracking your expenses</Text>
           </View>
 
-          <Card style={styles.formCard} elevation={4}>
+          <Card style={[styles.formCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 4}>
             <View style={styles.cardContent}>
               {errorMessage && (
                 <View style={styles.errorContainer}>
@@ -550,7 +554,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 10,
-    elevation: 2,
+    elevation: Platform.OS === 'android' ? 0 : 2,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -579,7 +583,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 10,
-    elevation: 2,
+    elevation: Platform.OS === 'android' ? 0 : 2,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -634,6 +638,10 @@ const styles = StyleSheet.create({
   validText: {
     color: '#4CAF50',
     fontWeight: '600',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });
 

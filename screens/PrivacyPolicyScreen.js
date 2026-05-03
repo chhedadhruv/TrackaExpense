@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Linking,
+  Platform,
 } from 'react-native';
 import {Card, Divider} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -317,7 +318,7 @@ For legal or compliance requests, please include relevant documentation and spec
   const ExpandableSection = ({section}) => {
     const isExpanded = expandedSections[section.id];
     return (
-      <Card style={styles.sectionCard} key={section.id} elevation={2}>
+      <Card style={[styles.sectionCard, Platform.OS === 'android' && styles.cardAndroid]} key={section.id} elevation={Platform.OS === 'android' ? 0 : 2}>
         <TouchableOpacity
           style={styles.sectionHeader}
           onPress={() => toggleSection(section.id)}
@@ -373,7 +374,7 @@ For legal or compliance requests, please include relevant documentation and spec
           </Text>
         </View>
         {/* Quick Summary */}
-        <Card style={styles.summaryCard} elevation={3}>
+        <Card style={[styles.summaryCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 3}>
           <View style={styles.summaryContent}>
             <Text style={styles.summaryTitle}>Quick Summary</Text>
             <Text style={styles.summaryText}>
@@ -536,7 +537,7 @@ const styles = StyleSheet.create({
     backgroundColor: PRIMARY_COLOR,
     paddingVertical: 15,
     borderRadius: 12,
-    elevation: 3,
+    elevation: Platform.OS === 'android' ? 0 : 3,
     shadowColor: PRIMARY_COLOR,
     shadowOffset: {
       width: 0,
@@ -579,6 +580,10 @@ const styles = StyleSheet.create({
     color: SUBTITLE_COLOR,
     fontFamily: 'Lato-Regular',
     marginBottom: 4,
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });
 export default PrivacyPolicyScreen;

@@ -433,8 +433,8 @@ const TransactionScreen = ({navigation}) => {
             filteredTransactions.map(transaction => (
               <Card
                 key={transaction.id}
-                style={styles.transactionsCard}
-                elevation={2}
+                style={[styles.transactionsCard, Platform.OS === 'android' && styles.cardAndroid]}
+                elevation={Platform.OS === 'android' ? 0 : 2}
                 onPress={() =>
                   navigation.navigate('TransactionDetail', {transaction})
                 }>
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
   searchBar: {
     marginBottom: 15,
     backgroundColor: '#FFFFFF',
-    elevation: 2,
+    elevation: Platform.OS === 'android' ? 0 : 2,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
     borderWidth: 1,
     borderColor: '#E8EBF7',
-    elevation: 2,
+    elevation: Platform.OS === 'android' ? 0 : 2,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -719,7 +719,7 @@ const styles = StyleSheet.create({
     borderColor: '#E8EBF7',
     borderRadius: 12,
     padding: 15,
-    elevation: 2,
+    elevation: Platform.OS === 'android' ? 0 : 2,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
-    elevation: 4,
+    elevation: Platform.OS === 'android' ? 0 : 4,
     shadowColor: PRIMARY_COLOR,
     shadowOffset: {
       width: 0,
@@ -778,7 +778,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    elevation: 3,
+    elevation: Platform.OS === 'android' ? 0 : 3,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -866,6 +866,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     fontFamily: 'Lato-Regular',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });
 export default TransactionScreen; 

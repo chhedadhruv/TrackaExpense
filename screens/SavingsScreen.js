@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   Modal,
+  Platform,
 } from 'react-native';
 import {Card, ActivityIndicator, Button} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -552,7 +553,7 @@ const SavingsScreen = ({navigation}) => {
           {/* Savings Goals List */}
           {savingsGoals.length > 0 ? (
             savingsGoals.map((goal, index) => (
-              <Card key={goal.id} style={styles.savingsCard} elevation={2}>
+              <Card key={goal.id} style={[styles.savingsCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
                 <View style={styles.cardContent}>
                   <View style={styles.savingsHeader}>
                     <View style={styles.goalInfo}>
@@ -722,7 +723,7 @@ const SavingsScreen = ({navigation}) => {
               </Card>
             ))
           ) : (
-            <Card style={styles.emptyStateCard} elevation={2}>
+            <Card style={[styles.emptyStateCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
               <View style={styles.emptyState}>
                 <MaterialCommunityIcons name="piggy-bank-outline" size={64} color="#CBD3EE" />
                 <Text style={styles.emptyStateTitle}>No Savings Goals Yet</Text>
@@ -737,7 +738,7 @@ const SavingsScreen = ({navigation}) => {
           )}
 
           {/* Recent Activity Card */}
-          <Card style={styles.historyCard}>
+          <Card style={[styles.historyCard, Platform.OS === 'android' && styles.cardAndroid]}>
             <View style={styles.cardContent}>
               <Text style={styles.historyTitle}>Recent Activity</Text>
               {savingsHistory.length > 0 ? (
@@ -1041,7 +1042,7 @@ const styles = StyleSheet.create({
   progressCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    elevation: 8,
+    elevation: Platform.OS === 'android' ? 0 : 8,
     shadowColor: PRIMARY_COLOR,
     shadowOffset: {
       width: 0,
@@ -1055,7 +1056,7 @@ const styles = StyleSheet.create({
   actionsCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    elevation: 8,
+    elevation: Platform.OS === 'android' ? 0 : 8,
     shadowColor: PRIMARY_COLOR,
     shadowOffset: {
       width: 0,
@@ -1069,7 +1070,7 @@ const styles = StyleSheet.create({
   historyCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    elevation: 8,
+    elevation: Platform.OS === 'android' ? 0 : 8,
     shadowColor: PRIMARY_COLOR,
     shadowOffset: {
       width: 0,
@@ -1321,7 +1322,7 @@ const styles = StyleSheet.create({
     padding: 25,
     width: '100%',
     maxWidth: 400,
-    elevation: 10,
+    elevation: Platform.OS === 'android' ? 0 : 10,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1506,6 +1507,10 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'right',
     fontFamily: 'Lato-Regular',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });
 export default SavingsScreen; 
