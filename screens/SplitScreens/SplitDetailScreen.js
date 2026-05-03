@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, ScrollView, StyleSheet, TouchableOpacity, Alert, Platform} from 'react-native';
+import {View, ScrollView, StyleSheet, TouchableOpacity, Alert, Platform, Image, Linking} from 'react-native';
 import {Text, Card} from 'react-native-paper';
 import UserAvatar from 'react-native-user-avatar';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -152,6 +152,12 @@ const SplitDetailScreen = ({route, navigation}) => {
         console.error('Failed to send split deleted notification:', error);
       }
       
+      try {
+        const txSnap = await firestore()
+          .collection('users').doc(currentUser.uid)
+          .collection('transactions').where('splitId', '==', split.id).get();
+        if (!txSnap.empty) { await txSnap.docs[0].ref.delete(); }
+      } catch (_) {}
       setMenuVisible(false);
       Alert.alert('Deleted', 'Split deleted successfully');
       navigation.goBack();
@@ -292,6 +298,12 @@ const SplitDetailScreen = ({route, navigation}) => {
                   <Text style={styles.summaryAmount}>
                     {formatAmount(split.amount)}
                   </Text>
+                  {split.recurring?.enabled ? (
+                    <View style={styles.recurringBadge}>
+                      <MaterialCommunityIcons name="repeat" size={12} color="#677CD2" />
+                      <Text style={styles.recurringBadgeText}>{split.recurring.frequency === 'weekly' ? 'Weekly' : 'Monthly'} recurring</Text>
+                    </View>
+                  ) : null}
                 </View>
               </View>
               <View style={styles.detailsGrid}>
@@ -323,6 +335,12 @@ const SplitDetailScreen = ({route, navigation}) => {
                     </Text>
                   </View>
                 )}
+                {!isSettlement && split.notes ? (
+                  <View style={[styles.detailItem, {width: '100%'}]}>
+                    <Text style={styles.detailLabel}>Notes</Text>
+                    <Text style={[styles.detailValue, {fontFamily: 'Lato-Regular', fontSize: 14, fontWeight: '400'}]}>{split.notes}</Text>
+                  </View>
+                ) : null}
               </View>
             </View>
           </Card>
@@ -333,6 +351,15 @@ const SplitDetailScreen = ({route, navigation}) => {
             </Text>
             {renderSplitUserDetails()}
           </View>
+          {split.imageUrl ? (
+            <View style={styles.receiptSection}>
+              <Text style={styles.sectionTitle}>Receipt</Text>
+              <TouchableOpacity onPress={() => Linking.openURL(split.imageUrl)} activeOpacity={0.9}>
+                <Image source={{uri: split.imageUrl}} style={styles.receiptImage} resizeMode="cover" />
+                <Text style={styles.receiptTapHint}>Tap to open full size</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
           {/* Action Buttons */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity
@@ -638,6 +665,39 @@ const styles = StyleSheet.create({
   cardAndroid: {
     borderWidth: 1,
     borderColor: '#E8EBF7',
+  },
+  receiptSection: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  receiptImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    marginTop: 10,
+  },
+  receiptTapHint: {
+    fontSize: 12,
+    color: '#888',
+    textAlign: 'center',
+    marginTop: 6,
+    fontFamily: 'Lato-Regular',
+  },
+  recurringBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+    backgroundColor: '#EEF0FB',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  recurringBadgeText: {
+    fontSize: 11,
+    color: '#677CD2',
+    fontFamily: 'Lato-Regular',
   },
 });
 export default SplitDetailScreen;

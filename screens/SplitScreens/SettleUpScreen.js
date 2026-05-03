@@ -159,6 +159,25 @@ const SettleUpScreen = ({route, navigation}) => {
             createdAt: firestore.FieldValue.serverTimestamp(),
           });
       } catch (_) {}
+      try {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const txCol = firestore().collection('users').doc(currentUser.uid).collection('transactions');
+        if (selectedBorrower.email === currentUserEmail) {
+          await txCol.add({
+            title: note.trim() || `Settlement: ${group.name}`, type: 'expense',
+            category: 'Settlement', amount: String(settlementAmount), date: todayStr,
+            source: 'split', splitId: splitRef.id, groupId: group.id, groupName: group.name,
+            splitRole: 'settlement_payer', createdAt: firestore.FieldValue.serverTimestamp(),
+          });
+        } else if (selectedLender.email === currentUserEmail) {
+          await txCol.add({
+            title: note.trim() || `Settlement: ${group.name}`, type: 'income',
+            category: 'Settlement', amount: String(settlementAmount), date: todayStr,
+            source: 'split', splitId: splitRef.id, groupId: group.id, groupName: group.name,
+            splitRole: 'settlement_receiver', createdAt: firestore.FieldValue.serverTimestamp(),
+          });
+        }
+      } catch (_) {}
       if (selectedBorrower.email === currentUserEmail) {
         // Update user's balance without creating a transaction
         await firestore().runTransaction(async transaction => {

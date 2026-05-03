@@ -9,7 +9,12 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
+  Image,
+  Modal,
 } from 'react-native';
+import storage from '@react-native-firebase/storage';
+import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
+import { requestCameraPermission } from '../../utils/Permissions';
 import {Card, Checkbox, ActivityIndicator, Switch} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import firestore from '@react-native-firebase/firestore';
@@ -83,6 +88,12 @@ const CreateSplitScreen = ({route, navigation}) => {
   const [splitType, setSplitType] = useState('equal'); // Changed from isSplitByPercentage to splitType
   const [date, setDate] = useState(new Date());
   const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [receiptImage, setReceiptImage] = useState(null);
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [recurringEnabled, setRecurringEnabled] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState('monthly');
   const isEditMode = !!split;
   useEffect(() => {
     if (!group || !group.id) {
@@ -98,6 +109,10 @@ const CreateSplitScreen = ({route, navigation}) => {
       setTitle(split.title);
       setAmount(split.amount.toString());
       setCategory(split.category);
+      setNotes(split.notes || '');
+      setReceiptImage(split.imageUrl || null);
+      setRecurringEnabled(split.recurring?.enabled || false);
+      setRecurringFrequency(split.recurring?.frequency || 'monthly');
       setDate(split.date?.toDate() || split.createdAt.toDate());
       // Set paid by
       const paidByMember = groupMembers.find(
@@ -308,6 +323,12 @@ const CreateSplitScreen = ({route, navigation}) => {
         const profileName = userDoc.data()?.name;
         if (profileName && profileName.toLowerCase() !== 'me') actorNameResolved = profileName;
       } catch (_) {}
+      let imageUrl = null;
+      if (receiptImage && !receiptImage.startsWith('http')) {
+        imageUrl = await uploadReceiptImage();
+      } else if (receiptImage) {
+        imageUrl = receiptImage;
+      }
       const splitAmount = parseFloat(amount);
       const splitDate = firestore.Timestamp.fromDate(date);
       const splitData = {
@@ -326,6 +347,20 @@ const CreateSplitScreen = ({route, navigation}) => {
             }))
           : selectedUsersList,
         category,
+        notes: notes.trim(),
+        imageUrl: imageUrl || null,
+        recurring: recurringEnabled
+          ? {
+              enabled: true,
+              frequency: recurringFrequency,
+              nextDate: firestore.Timestamp.fromDate(
+                recurringFrequency === 'weekly'
+                  ? new Date(date.getTime() + 7 * 24 * 60 * 60 * 1000)
+                  : new Date(date.getFullYear(), date.getMonth() + 1, date.getDate()),
+              ),
+            }
+          : null,
+        currency: currency.code || 'INR',
         date: splitDate,
         createdAt: isEditMode
           ? split.createdAt
@@ -458,6 +493,7 @@ const CreateSplitScreen = ({route, navigation}) => {
               createdAt: firestore.FieldValue.serverTimestamp(),
             });
         } catch (_) {}
+        await writeSplitTransaction(split.id, splitAmount, splitData, true);
         Alert.alert('Success', 'Split updated successfully');
       } else {
         // Add new split
@@ -520,6 +556,7 @@ const CreateSplitScreen = ({route, navigation}) => {
               createdAt: firestore.FieldValue.serverTimestamp(),
             });
         } catch (_) {}
+        await writeSplitTransaction(splitRef.id, splitAmount, splitData, false);
       }
       setLoading(false);
       navigation.goBack();
@@ -534,6 +571,68 @@ const CreateSplitScreen = ({route, navigation}) => {
     } finally {
     }
   };
+  const writeSplitTransaction = async (splitId, amount, data, isEdit) => {
+    try {
+      const u = auth().currentUser;
+      if (!u) return;
+      const email = u.email?.toLowerCase();
+      const isPayer = data.paidBy?.email?.toLowerCase() === email;
+      const isParticipant = data.splitUsers?.some(su => su.email?.toLowerCase() === email);
+      if (!isPayer && !isParticipant) return;
+      let userShare;
+      if (data.splitType === 'percentage') {
+        const entry = data.splitUsers?.find(su => su.email?.toLowerCase() === email);
+        userShare = amount * ((entry?.percentage || 0) / 100);
+      } else {
+        userShare = amount / (data.splitUsers?.length || 1);
+      }
+      const dateStr = data.date.toDate().toISOString().split('T')[0];
+      const txData = {
+        title: data.title, type: 'expense', category: data.category || 'Split',
+        amount: String(parseFloat(userShare.toFixed(2))), date: dateStr,
+        source: 'split', splitId, groupId: group.id, groupName: group.name,
+        splitRole: isPayer ? 'payer' : 'participant',
+        createdAt: firestore.FieldValue.serverTimestamp(),
+      };
+      const txCol = firestore().collection('users').doc(u.uid).collection('transactions');
+      if (isEdit) {
+        const snap = await txCol.where('splitId', '==', splitId).get();
+        if (!snap.empty) { await snap.docs[0].ref.update(txData); }
+        else { await txCol.add(txData); }
+      } else { await txCol.add(txData); }
+    } catch (_) {}
+  };
+
+  const uploadReceiptImage = async () => {
+    if (!receiptImage) return null;
+    const currentUser = auth().currentUser;
+    if (!currentUser) return null;
+    const path = `bills/${currentUser.uid}/${Date.now()}-split-receipt.jpg`;
+    const ref = storage().ref(path);
+    await ref.putFile(receiptImage);
+    return await ref.getDownloadURL();
+  };
+
+  const takePhotoFromCamera = async () => {
+    const hasPermission = await requestCameraPermission();
+    if (!hasPermission) return;
+    launchCamera({mediaType: 'photo', includeBase64: false, quality: 0.8}, response => {
+      if (!response.didCancel && !response.errorCode) {
+        setReceiptImage(response.assets[0].uri);
+      }
+    });
+    setImageModalVisible(false);
+  };
+
+  const choosePhotoFromLibrary = () => {
+    launchImageLibrary({mediaType: 'photo', includeBase64: false, quality: 0.8}, response => {
+      if (!response.didCancel && !response.errorCode) {
+        setReceiptImage(response.assets[0].uri);
+      }
+    });
+    setImageModalVisible(false);
+  };
+
   const renderSplitTypeButtons = () => (
     <View style={styles.splitTypeButtons}>
       <TouchableOpacity
@@ -759,6 +858,70 @@ const CreateSplitScreen = ({route, navigation}) => {
                   modalAnimationType="slide"
                 />
               </View>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Notes (Optional)</Text>
+                <TextInput
+                  style={[styles.textInput, styles.notesInput]}
+                  placeholder="Add a note..."
+                  value={notes}
+                  onChangeText={setNotes}
+                  placeholderTextColor="#999"
+                  multiline
+                  maxLength={200}
+                  numberOfLines={3}
+                />
+                <Text style={styles.characterCount}>{notes.length}/200</Text>
+              </View>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Receipt (Optional)</Text>
+                {receiptImage ? (
+                  <View style={styles.receiptPreviewContainer}>
+                    <Image source={{uri: receiptImage}} style={styles.receiptPreview} />
+                    <View style={styles.receiptActions}>
+                      <TouchableOpacity style={styles.receiptActionBtn} onPress={() => setImageModalVisible(true)}>
+                        <MaterialCommunityIcons name="camera-switch" size={18} color={PRIMARY_COLOR} />
+                        <Text style={styles.receiptActionText}>Change</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.receiptActionBtn, styles.removeBtn]} onPress={() => setReceiptImage(null)}>
+                        <MaterialCommunityIcons name="delete" size={18} color="#F64E4E" />
+                        <Text style={[styles.receiptActionText, {color: '#F64E4E'}]}>Remove</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={styles.receiptUploadBtn} onPress={() => setImageModalVisible(true)}>
+                    <MaterialCommunityIcons name="camera-plus" size={28} color={PRIMARY_COLOR} />
+                    <Text style={styles.receiptUploadText}>Attach Receipt</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <View style={styles.inputContainer}>
+                <View style={styles.recurringRow}>
+                  <View>
+                    <Text style={styles.inputLabel}>Recurring Split</Text>
+                    <Text style={styles.recurringSubtext}>Auto-create this split on a schedule</Text>
+                  </View>
+                  <Switch
+                    value={recurringEnabled}
+                    onValueChange={setRecurringEnabled}
+                    color={PRIMARY_COLOR}
+                  />
+                </View>
+                {recurringEnabled && (
+                  <View style={styles.frequencyRow}>
+                    <TouchableOpacity
+                      style={[styles.freqBtn, recurringFrequency === 'weekly' && styles.freqBtnActive]}
+                      onPress={() => setRecurringFrequency('weekly')}>
+                      <Text style={[styles.freqBtnText, recurringFrequency === 'weekly' && styles.freqBtnTextActive]}>Weekly</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.freqBtn, recurringFrequency === 'monthly' && styles.freqBtnActive]}
+                      onPress={() => setRecurringFrequency('monthly')}>
+                      <Text style={[styles.freqBtnText, recurringFrequency === 'monthly' && styles.freqBtnTextActive]}>Monthly</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
             </View>
           </Card>
           {/* Paid By Card */}
@@ -829,6 +992,28 @@ const CreateSplitScreen = ({route, navigation}) => {
               <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
+          <Modal
+            visible={imageModalVisible}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setImageModalVisible(false)}>
+            <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setImageModalVisible(false)}>
+              <View style={styles.modalSheet}>
+                <Text style={styles.modalTitle}>Add Receipt Photo</Text>
+                <TouchableOpacity style={styles.modalOption} onPress={takePhotoFromCamera}>
+                  <MaterialCommunityIcons name="camera" size={24} color={PRIMARY_COLOR} />
+                  <Text style={styles.modalOptionText}>Take Photo</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalOption} onPress={choosePhotoFromLibrary}>
+                  <MaterialCommunityIcons name="image" size={24} color={PRIMARY_COLOR} />
+                  <Text style={styles.modalOptionText}>Choose from Gallery</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalCancel} onPress={() => setImageModalVisible(false)}>
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </Modal>
         </KeyboardAwareScrollView>
       </View>
     </SafeAreaProvider>
@@ -1197,9 +1382,137 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontFamily: 'Lato-Regular',
   },
+  notesInput: {
+    minHeight: 70,
+    textAlignVertical: 'top',
+    paddingTop: 10,
+  },
   cardAndroid: {
     borderWidth: 1,
     borderColor: '#E8EBF7',
+  },
+  receiptPreviewContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E0E4F0',
+  },
+  receiptPreview: {
+    width: '100%',
+    height: 150,
+    resizeMode: 'cover',
+  },
+  receiptActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 8,
+    backgroundColor: '#F9FAFF',
+  },
+  receiptActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  receiptActionText: {
+    fontSize: 13,
+    color: '#677CD2',
+    fontFamily: 'Lato-Regular',
+  },
+  removeBtn: {},
+  receiptUploadBtn: {
+    borderWidth: 1,
+    borderColor: '#E0E4F0',
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    backgroundColor: '#F9FAFF',
+    gap: 6,
+  },
+  receiptUploadText: {
+    fontSize: 14,
+    color: '#677CD2',
+    fontFamily: 'Lato-Regular',
+  },
+  recurringRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  recurringSubtext: {
+    fontSize: 12,
+    color: '#888',
+    fontFamily: 'Lato-Regular',
+    marginTop: 2,
+  },
+  frequencyRow: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 10,
+  },
+  freqBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 10,
+    backgroundColor: '#EEF0FB',
+  },
+  freqBtnActive: {
+    backgroundColor: '#677CD2',
+  },
+  freqBtnText: {
+    fontSize: 14,
+    color: '#677CD2',
+    fontFamily: 'Lato-Bold',
+  },
+  freqBtnTextActive: {
+    color: '#FFFFFF',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
+  },
+  modalCancel: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginTop: 8,
+  },
+  modalCancelText: {
+    fontSize: 16,
+    color: '#F64E4E',
+    fontFamily: 'Lato-Bold',
   },
 });
 export default CreateSplitScreen;

@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {View, StyleSheet, Platform} from 'react-native';
+import {View, StyleSheet, Platform, RefreshControl, ScrollView, TouchableOpacity} from 'react-native';
 import {Card, ActivityIndicator, Text} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import firestore from '@react-native-firebase/firestore';
@@ -16,51 +16,68 @@ const SplitHistoryScreen = () => {
   const {currency, formatAmount} = useCurrency();
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState([]);
+  const [allHistory, setAllHistory] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = React.useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    try {
+      const currentUser = auth().currentUser;
+      if (!currentUser) {
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+      const userEmail = currentUser.email;
+      const groupsSnapshot = await firestore()
+        .collection('groups')
+        .where('members', 'array-contains', userEmail)
+        .get();
+      const groupIds = groupsSnapshot.docs.map(d => ({ id: d.id, name: d.data()?.name }));
+      setGroups(groupIds);
+      const historySnapshots = await Promise.all(
+        groupIds.map(g =>
+          firestore()
+            .collection('groups')
+            .doc(g.id)
+            .collection('splitHistory')
+            .orderBy('createdAt', 'desc')
+            .limit(50)
+            .get()
+            .then(s => s.docs.map(d => ({ id: `${g.id}:${d.id}`, groupId: g.id, groupName: g.name, ...d.data() })))
+        )
+      );
+      const merged = historySnapshots.flat();
+      merged.sort((a, b) => {
+        const ta = a.createdAt?.toMillis?.() || a.createdAt?.seconds || 0;
+        const tb = b.createdAt?.toMillis?.() || b.createdAt?.seconds || 0;
+        return tb - ta;
+      });
+      setAllHistory(merged);
+      setHistory(merged);
+    } catch (e) {
+      setAllHistory([]);
+      setHistory([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const currentUser = auth().currentUser;
-        if (!currentUser) {
-          setLoading(false);
-          return;
-        }
-        // Fetch groups user belongs to (by membership email)
-        const userEmail = currentUser.email;
-        const groupsSnapshot = await firestore()
-          .collection('groups')
-          .where('members', 'array-contains', userEmail)
-          .get();
-        const groupIds = groupsSnapshot.docs.map(d => ({ id: d.id, name: d.data()?.name }));
-        // Fetch history from all groups in parallel
-        const historySnapshots = await Promise.all(
-          groupIds.map(g =>
-            firestore()
-              .collection('groups')
-              .doc(g.id)
-              .collection('splitHistory')
-              .orderBy('createdAt', 'desc')
-              .limit(50)
-              .get()
-              .then(s => s.docs.map(d => ({ id: `${g.id}:${d.id}`, groupId: g.id, groupName: g.name, ...d.data() })))
-          )
-        );
-        const merged = historySnapshots.flat();
-        // Sort by createdAt desc
-        merged.sort((a, b) => {
-          const ta = a.createdAt?.toMillis?.() || a.createdAt?.seconds || 0;
-          const tb = b.createdAt?.toMillis?.() || b.createdAt?.seconds || 0;
-          return tb - ta;
-        });
-        setHistory(merged);
-      } catch (e) {
-        setHistory([]);
-      } finally {
-        setLoading(false);
-      }
-    };
     load();
-  }, []);
+  }, [load]);
+
+  useEffect(() => {
+    if (selectedGroup === null) {
+      setHistory(allHistory);
+    } else {
+      setHistory(allHistory.filter(item => item.groupId === selectedGroup));
+    }
+  }, [selectedGroup, allHistory]);
 
   const renderIcon = (type) => {
     switch (type) {
@@ -153,16 +170,42 @@ const SplitHistoryScreen = () => {
             <Text style={styles.loadingText}>Loading activity...</Text>
           </View>
         ) : (
-          <KeyboardAwareScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <KeyboardAwareScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} colors={['#677CD2']} tintColor="#677CD2" />}>
             <Card style={[styles.historyCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
               <View style={styles.cardContent}>
                 <Text style={styles.historyTitle}>Split History</Text>
+                {groups.length > 1 && (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={{marginBottom: 15}}
+                    contentContainerStyle={{flexDirection: 'row'}}>
+                    <TouchableOpacity
+                      onPress={() => setSelectedGroup(null)}
+                      style={[styles.filterChip, selectedGroup === null && styles.filterChipActive]}>
+                      <Text style={[styles.filterChipText, selectedGroup === null && styles.filterChipTextActive]}>All</Text>
+                    </TouchableOpacity>
+                    {groups.map(g => (
+                      <TouchableOpacity
+                        key={g.id}
+                        onPress={() => setSelectedGroup(g.id)}
+                        style={[styles.filterChip, selectedGroup === g.id && styles.filterChipActive]}>
+                        <Text style={[styles.filterChipText, selectedGroup === g.id && styles.filterChipTextActive]}>{g.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
                 {history.length > 0 ? (
                   history.map(item => (
                     <View key={item.id} style={styles.historyItem}>
                       <View style={styles.historyIcon}>{renderIcon(item.type)}</View>
                       <View style={styles.historyDetails}>
                         <Text style={styles.historyDescription}>{renderDescription(item)}</Text>
+                        {(item.type === 'create' || item.type === 'settlement_create') && item.amount ? (
+                          <Text style={styles.historyAmount}>
+                            {formatAmount(item.amount)}
+                          </Text>
+                        ) : null}
                         {renderChanges(item)}
                         <Text style={styles.historyDate}>
                           {item.createdAt ? item.createdAt.toDate().toLocaleString() : 'Unknown date'}
@@ -271,6 +314,31 @@ const styles = StyleSheet.create({
   cardAndroid: {
     borderWidth: 1,
     borderColor: '#E8EBF7',
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    marginRight: 8,
+    borderRadius: 16,
+    backgroundColor: '#EEF0FB',
+  },
+  filterChipActive: {
+    backgroundColor: '#677CD2',
+  },
+  filterChipText: {
+    fontSize: 13,
+    color: '#677CD2',
+    fontFamily: 'Lato-Regular',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
+    fontFamily: 'Lato-Bold',
+  },
+  historyAmount: {
+    fontSize: 13,
+    color: '#677CD2',
+    fontFamily: 'Lato-Bold',
+    marginTop: 2,
   },
 });
 

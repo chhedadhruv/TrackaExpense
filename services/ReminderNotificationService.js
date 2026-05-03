@@ -379,6 +379,63 @@ class ReminderNotificationService {
       console.error('Failed to send monthly goal reminder:', error);
     }
   }
+
+  async processRecurringSplits() {
+    try {
+      const currentUser = auth().currentUser;
+      if (!currentUser) return;
+      const now = firestore.Timestamp.now();
+      const groupsSnap = await firestore()
+        .collection('groups')
+        .where('members', 'array-contains', currentUser.email)
+        .get();
+      for (const groupDoc of groupsSnap.docs) {
+        try {
+          const splitsSnap = await firestore()
+            .collection('groups')
+            .doc(groupDoc.id)
+            .collection('splits')
+            .where('recurring.enabled', '==', true)
+            .get();
+          for (const splitDoc of splitsSnap.docs) {
+            const split = splitDoc.data();
+            const nextDate = split.recurring?.nextDate;
+            if (!nextDate || nextDate.toMillis() > now.toMillis()) continue;
+            if (split.paidBy?.userId !== currentUser.uid) continue;
+            const frequency = split.recurring?.frequency || 'monthly';
+            const nextDateJs = nextDate.toDate();
+            const newNextDate = frequency === 'weekly'
+              ? new Date(nextDateJs.getTime() + 7 * 24 * 60 * 60 * 1000)
+              : new Date(nextDateJs.getFullYear(), nextDateJs.getMonth() + 1, nextDateJs.getDate());
+            const newSplitData = {
+              title: split.title,
+              amount: split.amount,
+              paidBy: split.paidBy,
+              splitType: split.splitType || 'equal',
+              splitUsers: split.splitUsers || [],
+              category: split.category || null,
+              notes: split.notes || null,
+              date: firestore.Timestamp.fromDate(nextDateJs),
+              createdAt: now,
+              recurring: {
+                enabled: true,
+                frequency,
+                nextDate: firestore.Timestamp.fromDate(newNextDate),
+              },
+            };
+            await firestore()
+              .collection('groups')
+              .doc(groupDoc.id)
+              .collection('splits')
+              .add(newSplitData);
+            await splitDoc.ref.update({
+              'recurring.nextDate': firestore.Timestamp.fromDate(newNextDate),
+            });
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
 }
 
 export default new ReminderNotificationService();
