@@ -594,12 +594,12 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
                 }
                 if (viewerReceives) {
                   return (
-                    <View>
+                    <>
                       <Text style={styles.lendingDetailText}>
                         You receive <Text style={[styles.amountStrongText, {color: SUCCESS_COLOR}]}>{amountStr}</Text> from {detail.borrower.name}
                       </Text>
                       <TouchableOpacity
-                        style={styles.remindButton}
+                        style={styles.remindIconButton}
                         onPress={async () => {
                           try {
                             const lenderDoc = await firestore().collection('users').where('email', '==', user?.email).get();
@@ -619,10 +619,9 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
                             Alert.alert('Error', 'Failed to send reminder');
                           }
                         }}>
-                        <MaterialCommunityIcons name="bell-outline" size={14} color={PRIMARY_COLOR} />
-                        <Text style={styles.remindButtonText}>Remind</Text>
+                        <MaterialCommunityIcons name="bell-outline" size={18} color={PRIMARY_COLOR} />
                       </TouchableOpacity>
-                    </View>
+                    </>
                   );
                 }
                 return (
@@ -979,6 +978,7 @@ const styles = StyleSheet.create({
   lendingSummaryContent: {
     alignItems: 'center',
     padding: 15,
+    position: 'relative',
   },
   actionButtonsRow: {
     flexDirection: 'row',
@@ -1129,21 +1129,13 @@ const styles = StyleSheet.create({
   button: {
     width: '45%',
   },
-  remindButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 6,
-    alignSelf: 'flex-start',
+  remindIconButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 6,
+    borderRadius: 20,
     backgroundColor: '#EEF0FB',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  remindButtonText: {
-    fontSize: 12,
-    color: '#677CD2',
-    fontFamily: 'Lato-Bold',
   },
   recurringTag: {
     flexDirection: 'row',
