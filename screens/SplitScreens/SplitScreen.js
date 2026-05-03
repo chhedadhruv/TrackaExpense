@@ -665,7 +665,7 @@ const SplitScreen = ({navigation, route}) => {
       return <MaterialCommunityIcons name="account-group" size={24} color="#fff" />;
     };
     return (
-      <Card key={group.id} style={styles.groupCard} elevation={2}>
+      <Card key={group.id} style={[styles.groupCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
         <TouchableOpacity
           style={styles.groupCardContent}
           onPress={() =>
@@ -723,7 +723,7 @@ const SplitScreen = ({navigation, route}) => {
             <Text style={styles.headerSubtitle}>Manage your expense groups</Text>
           </View>
           {/* Create Group Card */}
-          <Card style={styles.createGroupCard} elevation={2}>
+          <Card style={[styles.createGroupCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
             <View style={styles.cardContent}>
               <TouchableOpacity
                 style={styles.createGroupHeader}
@@ -885,7 +885,7 @@ const SplitScreen = ({navigation, route}) => {
               </View>
             </View>
             {groups.length === 0 ? (
-              <Card style={styles.emptyStateCard} elevation={1}>
+              <Card style={[styles.emptyStateCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
                 <View style={styles.emptyState}>
                   <MaterialCommunityIcons name="account-group-outline" size={64} color="#CBD3EE" />
                   <Text style={styles.emptyStateText}>
@@ -1010,7 +1010,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E8EBF7',
-    elevation: 5,
+    elevation: Platform.OS === 'android' ? 0 : 5,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1026,7 +1026,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 12,
     marginBottom: 10,
-    elevation: 1,
+    elevation: Platform.OS === 'android' ? 0 : 1,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1133,7 +1133,7 @@ const styles = StyleSheet.create({
     backgroundColor: PRIMARY_COLOR,
     paddingVertical: 15,
     borderRadius: 12,
-    elevation: 1,
+    elevation: Platform.OS === 'android' ? 0 : 1,
     shadowColor: PRIMARY_COLOR,
     shadowOffset: {
       width: 0,
@@ -1267,7 +1267,7 @@ const styles = StyleSheet.create({
   memberAvatar: {
     borderWidth: 2,
     borderColor: '#FFFFFF',
-    elevation: 2,
+    elevation: Platform.OS === 'android' ? 0 : 2,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1332,7 +1332,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 12,
-    elevation: 3,
+    elevation: Platform.OS === 'android' ? 0 : 3,
     shadowColor: PRIMARY_COLOR,
     shadowOffset: {
       width: 0,

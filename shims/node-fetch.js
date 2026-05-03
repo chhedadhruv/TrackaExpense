@@ -1,0 +1,2 @@
+module.exports = fetch;
+module.exports.default = fetch;

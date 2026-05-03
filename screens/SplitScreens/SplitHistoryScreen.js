@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {View, StyleSheet} from 'react-native';
+import {View, StyleSheet, Platform} from 'react-native';
 import {Card, ActivityIndicator, Text} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import firestore from '@react-native-firebase/firestore';
@@ -154,7 +154,7 @@ const SplitHistoryScreen = () => {
           </View>
         ) : (
           <KeyboardAwareScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-            <Card style={styles.historyCard} elevation={2}>
+            <Card style={[styles.historyCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
               <View style={styles.cardContent}>
                 <Text style={styles.historyTitle}>Split History</Text>
                 {history.length > 0 ? (
@@ -267,6 +267,10 @@ const styles = StyleSheet.create({
     color: '#888',
     textAlign: 'center',
     fontFamily: 'Lato-Regular',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });
 

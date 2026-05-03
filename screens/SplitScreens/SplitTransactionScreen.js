@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useContext} from 'react';
 import {
   View,
   Text,
@@ -15,12 +15,36 @@ import {DatePickerModal} from 'react-native-paper-dates';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {useCurrency} from '../../utils/CurrencyUtil';
+import {AuthContext} from '../../navigation/AuthProvider';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
+
+const getSplitCardColor = (split, currentEmail) => {
+  if (!currentEmail) return PRIMARY_COLOR;
+  if (split.type === 'settlement' || split.isSettlement) {
+    const payerEmail = split.paidBy?.email?.toLowerCase();
+    const isReceiver =
+      split.splitUsers?.some(u => u.email?.toLowerCase() === currentEmail) &&
+      payerEmail !== currentEmail;
+    if (isReceiver) return SUCCESS_COLOR;
+    if (payerEmail === currentEmail) return EXPENSE_COLOR;
+    return PRIMARY_COLOR;
+  }
+  const isPayer = split.paidBy?.email?.toLowerCase() === currentEmail;
+  const isInSplitUsers = split.splitUsers?.some(
+    u => u.email?.toLowerCase() === currentEmail,
+  );
+  if (isPayer && split.splitUsers?.length > 1) return SUCCESS_COLOR;
+  if (!isPayer && isInSplitUsers) return EXPENSE_COLOR;
+  return PRIMARY_COLOR;
+};
+
 const SplitTransactionScreen = ({route, navigation}) => {
   const {currency, formatAmount} = useCurrency();
+  const {user} = useContext(AuthContext);
+  const currentUserEmail = user?.email?.toLowerCase();
   const {group} = route.params;
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
@@ -43,12 +67,14 @@ const SplitTransactionScreen = ({route, navigation}) => {
         .collection('groups')
         .doc(group.id)
         .collection('splits')
-        .orderBy('createdAt', 'desc')
         .get();
-      const fetchedTransactions = splitsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const fetchedTransactions = splitsSnapshot.docs
+        .map(doc => ({id: doc.id, ...doc.data()}))
+        .sort((a, b) => {
+          const aTs = (a.date || a.createdAt)?.toMillis?.() ?? 0;
+          const bTs = (b.date || b.createdAt)?.toMillis?.() ?? 0;
+          return bTs - aTs;
+        });
       setTransactions(fetchedTransactions);
       setLoading(false);
     } catch (error) {
@@ -60,14 +86,14 @@ const SplitTransactionScreen = ({route, navigation}) => {
     switch (filter) {
       case '7days':
         filtered = transactions.filter(transaction =>
-          moment(transaction.createdAt.toDate()).isAfter(
+          moment((transaction.date || transaction.createdAt).toDate()).isAfter(
             moment().subtract(7, 'days'),
           ),
         );
         break;
       case '30days':
         filtered = transactions.filter(transaction =>
-          moment(transaction.createdAt.toDate()).isAfter(
+          moment((transaction.date || transaction.createdAt).toDate()).isAfter(
             moment().subtract(30, 'days'),
           ),
         );
@@ -75,7 +101,7 @@ const SplitTransactionScreen = ({route, navigation}) => {
       case 'custom':
         if (customStartDate && customEndDate) {
           filtered = transactions.filter(transaction =>
-            moment(transaction.createdAt.toDate()).isBetween(
+            moment((transaction.date || transaction.createdAt).toDate()).isBetween(
               customStartDate,
               customEndDate,
               undefined,
@@ -100,7 +126,7 @@ const SplitTransactionScreen = ({route, navigation}) => {
       const matchTitle = transaction.title
         .toLowerCase()
         .includes(query.toLowerCase());
-      const matchDate = moment(transaction.createdAt.toDate())
+      const matchDate = moment((transaction.date || transaction.createdAt).toDate())
         .format('MMM D, YYYY')
         .toLowerCase()
         .includes(query.toLowerCase());
@@ -167,7 +193,7 @@ const SplitTransactionScreen = ({route, navigation}) => {
             />
           </View>
           {/* Filter Section */}
-          <Card style={styles.filterCard} elevation={1}>
+          <Card style={[styles.filterCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
             <View style={styles.cardContent}>
               <Text style={styles.filterTitle}>Filter by Date</Text>
               <ScrollView 
@@ -319,15 +345,18 @@ const SplitTransactionScreen = ({route, navigation}) => {
           <View style={styles.transactionsSection}>
             <Text style={styles.sectionTitle}>Transactions</Text>
             {filteredTransactions.length > 0 ? (
-              filteredTransactions.map(transaction => (
+              filteredTransactions.map(transaction => {
+                const txColor = getSplitCardColor(transaction, currentUserEmail);
+                return (
                 <Card
                   key={transaction.id}
-                  style={styles.transactionsCard}
-                  elevation={1}
+                  style={[styles.transactionsCard, Platform.OS === 'android' && styles.cardAndroid]}
+                  elevation={Platform.OS === 'android' ? 0 : 1}
                   onPress={() =>
                     navigation.navigate('SplitDetail', {group, split: transaction})
                   }>
                   <View style={styles.transactionsCardContent}>
+                    <View style={[styles.transactionColorBar, {backgroundColor: txColor}]} />
                     <View style={styles.transactionsCardDetails}>
                       <View style={styles.transactionsCardInfo}>
                         <Text style={styles.transactionsCardTitle}>
@@ -337,7 +366,7 @@ const SplitTransactionScreen = ({route, navigation}) => {
                           Paid by {transaction.paidBy.name || transaction.paidBy.email}
                         </Text>
                         <Text style={styles.transactionsCardDate}>
-                          {moment(transaction.createdAt.toDate()).format('MMM D, YYYY')}
+                          {moment((transaction.date || transaction.createdAt).toDate()).format('MMM D, YYYY')}
                         </Text>
                         {transaction.category && (
                           <View style={styles.categoryTag}>
@@ -348,14 +377,15 @@ const SplitTransactionScreen = ({route, navigation}) => {
                         )}
                       </View>
                     </View>
-                    <Text style={styles.transactionsCardAmount}>
+                    <Text style={[styles.transactionsCardAmount, {color: txColor}]}>
                       {formatAmount(transaction.amount)}
                     </Text>
                   </View>
                 </Card>
-              ))
+                );
+              })
             ) : (
-              <Card style={styles.emptyStateCard} elevation={1}>
+              <Card style={[styles.emptyStateCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
                 <View style={styles.emptyState}>
                   <MaterialCommunityIcons name="history" size={64} color="#CBD3EE" />
                   <Text style={styles.emptyStateText}>No transactions found</Text>
@@ -438,7 +468,7 @@ const styles = StyleSheet.create({
   searchBar: {
     marginBottom: 15,
     backgroundColor: '#FFFFFF',
-    elevation: 1,
+    elevation: Platform.OS === 'android' ? 0 : 1,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -541,7 +571,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 12,
-    elevation: 1,
+    elevation: Platform.OS === 'android' ? 0 : 1,
     shadowColor: PRIMARY_COLOR,
     shadowOffset: {
       width: 0,
@@ -562,17 +592,23 @@ const styles = StyleSheet.create({
   },
   transactionsCard: {
     marginBottom: 10,
-    padding: 15,
     backgroundColor: '#fff',
     borderRadius: 10,
+    overflow: 'hidden',
   },
   transactionsCardContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'stretch',
+  },
+  transactionColorBar: {
+    width: 4,
+    alignSelf: 'stretch',
   },
   transactionsCardDetails: {
     flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
   },
   transactionsCardIcon: {
     width: 50,
@@ -604,6 +640,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: PRIMARY_COLOR,
+    paddingRight: 12,
+    alignSelf: 'center',
   },
   noTransactionsText: {
     textAlign: 'center',
@@ -657,6 +695,10 @@ const styles = StyleSheet.create({
     color: '#888',
     textAlign: 'center',
     fontFamily: 'Lato-Regular',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });
 export default SplitTransactionScreen;

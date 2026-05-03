@@ -16,6 +16,14 @@ import {useCurrency} from '../utils/CurrencyUtil';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const EXPENSE_COLOR = '#F64E4E';
+const formatInputAmount = (value) => {
+  if (!value && value !== 0) return '';
+  const str = value.toString().replace(/,/g, '');
+  const [integer, decimal] = str.split('.');
+  const formattedInteger = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return decimal !== undefined ? `${formattedInteger}.${decimal}` : formattedInteger;
+};
+
 const AddExpense = ({navigation}) => {
   const {currency, formatAmount} = useCurrency();
   const [userData, setUserData] = useState([]);
@@ -167,6 +175,9 @@ const AddExpense = ({navigation}) => {
         const expenseDocRef = await transactionRef.add(expenseData);
         expenseData.documentId = expenseDocRef.id;
         transaction.update(expenseDocRef, {documentId: expenseDocRef.id});
+        transaction.update(userDocRef, {
+          balance: firestore.FieldValue.increment(-parseFloat(amount)),
+        });
       });
       setAmount('');
       setTitle('');
@@ -275,7 +286,7 @@ const AddExpense = ({navigation}) => {
               <Text style={styles.headerSubtitle}>Record your expenses to track your spending</Text>
             </View>
             {/* Form Card */}
-            <Card style={styles.formCard} elevation={4}>
+            <Card style={[styles.formCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 4}>
               <View style={styles.cardContent}>
                 {errorMessage && (
                   <View style={styles.errorContainer}>
@@ -370,8 +381,8 @@ const AddExpense = ({navigation}) => {
                       placeholderTextColor="#999"
                       keyboardType="numeric"
                       autoCorrect={false}
-                      value={amount}
-                      onChangeText={setAmount}
+                      value={formatInputAmount(amount)}
+                      onChangeText={text => setAmount(text.replace(/,/g, ''))}
                       style={styles.textInput}
                       editable={!isSubmitting}
                     />
@@ -631,7 +642,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E8EBF7',
-    elevation: 5,
+    elevation: Platform.OS === 'android' ? 0 : 5,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -814,5 +825,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'right',
     fontFamily: 'Lato-Regular',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });

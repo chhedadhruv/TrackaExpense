@@ -28,7 +28,7 @@ const StatisticScreen = ({navigation}) => {
   const [loading, setLoading] = useState(true);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
-  const [timeRange, setTimeRange] = useState('7days');
+  const [timeRange, setTimeRange] = useState('all');
   const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [selectedBtn, setSelectedBtn] = useState('Income');
   const [categoryPieData, setCategoryPieData] = useState([]);
@@ -447,7 +447,7 @@ const StatisticScreen = ({navigation}) => {
         />
         {/* Summary Cards */}
         <View style={styles.cardSection}>
-          <Card style={styles.incomeCard} elevation={2}>
+          <Card style={[styles.incomeCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
             <View style={styles.cardContent}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardIcon}>
@@ -464,7 +464,7 @@ const StatisticScreen = ({navigation}) => {
               </Text>
             </View>
           </Card>
-          <Card style={styles.expenseCard} elevation={2}>
+          <Card style={[styles.expenseCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
             <View style={styles.cardContent}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardIcon}>
@@ -483,7 +483,7 @@ const StatisticScreen = ({navigation}) => {
           </Card>
         </View>
         {/* Statistics Chart Section */}
-        <Card style={styles.statisticCard} elevation={3}>
+        <Card style={[styles.statisticCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 3}>
           <View style={styles.statisticHeader}>
             <Text style={styles.statisticHeaderText}>Financial Overview</Text>
             <Text style={styles.statisticHeaderSubText}>
@@ -560,7 +560,7 @@ const StatisticScreen = ({navigation}) => {
 
         {/* Category Breakdown Pie */
         }
-        <Card style={styles.statisticCard} elevation={3}>
+        <Card style={[styles.statisticCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 3}>
           <View style={styles.statisticHeader}>
             <Text style={styles.statisticHeaderText}>
               {selectedBtn === 'Income' ? 'Income by Category' : 'Spending by Category'}
@@ -670,9 +670,9 @@ const StatisticScreen = ({navigation}) => {
                 )
                 .map(transaction => (
                   <Card
-                    style={styles.transactionsCard}
+                    style={[styles.transactionsCard, Platform.OS === 'android' && styles.cardAndroid]}
                     key={transaction.id}
-                    elevation={2}
+                    elevation={Platform.OS === 'android' ? 0 : 2}
                     onPress={() =>
                       navigation.navigate('TransactionDetail', {
                         transaction,
@@ -708,8 +708,8 @@ const StatisticScreen = ({navigation}) => {
                               ? styles.transactionsCardAmountIncomeText
                               : styles.transactionsCardAmountExpenseText
                           }>
-                          {transaction.type === 'income' ? '+' : '-'}{currency.symbol}
-                          {parseInt(transaction.amount, 10).toLocaleString()}
+                          {transaction.type === 'income' ? '+' : '-'}
+                          {formatAmount(transaction.amount)}
                         </Text>
                       </View>
                     </View>
@@ -1106,6 +1106,10 @@ const styles = StyleSheet.create({
     color: '#666',
     marginLeft: 10,
     fontFamily: 'Lato-Regular',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });
 export default StatisticScreen;

@@ -13,6 +13,7 @@ import {
   SafeAreaView,
   Alert,
   Modal,
+  Platform,
 } from 'react-native';
 import {
   Avatar,
@@ -232,7 +233,7 @@ const ProfileScreen = ({navigation, route}) => {
         </View>
 
         {/* Profile Card */}
-        <Card style={styles.profileCard} elevation={2}>
+        <Card style={[styles.profileCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
           <View style={styles.profileCardContent}>
             <View style={styles.profileRow}>
               <View style={styles.avatarSection}>
@@ -291,7 +292,7 @@ const ProfileScreen = ({navigation, route}) => {
         <View style={styles.settingsSection}>
           <Text style={styles.sectionHeader}>Account Settings</Text>
           
-          <Card style={styles.settingsCard} elevation={2}>
+          <Card style={[styles.settingsCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
 
             <TouchableOpacity
               style={styles.settingsItem}
@@ -363,7 +364,7 @@ const ProfileScreen = ({navigation, route}) => {
 
         {/* Account Actions Section - Collapsible */}
         <View style={styles.settingsSection}>
-          <Card style={styles.settingsCard} elevation={2}>
+          <Card style={[styles.settingsCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
             <TouchableOpacity
               style={styles.collapsibleHeader}
               onPress={() => setAccountActionsExpanded(!accountActionsExpanded)}
@@ -608,7 +609,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 12,
-    elevation: 3,
+    elevation: Platform.OS === 'android' ? 0 : 3,
     shadowColor: PRIMARY_COLOR,
     shadowOffset: {
       width: 0,
@@ -779,5 +780,9 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 2,
     fontFamily: 'Lato-Regular',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });

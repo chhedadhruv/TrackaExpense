@@ -14,6 +14,9 @@ const config = {
       // Exclude server directory from Metro bundler
       /server\/.*/,
     ],
+    extraNodeModules: {
+      'node-fetch': path.resolve(__dirname, 'shims/node-fetch.js'),
+    },
   },
 };
 

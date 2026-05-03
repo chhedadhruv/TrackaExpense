@@ -59,6 +59,14 @@ const CATEGORY_OPTIONS = [
     icon: 'dots-horizontal',
   },
 ];
+const formatInputAmount = (value) => {
+  if (!value && value !== 0) return '';
+  const str = value.toString().replace(/,/g, '');
+  const [integer, decimal] = str.split('.');
+  const formattedInteger = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return decimal !== undefined ? `${formattedInteger}.${decimal}` : formattedInteger;
+};
+
 const CreateSplitScreen = ({route, navigation}) => {
   const {currency, formatAmount} = useCurrency();
   const [isSplitByPercentage, setIsSplitByPercentage] = useState(false);
@@ -512,10 +520,11 @@ const CreateSplitScreen = ({route, navigation}) => {
               createdAt: firestore.FieldValue.serverTimestamp(),
             });
         } catch (_) {}
-        Alert.alert('Success', 'Split added successfully');
       }
+      setLoading(false);
       navigation.goBack();
     } catch (error) {
+      setLoading(false);
       Alert.alert(
         'Error',
         `Failed to ${
@@ -523,7 +532,6 @@ const CreateSplitScreen = ({route, navigation}) => {
         } split. Please try again.`,
       );
     } finally {
-      setLoading(false);
     }
   };
   const renderSplitTypeButtons = () => (
@@ -590,8 +598,9 @@ const CreateSplitScreen = ({route, navigation}) => {
         onPress={handleCardPress}>
         <Card style={[
           styles.memberCard,
-          isSelected && styles.memberCardSelected
-        ]} elevation={isSelected ? 2 : 1}>
+          isSelected && styles.memberCardSelected,
+          Platform.OS === 'android' && styles.cardAndroid
+        ]} elevation={Platform.OS === 'android' ? 0 : (isSelected ? 2 : 1)}>
           <View style={styles.memberCheckboxContainer}>
             <View style={styles.memberInfo}>
               <View style={styles.memberNameContainer}>
@@ -670,7 +679,7 @@ const CreateSplitScreen = ({route, navigation}) => {
             </Text>
           </View>
           {/* Form Card */}
-          <Card style={styles.formCard} elevation={2}>
+          <Card style={[styles.formCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
             <View style={styles.cardContent}>
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Split Title</Text>
@@ -692,8 +701,8 @@ const CreateSplitScreen = ({route, navigation}) => {
                     style={styles.textInputAmount}
                     placeholder="Enter total amount"
                     keyboardType="numeric"
-                    value={amount}
-                    onChangeText={setAmount}
+                    value={formatInputAmount(amount)}
+                    onChangeText={text => setAmount(text.replace(/,/g, ''))}
                     placeholderTextColor="#999"
                   />
                 </View>
@@ -753,7 +762,7 @@ const CreateSplitScreen = ({route, navigation}) => {
             </View>
           </Card>
           {/* Paid By Card */}
-          <Card style={styles.sectionCard} elevation={1}>
+          <Card style={[styles.sectionCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
             <View style={styles.cardContent}>
               <Text style={styles.sectionTitle}>Paid By</Text>
               <View style={styles.paidByContainer}>
@@ -779,14 +788,14 @@ const CreateSplitScreen = ({route, navigation}) => {
             </View>
           </Card>
           {/* Split Type Card */}
-          <Card style={styles.sectionCard} elevation={1}>
+          <Card style={[styles.sectionCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
             <View style={styles.cardContent}>
               <Text style={styles.sectionTitle}>Split Type</Text>
               {renderSplitTypeButtons()}
             </View>
           </Card>
           {/* Split With Card */}
-          <Card style={styles.sectionCard} elevation={1}>
+          <Card style={[styles.sectionCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
             <View style={styles.cardContent}>
               <View style={styles.splitWithHeader}>
                 <Text style={styles.sectionTitle}>Split With</Text>
@@ -955,7 +964,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E8EBF7',
-    elevation: 5,
+    elevation: Platform.OS === 'android' ? 0 : 5,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1003,7 +1012,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     backgroundColor: '#fff',
     borderRadius: 12,
-    elevation: 1,
+    elevation: Platform.OS === 'android' ? 0 : 1,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1165,7 +1174,7 @@ const styles = StyleSheet.create({
     backgroundColor: PRIMARY_COLOR,
     paddingVertical: 15,
     borderRadius: 12,
-    elevation: 1,
+    elevation: Platform.OS === 'android' ? 0 : 1,
     shadowColor: PRIMARY_COLOR,
     shadowOffset: {
       width: 0,
@@ -1187,6 +1196,10 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'right',
     fontFamily: 'Lato-Regular',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });
 export default CreateSplitScreen;

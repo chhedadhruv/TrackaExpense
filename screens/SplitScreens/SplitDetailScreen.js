@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, ScrollView, StyleSheet, TouchableOpacity, Alert} from 'react-native';
+import {View, ScrollView, StyleSheet, TouchableOpacity, Alert, Platform} from 'react-native';
 import {Text, Card} from 'react-native-paper';
 import UserAvatar from 'react-native-user-avatar';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -275,7 +275,7 @@ const SplitDetailScreen = ({route, navigation}) => {
             </Text>
           </View>
           {/* Summary Card */}
-          <Card style={styles.summaryCard} elevation={2}>
+          <Card style={[styles.summaryCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
             <View style={styles.cardContent}>
               <View style={styles.summaryHeader}>
                 <View style={styles.summaryIcon}>
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    elevation: 1,
+    elevation: Platform.OS === 'android' ? 0 : 1,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -583,7 +583,7 @@ const styles = StyleSheet.create({
     backgroundColor: PRIMARY_COLOR,
     paddingVertical: 15,
     borderRadius: 12,
-    elevation: 1,
+    elevation: Platform.OS === 'android' ? 0 : 1,
     shadowColor: PRIMARY_COLOR,
     shadowOffset: {
       width: 0,
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
     backgroundColor: EXPENSE_COLOR,
     paddingVertical: 15,
     borderRadius: 12,
-    elevation: 1,
+    elevation: Platform.OS === 'android' ? 0 : 1,
     shadowColor: EXPENSE_COLOR,
     shadowOffset: {
       width: 0,
@@ -634,6 +634,10 @@ const styles = StyleSheet.create({
   paidBy: {
     fontSize: 16,
     color: '#3A3B3E',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });
 export default SplitDetailScreen;

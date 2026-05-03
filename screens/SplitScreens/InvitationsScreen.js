@@ -1,5 +1,5 @@
 import React, {useEffect, useState, useCallback} from 'react';
-import {View, StyleSheet, TouchableOpacity, Alert} from 'react-native';
+import {View, StyleSheet, TouchableOpacity, Alert, Platform} from 'react-native';
 import {Text, Card, ActivityIndicator} from 'react-native-paper';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
@@ -94,7 +94,7 @@ const InvitationsScreen = () => {
             ) : (
               <View style={{ width: '100%', paddingHorizontal: 16, marginTop: 12 }}>
                 {invitations.map(invite => (
-                  <Card key={invite.id} style={styles.inviteCard} elevation={1}>
+                  <Card key={invite.id} style={[styles.inviteCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
                     <View style={styles.inviteRow}>
                       <View style={styles.inviteLeft}>
                         <View style={styles.inviteIconWrap}>
@@ -203,6 +203,10 @@ const styles = StyleSheet.create({
   placeholderSubtitle: {
     fontSize: 14,
     color: '#666',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });
 

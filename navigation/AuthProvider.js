@@ -126,6 +126,7 @@ const AuthProvider = ({ children }) => {
               verified: false,
               createdAt: firestore.Timestamp.fromDate(new Date()),
               userImg: null,
+              balance: 0,
             });
             await auth().signOut();
             Alert.alert(

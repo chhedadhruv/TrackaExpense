@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  Platform,
 } from 'react-native';
 import React, {useState, useEffect, useCallback} from 'react';
 import {Card, Searchbar, ActivityIndicator} from 'react-native-paper';
@@ -174,9 +175,9 @@ const AddOrRemoveExpense = ({navigation}) => {
           {sortedTransactions.length > 0 ? (
             sortedTransactions.map((transaction, index) => (
               <Card
-                style={styles.transactionsCard}
+                style={[styles.transactionsCard, Platform.OS === 'android' && styles.cardAndroid]}
                 key={transaction.id || index}
-                elevation={2}
+                elevation={Platform.OS === 'android' ? 0 : 2}
                 onPress={() =>
                   navigation.navigate('TransactionDetail', {
                     transaction,
@@ -223,8 +224,8 @@ const AddOrRemoveExpense = ({navigation}) => {
                           ? styles.transactionsCardAmountIncomeText
                           : styles.transactionsCardAmountExpenseText
                       }>
-                      {transaction.type === 'income' ? '+ ' : '- '}{currency.symbol}
-                      {parseInt(transaction.amount, 10).toLocaleString()}
+                      {transaction.type === 'income' ? '+ ' : '- '}
+                      {formatAmount(transaction.amount)}
                     </Text>
                   </View>
                 </View>
@@ -314,7 +315,7 @@ const styles = StyleSheet.create({
   },
   searchBar: {
     backgroundColor: '#FFFFFF',
-    elevation: 2,
+    elevation: Platform.OS === 'android' ? 0 : 2,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -479,7 +480,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
-    elevation: 10,
+    elevation: Platform.OS === 'android' ? 0 : 10,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -495,7 +496,7 @@ const styles = StyleSheet.create({
     width: '47%',
     height: 50,
     borderRadius: 16,
-    elevation: 4,
+    elevation: Platform.OS === 'android' ? 0 : 4,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -517,5 +518,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginLeft: 8,
     fontFamily: 'Lato-Bold',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });

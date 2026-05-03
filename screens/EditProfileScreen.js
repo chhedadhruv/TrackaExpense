@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react';
-import {View, Alert, StyleSheet, SafeAreaView} from 'react-native';
+import {View, Alert, StyleSheet, SafeAreaView, Platform} from 'react-native';
 import {ActivityIndicator, Text, Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
@@ -119,7 +119,7 @@ const EditProfileScreen = ({navigation}) => {
           <Text style={styles.subtitleText}>Update your personal information</Text>
         </View>
         {/* Form Card */}
-        <Card style={styles.formCard} elevation={4}>
+        <Card style={[styles.formCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 4}>
           <View style={styles.cardContent}>
             {errorMessage && (
               <View style={styles.errorContainer}>
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
-    elevation: 3,
+    elevation: Platform.OS === 'android' ? 0 : 3,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -305,5 +305,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Lato-Regular',
     marginLeft: 12,
     flex: 1,
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });

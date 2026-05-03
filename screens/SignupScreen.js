@@ -321,7 +321,7 @@ const SignupScreen = ({navigation}) => {
             </Text>
           </View>
 
-          <Card style={styles.formCard} elevation={4}>
+          <Card style={[styles.formCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 4}>
             <View style={styles.cardContent}>
               {errorMessage && (
                 <View style={styles.errorContainer}>
@@ -517,7 +517,7 @@ const SignupScreen = ({navigation}) => {
             </View>
           </Card>
 
-          <Card style={styles.termsCard} elevation={2}>
+          <Card style={[styles.termsCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
             <View style={styles.termsContent}>
               <Text style={styles.termsText}>
                 By creating an account, you agree to our{' '}
@@ -724,7 +724,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 10,
-    elevation: 2,
+    elevation: Platform.OS === 'android' ? 0 : 2,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -753,7 +753,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 10,
-    elevation: 2,
+    elevation: Platform.OS === 'android' ? 0 : 2,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -912,5 +912,9 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 2,
     fontFamily: 'Lato-Regular',
+  },
+  cardAndroid: {
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
 });
