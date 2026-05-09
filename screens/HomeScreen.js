@@ -8,7 +8,6 @@ import {useFocusEffect} from '@react-navigation/native';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {useCurrency} from '../utils/CurrencyUtil';
-import FunNotificationService from '../services/FunNotificationService';
 
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
@@ -43,7 +42,6 @@ const HomeScreen = ({navigation}) => {
   const [balanceSaving, setBalanceSaving] = useState(false);
 
   const currentUser = auth().currentUser;
-  const funNotificationSent = useRef(false);
   const retryTimeoutRef = useRef(null);
   useEffect(() => () => clearTimeout(retryTimeoutRef.current), []);
 
@@ -187,18 +185,7 @@ const HomeScreen = ({navigation}) => {
       fetchTransactions();
     }, 1000);
 
-    let t2;
-    if (currentUser?.email && !funNotificationSent.current) {
-      funNotificationSent.current = true;
-      t2 = setTimeout(() => {
-        FunNotificationService.sendRandomFunNotification(currentUser.email);
-      }, 3000);
-    }
-
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
+    return () => clearTimeout(t1);
   }, []);
 
   useEffect(() => {
