@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {View, Text, StyleSheet, TextInput, Image, TouchableOpacity, Platform} from 'react-native';
 import {Card, Modal, Portal, Provider, ActivityIndicator} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
@@ -45,6 +45,8 @@ const EditTransactionScreen = ({route, navigation}) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  const navTimeoutRef = useRef(null);
+  useEffect(() => () => clearTimeout(navTimeoutRef.current), []);
   const [expenseItems] = useState([
     {label: 'Bills', value: 'Bills', icon: 'file-document'},
     {label: 'Education', value: 'Education', icon: 'school'},
@@ -162,7 +164,7 @@ const EditTransactionScreen = ({route, navigation}) => {
       });
 
       setSuccessMessage('Transaction updated successfully!');
-      setTimeout(() => navigation.navigate('Home'), 1500);
+      navTimeoutRef.current = setTimeout(() => navigation.navigate('Home'), 1500);
     } catch (error) {
       setErrorMessage('An error occurred while updating the transaction. Please try again.');
     } finally {
