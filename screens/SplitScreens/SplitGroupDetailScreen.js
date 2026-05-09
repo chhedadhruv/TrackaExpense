@@ -45,7 +45,10 @@ const getSplitCardColor = (split, currentEmail) => {
 
 const SplitGroupDetailScreen = ({route, navigation}) => {
   const {currency, formatAmount} = useCurrency();
-  const {group} = route.params || {};
+  const rawGroup = route.params?.group;
+  const group = rawGroup || (route.params?.groupId
+    ? {id: route.params.groupId, name: decodeURIComponent(route.params.groupName || 'Split Group')}
+    : null);
   const {user} = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
   const [splits, setSplits] = useState([]);

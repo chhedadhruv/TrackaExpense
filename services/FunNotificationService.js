@@ -121,6 +121,7 @@ class FunNotificationService {
           type: 'fun_notification',
           context: context,
           action: 'view_dashboard',
+          url: 'trackaexpense://home',
         },
         icon: '😊',
         priority: 'low',
@@ -215,6 +216,7 @@ class FunNotificationService {
           type: 'achievement',
           achievementType: achievementType,
           action: 'view_achievements',
+          url: 'trackaexpense://statistic',
         },
         icon: '🏆',
         priority: 'normal',
@@ -239,6 +241,7 @@ class FunNotificationService {
         data: {
           type: 'motivational',
           action: 'view_dashboard',
+          url: 'trackaexpense://home',
         },
         icon: '💪',
         priority: 'low',
@@ -263,6 +266,7 @@ class FunNotificationService {
         data: {
           type: 'funny',
           action: 'view_dashboard',
+          url: 'trackaexpense://home',
         },
         icon: '😂',
         priority: 'low',
@@ -287,6 +291,7 @@ class FunNotificationService {
         data: {
           type: 'playful',
           action: 'view_dashboard',
+          url: 'trackaexpense://home',
         },
         icon: '🍕',
         priority: 'low',
@@ -311,6 +316,7 @@ class FunNotificationService {
         data: {
           type: 'seasonal',
           action: 'view_dashboard',
+          url: 'trackaexpense://home',
         },
         icon: '🌟',
         priority: 'low',

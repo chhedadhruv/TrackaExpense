@@ -9,9 +9,6 @@ import messaging from '@react-native-firebase/messaging';
 // Create a navigation reference to use outside of React components
 export const navigationRef = React.createRef();
 
-// Store pending notification to handle after navigation is ready
-let pendingNotification = null;
-
 // Helper function to navigate from outside React components
 export function navigate(name, params) {
   if (navigationRef.current) {
@@ -27,15 +24,52 @@ export function getCurrentRoute() {
   return null;
 }
 
-// Function to set pending notification (called from NotificationService)
-export function setPendingNotification(data) {
-  pendingNotification = data;
-}
+const linking = {
+  prefixes: ['trackaexpense://'],
+  config: {
+    screens: {
+      Home: {
+        screens: {
+          Home: 'home',
+          AddIncome: 'income/add',
+          AddExpense: 'expense/add',
+        },
+      },
+      Statistic: {
+        screens: {
+          Statistic: 'statistic',
+        },
+      },
+      Split: {
+        screens: {
+          Split: 'split',
+          Invitations: 'split/invitations',
+          SplitGroupDetail: 'split/group/:groupId',
+        },
+      },
+      Savings: {
+        screens: {
+          Savings: 'savings',
+        },
+      },
+    },
+  },
+  getInitialURL: async () => {
+    const message = await messaging().getInitialNotification();
+    if (message?.data?.url) return message.data.url;
+    return null;
+  },
+  subscribe: listener => {
+    const unsub = messaging().onNotificationOpenedApp(message => {
+      if (message?.data?.url) listener(message.data.url);
+    });
+    return unsub;
+  },
+};
 
 const Routes = () => {
   const { user, setUser } = useContext(AuthContext);
   const [initializing, setInitializing] = useState(true);
-  const [isNavigationReady, setIsNavigationReady] = useState(false);
 
   // Handle changes in authentication state
   const onAuthStateChanged = (user) => {
@@ -49,34 +83,14 @@ const Routes = () => {
     return () => subscriber(); // Cleanup the listener on unmount
   }, []);
 
-  // Handle pending notification when navigation is ready
-  useEffect(() => {
-    if (isNavigationReady && user && pendingNotification) {
-      // Import the notification handler
-      import('../services/NotificationService').then((module) => {
-        const NotificationService = module.default;
-        // Give navigation a bit more time to fully mount
-        setTimeout(() => {
-          NotificationService.handleNotificationTap(pendingNotification);
-          pendingNotification = null; // Clear after handling
-        }, 500);
-      });
-    }
-  }, [isNavigationReady, user]);
-
-  // Handle navigation ready callback
-  const onNavigationReady = () => {
-    setIsNavigationReady(true);
-  };
-
   // Show a loading indicator while initializing
   if (initializing) return null;
 
   // Render navigation stacks based on user authentication
   return (
-    <NavigationContainer 
+    <NavigationContainer
       ref={navigationRef}
-      onReady={onNavigationReady}
+      linking={linking}
     >
       {user ? <AppStack /> : <AuthStack />}
     </NavigationContainer>

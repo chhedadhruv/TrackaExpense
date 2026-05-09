@@ -6,25 +6,12 @@ import {Platform, PermissionsAndroid, Alert} from 'react-native';
 import * as RootNavigation from '../navigation/Routes';
 import {NOTIFICATION_SERVER_URL, EXPO_PUBLIC_NOTIFICATION_SERVER_URL} from '@env';
 
-// Register background notification event handler at top level (for when notification is tapped)
+// Register background notification event handler at top level (for Notifee local notification taps)
 notifee.onBackgroundEvent(async ({ type, detail }) => {
   if (type === EventType.PRESS && detail.notification?.data) {
-    // If app is being opened from quit state, store the notification to handle after navigation is ready
-    import('../navigation/Routes').then((module) => {
-      if (module.setPendingNotification) {
-        module.setPendingNotification(detail.notification?.data);
-      } else {
-        // Fallback: delay navigation to ensure app is ready
-        setTimeout(() => {
-          handleNotificationNavigation(detail.notification?.data);
-        }, 1000);
-      }
-    }).catch(() => {
-      // Fallback if import fails
-      setTimeout(() => {
-        handleNotificationNavigation(detail.notification?.data);
-      }, 1000);
-    });
+    setTimeout(() => {
+      handleNotificationNavigation(detail.notification?.data);
+    }, 1000);
   }
 });
 
@@ -222,23 +209,9 @@ class NotificationService {
       await this.showLocalNotification(remoteMessage);
     });
 
-    // Handle notification tap when app is in background
-    messaging().onNotificationOpenedApp(remoteMessage => {
-      this.handleNotificationTap(remoteMessage.data);
-    });
-
-    // Handle notification tap when app is closed/killed
-    // Store it to be handled after navigation is ready
-    messaging()
-      .getInitialNotification()
-      .then(remoteMessage => {
-        if (remoteMessage) {
-          // Import and set pending notification
-          import('../navigation/Routes').then((module) => {
-            module.setPendingNotification(remoteMessage.data);
-          });
-        }
-      });
+    // Note: background and cold-start FCM notification taps are handled by
+    // the React Navigation linking config in Routes.js via onNotificationOpenedApp
+    // and getInitialNotification.
   }
 
   // Setup notifee event handlers for local notifications

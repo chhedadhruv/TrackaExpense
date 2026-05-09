@@ -158,6 +158,13 @@ class ReminderNotificationService {
           type: 'reminder',
           reminderType: reminderType,
           action: `add_${reminderType}`,
+          url: reminderType === 'income'
+            ? 'trackaexpense://income/add'
+            : reminderType === 'expense'
+              ? 'trackaexpense://expense/add'
+              : reminderType === 'savings'
+                ? 'trackaexpense://savings'
+                : 'trackaexpense://home',
         },
         icon: this.getReminderEmoji(reminderType),
         priority: 'normal',
@@ -189,6 +196,7 @@ class ReminderNotificationService {
         data: {
           type: 'positive_reminder',
           action: 'view_dashboard',
+          url: 'trackaexpense://home',
         },
         icon: '🎉',
         priority: 'low',
@@ -261,6 +269,7 @@ class ReminderNotificationService {
           weekStart: weekStart,
           weekEnd: weekEnd,
           activity: weeklyActivity,
+          url: 'trackaexpense://statistic',
         },
         icon: '📊',
         priority: 'normal',
@@ -356,6 +365,7 @@ class ReminderNotificationService {
           monthStart: monthStart,
           monthEnd: monthEnd,
           action: 'view_goals',
+          url: 'trackaexpense://statistic',
         },
         icon: '🎯',
         priority: 'normal',
@@ -412,6 +422,7 @@ class ReminderNotificationService {
           type: 'savings_reminder',
           goalId: goal.id,
           action: 'view_savings',
+          url: 'trackaexpense://savings',
         },
         icon: '💰',
         priority: 'normal',
