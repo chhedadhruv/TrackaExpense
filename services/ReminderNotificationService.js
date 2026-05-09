@@ -380,6 +380,62 @@ class ReminderNotificationService {
     }
   }
 
+  async sendSavingsGoalReminder(goal, userId) {
+    try {
+      const currentUser = auth().currentUser;
+      if (!currentUser) return;
+
+      const frequency = goal.reminderFrequency || 'weekly';
+      const periodKey =
+        frequency === 'weekly'
+          ? moment().startOf('week').format('YYYY-MM-DD')
+          : moment().startOf('month').format('YYYY-MM-DD');
+      const logDocId = `savings_${goal.id}_${periodKey}`;
+
+      const alreadySent = await firestore()
+        .collection('users')
+        .doc(userId)
+        .collection('reminderLogs')
+        .doc(logDocId)
+        .get();
+
+      if (alreadySent.exists) return;
+
+      const progress = goal.target > 0 ? Math.min((goal.current / goal.target) * 100, 100) : 0;
+      const userEmail = currentUser.email;
+
+      const notificationData = {
+        type: 'savings_reminder',
+        title: `💰 ${goal.name} reminder`,
+        body: `You've saved ${progress.toFixed(0)}% of your goal. Keep it up!`,
+        data: {
+          type: 'savings_reminder',
+          goalId: goal.id,
+          action: 'view_savings',
+        },
+        icon: '💰',
+        priority: 'normal',
+      };
+
+      await this.notificationService.sendNotificationToUsers([userEmail], notificationData);
+
+      await firestore()
+        .collection('users')
+        .doc(userId)
+        .collection('reminderLogs')
+        .doc(logDocId)
+        .set({
+          type: 'savings_reminder',
+          goalId: goal.id,
+          goalName: goal.name,
+          frequency,
+          sentAt: firestore.FieldValue.serverTimestamp(),
+        });
+    } catch (error) {
+      console.error('Failed to send savings goal reminder:', error);
+    }
+  }
+
   async processRecurringSplits() {
     try {
       const currentUser = auth().currentUser;

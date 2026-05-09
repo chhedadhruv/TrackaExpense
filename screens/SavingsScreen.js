@@ -10,18 +10,33 @@ import {
   Modal,
   Platform,
 } from 'react-native';
-import {Card, ActivityIndicator, Button} from 'react-native-paper';
+import {Card, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
-import FormButton from '../components/FormButton';
 import {useCurrency} from '../utils/CurrencyUtil';
+import ReminderNotificationService from '../services/ReminderNotificationService';
+
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
+const ORANGE_COLOR = '#F5A623';
+
+const GOAL_CATEGORIES = [
+  {id: 'emergency', label: 'Emergency', icon: 'shield-check'},
+  {id: 'vacation', label: 'Vacation', icon: 'airplane'},
+  {id: 'house', label: 'House', icon: 'home'},
+  {id: 'car', label: 'Car', icon: 'car'},
+  {id: 'education', label: 'Education', icon: 'school'},
+  {id: 'investment', label: 'Investment', icon: 'trending-up'},
+  {id: 'wedding', label: 'Wedding', icon: 'ring'},
+  {id: 'electronics', label: 'Electronics', icon: 'laptop'},
+  {id: 'other', label: 'Other', icon: 'piggy-bank'},
+];
+
 const SavingsScreen = ({navigation}) => {
   const {currency, formatAmount: formatCurrencyAmount} = useCurrency();
   const [loading, setLoading] = useState(true);
@@ -35,18 +50,24 @@ const SavingsScreen = ({navigation}) => {
     current: '',
     target: '',
     monthly: '',
+    category: 'other',
+    targetDate: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showInputModal, setShowInputModal] = useState(false);
   const [inputAmount, setInputAmount] = useState('');
-  const [inputType, setInputType] = useState(''); // 'add' or 'withdraw'
+  const [inputType, setInputType] = useState('');
   const [selectedGoalId, setSelectedGoalId] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [goalToDelete, setGoalToDelete] = useState(null);
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [reminderGoalId, setReminderGoalId] = useState(null);
+
   useEffect(() => {
     fetchSavingsData();
   }, []);
+
   const fetchSavingsData = async () => {
     try {
       const currentUser = auth().currentUser;
@@ -60,7 +81,7 @@ const SavingsScreen = ({navigation}) => {
         .collection('users')
         .doc(currentUser.uid)
         .get();
-      
+
       if (!userDoc.exists) {
         Alert.alert('Error', 'User document not found. Please try again.');
         setLoading(false);
@@ -71,7 +92,6 @@ const SavingsScreen = ({navigation}) => {
       if (userData && userData.savingsGoals && userData.savingsGoals.length > 0) {
         setSavingsGoals(userData.savingsGoals);
       } else {
-        // Initialize with a default savings goal if none exist
         const defaultGoal = {
           id: Date.now().toString(),
           name: 'Emergency Fund',
@@ -79,17 +99,20 @@ const SavingsScreen = ({navigation}) => {
           current: 0,
           target: 10000,
           monthly: 500,
+          category: 'emergency',
+          targetDate: '',
+          reminderEnabled: false,
+          reminderFrequency: null,
           createdAt: firestore.Timestamp.fromDate(new Date()),
           updatedAt: firestore.Timestamp.fromDate(new Date()),
         };
         await firestore()
           .collection('users')
           .doc(currentUser.uid)
-          .update({ savingsGoals: [defaultGoal] });
+          .update({savingsGoals: [defaultGoal]});
         setSavingsGoals([defaultGoal]);
       }
 
-      // Fetch savings history
       const historySnapshot = await firestore()
         .collection('users')
         .doc(currentUser.uid)
@@ -97,13 +120,12 @@ const SavingsScreen = ({navigation}) => {
         .orderBy('createdAt', 'desc')
         .limit(20)
         .get();
-      
+
       const history = historySnapshot.docs.map(doc => {
         const data = doc.data();
         return {
           id: doc.id,
           ...data,
-          // Ensure goalName exists for display
           goalName: data.goalName || data.goal?.name || 'savings goal',
         };
       });
@@ -115,7 +137,8 @@ const SavingsScreen = ({navigation}) => {
       setLoading(false);
     }
   };
-  const handleEdit = (goalId) => {
+
+  const handleEdit = goalId => {
     const goal = savingsGoals.find(g => g.id === goalId);
     if (goal) {
       setEditingGoalId(goalId);
@@ -125,11 +148,13 @@ const SavingsScreen = ({navigation}) => {
         current: goal.current.toString(),
         target: goal.target.toString(),
         monthly: goal.monthly.toString(),
+        category: goal.category || 'other',
+        targetDate: goal.targetDate || '',
       });
       setIsEditing(true);
     }
   };
-  
+
   const handleCancel = () => {
     setIsEditing(false);
     setEditingGoalId(null);
@@ -139,36 +164,60 @@ const SavingsScreen = ({navigation}) => {
       current: '',
       target: '',
       monthly: '',
+      category: 'other',
+      targetDate: '',
     });
   };
-  const handleSave = async () => {
-    if (!editValues.name || !editValues.current || !editValues.target || !editValues.monthly) {
+
+  const validateGoalValues = (values, current, target, monthly) => {
+    if (!values.name || !values.current || !values.target || !values.monthly) {
       Alert.alert('Error', 'Please fill in all required fields');
-      return;
+      return false;
     }
-    if (editValues.name.trim().length > 50) {
+    if (values.name.trim().length > 50) {
       Alert.alert('Error', 'Goal name must be 50 characters or less');
-      return;
+      return false;
     }
-    if (editValues.description.trim().length > 200) {
+    if (values.description.trim().length > 200) {
       Alert.alert('Error', 'Description must be 200 characters or less');
-      return;
+      return false;
     }
-    const current = parseFloat(editValues.current);
-    const target = parseFloat(editValues.target);
-    const monthly = parseFloat(editValues.monthly);
     if (isNaN(current) || isNaN(target) || isNaN(monthly)) {
       Alert.alert('Error', 'Please enter valid numbers');
-      return;
+      return false;
     }
     if (current < 0 || target < 0 || monthly < 0) {
       Alert.alert('Error', 'Values cannot be negative');
-      return;
+      return false;
     }
     if (current > 999999999 || target > 999999999 || monthly > 999999999) {
       Alert.alert('Error', 'Values are too large. Please enter smaller amounts.');
-      return;
+      return false;
     }
+    if (current > target) {
+      Alert.alert('Error', 'Current amount cannot exceed target amount');
+      return false;
+    }
+    if (values.targetDate && !/^\d{4}-\d{2}-\d{2}$/.test(values.targetDate)) {
+      Alert.alert('Error', 'Target date must be in YYYY-MM-DD format');
+      return false;
+    }
+    if (values.targetDate) {
+      const date = new Date(values.targetDate);
+      if (isNaN(date.getTime()) || date <= new Date()) {
+        Alert.alert('Error', 'Target date must be a valid future date');
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleSave = async () => {
+    const current = parseFloat(editValues.current);
+    const target = parseFloat(editValues.target);
+    const monthly = parseFloat(editValues.monthly);
+    if (!validateGoalValues(editValues, current, target, monthly)) return;
+
     setIsSubmitting(true);
     try {
       const currentUser = auth().currentUser;
@@ -181,7 +230,7 @@ const SavingsScreen = ({navigation}) => {
       const userDocRef = firestore().collection('users').doc(currentUser.uid);
       const updatedGoals = savingsGoals.map(goal => {
         if (goal.id === editingGoalId) {
-          const oldGoal = { ...goal };
+          const oldGoal = {...goal};
           const newGoal = {
             ...goal,
             name: editValues.name,
@@ -189,12 +238,20 @@ const SavingsScreen = ({navigation}) => {
             current,
             target,
             monthly,
+            category: editValues.category || 'other',
+            targetDate: editValues.targetDate || '',
             updatedAt: firestore.Timestamp.fromDate(new Date()),
           };
-          
-          // Add to history if values changed
-          if (current !== oldGoal.current || target !== oldGoal.target || monthly !== oldGoal.monthly || 
-              editValues.name !== oldGoal.name || editValues.description !== oldGoal.description) {
+
+          if (
+            current !== oldGoal.current ||
+            target !== oldGoal.target ||
+            monthly !== oldGoal.monthly ||
+            editValues.name !== oldGoal.name ||
+            editValues.description !== oldGoal.description ||
+            editValues.category !== oldGoal.category ||
+            editValues.targetDate !== oldGoal.targetDate
+          ) {
             userDocRef.collection('savingsHistory').add({
               goalId: editingGoalId,
               goalName: editValues.name || oldGoal.name,
@@ -204,16 +261,13 @@ const SavingsScreen = ({navigation}) => {
               createdAt: firestore.Timestamp.fromDate(new Date()),
             });
           }
-          
+
           return newGoal;
         }
         return goal;
       });
 
-      await userDocRef.update({
-        savingsGoals: updatedGoals,
-      });
-      
+      await userDocRef.update({savingsGoals: updatedGoals});
       setSavingsGoals(updatedGoals);
       setIsEditing(false);
       setEditingGoalId(null);
@@ -225,7 +279,8 @@ const SavingsScreen = ({navigation}) => {
       setIsSubmitting(false);
     }
   };
-  const addToSavings = async (amount) => {
+
+  const addToSavings = async amount => {
     if (!amount || isNaN(amount) || amount <= 0) {
       Alert.alert('Error', 'Please enter a valid amount');
       return;
@@ -248,16 +303,12 @@ const SavingsScreen = ({navigation}) => {
       }
 
       const userDocRef = firestore().collection('users').doc(currentUser.uid);
+      let updatedGoal = null;
       const updatedGoals = savingsGoals.map(goal => {
         if (goal.id === selectedGoalId) {
           const newCurrent = goal.current + parseFloat(amount);
-          const updatedGoal = {
-            ...goal,
-            current: newCurrent,
-            updatedAt: firestore.Timestamp.fromDate(new Date()),
-          };
-          
-          // Add to history
+          updatedGoal = {...goal, current: newCurrent, updatedAt: firestore.Timestamp.fromDate(new Date())};
+
           userDocRef.collection('savingsHistory').add({
             goalId: selectedGoalId,
             goalName: goal.name,
@@ -267,18 +318,29 @@ const SavingsScreen = ({navigation}) => {
             newAmount: newCurrent,
             createdAt: firestore.Timestamp.fromDate(new Date()),
           });
-          
+
           return updatedGoal;
         }
         return goal;
       });
 
-      await userDocRef.update({
-        savingsGoals: updatedGoals,
-      });
-      
+      await userDocRef.update({savingsGoals: updatedGoals});
       setSavingsGoals(updatedGoals);
-      Alert.alert('Success', `${formatCurrencyAmount(amount)} added to ${savingsGoals.find(g => g.id === selectedGoalId)?.name}`);
+
+      const newHistoryItem = {
+        id: Date.now().toString(),
+        goalId: selectedGoalId,
+        goalName: savingsGoals.find(g => g.id === selectedGoalId)?.name || '',
+        type: 'deposit',
+        amount: parseFloat(amount),
+        createdAt: {toDate: () => new Date()},
+      };
+      setSavingsHistory(prev => [newHistoryItem, ...prev.slice(0, 19)]);
+
+      Alert.alert(
+        'Success',
+        `${formatCurrencyAmount(amount)} added to ${savingsGoals.find(g => g.id === selectedGoalId)?.name}`,
+      );
     } catch (error) {
       console.error('Error adding to savings:', error);
       Alert.alert('Error', `Failed to add to savings: ${error.message}`);
@@ -286,7 +348,8 @@ const SavingsScreen = ({navigation}) => {
       setIsSubmitting(false);
     }
   };
-  const withdrawFromSavings = async (amount) => {
+
+  const withdrawFromSavings = async amount => {
     if (!amount || isNaN(amount) || amount <= 0) {
       Alert.alert('Error', 'Please enter a valid amount');
       return;
@@ -299,13 +362,13 @@ const SavingsScreen = ({navigation}) => {
       Alert.alert('Error', 'Please select a savings goal first');
       return;
     }
-    
+
     const selectedGoal = savingsGoals.find(g => g.id === selectedGoalId);
     if (parseFloat(amount) > selectedGoal.current) {
       Alert.alert('Error', 'Insufficient savings balance');
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       const currentUser = auth().currentUser;
@@ -319,13 +382,8 @@ const SavingsScreen = ({navigation}) => {
       const updatedGoals = savingsGoals.map(goal => {
         if (goal.id === selectedGoalId) {
           const newCurrent = goal.current - parseFloat(amount);
-          const updatedGoal = {
-            ...goal,
-            current: newCurrent,
-            updatedAt: firestore.Timestamp.fromDate(new Date()),
-          };
-          
-          // Add to history
+          const updatedGoal = {...goal, current: newCurrent, updatedAt: firestore.Timestamp.fromDate(new Date())};
+
           userDocRef.collection('savingsHistory').add({
             goalId: selectedGoalId,
             goalName: goal.name,
@@ -335,17 +393,25 @@ const SavingsScreen = ({navigation}) => {
             newAmount: newCurrent,
             createdAt: firestore.Timestamp.fromDate(new Date()),
           });
-          
+
           return updatedGoal;
         }
         return goal;
       });
 
-      await userDocRef.update({
-        savingsGoals: updatedGoals,
-      });
-      
+      await userDocRef.update({savingsGoals: updatedGoals});
       setSavingsGoals(updatedGoals);
+
+      const newHistoryItem = {
+        id: Date.now().toString(),
+        goalId: selectedGoalId,
+        goalName: selectedGoal.name,
+        type: 'withdrawal',
+        amount: parseFloat(amount),
+        createdAt: {toDate: () => new Date()},
+      };
+      setSavingsHistory(prev => [newHistoryItem, ...prev.slice(0, 19)]);
+
       Alert.alert('Success', `${formatCurrencyAmount(amount)} withdrawn from ${selectedGoal.name}`);
     } catch (error) {
       console.error('Error withdrawing from savings:', error);
@@ -354,22 +420,75 @@ const SavingsScreen = ({navigation}) => {
       setIsSubmitting(false);
     }
   };
-  const calculateProgress = (goal) => {
+
+  const calculateProgress = goal => {
     if (goal.target === 0) return 0;
     return Math.min((goal.current / goal.target) * 100, 100);
   };
-  
-  const calculateMonthsToTarget = (goal) => {
+
+  const calculateMonthsToTarget = goal => {
     if (goal.monthly === 0) return null;
     const remaining = goal.target - goal.current;
     if (remaining <= 0) return 0;
     return Math.ceil(remaining / goal.monthly);
   };
-  const formatCurrency = (amount) => {
-    return parseInt(amount, 10).toLocaleString();
+
+  const getProgressColor = progress => {
+    if (progress >= 100) return SUCCESS_COLOR;
+    if (progress >= 75) return SUCCESS_COLOR;
+    if (progress >= 25) return ORANGE_COLOR;
+    return EXPENSE_COLOR;
   };
 
-  const showAmountInput = (type) => {
+  const getCategoryIcon = category => {
+    const cat = GOAL_CATEGORIES.find(c => c.id === category);
+    return cat ? cat.icon : 'piggy-bank';
+  };
+
+  const calculateTargetDateLabel = targetDate => {
+    if (!targetDate) return null;
+    const date = new Date(targetDate);
+    const now = new Date();
+    const diffDays = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return 'Overdue';
+    if (diffDays === 0) return 'Due today';
+    if (diffDays < 30) return `${diffDays} days left`;
+    const monthsLeft = Math.ceil(diffDays / 30);
+    const targetMonth = date.toLocaleString('default', {month: 'short', year: 'numeric'});
+    return `Due ${targetMonth} · ${monthsLeft}mo left`;
+  };
+
+  const getRequiredMonthly = goal => {
+    if (!goal.targetDate) return null;
+    const date = new Date(goal.targetDate);
+    const now = new Date();
+    const monthsLeft = Math.max(1, Math.ceil((date - now) / (1000 * 60 * 60 * 24 * 30)));
+    const remaining = goal.target - goal.current;
+    if (remaining <= 0) return null;
+    return remaining / monthsLeft;
+  };
+
+  const handleTargetDateChange = text => {
+    setEditValues(prev => {
+      const updated = {...prev, targetDate: text};
+      if (text && text.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(text)) {
+        const date = new Date(text);
+        const now = new Date();
+        if (date > now) {
+          const monthsLeft = Math.max(1, Math.ceil((date - now) / (1000 * 60 * 60 * 24 * 30)));
+          const current = parseFloat(prev.current) || 0;
+          const target = parseFloat(prev.target) || 0;
+          const remaining = target - current;
+          if (remaining > 0 && (!prev.monthly || prev.monthly === '0')) {
+            updated.monthly = Math.ceil(remaining / monthsLeft).toString();
+          }
+        }
+      }
+      return updated;
+    });
+  };
+
+  const showAmountInput = type => {
     setInputType(type);
     setInputAmount('');
     setShowInputModal(true);
@@ -395,34 +514,11 @@ const SavingsScreen = ({navigation}) => {
   };
 
   const createNewGoal = async () => {
-    if (!editValues.name || !editValues.current || !editValues.target || !editValues.monthly) {
-      Alert.alert('Error', 'Please fill in all required fields');
-      return;
-    }
-    if (editValues.name.trim().length > 50) {
-      Alert.alert('Error', 'Goal name must be 50 characters or less');
-      return;
-    }
-    if (editValues.description.trim().length > 200) {
-      Alert.alert('Error', 'Description must be 200 characters or less');
-      return;
-    }
     const current = parseFloat(editValues.current);
     const target = parseFloat(editValues.target);
     const monthly = parseFloat(editValues.monthly);
-    if (isNaN(current) || isNaN(target) || isNaN(monthly)) {
-      Alert.alert('Error', 'Please enter valid numbers');
-      return;
-    }
-    if (current < 0 || target < 0 || monthly < 0) {
-      Alert.alert('Error', 'Values cannot be negative');
-      return;
-    }
-    if (current > 999999999 || target > 999999999 || monthly > 999999999) {
-      Alert.alert('Error', 'Values are too large. Please enter smaller amounts.');
-      return;
-    }
-    
+    if (!validateGoalValues(editValues, current, target, monthly)) return;
+
     setIsSubmitting(true);
     try {
       const currentUser = auth().currentUser;
@@ -440,16 +536,17 @@ const SavingsScreen = ({navigation}) => {
         current,
         target,
         monthly,
+        category: editValues.category || 'other',
+        targetDate: editValues.targetDate || '',
+        reminderEnabled: false,
+        reminderFrequency: null,
         createdAt: firestore.Timestamp.fromDate(new Date()),
         updatedAt: firestore.Timestamp.fromDate(new Date()),
       };
-      
+
       const updatedGoals = [...savingsGoals, newGoal];
-      await userDocRef.update({
-        savingsGoals: updatedGoals,
-      });
-      
-      // Add to history
+      await userDocRef.update({savingsGoals: updatedGoals});
+
       await userDocRef.collection('savingsHistory').add({
         goalId: newGoal.id,
         goalName: newGoal.name,
@@ -457,7 +554,7 @@ const SavingsScreen = ({navigation}) => {
         newGoal,
         createdAt: firestore.Timestamp.fromDate(new Date()),
       });
-      
+
       setSavingsGoals(updatedGoals);
       setShowCreateModal(false);
       setEditValues({
@@ -466,6 +563,8 @@ const SavingsScreen = ({navigation}) => {
         current: '',
         target: '',
         monthly: '',
+        category: 'other',
+        targetDate: '',
       });
       Alert.alert('Success', 'Savings goal created successfully');
     } catch (error) {
@@ -476,7 +575,7 @@ const SavingsScreen = ({navigation}) => {
     }
   };
 
-  const deleteGoal = async (goalId) => {
+  const deleteGoal = async goalId => {
     setIsSubmitting(true);
     try {
       const currentUser = auth().currentUser;
@@ -487,22 +586,19 @@ const SavingsScreen = ({navigation}) => {
       }
 
       const userDocRef = firestore().collection('users').doc(currentUser.uid);
-      const goalToDelete = savingsGoals.find(g => g.id === goalId);
+      const deletedGoal = savingsGoals.find(g => g.id === goalId);
       const updatedGoals = savingsGoals.filter(g => g.id !== goalId);
-      
-      await userDocRef.update({
-        savingsGoals: updatedGoals,
-      });
-      
-      // Add to history
+
+      await userDocRef.update({savingsGoals: updatedGoals});
+
       await userDocRef.collection('savingsHistory').add({
         goalId: goalId,
-        goalName: goalToDelete.name,
+        goalName: deletedGoal.name,
         type: 'delete',
-        deletedGoal: goalToDelete,
+        deletedGoal: deletedGoal,
         createdAt: firestore.Timestamp.fromDate(new Date()),
       });
-      
+
       setSavingsGoals(updatedGoals);
       setShowDeleteModal(false);
       setGoalToDelete(null);
@@ -515,11 +611,65 @@ const SavingsScreen = ({navigation}) => {
     }
   };
 
-  const confirmDelete = (goalId) => {
+  const confirmDelete = goalId => {
     const goal = savingsGoals.find(g => g.id === goalId);
     setGoalToDelete(goal);
     setShowDeleteModal(true);
   };
+
+  const handleReminderToggle = goalId => {
+    const goal = savingsGoals.find(g => g.id === goalId);
+    if (goal?.reminderEnabled) {
+      toggleReminder(goalId, false, null);
+    } else {
+      setReminderGoalId(goalId);
+      setShowReminderModal(true);
+    }
+  };
+
+  const toggleReminder = async (goalId, enabled, frequency) => {
+    try {
+      const currentUser = auth().currentUser;
+      if (!currentUser) return;
+      const userDocRef = firestore().collection('users').doc(currentUser.uid);
+      const updatedGoals = savingsGoals.map(goal => {
+        if (goal.id === goalId) {
+          return {...goal, reminderEnabled: enabled, reminderFrequency: frequency};
+        }
+        return goal;
+      });
+      await userDocRef.update({savingsGoals: updatedGoals});
+      setSavingsGoals(updatedGoals);
+
+      if (enabled) {
+        const goal = updatedGoals.find(g => g.id === goalId);
+        await ReminderNotificationService.sendSavingsGoalReminder(goal, currentUser.uid);
+        Alert.alert(
+          'Reminder Set',
+          `You'll receive ${frequency} reminders for "${goal.name}".`,
+        );
+      }
+    } catch (error) {
+      console.error('Error toggling reminder:', error);
+    }
+  };
+
+  const totalSaved = savingsGoals.reduce((sum, g) => sum + g.current, 0);
+  const totalTarget = savingsGoals.reduce((sum, g) => sum + g.target, 0);
+  const overallProgress = totalTarget > 0 ? Math.min((totalSaved / totalTarget) * 100, 100) : 0;
+
+  const resetEditValues = () => {
+    setEditValues({
+      name: '',
+      description: '',
+      current: '',
+      target: '',
+      monthly: '',
+      category: 'other',
+      targetDate: '',
+    });
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -528,6 +678,7 @@ const SavingsScreen = ({navigation}) => {
       </View>
     );
   }
+
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
@@ -535,7 +686,8 @@ const SavingsScreen = ({navigation}) => {
           style={styles.scrollView}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          {/* Header Section */}
+
+          {/* Header */}
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
               <MaterialCommunityIcons name="piggy-bank" size={32} color={SUCCESS_COLOR} />
@@ -550,184 +702,340 @@ const SavingsScreen = ({navigation}) => {
             </TouchableOpacity>
           </View>
 
-          {/* Savings Goals List */}
+          {/* Summary Hero Card */}
+          {savingsGoals.length > 0 && (
+            <Card
+              style={[styles.summaryCard, Platform.OS === 'android' && styles.cardAndroid]}
+              elevation={Platform.OS === 'android' ? 0 : 2}>
+              <View style={styles.cardContent}>
+                <Text style={styles.summaryLabel}>Total Saved</Text>
+                <Text style={styles.summaryAmount}>{formatCurrencyAmount(totalSaved)}</Text>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryTarget}>
+                    of {formatCurrencyAmount(totalTarget)} target
+                  </Text>
+                  <Text style={styles.summaryPercent}>{overallProgress.toFixed(1)}%</Text>
+                </View>
+                <View style={styles.progressBar}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${overallProgress}%`,
+                        backgroundColor: getProgressColor(overallProgress),
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.summaryGoalCount}>
+                  {savingsGoals.length} {savingsGoals.length === 1 ? 'goal' : 'goals'} active
+                </Text>
+              </View>
+            </Card>
+          )}
+
+          {/* Goals List */}
           {savingsGoals.length > 0 ? (
-            savingsGoals.map((goal, index) => (
-              <Card key={goal.id} style={[styles.savingsCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
-                <View style={styles.cardContent}>
-                  <View style={styles.savingsHeader}>
-                    <View style={styles.goalInfo}>
-                      <Text style={styles.goalName}>{goal.name}</Text>
-                      {goal.description && (
-                        <Text style={styles.goalDescription}>{goal.description}</Text>
-                      )}
-                    </View>
-                    <View style={styles.goalActions}>
-                      <TouchableOpacity 
-                        onPress={() => handleEdit(goal.id)} 
-                        style={styles.actionIcon}>
-                        <MaterialCommunityIcons name="pencil" size={20} color={PRIMARY_COLOR} />
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        onPress={() => confirmDelete(goal.id)} 
-                        style={styles.actionIcon}>
-                        <MaterialCommunityIcons name="delete" size={20} color={EXPENSE_COLOR} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+            savingsGoals.map(goal => {
+              const progress = calculateProgress(goal);
+              const progressColor = getProgressColor(progress);
+              const targetDateLabel = calculateTargetDateLabel(goal.targetDate);
+              const requiredMonthly = getRequiredMonthly(goal);
+              const monthsToTarget = calculateMonthsToTarget(goal);
 
-                  {isEditing && editingGoalId === goal.id ? (
-                    <View style={styles.editForm}>
-                      <View style={styles.inputContainer}>
-                        <Text style={styles.inputLabel}>Goal Name</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          value={editValues.name}
-                          onChangeText={(text) => setEditValues({...editValues, name: text})}
-                          placeholder="Enter goal name"
-                          placeholderTextColor="#999"
-                          maxLength={50}
-                        />
-                        <Text style={styles.characterCount}>{editValues.name.length}/50</Text>
-                      </View>
-                      <View style={styles.inputContainer}>
-                        <Text style={styles.inputLabel}>Description (Optional)</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          value={editValues.description}
-                          onChangeText={(text) => setEditValues({...editValues, description: text})}
-                          placeholder="Enter description"
-                          placeholderTextColor="#999"
-                          maxLength={200}
-                          multiline
-                          numberOfLines={2}
-                        />
-                        <Text style={styles.characterCount}>{editValues.description.length}/200</Text>
-                      </View>
-                      <View style={styles.inputContainer}>
-                        <Text style={styles.inputLabel}>Current Amount ({currency.symbol})</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          value={editValues.current}
-                          onChangeText={(text) => setEditValues({...editValues, current: text})}
-                          keyboardType="numeric"
-                          placeholder="Enter current amount"
-                          placeholderTextColor="#999"
+              return (
+                <Card
+                  key={goal.id}
+                  style={[styles.savingsCard, Platform.OS === 'android' && styles.cardAndroid]}
+                  elevation={Platform.OS === 'android' ? 0 : 2}>
+                  <View style={styles.cardContent}>
+                    {/* Goal Header */}
+                    <View style={styles.savingsHeader}>
+                      <View style={styles.goalCategoryIcon}>
+                        <MaterialCommunityIcons
+                          name={getCategoryIcon(goal.category)}
+                          size={24}
+                          color={PRIMARY_COLOR}
                         />
                       </View>
-                      <View style={styles.inputContainer}>
-                        <Text style={styles.inputLabel}>Target Amount ({currency.symbol})</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          value={editValues.target}
-                          onChangeText={(text) => setEditValues({...editValues, target: text})}
-                          keyboardType="numeric"
-                          placeholder="Enter target amount"
-                          placeholderTextColor="#999"
-                        />
+                      <View style={styles.goalInfo}>
+                        <Text style={styles.goalName}>{goal.name}</Text>
+                        {goal.description ? (
+                          <Text style={styles.goalDescription}>{goal.description}</Text>
+                        ) : null}
                       </View>
-                      <View style={styles.inputContainer}>
-                        <Text style={styles.inputLabel}>Monthly Goal ({currency.symbol})</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          value={editValues.monthly}
-                          onChangeText={(text) => setEditValues({...editValues, monthly: text})}
-                          keyboardType="numeric"
-                          placeholder="Enter monthly goal"
-                          placeholderTextColor="#999"
-                        />
-                      </View>
-                      <View style={styles.editActions}>
+                      <View style={styles.goalHeaderActions}>
                         <TouchableOpacity
-                          style={[styles.actionButton, styles.cancelButton]}
-                          onPress={handleCancel}
-                          disabled={isSubmitting}>
-                          <Text style={styles.cancelButtonText}>Cancel</Text>
+                          onPress={() => handleReminderToggle(goal.id)}
+                          style={styles.actionIcon}>
+                          <MaterialCommunityIcons
+                            name={goal.reminderEnabled ? 'bell' : 'bell-outline'}
+                            size={20}
+                            color={goal.reminderEnabled ? PRIMARY_COLOR : '#999'}
+                          />
                         </TouchableOpacity>
                         <TouchableOpacity
-                          style={[styles.actionButton, styles.saveButton]}
-                          onPress={handleSave}
-                          disabled={isSubmitting}>
-                          {isSubmitting ? (
-                            <ActivityIndicator size="small" color="#FFFFFF" />
-                          ) : (
-                            <Text style={styles.saveButtonText}>Save</Text>
-                          )}
+                          onPress={() => handleEdit(goal.id)}
+                          style={styles.actionIcon}>
+                          <MaterialCommunityIcons name="pencil" size={20} color={PRIMARY_COLOR} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => confirmDelete(goal.id)}
+                          style={styles.actionIcon}>
+                          <MaterialCommunityIcons name="delete" size={20} color={EXPENSE_COLOR} />
                         </TouchableOpacity>
                       </View>
                     </View>
-                  ) : (
-                    <>
-                      <Text style={styles.savingsAmount}>{formatCurrency(goal.current)}</Text>
-                      <View style={styles.savingsInfo}>
-                        <View style={styles.infoRow}>
-                          <Text style={styles.infoLabel}>Target:</Text>
-                          <Text style={styles.infoValue}>{formatCurrency(goal.target)}</Text>
-                        </View>
-                        <View style={styles.infoRow}>
-                          <Text style={styles.infoLabel}>Monthly Goal:</Text>
-                          <Text style={styles.infoValue}>{formatCurrency(goal.monthly)}</Text>
-                        </View>
-                      </View>
 
-                      {/* Progress Section */}
-                      <View style={styles.progressSection}>
-                        <Text style={styles.progressTitle}>Progress to Goal</Text>
-                        <View style={styles.progressBar}>
-                          <View 
-                            style={[
-                              styles.progressFill, 
-                              {width: `${calculateProgress(goal)}%`}
-                            ]} 
+                    {isEditing && editingGoalId === goal.id ? (
+                      <View style={styles.editForm}>
+                        <View style={styles.inputContainer}>
+                          <Text style={styles.inputLabel}>Goal Name</Text>
+                          <TextInput
+                            style={styles.textInput}
+                            value={editValues.name}
+                            onChangeText={text => setEditValues({...editValues, name: text})}
+                            placeholder="Enter goal name"
+                            placeholderTextColor="#999"
+                            maxLength={50}
+                          />
+                          <Text style={styles.characterCount}>{editValues.name.length}/50</Text>
+                        </View>
+                        <View style={styles.inputContainer}>
+                          <Text style={styles.inputLabel}>Description (Optional)</Text>
+                          <TextInput
+                            style={styles.textInput}
+                            value={editValues.description}
+                            onChangeText={text =>
+                              setEditValues({...editValues, description: text})
+                            }
+                            placeholder="Enter description"
+                            placeholderTextColor="#999"
+                            maxLength={200}
+                            multiline
+                            numberOfLines={2}
+                          />
+                          <Text style={styles.characterCount}>
+                            {editValues.description.length}/200
+                          </Text>
+                        </View>
+                        <View style={styles.inputContainer}>
+                          <Text style={styles.inputLabel}>Category</Text>
+                          <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            style={styles.categoryScroll}>
+                            {GOAL_CATEGORIES.map(cat => (
+                              <TouchableOpacity
+                                key={cat.id}
+                                style={[
+                                  styles.categoryChip,
+                                  editValues.category === cat.id && styles.categoryChipSelected,
+                                ]}
+                                onPress={() =>
+                                  setEditValues({...editValues, category: cat.id})
+                                }>
+                                <MaterialCommunityIcons
+                                  name={cat.icon}
+                                  size={16}
+                                  color={editValues.category === cat.id ? '#FFFFFF' : PRIMARY_COLOR}
+                                />
+                                <Text
+                                  style={[
+                                    styles.categoryChipText,
+                                    editValues.category === cat.id &&
+                                      styles.categoryChipTextSelected,
+                                  ]}>
+                                  {cat.label}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </ScrollView>
+                        </View>
+                        <View style={styles.inputContainer}>
+                          <Text style={styles.inputLabel}>Current Amount ({currency.symbol})</Text>
+                          <TextInput
+                            style={styles.textInput}
+                            value={editValues.current}
+                            onChangeText={text => setEditValues({...editValues, current: text})}
+                            keyboardType="numeric"
+                            placeholder="Enter current amount"
+                            placeholderTextColor="#999"
                           />
                         </View>
-                        <Text style={styles.progressText}>
-                          {calculateProgress(goal).toFixed(1)}% Complete
+                        <View style={styles.inputContainer}>
+                          <Text style={styles.inputLabel}>Target Amount ({currency.symbol})</Text>
+                          <TextInput
+                            style={styles.textInput}
+                            value={editValues.target}
+                            onChangeText={text => setEditValues({...editValues, target: text})}
+                            keyboardType="numeric"
+                            placeholder="Enter target amount"
+                            placeholderTextColor="#999"
+                          />
+                        </View>
+                        <View style={styles.inputContainer}>
+                          <Text style={styles.inputLabel}>Target Date (Optional, YYYY-MM-DD)</Text>
+                          <TextInput
+                            style={styles.textInput}
+                            value={editValues.targetDate}
+                            onChangeText={handleTargetDateChange}
+                            placeholder="e.g. 2026-12-31"
+                            placeholderTextColor="#999"
+                            keyboardType="numbers-and-punctuation"
+                            maxLength={10}
+                          />
+                        </View>
+                        <View style={styles.inputContainer}>
+                          <Text style={styles.inputLabel}>Monthly Goal ({currency.symbol})</Text>
+                          <TextInput
+                            style={styles.textInput}
+                            value={editValues.monthly}
+                            onChangeText={text => setEditValues({...editValues, monthly: text})}
+                            keyboardType="numeric"
+                            placeholder="Enter monthly goal"
+                            placeholderTextColor="#999"
+                          />
+                        </View>
+                        <View style={styles.editActions}>
+                          <TouchableOpacity
+                            style={[styles.actionButton, styles.cancelButton]}
+                            onPress={handleCancel}
+                            disabled={isSubmitting}>
+                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.actionButton, styles.saveButton]}
+                            onPress={handleSave}
+                            disabled={isSubmitting}>
+                            {isSubmitting ? (
+                              <ActivityIndicator size="small" color="#FFFFFF" />
+                            ) : (
+                              <Text style={styles.saveButtonText}>Save</Text>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ) : (
+                      <>
+                        <Text style={styles.savingsAmount}>
+                          {formatCurrencyAmount(goal.current)}
                         </Text>
-                        {calculateMonthsToTarget(goal) !== null && (
-                          <Text style={styles.monthsText}>
-                            {calculateMonthsToTarget(goal) === 0 
-                              ? 'Goal achieved! 🎉' 
-                              : `${calculateMonthsToTarget(goal)} months to target`
-                            }
-                          </Text>
-                        )}
-                      </View>
 
-                      {/* Quick Actions for this goal */}
-                      <View style={styles.goalActions}>
-                        <TouchableOpacity
-                          style={[styles.goalActionButton, styles.addButton]}
-                          onPress={() => {
-                            setSelectedGoalId(goal.id);
-                            showAmountInput('add');
-                          }}
-                          disabled={isSubmitting}>
-                          <MaterialCommunityIcons name="plus" size={20} color="#FFFFFF" />
-                          <Text style={styles.goalActionText}>Add Money</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.goalActionButton, styles.withdrawButton]}
-                          onPress={() => {
-                            setSelectedGoalId(goal.id);
-                            showAmountInput('withdraw');
-                          }}
-                          disabled={isSubmitting}>
-                          <MaterialCommunityIcons name="minus" size={20} color="#FFFFFF" />
-                          <Text style={styles.goalActionText}>Withdraw</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </>
-                  )}
-                </View>
-              </Card>
-            ))
+                        {/* Target date badge */}
+                        {targetDateLabel && (
+                          <View
+                            style={[
+                              styles.targetDateBadge,
+                              targetDateLabel === 'Overdue' && styles.targetDateBadgeOverdue,
+                            ]}>
+                            <MaterialCommunityIcons
+                              name="calendar-clock"
+                              size={12}
+                              color={targetDateLabel === 'Overdue' ? EXPENSE_COLOR : PRIMARY_COLOR}
+                            />
+                            <Text
+                              style={[
+                                styles.targetDateText,
+                                targetDateLabel === 'Overdue' && styles.targetDateTextOverdue,
+                              ]}>
+                              {targetDateLabel}
+                            </Text>
+                          </View>
+                        )}
+
+                        <View style={styles.savingsInfo}>
+                          <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>Target:</Text>
+                            <Text style={styles.infoValue}>
+                              {formatCurrencyAmount(goal.target)}
+                            </Text>
+                          </View>
+                          <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>Monthly Goal:</Text>
+                            <Text style={styles.infoValue}>
+                              {formatCurrencyAmount(goal.monthly)}
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Progress Section */}
+                        <View style={styles.progressSection}>
+                          <Text style={styles.progressTitle}>Progress to Goal</Text>
+                          <View style={styles.progressBar}>
+                            <View
+                              style={[
+                                styles.progressFill,
+                                {
+                                  width: `${progress}%`,
+                                  backgroundColor: progressColor,
+                                },
+                              ]}
+                            />
+                          </View>
+                          <Text style={[styles.progressText, {color: progressColor}]}>
+                            {progress.toFixed(1)}% Complete
+                          </Text>
+                          {progress >= 100 ? (
+                            <Text style={styles.monthsText}>Goal achieved! 🎉</Text>
+                          ) : requiredMonthly ? (
+                            <Text style={styles.monthsText}>
+                              Need {formatCurrencyAmount(requiredMonthly)}/month to reach goal by{' '}
+                              {new Date(goal.targetDate).toLocaleString('default', {
+                                month: 'short',
+                                year: 'numeric',
+                              })}
+                            </Text>
+                          ) : monthsToTarget !== null ? (
+                            <Text style={styles.monthsText}>
+                              {monthsToTarget === 0
+                                ? 'Almost there!'
+                                : `${monthsToTarget} months to target`}
+                            </Text>
+                          ) : (
+                            <Text style={styles.monthsText}>No monthly goal set</Text>
+                          )}
+                        </View>
+
+                        {/* Goal Action Buttons */}
+                        <View style={styles.goalActionsRow}>
+                          <TouchableOpacity
+                            style={[styles.goalActionButton, styles.addButton]}
+                            onPress={() => {
+                              setSelectedGoalId(goal.id);
+                              showAmountInput('add');
+                            }}
+                            disabled={isSubmitting}>
+                            <MaterialCommunityIcons name="plus" size={20} color="#FFFFFF" />
+                            <Text style={styles.goalActionText}>Add Money</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.goalActionButton, styles.withdrawButton]}
+                            onPress={() => {
+                              setSelectedGoalId(goal.id);
+                              showAmountInput('withdraw');
+                            }}
+                            disabled={isSubmitting}>
+                            <MaterialCommunityIcons name="minus" size={20} color="#FFFFFF" />
+                            <Text style={styles.goalActionText}>Withdraw</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </>
+                    )}
+                  </View>
+                </Card>
+              );
+            })
           ) : (
-            <Card style={[styles.emptyStateCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
+            <Card
+              style={[styles.emptyStateCard, Platform.OS === 'android' && styles.cardAndroid]}
+              elevation={Platform.OS === 'android' ? 0 : 2}>
               <View style={styles.emptyState}>
                 <MaterialCommunityIcons name="piggy-bank-outline" size={64} color="#CBD3EE" />
                 <Text style={styles.emptyStateTitle}>No Savings Goals Yet</Text>
-                <Text style={styles.emptyStateSubtitle}>Create your first savings goal to start tracking your progress</Text>
+                <Text style={styles.emptyStateSubtitle}>
+                  Create your first savings goal to start tracking your progress
+                </Text>
                 <TouchableOpacity
                   style={styles.createFirstGoalButton}
                   onPress={() => setShowCreateModal(true)}>
@@ -737,18 +1045,27 @@ const SavingsScreen = ({navigation}) => {
             </Card>
           )}
 
-          {/* Recent Activity Card */}
-          <Card style={[styles.historyCard, Platform.OS === 'android' && styles.cardAndroid]}>
+          {/* Recent Activity */}
+          <Card
+            style={[styles.historyCard, Platform.OS === 'android' && styles.cardAndroid]}>
             <View style={styles.cardContent}>
               <Text style={styles.historyTitle}>Recent Activity</Text>
               {savingsHistory.length > 0 ? (
-                savingsHistory.map((item, index) => (
+                savingsHistory.map(item => (
                   <View key={item.id} style={styles.historyItem}>
                     <View style={styles.historyIcon}>
                       {item.type === 'deposit' ? (
-                        <MaterialCommunityIcons name="plus-circle" size={20} color={SUCCESS_COLOR} />
+                        <MaterialCommunityIcons
+                          name="plus-circle"
+                          size={20}
+                          color={SUCCESS_COLOR}
+                        />
                       ) : item.type === 'withdrawal' ? (
-                        <MaterialCommunityIcons name="minus-circle" size={20} color={EXPENSE_COLOR} />
+                        <MaterialCommunityIcons
+                          name="minus-circle"
+                          size={20}
+                          color={EXPENSE_COLOR}
+                        />
                       ) : item.type === 'create' ? (
                         <MaterialCommunityIcons name="plus" size={20} color={PRIMARY_COLOR} />
                       ) : item.type === 'delete' ? (
@@ -773,7 +1090,7 @@ const SavingsScreen = ({navigation}) => {
                             case 'update':
                               return `Updated ${goalName}`;
                             default:
-                              return `Savings activity`;
+                              return 'Savings activity';
                           }
                         })()}
                       </Text>
@@ -781,28 +1098,32 @@ const SavingsScreen = ({navigation}) => {
                         {item.createdAt ? item.createdAt.toDate().toLocaleDateString() : 'Unknown date'}
                       </Text>
                     </View>
-                    {item.amount && (
-                      <Text style={[
-                        styles.historyAmount,
-                        item.type === 'deposit' ? styles.positiveAmount : styles.negativeAmount
-                      ]}>
-                        {item.type === 'deposit' ? '+' : '-'}{formatCurrency(item.amount)}
+                    {item.amount ? (
+                      <Text
+                        style={[
+                          styles.historyAmount,
+                          item.type === 'deposit' ? styles.positiveAmount : styles.negativeAmount,
+                        ]}>
+                        {item.type === 'deposit' ? '+' : '-'}
+                        {formatCurrencyAmount(item.amount)}
                       </Text>
-                    )}
+                    ) : null}
                   </View>
                 ))
               ) : (
                 <View style={styles.emptyHistory}>
                   <MaterialCommunityIcons name="history" size={48} color="#CBD3EE" />
                   <Text style={styles.emptyHistoryText}>No activity yet</Text>
-                  <Text style={styles.emptyHistorySubtext}>Your savings activity will appear here</Text>
+                  <Text style={styles.emptyHistorySubtext}>
+                    Your savings activity will appear here
+                  </Text>
                 </View>
               )}
             </View>
           </Card>
         </KeyboardAwareScrollView>
-        
-        {/* Input Modal */}
+
+        {/* Add / Withdraw Modal */}
         <Modal
           visible={showInputModal}
           transparent={true}
@@ -814,10 +1135,9 @@ const SavingsScreen = ({navigation}) => {
                 {inputType === 'add' ? 'Add to Savings' : 'Withdraw from Savings'}
               </Text>
               <Text style={styles.modalSubtitle}>
-                {inputType === 'add' 
-                  ? 'Enter the amount you want to add to your savings' 
-                  : 'Enter the amount you want to withdraw from your savings'
-                }
+                {inputType === 'add'
+                  ? 'Enter the amount you want to add to your savings'
+                  : 'Enter the amount you want to withdraw from your savings'}
               </Text>
               <TextInput
                 style={styles.modalInput}
@@ -856,84 +1176,127 @@ const SavingsScreen = ({navigation}) => {
           visible={showCreateModal}
           transparent={true}
           animationType="slide"
-          onRequestClose={() => setShowCreateModal(false)}>
+          onRequestClose={() => {
+            setShowCreateModal(false);
+            resetEditValues();
+          }}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Create New Savings Goal</Text>
               <Text style={styles.modalSubtitle}>
                 Set up a new savings goal to track your progress
               </Text>
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Goal Name *</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={editValues.name}
-                  onChangeText={(text) => setEditValues({...editValues, name: text})}
-                  placeholder="e.g., Emergency Fund, Vacation"
-                  placeholderTextColor="#999"
-                  maxLength={50}
-                />
-                <Text style={styles.characterCount}>{editValues.name.length}/50</Text>
-              </View>
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Description (Optional)</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={editValues.description}
-                  onChangeText={(text) => setEditValues({...editValues, description: text})}
-                  placeholder="Describe your savings goal"
-                  placeholderTextColor="#999"
-                  maxLength={200}
-                  multiline
-                  numberOfLines={2}
-                />
-                <Text style={styles.characterCount}>{editValues.description.length}/200</Text>
-              </View>
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Current Amount ({currency.symbol}) *</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={editValues.current}
-                  onChangeText={(text) => setEditValues({...editValues, current: text})}
-                  keyboardType="numeric"
-                  placeholder="Enter current amount"
-                  placeholderTextColor="#999"
-                />
-              </View>
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Target Amount ({currency.symbol}) *</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={editValues.target}
-                  onChangeText={(text) => setEditValues({...editValues, target: text})}
-                  keyboardType="numeric"
-                  placeholder="Enter target amount"
-                  placeholderTextColor="#999"
-                />
-              </View>
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Monthly Goal ({currency.symbol}) *</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={editValues.monthly}
-                  onChangeText={(text) => setEditValues({...editValues, monthly: text})}
-                  keyboardType="numeric"
-                  placeholder="Enter monthly goal"
-                  placeholderTextColor="#999"
-                />
-              </View>
-              <View style={styles.modalButtons}>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled">
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Goal Name *</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editValues.name}
+                    onChangeText={text => setEditValues({...editValues, name: text})}
+                    placeholder="e.g., Emergency Fund, Vacation"
+                    placeholderTextColor="#999"
+                    maxLength={50}
+                  />
+                  <Text style={styles.characterCount}>{editValues.name.length}/50</Text>
+                </View>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Description (Optional)</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editValues.description}
+                    onChangeText={text => setEditValues({...editValues, description: text})}
+                    placeholder="Describe your savings goal"
+                    placeholderTextColor="#999"
+                    maxLength={200}
+                    multiline
+                    numberOfLines={2}
+                  />
+                  <Text style={styles.characterCount}>{editValues.description.length}/200</Text>
+                </View>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Category</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.categoryScroll}>
+                    {GOAL_CATEGORIES.map(cat => (
+                      <TouchableOpacity
+                        key={cat.id}
+                        style={[
+                          styles.categoryChip,
+                          editValues.category === cat.id && styles.categoryChipSelected,
+                        ]}
+                        onPress={() => setEditValues({...editValues, category: cat.id})}>
+                        <MaterialCommunityIcons
+                          name={cat.icon}
+                          size={16}
+                          color={editValues.category === cat.id ? '#FFFFFF' : PRIMARY_COLOR}
+                        />
+                        <Text
+                          style={[
+                            styles.categoryChipText,
+                            editValues.category === cat.id && styles.categoryChipTextSelected,
+                          ]}>
+                          {cat.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Current Amount ({currency.symbol}) *</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editValues.current}
+                    onChangeText={text => setEditValues({...editValues, current: text})}
+                    keyboardType="numeric"
+                    placeholder="Enter current amount"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Target Amount ({currency.symbol}) *</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editValues.target}
+                    onChangeText={text => setEditValues({...editValues, target: text})}
+                    keyboardType="numeric"
+                    placeholder="Enter target amount"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Target Date (Optional, YYYY-MM-DD)</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editValues.targetDate}
+                    onChangeText={handleTargetDateChange}
+                    placeholder="e.g. 2026-12-31"
+                    placeholderTextColor="#999"
+                    keyboardType="numbers-and-punctuation"
+                    maxLength={10}
+                  />
+                </View>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Monthly Goal ({currency.symbol}) *</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editValues.monthly}
+                    onChangeText={text => setEditValues({...editValues, monthly: text})}
+                    keyboardType="numeric"
+                    placeholder="Enter monthly goal"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+              </ScrollView>
+              <View style={[styles.modalButtons, {marginTop: 10}]}>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.modalCancelButton]}
                   onPress={() => {
                     setShowCreateModal(false);
-                    setEditValues({
-                      name: '',
-                      description: '',
-                      current: '',
-                      target: '',
-                      monthly: '',
-                    });
+                    resetEditValues();
                   }}>
                   <Text style={styles.modalCancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
@@ -963,7 +1326,8 @@ const SavingsScreen = ({navigation}) => {
               <MaterialCommunityIcons name="alert-circle" size={48} color={EXPENSE_COLOR} />
               <Text style={styles.modalTitle}>Delete Savings Goal</Text>
               <Text style={styles.modalSubtitle}>
-                Are you sure you want to delete "{goalToDelete?.name}"? This action cannot be undone.
+                Are you sure you want to delete "{goalToDelete?.name}"? This action cannot be
+                undone.
               </Text>
               <View style={styles.modalButtons}>
                 <TouchableOpacity
@@ -985,10 +1349,59 @@ const SavingsScreen = ({navigation}) => {
             </View>
           </View>
         </Modal>
+
+        {/* Reminder Frequency Modal */}
+        <Modal
+          visible={showReminderModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowReminderModal(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <MaterialCommunityIcons name="bell-ring" size={40} color={PRIMARY_COLOR} />
+              <Text style={styles.modalTitle}>Set Reminder</Text>
+              <Text style={styles.modalSubtitle}>
+                How often would you like to be reminded about this savings goal?
+              </Text>
+              <TouchableOpacity
+                style={styles.reminderOption}
+                onPress={() => {
+                  setShowReminderModal(false);
+                  toggleReminder(reminderGoalId, true, 'weekly');
+                }}>
+                <MaterialCommunityIcons name="calendar-week" size={22} color={PRIMARY_COLOR} />
+                <View style={styles.reminderOptionText}>
+                  <Text style={styles.reminderOptionTitle}>Weekly</Text>
+                  <Text style={styles.reminderOptionSubtitle}>Every week to check in on your goal</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={20} color="#CCC" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.reminderOption}
+                onPress={() => {
+                  setShowReminderModal(false);
+                  toggleReminder(reminderGoalId, true, 'monthly');
+                }}>
+                <MaterialCommunityIcons name="calendar-month" size={22} color={PRIMARY_COLOR} />
+                <View style={styles.reminderOptionText}>
+                  <Text style={styles.reminderOptionTitle}>Monthly</Text>
+                  <Text style={styles.reminderOptionSubtitle}>Once a month to review progress</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={20} color="#CCC" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalCancelButton, styles.reminderCancelButton]}
+                onPress={() => setShowReminderModal(false)}>
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
     </SafeAreaProvider>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1033,37 +1446,68 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: 'Lato-Regular',
   },
+  addGoalButton: {
+    backgroundColor: PRIMARY_COLOR,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    marginTop: 15,
+  },
+  addGoalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+    fontFamily: 'Lato-Bold',
+  },
+  summaryCard: {
+    backgroundColor: PRIMARY_COLOR,
+    borderRadius: 20,
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    fontFamily: 'Lato-Regular',
+    marginBottom: 4,
+  },
+  summaryAmount: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontFamily: 'Kufam-SemiBoldItalic',
+    marginBottom: 4,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  summaryTarget: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.75)',
+    fontFamily: 'Lato-Regular',
+  },
+  summaryPercent: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    fontFamily: 'Lato-Bold',
+  },
+  summaryGoalCount: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 8,
+    fontFamily: 'Lato-Regular',
+  },
   savingsCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  progressCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    elevation: Platform.OS === 'android' ? 0 : 8,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  actionsCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    elevation: Platform.OS === 'android' ? 0 : 8,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
     marginHorizontal: 20,
     marginBottom: 20,
   },
@@ -1072,10 +1516,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     elevation: Platform.OS === 'android' ? 0 : 8,
     shadowColor: PRIMARY_COLOR,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.1,
     shadowRadius: 8,
     marginHorizontal: 20,
@@ -1089,26 +1530,71 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 15,
   },
-  savingsTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginLeft: 10,
+  goalCategoryIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#EEF0FB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  goalInfo: {
     flex: 1,
+  },
+  goalName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
     fontFamily: 'Lato-Bold',
   },
-  editButton: {
-    padding: 5,
+  goalDescription: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
+    fontFamily: 'Lato-Regular',
+  },
+  goalHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionIcon: {
+    padding: 6,
+    marginLeft: 2,
   },
   savingsAmount: {
     fontSize: 32,
     fontWeight: 'bold',
     color: SUCCESS_COLOR,
-    marginBottom: 20,
+    marginBottom: 8,
     fontFamily: 'Kufam-SemiBoldItalic',
   },
+  targetDateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF0FB',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    marginBottom: 12,
+    gap: 4,
+  },
+  targetDateBadgeOverdue: {
+    backgroundColor: '#FFF0F0',
+  },
+  targetDateText: {
+    fontSize: 12,
+    color: PRIMARY_COLOR,
+    fontFamily: 'Lato-Regular',
+    marginLeft: 4,
+  },
+  targetDateTextOverdue: {
+    color: EXPENSE_COLOR,
+  },
   savingsInfo: {
-    marginTop: 10,
+    marginTop: 4,
+    marginBottom: 4,
   },
   infoRow: {
     flexDirection: 'row',
@@ -1126,8 +1612,69 @@ const styles = StyleSheet.create({
     color: '#2C2C2C',
     fontFamily: 'Lato-Bold',
   },
-  editForm: {
+  progressSection: {
     marginTop: 15,
+    marginBottom: 15,
+  },
+  progressTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    marginBottom: 10,
+    fontFamily: 'Lato-Bold',
+  },
+  progressBar: {
+    height: 12,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 6,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 6,
+  },
+  progressText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 4,
+    fontFamily: 'Lato-Bold',
+  },
+  monthsText: {
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
+    fontFamily: 'Lato-Regular',
+  },
+  goalActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  goalActionButton: {
+    flex: 0.48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  addButton: {
+    backgroundColor: PRIMARY_COLOR,
+  },
+  withdrawButton: {
+    backgroundColor: EXPENSE_COLOR,
+  },
+  goalActionText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+    fontFamily: 'Lato-Bold',
+  },
+  editForm: {
+    marginTop: 10,
   },
   inputContainer: {
     marginBottom: 15,
@@ -1149,6 +1696,39 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#2C2C2C',
     fontFamily: 'Lato-Regular',
+  },
+  characterCount: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+    textAlign: 'right',
+    fontFamily: 'Lato-Regular',
+  },
+  categoryScroll: {
+    flexGrow: 0,
+  },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: PRIMARY_COLOR,
+    marginRight: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  categoryChipSelected: {
+    backgroundColor: PRIMARY_COLOR,
+  },
+  categoryChipText: {
+    fontSize: 13,
+    color: PRIMARY_COLOR,
+    marginLeft: 5,
+    fontFamily: 'Lato-Regular',
+  },
+  categoryChipTextSelected: {
+    color: '#FFFFFF',
   },
   editActions: {
     flexDirection: 'row',
@@ -1181,69 +1761,44 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Lato-Bold',
   },
-  progressTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  emptyStateCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
     color: '#2C2C2C',
-    marginBottom: 15,
-    fontFamily: 'Lato-Bold',
-  },
-  progressBar: {
-    height: 12,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 6,
+    marginTop: 20,
     marginBottom: 10,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: PRIMARY_COLOR,
-    borderRadius: 6,
-  },
-  progressText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: PRIMARY_COLOR,
     textAlign: 'center',
-    marginBottom: 5,
     fontFamily: 'Lato-Bold',
   },
-  monthsText: {
-    fontSize: 14,
+  emptyStateSubtitle: {
+    fontSize: 16,
     color: '#666',
     textAlign: 'center',
+    marginBottom: 30,
+    lineHeight: 22,
     fontFamily: 'Lato-Regular',
   },
-  actionsTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 20,
-    fontFamily: 'Lato-Bold',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  quickActionButton: {
-    flex: 0.48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 15,
-    borderRadius: 12,
-  },
-  addButton: {
+  createFirstGoalButton: {
     backgroundColor: PRIMARY_COLOR,
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 25,
   },
-  withdrawButton: {
-    backgroundColor: EXPENSE_COLOR,
-  },
-  quickActionText: {
+  createFirstGoalButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-    marginLeft: 8,
     fontFamily: 'Lato-Bold',
   },
   historyTitle: {
@@ -1322,12 +1877,10 @@ const styles = StyleSheet.create({
     padding: 25,
     width: '100%',
     maxWidth: 400,
+    maxHeight: '85%',
     elevation: Platform.OS === 'android' ? 0 : 10,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.25,
     shadowRadius: 8,
   },
@@ -1388,110 +1941,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Lato-Bold',
   },
-  addGoalButton: {
-    backgroundColor: PRIMARY_COLOR,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 25,
-    marginTop: 15,
-  },
-  addGoalButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-    fontFamily: 'Lato-Bold',
-  },
-  goalInfo: {
-    flex: 1,
-  },
-  goalName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  goalDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-    fontFamily: 'Lato-Regular',
-  },
-  goalActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  actionIcon: {
-    padding: 8,
-    marginLeft: 5,
-  },
-  progressSection: {
-    marginTop: 15,
-    marginBottom: 15,
-  },
-  goalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  goalActionButton: {
-    flex: 0.48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  goalActionText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
-    fontFamily: 'Lato-Bold',
-  },
-  emptyStateCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 40,
-  },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    marginTop: 20,
-    marginBottom: 10,
-    textAlign: 'center',
-    fontFamily: 'Lato-Bold',
-  },
-  emptyStateSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 30,
-    lineHeight: 22,
-    fontFamily: 'Lato-Regular',
-  },
-  createFirstGoalButton: {
-    backgroundColor: PRIMARY_COLOR,
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 25,
-  },
-  createFirstGoalButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'Lato-Bold',
-  },
   deleteButton: {
     backgroundColor: EXPENSE_COLOR,
   },
@@ -1501,16 +1950,41 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Lato-Bold',
   },
-  characterCount: {
+  reminderOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  reminderOptionText: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  reminderOptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
+  },
+  reminderOptionSubtitle: {
     fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-    textAlign: 'right',
+    color: '#888',
+    marginTop: 2,
     fontFamily: 'Lato-Regular',
+  },
+  reminderCancelButton: {
+    marginTop: 12,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    width: '100%',
   },
   cardAndroid: {
     borderWidth: 1,
     borderColor: '#E8EBF7',
   },
 });
-export default SavingsScreen; 
+
+export default SavingsScreen;

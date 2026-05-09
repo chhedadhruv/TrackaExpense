@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">TrackaExpense</string>
     <string moduleConfig="true" name="CodePushServerUrl">https://api.revopush.org</string>
+    <string moduleConfig="true" name="CodePushDeploymentKey"></string>
 </resources>
