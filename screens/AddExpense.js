@@ -1,5 +1,5 @@
 import {View, StyleSheet, TextInput, Image, Text, TouchableOpacity, Platform} from 'react-native';
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {Card, ActivityIndicator, Modal, Portal, Provider} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import auth from '@react-native-firebase/auth';
@@ -55,6 +55,8 @@ const AddExpense = ({navigation}) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  const navTimeoutRef = useRef(null);
+  useEffect(() => () => clearTimeout(navTimeoutRef.current), []);
   const onDismissSingle = () => {
     setOpenDate(false);
   };
@@ -187,7 +189,7 @@ const AddExpense = ({navigation}) => {
       setDate(undefined);
       setImage(null);
       setSuccessMessage('Expense added successfully!');
-      setTimeout(() => {
+      navTimeoutRef.current = setTimeout(() => {
         navigation.goBack();
       }, 1500);
     } catch (error) {

@@ -44,6 +44,8 @@ const HomeScreen = ({navigation}) => {
 
   const currentUser = auth().currentUser;
   const funNotificationSent = useRef(false);
+  const retryTimeoutRef = useRef(null);
+  useEffect(() => () => clearTimeout(retryTimeoutRef.current), []);
 
   const filterTransactionsByTimeRange = (transactions, range) => {
     const now = new Date();
@@ -104,7 +106,7 @@ const HomeScreen = ({navigation}) => {
         // If user data doesn't exist, wait a bit and retry (for social sign-in timing issues)
         if (retryCount < 2) {
           console.log(`User data not found, retrying... (${retryCount + 1}/2)`);
-          setTimeout(() => {
+          retryTimeoutRef.current = setTimeout(() => {
             getUserData(retryCount + 1);
           }, 2000 * (retryCount + 1)); // Longer wait times
         } else {
@@ -115,7 +117,7 @@ const HomeScreen = ({navigation}) => {
     } catch (error) {
       console.error('Error fetching user data:', error);
       if (retryCount < 1) {
-        setTimeout(() => {
+        retryTimeoutRef.current = setTimeout(() => {
           getUserData(retryCount + 1);
         }, 2000);
       } else {
@@ -180,17 +182,23 @@ const HomeScreen = ({navigation}) => {
   };
 
   useEffect(() => {
-    setTimeout(() => {
+    const t1 = setTimeout(() => {
       getUserData();
       fetchTransactions();
     }, 1000);
 
+    let t2;
     if (currentUser?.email && !funNotificationSent.current) {
       funNotificationSent.current = true;
-      setTimeout(() => {
+      t2 = setTimeout(() => {
         FunNotificationService.sendRandomFunNotification(currentUser.email);
       }, 3000);
     }
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, []);
 
   useEffect(() => {
