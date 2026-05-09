@@ -1,5 +1,5 @@
 import {View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform, Modal, TextInput, Image, KeyboardAvoidingView} from 'react-native';
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {ActivityIndicator, Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import auth from '@react-native-firebase/auth';
@@ -8,6 +8,7 @@ import {useFocusEffect} from '@react-navigation/native';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {useCurrency} from '../utils/CurrencyUtil';
+import FunNotificationService from '../services/FunNotificationService';
 
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
@@ -42,6 +43,7 @@ const HomeScreen = ({navigation}) => {
   const [balanceSaving, setBalanceSaving] = useState(false);
 
   const currentUser = auth().currentUser;
+  const funNotificationSent = useRef(false);
 
   const filterTransactionsByTimeRange = (transactions, range) => {
     const now = new Date();
@@ -182,6 +184,13 @@ const HomeScreen = ({navigation}) => {
       getUserData();
       fetchTransactions();
     }, 1000);
+
+    if (currentUser?.email && !funNotificationSent.current) {
+      funNotificationSent.current = true;
+      setTimeout(() => {
+        FunNotificationService.sendRandomFunNotification(currentUser.email);
+      }, 3000);
+    }
   }, []);
 
   useEffect(() => {

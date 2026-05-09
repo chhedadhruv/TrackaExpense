@@ -15,7 +15,10 @@
     "start:reset": "react-native start --reset-cache",
     "test": "jest",
     "postinstall": "patch-package",
-    "version:bump": "node scripts/bump-version.js"
+    "version:bump": "node scripts/bump-version.js",
+    "release:ios": "revopush release-react Tracka-ios ios -d Production",
+    "release:android": "revopush release-react Tracka-android android -d Production",
+    "release:all": "npm run release:ios && npm run release:android"
   },
   "dependencies": {
     "@invertase/react-native-apple-authentication": "^2.4.1",
@@ -32,6 +35,7 @@
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
     "@react-navigation/stack": "^7.1.0",
+    "@revopush/react-native-code-push": "^1.5.1",
     "moment": "^2.30.1",
     "react": "18.3.1",
     "react-native": "0.77.0",

@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
-import { Platform, StatusBar, StyleSheet, View } from 'react-native';
+import { Platform, StatusBar, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import codePush from '@revopush/react-native-code-push';
+import { REVOPUSH_IOS_DEPLOYMENT_KEY, REVOPUSH_ANDROID_DEPLOYMENT_KEY } from '@env';
 import Providers from './navigation';
 import NotificationService from './services/NotificationService';
 
@@ -19,9 +21,9 @@ const App: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar 
-        barStyle="dark-content" 
-        backgroundColor="#F5F5F5" 
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="#F5F5F5"
         translucent={false}
       />
       <Providers />
@@ -36,4 +38,9 @@ const styles = StyleSheet.create({
   },
 });
 
-export default App;
+export default codePush({
+  deploymentKey: Platform.select({
+    ios: REVOPUSH_IOS_DEPLOYMENT_KEY,
+    android: REVOPUSH_ANDROID_DEPLOYMENT_KEY,
+  }),
+})(App);
