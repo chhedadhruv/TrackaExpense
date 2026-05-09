@@ -1047,6 +1047,7 @@ const SavingsScreen = ({navigation}) => {
 
           {/* Recent Activity */}
           <Card
+            elevation={Platform.OS === 'android' ? 0 : 2}
             style={[styles.historyCard, Platform.OS === 'android' && styles.cardAndroid]}>
             <View style={styles.cardContent}>
               <Text style={styles.historyTitle}>Recent Activity</Text>
@@ -1515,10 +1516,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     elevation: Platform.OS === 'android' ? 0 : 8,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    ...(Platform.OS !== 'android' && {
+      shadowColor: PRIMARY_COLOR,
+      shadowOffset: {width: 0, height: 4},
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+    }),
     marginHorizontal: 20,
     marginBottom: 40,
   },

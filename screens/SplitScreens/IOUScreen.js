@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   emptyState: {alignItems: 'center', paddingVertical: 50},
   emptyTitle: {fontSize: 18, fontWeight: '600', color: '#666', marginTop: 15, fontFamily: 'Lato-Bold'},
   emptySubtitle: {fontSize: 14, color: '#888', textAlign: 'center', marginTop: 5, fontFamily: 'Lato-Regular'},
-  fab: {position: 'absolute', bottom: 24, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: PRIMARY_COLOR, justifyContent: 'center', alignItems: 'center', elevation: 4, shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.25, shadowRadius: 4},
+  fab: {position: 'absolute', bottom: 24, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: PRIMARY_COLOR, justifyContent: 'center', alignItems: 'center', elevation: Platform.OS === 'android' ? 0 : 4, ...(Platform.OS !== 'android' && {shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.25, shadowRadius: 4})},
 });
 
 export default IOUScreen;
