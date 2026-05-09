@@ -75,7 +75,6 @@ app.post('/send-notification', async (req, res) => {
         notification: {
           sound: 'default',
           channelId: 'trackaexpense_default_alerts',
-          clickAction: 'FLUTTER_NOTIFICATION_CLICK',
         },
       },
       apns: {
