@@ -4,6 +4,8 @@ import {AuthContext} from '../navigation/AuthProvider';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {useFocusEffect} from '@react-navigation/native';
+import codePush from '@revopush/react-native-code-push';
+import {version as appVersion} from '../package.json';
 import {
   View,
   Text,
@@ -38,6 +40,13 @@ const ProfileScreen = ({navigation, route}) => {
   const [error, setError] = useState(null);
   const [accountActionsExpanded, setAccountActionsExpanded] = useState(false);
   const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
+  const [codePushLabel, setCodePushLabel] = useState(null);
+
+  useEffect(() => {
+    codePush.getUpdateMetadata().then(meta => {
+      if (meta) setCodePushLabel(meta.label);
+    }).catch(() => {});
+  }, []);
 
   const user = auth().currentUser;
 
@@ -433,6 +442,15 @@ const ProfileScreen = ({navigation, route}) => {
             )}
           </Card>
         </View>
+
+        {/* App Version Info */}
+        <View style={styles.versionContainer}>
+          <Text style={styles.versionText}>TrackaExpense v{appVersion}</Text>
+          <Text style={styles.versionSubText}>
+            {codePushLabel ? `CodePush ${codePushLabel}` : 'Binary release'}
+          </Text>
+        </View>
+
       </ScrollView>
 
       {/* Currency Selection Modal */}
@@ -784,5 +802,21 @@ const styles = StyleSheet.create({
   cardAndroid: {
     borderWidth: 1,
     borderColor: '#E8EBF7',
+  },
+  versionContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingBottom: 36,
+  },
+  versionText: {
+    fontSize: 13,
+    color: '#999',
+    fontFamily: 'Lato-Regular',
+  },
+  versionSubText: {
+    fontSize: 12,
+    color: '#BBB',
+    fontFamily: 'Lato-Regular',
+    marginTop: 2,
   },
 });
