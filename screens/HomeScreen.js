@@ -8,6 +8,7 @@ import {useFocusEffect} from '@react-navigation/native';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {useCurrency} from '../utils/CurrencyUtil';
+import {getCategoryIcon} from '../utils/CategoryData';
 
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
@@ -619,94 +620,17 @@ const HomeScreen = ({navigation}) => {
                     <View style={styles.transactionsCardContent}>
                       <View style={styles.transactionsCardDetails}>
                         <View style={styles.transactionsCardIcon}>
-                          {transaction.category === 'Bills' && (
-                            <MaterialCommunityIcons
-                              name="receipt"
-                              size={25}
-                              color="#677CD2"
-                              style={{
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                              }}
-                            />
-                          )}
-                          {transaction.category === 'Education' && (
-                            <MaterialCommunityIcons
-                              name="school"
-                              size={25}
-                              color="#677CD2"
-                            />
-                          )}
-                          {transaction.category === 'Entertainment' && (
-                            <MaterialCommunityIcons
-                              name="movie"
-                              size={25}
-                              color="#677CD2"
-                            />
-                          )}
-                          {transaction.category === 'Food' && (
-                            <MaterialCommunityIcons
-                              name="food"
-                              size={25}
-                              color="#677CD2"
-                            />
-                          )}
-                          {transaction.category === 'Health' && (
-                            <MaterialCommunityIcons
-                              name="hospital"
-                              size={25}
-                              color="#677CD2"
-                            />
-                          )}
-                          {transaction.category === 'Shopping' && (
-                            <MaterialCommunityIcons
-                              name="cart"
-                              size={25}
-                              color="#677CD2"
-                            />
-                          )}
-                          {transaction.category === 'Travel' && (
-                            <MaterialCommunityIcons
-                              name="bus"
-                              size={25}
-                              color="#677CD2"
-                            />
-                          )}
-                          {transaction.type === 'expense' &&
-                            transaction.category === 'Others' && (
-                              <MaterialCommunityIcons
-                                name="cash-remove"
-                                size={25}
-                                color="#677CD2"
-                              />
-                            )}
-                          {(transaction.category === 'Salary' ||
-                            transaction.category === 'Bonus' ||
-                            transaction.category === 'Gift' ||
-                            (transaction.type === 'income' &&
-                              transaction.category === 'Others')) && (
-                            <MaterialCommunityIcons
-                              name="cash"
-                              size={25}
-                              color="#677CD2"
-                            />
-                          )}
-                          {transaction.source === 'split' &&
-                            transaction.category !== 'Settlement' && (
-                              <MaterialCommunityIcons
-                                name="account-group"
-                                size={25}
-                                color="#677CD2"
-                              />
-                            )}
-                          {transaction.source === 'split' &&
-                            transaction.category === 'Settlement' && (
-                              <MaterialCommunityIcons
-                                name="handshake"
-                                size={25}
-                                color="#677CD2"
-                              />
-                            )}
+                          <MaterialCommunityIcons
+                            name={
+                              transaction.source === 'split' && transaction.category === 'Settlement'
+                                ? 'handshake'
+                                : transaction.source === 'split'
+                                ? 'account-group'
+                                : getCategoryIcon(transaction.category)
+                            }
+                            size={25}
+                            color="#677CD2"
+                          />
                         </View>
                         <View style={{flexDirection: 'column', marginLeft: 5}}>
                           <Text style={styles.transactionsCardTitle} numberOfLines={1}>

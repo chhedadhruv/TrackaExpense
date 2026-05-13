@@ -1,7 +1,6 @@
-import {View, StyleSheet, TextInput, Image, Text, TouchableOpacity, Platform} from 'react-native';
+import {View, StyleSheet, TextInput, Image, Text, TouchableOpacity, Platform, Modal as RNModal} from 'react-native';
 import React, {useState, useEffect, useRef} from 'react';
 import {Card, ActivityIndicator, Modal, Portal, Provider} from 'react-native-paper';
-import DropDownPicker from 'react-native-dropdown-picker';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
@@ -13,6 +12,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import FormButton from '../components/FormButton';
 import { requestCameraPermission } from '../utils/Permissions';
 import {useCurrency} from '../utils/CurrencyUtil';
+import {EXPENSE_CATEGORIES, EXPENSE_KEYWORD_MAP, getCategoryIcon, getCategoryLabel} from '../utils/CategoryData';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const EXPENSE_COLOR = '#F64E4E';
@@ -38,18 +38,7 @@ const AddExpense = ({navigation}) => {
   const [image, setImage] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [transferred, setTransferred] = useState(0);
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState(null);
-  const [items, setItems] = useState([
-    {label: 'Bills', value: 'Bills', icon: 'file-document'},
-    {label: 'Education', value: 'Education', icon: 'school'},
-    {label: 'Entertainment', value: 'Entertainment', icon: 'movie'},
-    {label: 'Food', value: 'Food', icon: 'food'},
-    {label: 'Health', value: 'Health', icon: 'medical-bag'},
-    {label: 'Travel', value: 'Travel', icon: 'car'},
-    {label: 'Shopping', value: 'Shopping', icon: 'shopping'},
-    {label: 'Others', value: 'Others', icon: 'dots-horizontal'},
-  ]);
+  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [openDate, setOpenDate] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,6 +77,12 @@ const AddExpense = ({navigation}) => {
   useEffect(() => {
     fetchUserData();
   }, []);
+  useEffect(() => {
+    if (title.trim().length < 3 || category) return;
+    const lower = title.toLowerCase();
+    const match = Object.keys(EXPENSE_KEYWORD_MAP).find(kw => lower.includes(kw));
+    if (match) setCategory(EXPENSE_KEYWORD_MAP[match]);
+  }, [title]);
   const validateForm = () => {
     setErrorMessage(null);
     if (!title.trim()) {
@@ -185,7 +180,6 @@ const AddExpense = ({navigation}) => {
       setTitle('');
       setDescription('');
       setCategory('');
-      setValue(null);
       setDate(undefined);
       setImage(null);
       setSuccessMessage('Expense added successfully!');
@@ -340,38 +334,23 @@ const AddExpense = ({navigation}) => {
                   </View>
                   <Text style={styles.characterCount}>{description.length}/500</Text>
                 </View>
-                {/* Category Dropdown */}
+                {/* Category Selector */}
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Category</Text>
-                  <View style={styles.dropdownContainer}>
-                    <DropDownPicker
-                      open={open}
-                      value={value}
-                      items={items.map(cat => ({
-                        ...cat,
-                        icon: () => (
-                          <MaterialCommunityIcons
-                            name={cat.icon}
-                            size={20}
-                            color={PRIMARY_COLOR}
-                          />
-                        ),
-                      }))}
-                      setOpen={setOpen}
-                      setValue={setValue}
-                      setItems={setItems}
-                      placeholder="Select expense category"
-                      style={styles.dropdown}
-                      dropDownContainerStyle={styles.dropdownContainer}
-                      searchable={true}
-                      searchPlaceholder="Search categories..."
-                      listMode="MODAL"
-                      modalTitle="Select Expense Category"
-                      modalAnimationType="slide"
-                      onChangeValue={setCategory}
-                      disabled={isSubmitting}
-                    />
-                  </View>
+                  <TouchableOpacity
+                    style={styles.categorySelectorButton}
+                    onPress={() => !isSubmitting && setCategoryModalVisible(true)}
+                    disabled={isSubmitting}>
+                    {category ? (
+                      <>
+                        <MaterialCommunityIcons name={getCategoryIcon(category)} size={20} color={PRIMARY_COLOR} />
+                        <Text style={styles.categorySelectorText}>{getCategoryLabel(category)}</Text>
+                      </>
+                    ) : (
+                      <Text style={styles.categorySelectorPlaceholder}>Select expense category</Text>
+                    )}
+                    <MaterialCommunityIcons name="chevron-down" size={20} color="#999" style={styles.categorySelectorChevron} />
+                  </TouchableOpacity>
                 </View>
                 {/* Amount Input */}
                 <View style={styles.inputContainer}>
@@ -472,6 +451,46 @@ const AddExpense = ({navigation}) => {
               </View>
             </Card>
           </KeyboardAwareScrollView>
+          {/* Category Picker Modal */}
+          <RNModal
+            visible={categoryModalVisible}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setCategoryModalVisible(false)}>
+            <TouchableOpacity
+              style={styles.categoryModalOverlay}
+              activeOpacity={1}
+              onPress={() => setCategoryModalVisible(false)}>
+              <View style={styles.categoryModalSheet}>
+                <View style={styles.categoryModalHeader}>
+                  <Text style={styles.categoryModalTitle}>Select Category</Text>
+                  <TouchableOpacity onPress={() => setCategoryModalVisible(false)}>
+                    <MaterialCommunityIcons name="close" size={24} color="#666" />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.categoryGrid}>
+                  {EXPENSE_CATEGORIES.map(cat => {
+                    const isSelected = category === cat.value;
+                    return (
+                      <TouchableOpacity
+                        key={cat.value}
+                        style={[styles.categoryChip, isSelected && styles.categoryChipSelected]}
+                        onPress={() => {setCategory(cat.value); setCategoryModalVisible(false);}}>
+                        <MaterialCommunityIcons
+                          name={cat.icon}
+                          size={22}
+                          color={isSelected ? '#FFFFFF' : PRIMARY_COLOR}
+                        />
+                        <Text style={[styles.categoryChipText, isSelected && styles.categoryChipTextSelected]}>
+                          {cat.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            </TouchableOpacity>
+          </RNModal>
           {/* Image Picker Modal */}
           <Portal>
             <Modal
@@ -638,36 +657,85 @@ const styles = StyleSheet.create({
     fontFamily: 'Lato-Regular',
     textAlignVertical: 'top',
   },
-  dropdownContainer: {
-    zIndex: 1000,
-    backgroundColor: '#FFFFFF',
+  categorySelectorButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E8EBF7',
-    elevation: Platform.OS === 'android' ? 0 : 5,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    paddingHorizontal: 15,
+    paddingVertical: 14,
+    gap: 10,
   },
-  dropdown: {
+  categorySelectorText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
+  },
+  categorySelectorPlaceholder: {
+    flex: 1,
+    fontSize: 16,
+    color: '#999',
+    fontFamily: 'Lato-Regular',
+  },
+  categorySelectorChevron: {
+    marginLeft: 'auto',
+  },
+  categoryModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  categoryModalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  categoryModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  categoryModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
+  },
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  categoryChip: {
+    width: '30%',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     backgroundColor: '#F8F9FA',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E8EBF7',
   },
-  dropdownPlaceholder: {
-    color: '#999',
-    fontSize: 16,
-    fontFamily: 'Lato-Regular',
+  categoryChipSelected: {
+    backgroundColor: PRIMARY_COLOR,
+    borderColor: PRIMARY_COLOR,
   },
-  dropdownText: {
-    fontSize: 16,
-    color: '#2C2C2C',
+  categoryChipText: {
+    fontSize: 12,
+    color: '#555',
+    marginTop: 5,
     fontFamily: 'Lato-Regular',
+    textAlign: 'center',
+  },
+  categoryChipTextSelected: {
+    color: '#FFFFFF',
+    fontFamily: 'Lato-Bold',
   },
   dateInputWrapper: {
     flexDirection: 'row',
