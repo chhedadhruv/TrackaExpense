@@ -440,6 +440,7 @@ const SplitGroupDetailScreen = ({route, navigation}) => {
         members: groupMembers,
       },
       lendingDetails: detailedLendingInfo,
+      preselect: lender && borrower ? {lender, borrower, amount} : undefined,
     });
   };
   const renderSplitsList = () => {

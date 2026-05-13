@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -22,14 +22,36 @@ const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
+const formatInputAmount = (value) => {
+  if (!value && value !== 0) return '';
+  const str = value.toString().replace(/,/g, '');
+  const [integer, decimal] = str.split('.');
+  const formattedInteger = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return decimal !== undefined ? `${formattedInteger}.${decimal}` : formattedInteger;
+};
 const SettleUpScreen = ({route, navigation}) => {
   const {currency, formatAmount} = useCurrency();
-  const {group, lendingDetails} = route.params;
+  const {group, lendingDetails, preselect} = route.params;
   const [loading, setLoading] = useState(false);
   const [selectedLender, setSelectedLender] = useState(null);
   const [selectedBorrower, setSelectedBorrower] = useState(null);
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  useEffect(() => {
+    const currentUserEmail = auth().currentUser?.email;
+    if (preselect) {
+      setSelectedBorrower(group.members.find(m => m.email === preselect.borrower.email) ?? null);
+      setSelectedLender(group.members.find(m => m.email === preselect.lender.email) ?? null);
+      setAmount(preselect.amount.toString());
+    } else if (lendingDetails?.length) {
+      const myDebt = lendingDetails.find(d => d.borrower.email === currentUserEmail);
+      if (myDebt) {
+        setSelectedBorrower(group.members.find(m => m.email === myDebt.borrower.email) ?? null);
+        setSelectedLender(group.members.find(m => m.email === myDebt.lender.email) ?? null);
+        setAmount(myDebt.amount.toString());
+      }
+    }
+  }, []);
   const handleSettleUp = async () => {
     if (!selectedLender || !selectedBorrower || !amount) {
       Alert.alert('Error', 'Please fill in all required fields');
@@ -284,6 +306,45 @@ const SettleUpScreen = ({route, navigation}) => {
             </View>
             <Text style={styles.headerSubtitle}>Record payments between group members</Text>
           </View>
+          {/* Suggestions section */}
+          {lendingDetails?.length > 0 && (
+            <Card style={[styles.sectionCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
+              <View style={styles.cardContent}>
+                <Text style={styles.sectionTitle}>Suggestions</Text>
+                {lendingDetails.map((item, idx) => {
+                  const currentEmail = auth().currentUser?.email;
+                  const isActive =
+                    selectedBorrower?.email === item.borrower.email &&
+                    selectedLender?.email === item.lender.email;
+                  const isMyDebt = item.borrower.email === currentEmail;
+                  return (
+                    <TouchableOpacity
+                      key={idx}
+                      style={[styles.suggestionCard, isActive && styles.suggestionCardActive]}
+                      onPress={() => {
+                        setSelectedBorrower(group.members.find(m => m.email === item.borrower.email) ?? null);
+                        setSelectedLender(group.members.find(m => m.email === item.lender.email) ?? null);
+                        setAmount(item.amount.toString());
+                      }}>
+                      <View style={styles.suggestionLeft}>
+                        {isMyDebt && (
+                          <View style={styles.youPayBadge}>
+                            <Text style={styles.youPayText}>You pay</Text>
+                          </View>
+                        )}
+                        <Text style={[styles.suggestionText, isActive && styles.suggestionTextActive]}>
+                          {item.borrower.name} → {item.lender.name}
+                        </Text>
+                      </View>
+                      <Text style={[styles.suggestionAmount, isActive && styles.suggestionAmountActive]}>
+                        {formatAmount(item.amount)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </Card>
+          )}
           {/* Who paid section */}
           {renderUserSelectionCard(
             'Who paid?',
@@ -306,8 +367,8 @@ const SettleUpScreen = ({route, navigation}) => {
               <Text style={styles.sectionTitle}>Amount</Text>
               <TextInput
                 style={styles.textInput}
-                value={amount}
-                onChangeText={setAmount}
+                value={formatInputAmount(amount)}
+                onChangeText={text => setAmount(text.replace(/,/g, ''))}
                 keyboardType="numeric"
                 placeholder={`${currency.symbol}0`}
                 placeholderTextColor="#999"
@@ -537,6 +598,59 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'right',
     fontFamily: 'Lato-Regular',
+  },
+  suggestionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 10,
+  },
+  suggestionCardActive: {
+    backgroundColor: PRIMARY_COLOR + '15',
+    borderColor: PRIMARY_COLOR,
+    borderWidth: 2,
+  },
+  suggestionLeft: {
+    flex: 1,
+    gap: 4,
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
+  },
+  suggestionTextActive: {
+    color: PRIMARY_COLOR,
+    fontFamily: 'Lato-Bold',
+  },
+  suggestionAmount: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: EXPENSE_COLOR,
+    fontFamily: 'Lato-Bold',
+    marginLeft: 12,
+  },
+  suggestionAmountActive: {
+    color: PRIMARY_COLOR,
+  },
+  youPayBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: EXPENSE_COLOR + '20',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  youPayText: {
+    fontSize: 11,
+    color: EXPENSE_COLOR,
+    fontFamily: 'Lato-Bold',
+    fontWeight: '700',
   },
   cardAndroid: {
     borderWidth: 1,
