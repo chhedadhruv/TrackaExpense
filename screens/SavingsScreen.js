@@ -17,6 +17,7 @@ import auth from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {useCurrency} from '../utils/CurrencyUtil';
+import {GOAL_KEYWORD_MAP} from '../utils/CategoryData';
 import ReminderNotificationService from '../services/ReminderNotificationService';
 import {DatePickerModal} from 'react-native-paper-dates';
 
@@ -42,7 +43,6 @@ const SavingsScreen = ({navigation}) => {
   const {currency, formatAmount: formatCurrencyAmount} = useCurrency();
   const [loading, setLoading] = useState(true);
   const [savingsGoals, setSavingsGoals] = useState([]);
-  const [savingsHistory, setSavingsHistory] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editingGoalId, setEditingGoalId] = useState(null);
   const [editValues, setEditValues] = useState({
@@ -66,10 +66,20 @@ const SavingsScreen = ({navigation}) => {
   const [reminderGoalId, setReminderGoalId] = useState(null);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [openDate, setOpenDate] = useState(false);
+  const [categoryManuallySelected, setCategoryManuallySelected] = useState(false);
 
   useEffect(() => {
     fetchSavingsData();
   }, []);
+
+  useEffect(() => {
+    if (editValues.name.trim().length < 3 || categoryManuallySelected) return;
+    const lower = editValues.name.toLowerCase();
+    const match = Object.keys(GOAL_KEYWORD_MAP).find(kw => lower.includes(kw));
+    if (match) {
+      setEditValues(prev => ({...prev, category: GOAL_KEYWORD_MAP[match]}));
+    }
+  }, [editValues.name]);
 
   const fetchSavingsData = async () => {
     try {
@@ -116,23 +126,6 @@ const SavingsScreen = ({navigation}) => {
         setSavingsGoals([defaultGoal]);
       }
 
-      const historySnapshot = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('savingsHistory')
-        .orderBy('createdAt', 'desc')
-        .limit(20)
-        .get();
-
-      const history = historySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          goalName: data.goalName || data.goal?.name || 'savings goal',
-        };
-      });
-      setSavingsHistory(history);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching savings data:', error);
@@ -154,6 +147,7 @@ const SavingsScreen = ({navigation}) => {
         category: goal.category || 'other',
         targetDate: goal.targetDate || '',
       });
+      setCategoryManuallySelected(false);
       setIsEditing(true);
     }
   };
@@ -170,6 +164,7 @@ const SavingsScreen = ({navigation}) => {
       category: 'other',
       targetDate: '',
     });
+    setCategoryManuallySelected(false);
   };
 
   const validateGoalValues = (values, current, target, monthly) => {
@@ -330,16 +325,6 @@ const SavingsScreen = ({navigation}) => {
       await userDocRef.update({savingsGoals: updatedGoals});
       setSavingsGoals(updatedGoals);
 
-      const newHistoryItem = {
-        id: Date.now().toString(),
-        goalId: selectedGoalId,
-        goalName: savingsGoals.find(g => g.id === selectedGoalId)?.name || '',
-        type: 'deposit',
-        amount: parseFloat(amount),
-        createdAt: {toDate: () => new Date()},
-      };
-      setSavingsHistory(prev => [newHistoryItem, ...prev.slice(0, 19)]);
-
       Alert.alert(
         'Success',
         `${formatCurrencyAmount(amount)} added to ${savingsGoals.find(g => g.id === selectedGoalId)?.name}`,
@@ -404,16 +389,6 @@ const SavingsScreen = ({navigation}) => {
 
       await userDocRef.update({savingsGoals: updatedGoals});
       setSavingsGoals(updatedGoals);
-
-      const newHistoryItem = {
-        id: Date.now().toString(),
-        goalId: selectedGoalId,
-        goalName: selectedGoal.name,
-        type: 'withdrawal',
-        amount: parseFloat(amount),
-        createdAt: {toDate: () => new Date()},
-      };
-      setSavingsHistory(prev => [newHistoryItem, ...prev.slice(0, 19)]);
 
       Alert.alert('Success', `${formatCurrencyAmount(amount)} withdrawn from ${selectedGoal.name}`);
     } catch (error) {
@@ -686,6 +661,7 @@ const SavingsScreen = ({navigation}) => {
       category: 'other',
       targetDate: '',
     });
+    setCategoryManuallySelected(false);
   };
 
   if (loading) {
@@ -708,8 +684,15 @@ const SavingsScreen = ({navigation}) => {
           {/* Header */}
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
-              <MaterialCommunityIcons name="piggy-bank" size={32} color={SUCCESS_COLOR} />
-              <Text style={styles.headerTitle}>Savings Goals</Text>
+              <View style={styles.headerTitleLeft}>
+                <MaterialCommunityIcons name="piggy-bank" size={32} color={SUCCESS_COLOR} />
+                <Text style={styles.headerTitle}>Savings Goals</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.historyIconButton}
+                onPress={() => navigation.navigate('SavingsHistory')}>
+                <MaterialCommunityIcons name="history" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
             </View>
             <Text style={styles.headerSubtitle}>Track and manage multiple savings goals</Text>
             <TouchableOpacity
@@ -1049,83 +1032,6 @@ const SavingsScreen = ({navigation}) => {
             </Card>
           )}
 
-          {/* Recent Activity */}
-          <Card
-            elevation={Platform.OS === 'android' ? 0 : 2}
-            style={[styles.historyCard, Platform.OS === 'android' && styles.cardAndroid]}>
-            <View style={styles.cardContent}>
-              <Text style={styles.historyTitle}>Recent Activity</Text>
-              {savingsHistory.length > 0 ? (
-                savingsHistory.map(item => (
-                  <View key={item.id} style={styles.historyItem}>
-                    <View style={styles.historyIcon}>
-                      {item.type === 'deposit' ? (
-                        <MaterialCommunityIcons
-                          name="plus-circle"
-                          size={20}
-                          color={SUCCESS_COLOR}
-                        />
-                      ) : item.type === 'withdrawal' ? (
-                        <MaterialCommunityIcons
-                          name="minus-circle"
-                          size={20}
-                          color={EXPENSE_COLOR}
-                        />
-                      ) : item.type === 'create' ? (
-                        <MaterialCommunityIcons name="plus" size={20} color={PRIMARY_COLOR} />
-                      ) : item.type === 'delete' ? (
-                        <MaterialCommunityIcons name="delete" size={20} color={EXPENSE_COLOR} />
-                      ) : (
-                        <MaterialCommunityIcons name="pencil" size={20} color={PRIMARY_COLOR} />
-                      )}
-                    </View>
-                    <View style={styles.historyDetails}>
-                      <Text style={styles.historyDescription}>
-                        {(() => {
-                          const goalName = item.goalName || 'savings goal';
-                          switch (item.type) {
-                            case 'deposit':
-                              return `Added to ${goalName}`;
-                            case 'withdrawal':
-                              return `Withdrawn from ${goalName}`;
-                            case 'create':
-                              return `Created goal: ${goalName}`;
-                            case 'delete':
-                              return `Deleted goal: ${goalName}`;
-                            case 'update':
-                              return `Updated ${goalName}`;
-                            default:
-                              return 'Savings activity';
-                          }
-                        })()}
-                      </Text>
-                      <Text style={styles.historyDate}>
-                        {item.createdAt ? item.createdAt.toDate().toLocaleDateString() : 'Unknown date'}
-                      </Text>
-                    </View>
-                    {item.amount ? (
-                      <Text
-                        style={[
-                          styles.historyAmount,
-                          item.type === 'deposit' ? styles.positiveAmount : styles.negativeAmount,
-                        ]}>
-                        {item.type === 'deposit' ? '+' : '-'}
-                        {formatCurrencyAmount(item.amount)}
-                      </Text>
-                    ) : null}
-                  </View>
-                ))
-              ) : (
-                <View style={styles.emptyHistory}>
-                  <MaterialCommunityIcons name="history" size={48} color="#CBD3EE" />
-                  <Text style={styles.emptyHistoryText}>No activity yet</Text>
-                  <Text style={styles.emptyHistorySubtext}>
-                    Your savings activity will appear here
-                  </Text>
-                </View>
-              )}
-            </View>
-          </Card>
         </KeyboardAwareScrollView>
 
         {/* Add / Withdraw Modal */}
@@ -1427,6 +1333,7 @@ const SavingsScreen = ({navigation}) => {
                       style={[styles.categoryChip, isSelected && styles.categoryChipSelected]}
                       onPress={() => {
                         setEditValues({...editValues, category: cat.id});
+                        setCategoryManuallySelected(true);
                         setShowCategoryModal(false);
                       }}>
                       <MaterialCommunityIcons
@@ -1478,7 +1385,21 @@ const styles = StyleSheet.create({
   headerTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
     marginBottom: 8,
+  },
+  headerTitleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  historyIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: PRIMARY_COLOR,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 28,
@@ -1557,19 +1478,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginHorizontal: 20,
     marginBottom: 20,
-  },
-  historyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    elevation: Platform.OS === 'android' ? 0 : 8,
-    ...(Platform.OS !== 'android' && {
-      shadowColor: PRIMARY_COLOR,
-      shadowOffset: {width: 0, height: 4},
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
-    }),
-    marginHorizontal: 20,
-    marginBottom: 40,
   },
   cardContent: {
     padding: 25,
@@ -1922,69 +1830,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'Lato-Bold',
-  },
-  historyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 20,
-    fontFamily: 'Lato-Bold',
-  },
-  historyItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  historyIcon: {
-    width: 40,
-    alignItems: 'center',
-  },
-  historyDetails: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  historyDescription: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  historyDate: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-    fontFamily: 'Lato-Regular',
-  },
-  historyAmount: {
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'Lato-Bold',
-  },
-  positiveAmount: {
-    color: SUCCESS_COLOR,
-  },
-  negativeAmount: {
-    color: EXPENSE_COLOR,
-  },
-  emptyHistory: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyHistoryText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-    marginTop: 15,
-    marginBottom: 5,
-    fontFamily: 'Lato-Bold',
-  },
-  emptyHistorySubtext: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
   },
   modalOverlay: {
     flex: 1,

@@ -87,6 +87,36 @@ export const INCOME_KEYWORD_MAP = {
   cashback: 'Cashback', refund: 'Cashback', points: 'Cashback',
 };
 
+export const GOAL_KEYWORD_MAP = {
+  // emergency — multi-word phrases first
+  'rainy day': 'emergency', contingency: 'emergency', emergency: 'emergency',
+  backup: 'emergency', safety: 'emergency',
+  // vacation — multi-word first
+  vacation: 'vacation', holiday: 'vacation', travel: 'vacation',
+  trip: 'vacation', beach: 'vacation', tour: 'vacation',
+  // house — multi-word first
+  'real estate': 'house', renovation: 'house', mortgage: 'house',
+  apartment: 'house', property: 'house', house: 'house', home: 'house', flat: 'house',
+  // car
+  motorcycle: 'car', vehicle: 'car', bike: 'car', suv: 'car', car: 'car',
+  // education
+  university: 'education', education: 'education', college: 'education',
+  school: 'education', tuition: 'education', course: 'education',
+  degree: 'education', study: 'education', mba: 'education',
+  // investment — multi-word first
+  'mutual fund': 'investment', investment: 'investment', portfolio: 'investment',
+  trading: 'investment', stocks: 'investment', crypto: 'investment',
+  bonds: 'investment', sip: 'investment',
+  // wedding
+  honeymoon: 'wedding', engagement: 'wedding', wedding: 'wedding',
+  marriage: 'wedding', bride: 'wedding', groom: 'wedding', ring: 'wedding',
+  // electronics
+  electronics: 'electronics', macbook: 'electronics', laptop: 'electronics',
+  computer: 'electronics', iphone: 'electronics', tablet: 'electronics',
+  ipad: 'electronics', gadget: 'electronics', camera: 'electronics',
+  phone: 'electronics', tv: 'electronics',
+};
+
 const ICON_MAP = {
   // Expense
   Food: 'food-fork-drink',

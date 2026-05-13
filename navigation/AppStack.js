@@ -31,6 +31,7 @@ import IOUScreen from '../screens/SplitScreens/IOUScreen';
 import CreateIOUScreen from '../screens/SplitScreens/CreateIOUScreen';
 import ContactUsScreen from '../screens/ContactUsScreen';
 import SavingsScreen from '../screens/SavingsScreen';
+import SavingsHistoryScreen from '../screens/SavingsHistoryScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 
 const Stack = createStackNavigator();
@@ -102,6 +103,7 @@ const ProfileStack = () =>
 const SavingsStack = () =>
   createStack([
     { name: 'Savings', component: SavingsScreen, title: 'Savings' },
+    { name: 'SavingsHistory', component: SavingsHistoryScreen, title: 'Savings History' },
   ]);
 
 // Statistic Stack
