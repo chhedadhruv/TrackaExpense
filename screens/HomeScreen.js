@@ -138,6 +138,7 @@ const HomeScreen = ({navigation}) => {
         const data = document.data();
         return {
           id: document.id,
+          userId: currentUser.uid,
           ...data,
         };
       });
