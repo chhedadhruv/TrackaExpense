@@ -61,6 +61,7 @@ const CreateSplitScreen = ({route, navigation}) => {
   const [uploading, setUploading] = useState(false);
   const [recurringEnabled, setRecurringEnabled] = useState(false);
   const [recurringFrequency, setRecurringFrequency] = useState('monthly');
+  const [includeInTransactions, setIncludeInTransactions] = useState(true);
   const isEditMode = !!split;
   useEffect(() => {
     if (!group || !group.id) {
@@ -468,7 +469,7 @@ const CreateSplitScreen = ({route, navigation}) => {
               createdAt: firestore.FieldValue.serverTimestamp(),
             });
         } catch (_) {}
-        await writeSplitTransaction(split.id, splitAmount, splitData, true);
+        await writeSplitTransaction(split.id, splitAmount, splitData, true, includeInTransactions);
         Alert.alert('Success', 'Split updated successfully');
       } else {
         // Add new split
@@ -531,7 +532,7 @@ const CreateSplitScreen = ({route, navigation}) => {
               createdAt: firestore.FieldValue.serverTimestamp(),
             });
         } catch (_) {}
-        await writeSplitTransaction(splitRef.id, splitAmount, splitData, false);
+        await writeSplitTransaction(splitRef.id, splitAmount, splitData, false, includeInTransactions);
       }
       setLoading(false);
       navigation.goBack();
@@ -546,11 +547,19 @@ const CreateSplitScreen = ({route, navigation}) => {
     } finally {
     }
   };
-  const writeSplitTransaction = async (splitId, amount, data, isEdit) => {
+  const writeSplitTransaction = async (splitId, amount, data, isEdit, include) => {
     try {
       const u = auth().currentUser;
       if (!u) return;
       const email = u.email?.toLowerCase();
+      const txCol = firestore().collection('users').doc(u.uid).collection('transactions');
+      if (!include) {
+        if (isEdit) {
+          const snap = await txCol.where('splitId', '==', splitId).get();
+          if (!snap.empty) { await snap.docs[0].ref.delete(); }
+        }
+        return;
+      }
       const isPayer = data.paidBy?.email?.toLowerCase() === email;
       const isParticipant = data.splitUsers?.some(su => su.email?.toLowerCase() === email);
       if (!isPayer && !isParticipant) return;
@@ -569,7 +578,6 @@ const CreateSplitScreen = ({route, navigation}) => {
         splitRole: isPayer ? 'payer' : 'participant',
         createdAt: firestore.FieldValue.serverTimestamp(),
       };
-      const txCol = firestore().collection('users').doc(u.uid).collection('transactions');
       if (isEdit) {
         const snap = await txCol.where('splitId', '==', splitId).get();
         if (!snap.empty) { await snap.docs[0].ref.update(txData); }
@@ -885,6 +893,19 @@ const CreateSplitScreen = ({route, navigation}) => {
                     </TouchableOpacity>
                   </View>
                 )}
+              </View>
+              <View style={styles.inputContainer}>
+                <View style={styles.recurringRow}>
+                  <View>
+                    <Text style={styles.inputLabel}>Add to my transactions</Text>
+                    <Text style={styles.recurringSubtext}>Record your share as a personal expense</Text>
+                  </View>
+                  <Switch
+                    value={includeInTransactions}
+                    onValueChange={setIncludeInTransactions}
+                    color={PRIMARY_COLOR}
+                  />
+                </View>
               </View>
             </View>
           </Card>
