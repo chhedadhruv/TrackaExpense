@@ -16,7 +16,6 @@ import storage from '@react-native-firebase/storage';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import { requestCameraPermission } from '../../utils/Permissions';
 import {Card, Checkbox, ActivityIndicator, Switch} from 'react-native-paper';
-import DropDownPicker from 'react-native-dropdown-picker';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import FormButton from '../../components/FormButton';
@@ -26,44 +25,12 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import {useCurrency} from '../../utils/CurrencyUtil';
+import {SPLIT_CATEGORIES, EXPENSE_KEYWORD_MAP, getCategoryIcon, getCategoryLabel} from '../../utils/CategoryData';
 const {width} = Dimensions.get('window');
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
 const EXPENSE_COLOR = '#F64E4E';
-// Category Options
-const CATEGORY_OPTIONS = [
-  {
-    label: 'Food & Drinks',
-    value: 'Food',
-    icon: 'food',
-  },
-  {
-    label: 'Shopping',
-    value: 'Shopping',
-    icon: 'shopping',
-  },
-  {
-    label: 'Entertainment',
-    value: 'Entertainment',
-    icon: 'movie',
-  },
-  {
-    label: 'Transport',
-    value: 'Transport',
-    icon: 'car',
-  },
-  {
-    label: 'Bills & Utilities',
-    value: 'Bills',
-    icon: 'file-document',
-  },
-  {
-    label: 'Others',
-    value: 'Others',
-    icon: 'dots-horizontal',
-  },
-];
 const formatInputAmount = (value) => {
   if (!value && value !== 0) return '';
   const str = value.toString().replace(/,/g, '');
@@ -84,7 +51,7 @@ const CreateSplitScreen = ({route, navigation}) => {
   const [groupMembers, setGroupMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState(null);
-  const [openCategory, setOpenCategory] = useState(false);
+  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [splitType, setSplitType] = useState('equal'); // Changed from isSplitByPercentage to splitType
   const [date, setDate] = useState(new Date());
   const [datePickerVisible, setDatePickerVisible] = useState(false);
@@ -200,6 +167,14 @@ const CreateSplitScreen = ({route, navigation}) => {
   useEffect(() => {
     setIsSplitByPercentage(splitType === 'percentage');
   }, [splitType]);
+  useEffect(() => {
+    if (title.trim().length < 3 || category) return;
+    const lower = title.toLowerCase();
+    const match = Object.keys(EXPENSE_KEYWORD_MAP).find(kw => lower.includes(kw));
+    const suggested = match ? EXPENSE_KEYWORD_MAP[match] : null;
+    const validSplitValues = SPLIT_CATEGORIES.map(c => c.value);
+    if (suggested && validSplitValues.includes(suggested)) setCategory(suggested);
+  }, [title]);
   // Function to update percentages automatically
   const updatePercentages = (email, newValue) => {
     const selectedEmails = Object.entries(selectedUsers)
@@ -833,30 +808,19 @@ const CreateSplitScreen = ({route, navigation}) => {
               </View>
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Category</Text>
-                <DropDownPicker
-                  open={openCategory}
-                  value={category}
-                  items={CATEGORY_OPTIONS.map(cat => ({
-                    ...cat,
-                    icon: () => (
-                      <MaterialCommunityIcons
-                        name={cat.icon}
-                        size={20}
-                        color={PRIMARY_COLOR}
-                      />
-                    ),
-                  }))}
-                  setOpen={setOpenCategory}
-                  setValue={setCategory}
-                  placeholder="Select Category"
-                  style={styles.dropdown}
-                  dropDownContainerStyle={styles.dropdownContainer}
-                  searchable={true}
-                  searchPlaceholder="Search categories..."
-                  listMode="MODAL"
-                  modalTitle="Select Split Category"
-                  modalAnimationType="slide"
-                />
+                <TouchableOpacity
+                  style={styles.categorySelectorButton}
+                  onPress={() => setCategoryModalVisible(true)}>
+                  {category ? (
+                    <>
+                      <MaterialCommunityIcons name={getCategoryIcon(category)} size={20} color={PRIMARY_COLOR} />
+                      <Text style={styles.categorySelectorText}>{getCategoryLabel(category, 'split')}</Text>
+                    </>
+                  ) : (
+                    <Text style={styles.categorySelectorPlaceholder}>Select category</Text>
+                  )}
+                  <MaterialCommunityIcons name="chevron-down" size={20} color="#999" />
+                </TouchableOpacity>
               </View>
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Notes (Optional)</Text>
@@ -992,6 +956,46 @@ const CreateSplitScreen = ({route, navigation}) => {
               <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
+          {/* Category Picker Modal */}
+          <Modal
+            visible={categoryModalVisible}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setCategoryModalVisible(false)}>
+            <TouchableOpacity
+              style={styles.categoryModalOverlay}
+              activeOpacity={1}
+              onPress={() => setCategoryModalVisible(false)}>
+              <View style={styles.categoryModalSheet}>
+                <View style={styles.categoryModalHeader}>
+                  <Text style={styles.categoryModalTitle}>Select Category</Text>
+                  <TouchableOpacity onPress={() => setCategoryModalVisible(false)}>
+                    <MaterialCommunityIcons name="close" size={24} color="#666" />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.categoryGrid}>
+                  {SPLIT_CATEGORIES.map(cat => {
+                    const isSelected = category === cat.value;
+                    return (
+                      <TouchableOpacity
+                        key={cat.value}
+                        style={[styles.categoryChip, isSelected && styles.categoryChipSelected]}
+                        onPress={() => {setCategory(cat.value); setCategoryModalVisible(false);}}>
+                        <MaterialCommunityIcons
+                          name={cat.icon}
+                          size={22}
+                          color={isSelected ? '#FFFFFF' : PRIMARY_COLOR}
+                        />
+                        <Text style={[styles.categoryChipText, isSelected && styles.categoryChipTextSelected]}>
+                          {cat.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            </TouchableOpacity>
+          </Modal>
           <Modal
             visible={imageModalVisible}
             transparent
@@ -1512,6 +1516,83 @@ const styles = StyleSheet.create({
   modalCancelText: {
     fontSize: 16,
     color: '#F64E4E',
+    fontFamily: 'Lato-Bold',
+  },
+  categorySelectorButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+    paddingHorizontal: 15,
+    paddingVertical: 14,
+    gap: 10,
+  },
+  categorySelectorText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
+  },
+  categorySelectorPlaceholder: {
+    flex: 1,
+    fontSize: 16,
+    color: '#999',
+    fontFamily: 'Lato-Regular',
+  },
+  categoryModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  categoryModalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  categoryModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  categoryModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
+  },
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  categoryChip: {
+    width: '30%',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+  },
+  categoryChipSelected: {
+    backgroundColor: PRIMARY_COLOR,
+    borderColor: PRIMARY_COLOR,
+  },
+  categoryChipText: {
+    fontSize: 12,
+    color: '#555',
+    marginTop: 5,
+    fontFamily: 'Lato-Regular',
+    textAlign: 'center',
+  },
+  categoryChipTextSelected: {
+    color: '#FFFFFF',
     fontFamily: 'Lato-Bold',
   },
 });

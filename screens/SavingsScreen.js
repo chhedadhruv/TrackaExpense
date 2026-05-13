@@ -18,6 +18,7 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {useCurrency} from '../utils/CurrencyUtil';
 import ReminderNotificationService from '../services/ReminderNotificationService';
+import {DatePickerModal} from 'react-native-paper-dates';
 
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
@@ -28,12 +29,12 @@ const ORANGE_COLOR = '#F5A623';
 const GOAL_CATEGORIES = [
   {id: 'emergency', label: 'Emergency', icon: 'shield-check'},
   {id: 'vacation', label: 'Vacation', icon: 'airplane'},
-  {id: 'house', label: 'House', icon: 'home'},
-  {id: 'car', label: 'Car', icon: 'car'},
+  {id: 'house', label: 'House', icon: 'home-city'},
+  {id: 'car', label: 'Car', icon: 'car-sports'},
   {id: 'education', label: 'Education', icon: 'school'},
-  {id: 'investment', label: 'Investment', icon: 'trending-up'},
+  {id: 'investment', label: 'Investment', icon: 'chart-line'},
   {id: 'wedding', label: 'Wedding', icon: 'ring'},
-  {id: 'electronics', label: 'Electronics', icon: 'laptop'},
+  {id: 'electronics', label: 'Electronics', icon: 'devices'},
   {id: 'other', label: 'Other', icon: 'piggy-bank'},
 ];
 
@@ -63,6 +64,8 @@ const SavingsScreen = ({navigation}) => {
   const [goalToDelete, setGoalToDelete] = useState(null);
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [reminderGoalId, setReminderGoalId] = useState(null);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [openDate, setOpenDate] = useState(false);
 
   useEffect(() => {
     fetchSavingsData();
@@ -488,6 +491,21 @@ const SavingsScreen = ({navigation}) => {
     });
   };
 
+  const formatDisplayDate = dateString => {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    return d.toLocaleDateString('en-US', {year: 'numeric', month: 'long', day: 'numeric'});
+  };
+
+  const onDismissDate = () => setOpenDate(false);
+
+  const onConfirmDate = params => {
+    setOpenDate(false);
+    const d = params.date;
+    const formatted = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    handleTargetDateChange(formatted);
+  };
+
   const showAmountInput = type => {
     setInputType(type);
     setInputAmount('');
@@ -821,36 +839,22 @@ const SavingsScreen = ({navigation}) => {
                         </View>
                         <View style={styles.inputContainer}>
                           <Text style={styles.inputLabel}>Category</Text>
-                          <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            style={styles.categoryScroll}>
-                            {GOAL_CATEGORIES.map(cat => (
-                              <TouchableOpacity
-                                key={cat.id}
-                                style={[
-                                  styles.categoryChip,
-                                  editValues.category === cat.id && styles.categoryChipSelected,
-                                ]}
-                                onPress={() =>
-                                  setEditValues({...editValues, category: cat.id})
-                                }>
-                                <MaterialCommunityIcons
-                                  name={cat.icon}
-                                  size={16}
-                                  color={editValues.category === cat.id ? '#FFFFFF' : PRIMARY_COLOR}
-                                />
-                                <Text
-                                  style={[
-                                    styles.categoryChipText,
-                                    editValues.category === cat.id &&
-                                      styles.categoryChipTextSelected,
-                                  ]}>
-                                  {cat.label}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </ScrollView>
+                          <TouchableOpacity
+                            style={styles.categorySelectorButton}
+                            onPress={() => setShowCategoryModal(true)}>
+                            {(() => {
+                              const cat = GOAL_CATEGORIES.find(c => c.id === editValues.category);
+                              return cat ? (
+                                <>
+                                  <MaterialCommunityIcons name={cat.icon} size={20} color={PRIMARY_COLOR} />
+                                  <Text style={styles.categorySelectorText}>{cat.label}</Text>
+                                </>
+                              ) : (
+                                <Text style={styles.categorySelectorPlaceholder}>Select category</Text>
+                              );
+                            })()}
+                            <MaterialCommunityIcons name="chevron-down" size={20} color="#999" />
+                          </TouchableOpacity>
                         </View>
                         <View style={styles.inputContainer}>
                           <Text style={styles.inputLabel}>Current Amount ({currency.symbol})</Text>
@@ -875,16 +879,16 @@ const SavingsScreen = ({navigation}) => {
                           />
                         </View>
                         <View style={styles.inputContainer}>
-                          <Text style={styles.inputLabel}>Target Date (Optional, YYYY-MM-DD)</Text>
-                          <TextInput
-                            style={styles.textInput}
-                            value={editValues.targetDate}
-                            onChangeText={handleTargetDateChange}
-                            placeholder="e.g. 2026-12-31"
-                            placeholderTextColor="#999"
-                            keyboardType="numbers-and-punctuation"
-                            maxLength={10}
-                          />
+                          <Text style={styles.inputLabel}>Target Date (Optional)</Text>
+                          <TouchableOpacity
+                            style={styles.dateInputWrapper}
+                            onPress={() => setOpenDate(true)}>
+                            <MaterialCommunityIcons name="calendar" size={20} color={PRIMARY_COLOR} style={styles.inputIcon} />
+                            <Text style={[styles.dateText, !editValues.targetDate && styles.placeholderText]}>
+                              {editValues.targetDate ? formatDisplayDate(editValues.targetDate) : 'Select target date'}
+                            </Text>
+                            <MaterialCommunityIcons name="chevron-down" size={20} color="#999" />
+                          </TouchableOpacity>
                         </View>
                         <View style={styles.inputContainer}>
                           <Text style={styles.inputLabel}>Monthly Goal ({currency.symbol})</Text>
@@ -1218,33 +1222,22 @@ const SavingsScreen = ({navigation}) => {
                 </View>
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Category</Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.categoryScroll}>
-                    {GOAL_CATEGORIES.map(cat => (
-                      <TouchableOpacity
-                        key={cat.id}
-                        style={[
-                          styles.categoryChip,
-                          editValues.category === cat.id && styles.categoryChipSelected,
-                        ]}
-                        onPress={() => setEditValues({...editValues, category: cat.id})}>
-                        <MaterialCommunityIcons
-                          name={cat.icon}
-                          size={16}
-                          color={editValues.category === cat.id ? '#FFFFFF' : PRIMARY_COLOR}
-                        />
-                        <Text
-                          style={[
-                            styles.categoryChipText,
-                            editValues.category === cat.id && styles.categoryChipTextSelected,
-                          ]}>
-                          {cat.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+                  <TouchableOpacity
+                    style={styles.categorySelectorButton}
+                    onPress={() => setShowCategoryModal(true)}>
+                    {(() => {
+                      const cat = GOAL_CATEGORIES.find(c => c.id === editValues.category);
+                      return cat ? (
+                        <>
+                          <MaterialCommunityIcons name={cat.icon} size={20} color={PRIMARY_COLOR} />
+                          <Text style={styles.categorySelectorText}>{cat.label}</Text>
+                        </>
+                      ) : (
+                        <Text style={styles.categorySelectorPlaceholder}>Select category</Text>
+                      );
+                    })()}
+                    <MaterialCommunityIcons name="chevron-down" size={20} color="#999" />
+                  </TouchableOpacity>
                 </View>
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Current Amount ({currency.symbol}) *</Text>
@@ -1269,16 +1262,16 @@ const SavingsScreen = ({navigation}) => {
                   />
                 </View>
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Target Date (Optional, YYYY-MM-DD)</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={editValues.targetDate}
-                    onChangeText={handleTargetDateChange}
-                    placeholder="e.g. 2026-12-31"
-                    placeholderTextColor="#999"
-                    keyboardType="numbers-and-punctuation"
-                    maxLength={10}
-                  />
+                  <Text style={styles.inputLabel}>Target Date (Optional)</Text>
+                  <TouchableOpacity
+                    style={styles.dateInputWrapper}
+                    onPress={() => setOpenDate(true)}>
+                    <MaterialCommunityIcons name="calendar" size={20} color={PRIMARY_COLOR} style={styles.inputIcon} />
+                    <Text style={[styles.dateText, !editValues.targetDate && styles.placeholderText]}>
+                      {editValues.targetDate ? formatDisplayDate(editValues.targetDate) : 'Select target date'}
+                    </Text>
+                    <MaterialCommunityIcons name="chevron-down" size={20} color="#999" />
+                  </TouchableOpacity>
                 </View>
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Monthly Goal ({currency.symbol}) *</Text>
@@ -1395,6 +1388,59 @@ const SavingsScreen = ({navigation}) => {
                 onPress={() => setShowReminderModal(false)}>
                 <Text style={styles.modalCancelButtonText}>Cancel</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+        <DatePickerModal
+          locale="en"
+          mode="single"
+          visible={openDate}
+          onDismiss={onDismissDate}
+          date={editValues.targetDate ? new Date(editValues.targetDate) : new Date()}
+          onConfirm={onConfirmDate}
+          saveLabel="Confirm"
+          label="Select target date"
+          uppercase={false}
+          validRange={{startDate: new Date()}}
+          {...(Platform.OS === 'ios' && {presentationStyle: 'pageSheet'})}
+        />
+        {/* Category Picker Modal */}
+        <Modal
+          visible={showCategoryModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowCategoryModal(false)}>
+          <View style={styles.categoryModalOverlay}>
+            <View style={styles.categoryModalSheet}>
+              <View style={styles.categoryModalHeader}>
+                <Text style={styles.categoryModalTitle}>Select Category</Text>
+                <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
+                  <MaterialCommunityIcons name="close" size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.categoryGrid}>
+                {GOAL_CATEGORIES.map(cat => {
+                  const isSelected = editValues.category === cat.id;
+                  return (
+                    <TouchableOpacity
+                      key={cat.id}
+                      style={[styles.categoryChip, isSelected && styles.categoryChipSelected]}
+                      onPress={() => {
+                        setEditValues({...editValues, category: cat.id});
+                        setShowCategoryModal(false);
+                      }}>
+                      <MaterialCommunityIcons
+                        name={cat.icon}
+                        size={22}
+                        color={isSelected ? '#FFFFFF' : PRIMARY_COLOR}
+                      />
+                      <Text style={[styles.categoryChipText, isSelected && styles.categoryChipTextSelected]}>
+                        {cat.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
           </View>
         </Modal>
@@ -1700,6 +1746,28 @@ const styles = StyleSheet.create({
     color: '#2C2C2C',
     fontFamily: 'Lato-Regular',
   },
+  dateInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  dateText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
+  },
+  placeholderText: {
+    color: '#999',
+  },
   characterCount: {
     fontSize: 12,
     color: '#999',
@@ -1707,31 +1775,82 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontFamily: 'Lato-Regular',
   },
-  categoryScroll: {
-    flexGrow: 0,
-  },
-  categoryChip: {
+  categorySelectorButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: PRIMARY_COLOR,
-    marginRight: 8,
+    borderColor: '#E8EBF7',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  categorySelectorText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
+  },
+  categorySelectorPlaceholder: {
+    flex: 1,
+    fontSize: 16,
+    color: '#999',
+    fontFamily: 'Lato-Regular',
+  },
+  categoryModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  categoryModalSheet: {
     backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 34,
+  },
+  categoryModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  categoryModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
+  },
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  categoryChip: {
+    width: '30%',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
   categoryChipSelected: {
     backgroundColor: PRIMARY_COLOR,
+    borderColor: PRIMARY_COLOR,
   },
   categoryChipText: {
-    fontSize: 13,
-    color: PRIMARY_COLOR,
-    marginLeft: 5,
+    fontSize: 12,
+    color: '#555',
+    marginTop: 5,
     fontFamily: 'Lato-Regular',
+    textAlign: 'center',
   },
   categoryChipTextSelected: {
     color: '#FFFFFF',
+    fontFamily: 'Lato-Bold',
   },
   editActions: {
     flexDirection: 'row',

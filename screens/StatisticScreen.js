@@ -17,6 +17,7 @@ import firestore from '@react-native-firebase/firestore';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {useCurrency} from '../utils/CurrencyUtil';
+import {getCategoryIcon as getCategoryIconShared} from '../utils/CategoryData';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const INCOME_COLOR = '#25B07F';
@@ -734,23 +735,7 @@ const StatisticScreen = ({navigation}) => {
     </View>
   );
 };
-// Helper function to get the appropriate icon for each category
-const getCategoryIcon = (category, type) => {
-  const iconMap = {
-    Bills: 'receipt',
-    Education: 'school',
-    Entertainment: 'movie',
-    Food: 'food',
-    Health: 'hospital',
-    Shopping: 'cart',
-    Travel: 'bus',
-    Salary: 'cash',
-    Bonus: 'cash',
-    Gift: 'gift',
-    Others: type === 'income' ? 'cash' : 'cash-remove',
-  };
-  return iconMap[category] || (type === 'income' ? 'cash' : 'cash-remove');
-};
+const getCategoryIcon = (category) => getCategoryIconShared(category);
 const styles = StyleSheet.create({
   container: {
     flex: 1,

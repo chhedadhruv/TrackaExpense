@@ -1,7 +1,6 @@
-import {View, StyleSheet, TextInput, Text, TouchableOpacity, Platform} from 'react-native';
+import {View, StyleSheet, TextInput, Text, TouchableOpacity, Platform, Modal} from 'react-native';
 import React, {useState, useEffect, useRef} from 'react';
 import {Card, ActivityIndicator} from 'react-native-paper';
-import DropDownPicker from 'react-native-dropdown-picker';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {DatePickerModal} from 'react-native-paper-dates';
@@ -10,6 +9,7 @@ import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import FormButton from '../components/FormButton';
 import {useCurrency} from '../utils/CurrencyUtil';
+import {INCOME_CATEGORIES, INCOME_KEYWORD_MAP, getCategoryIcon, getCategoryLabel} from '../utils/CategoryData';
 const PRIMARY_COLOR = '#677CD2';
 const BACKGROUND_COLOR = '#F4F6FA';
 const SUCCESS_COLOR = '#25B07F';
@@ -31,14 +31,7 @@ const AddIncome = ({navigation}) => {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   });
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState(null);
-  const [items, setItems] = useState([
-    {label: 'Salary', value: 'Salary', icon: 'currency-usd'},
-    {label: 'Bonus', value: 'Bonus', icon: 'gift'},
-    {label: 'Gift', value: 'Gift', icon: 'gift'},
-    {label: 'Others', value: 'Others', icon: 'dots-horizontal'},
-  ]);
+  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [openDate, setOpenDate] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,6 +56,12 @@ const AddIncome = ({navigation}) => {
   useEffect(() => {
     getUser();
   }, []);
+  useEffect(() => {
+    if (title.trim().length < 3 || category) return;
+    const lower = title.toLowerCase();
+    const match = Object.keys(INCOME_KEYWORD_MAP).find(kw => lower.includes(kw));
+    if (match) setCategory(INCOME_KEYWORD_MAP[match]);
+  }, [title]);
   const validateForm = () => {
     setErrorMessage(null);
     if (!title.trim()) {
@@ -130,7 +129,6 @@ const AddIncome = ({navigation}) => {
       setTitle('');
       setDescription('');
       setCategory('');
-      setValue(null);
       setDate(undefined);
       setSuccessMessage('Income added successfully!');
       navTimeoutRef.current = setTimeout(() => {
@@ -237,38 +235,23 @@ const AddIncome = ({navigation}) => {
                 </View>
                 <Text style={styles.characterCount}>{description.length}/500</Text>
               </View>
-              {/* Category Dropdown */}
+              {/* Category Selector */}
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Category</Text>
-                <View style={styles.dropdownContainer}>
-                  <DropDownPicker
-                    open={open}
-                    value={value}
-                    items={items.map(cat => ({
-                      ...cat,
-                      icon: () => (
-                        <MaterialCommunityIcons
-                          name={cat.icon}
-                          size={20}
-                          color={PRIMARY_COLOR}
-                        />
-                      ),
-                    }))}
-                    setOpen={setOpen}
-                    setValue={setValue}
-                    setItems={setItems}
-                    placeholder="Select income category"
-                    style={styles.dropdown}
-                    dropDownContainerStyle={styles.dropdownContainer}
-                    searchable={true}
-                    searchPlaceholder="Search categories..."
-                    listMode="MODAL"
-                    modalTitle="Select Income Category"
-                    modalAnimationType="slide"
-                    onChangeValue={setCategory}
-                    disabled={isSubmitting}
-                  />
-                </View>
+                <TouchableOpacity
+                  style={styles.categorySelectorButton}
+                  onPress={() => !isSubmitting && setCategoryModalVisible(true)}
+                  disabled={isSubmitting}>
+                  {category ? (
+                    <>
+                      <MaterialCommunityIcons name={getCategoryIcon(category)} size={20} color={PRIMARY_COLOR} />
+                      <Text style={styles.categorySelectorText}>{getCategoryLabel(category, 'income')}</Text>
+                    </>
+                  ) : (
+                    <Text style={styles.categorySelectorPlaceholder}>Select income category</Text>
+                  )}
+                  <MaterialCommunityIcons name="chevron-down" size={20} color="#999" style={styles.categorySelectorChevron} />
+                </TouchableOpacity>
               </View>
                 {/* Amount Input */}
                 <View style={styles.inputContainer}>
@@ -335,6 +318,46 @@ const AddIncome = ({navigation}) => {
             </View>
           </Card>
         </KeyboardAwareScrollView>
+        {/* Category Picker Modal */}
+        <Modal
+          visible={categoryModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setCategoryModalVisible(false)}>
+          <TouchableOpacity
+            style={styles.categoryModalOverlay}
+            activeOpacity={1}
+            onPress={() => setCategoryModalVisible(false)}>
+            <View style={styles.categoryModalSheet}>
+              <View style={styles.categoryModalHeader}>
+                <Text style={styles.categoryModalTitle}>Select Category</Text>
+                <TouchableOpacity onPress={() => setCategoryModalVisible(false)}>
+                  <MaterialCommunityIcons name="close" size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.categoryGrid}>
+                {INCOME_CATEGORIES.map(cat => {
+                  const isSelected = category === cat.value;
+                  return (
+                    <TouchableOpacity
+                      key={cat.value}
+                      style={[styles.categoryChip, isSelected && styles.categoryChipSelected]}
+                      onPress={() => {setCategory(cat.value); setCategoryModalVisible(false);}}>
+                      <MaterialCommunityIcons
+                        name={cat.icon}
+                        size={22}
+                        color={isSelected ? '#FFFFFF' : PRIMARY_COLOR}
+                      />
+                      <Text style={[styles.categoryChipText, isSelected && styles.categoryChipTextSelected]}>
+                        {cat.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </View>
     </SafeAreaProvider>
   );
@@ -470,36 +493,85 @@ const styles = StyleSheet.create({
     fontFamily: 'Lato-Regular',
     textAlignVertical: 'top',
   },
-  dropdownContainer: {
-    zIndex: 1000,
-    backgroundColor: '#FFFFFF',
+  categorySelectorButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E8EBF7',
-    elevation: Platform.OS === 'android' ? 0 : 5,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    paddingHorizontal: 15,
+    paddingVertical: 14,
+    gap: 10,
   },
-  dropdown: {
+  categorySelectorText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
+  },
+  categorySelectorPlaceholder: {
+    flex: 1,
+    fontSize: 16,
+    color: '#999',
+    fontFamily: 'Lato-Regular',
+  },
+  categorySelectorChevron: {
+    marginLeft: 'auto',
+  },
+  categoryModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  categoryModalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  categoryModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  categoryModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
+  },
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  categoryChip: {
+    width: '30%',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     backgroundColor: '#F8F9FA',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E8EBF7',
   },
-  dropdownPlaceholder: {
-    color: '#999',
-    fontSize: 16,
-    fontFamily: 'Lato-Regular',
+  categoryChipSelected: {
+    backgroundColor: PRIMARY_COLOR,
+    borderColor: PRIMARY_COLOR,
   },
-  dropdownText: {
-    fontSize: 16,
-    color: '#2C2C2C',
+  categoryChipText: {
+    fontSize: 12,
+    color: '#555',
+    marginTop: 5,
     fontFamily: 'Lato-Regular',
+    textAlign: 'center',
+  },
+  categoryChipTextSelected: {
+    color: '#FFFFFF',
+    fontFamily: 'Lato-Bold',
   },
   dateInputWrapper: {
     flexDirection: 'row',
