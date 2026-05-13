@@ -48,6 +48,7 @@ const TransactionScreen = ({navigation}) => {
         .get();
       const fetchedTransactions = transactionsSnapshot.docs.map(doc => ({
         id: doc.id,
+        userId: currentUser.uid,
         ...doc.data(),
       }));
       setTransactions(fetchedTransactions);
