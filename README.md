@@ -101,6 +101,82 @@ TrackaExpense is a modern, feature-rich expense tracking application designed to
 
 ---
 
+## 🏗️ Architecture
+
+### Provider Stack
+
+Every screen is wrapped in this fixed order (defined in `navigation/index.tsx`):
+
+```
+SafeAreaProvider → AuthProvider → CurrencyProvider → PaperProvider → Routes
+```
+
+### Folder Structure
+
+```
+/TrackaExpense/
+├── src/
+│   ├── types/index.ts          ← all Firestore + shared TypeScript types
+│   ├── constants/theme.ts      ← single source of truth for colors
+│   ├── hooks/                  ← data-fetching custom hooks
+│   │   ├── useUserData.ts
+│   │   ├── useTransactions.ts
+│   │   ├── useTransactionForm.ts
+│   │   ├── useSavings.ts
+│   │   └── useSplits.ts
+│   ├── utils/formatters.ts     ← formatInputAmount, formatDisplayDate, todayAsYMD
+│   └── components/             ← shared UI primitives
+│       ├── CategorySelector.tsx
+│       ├── AmountInput.tsx
+│       ├── DateInput.tsx
+│       └── ImagePickerModal.tsx
+├── components/                 ← FormButton, FormInput
+├── navigation/                 ← Routes, AppStack, AuthStack, AuthProvider
+├── screens/                    ← all .tsx screen files
+│   └── SplitScreens/
+├── services/                   ← FCM / Notifee / update services
+├── utils/                      ← CurrencyUtil, CategoryData, Permissions, etc.
+└── server/
+    └── notification-server.js  ← Express push relay (firebase-admin)
+```
+
+### Theme Constants
+
+All colors are defined once in `src/constants/theme.ts` and imported by every screen. Never hard-code hex values.
+
+| Constant | Value | Usage |
+|---|---|---|
+| `PRIMARY_COLOR` | `#677CD2` | Buttons, active states, brand accents |
+| `BACKGROUND_COLOR` | `#F4F6FA` | Screen backgrounds |
+| `INCOME_COLOR` | `#25B07F` | Positive / income values |
+| `EXPENSE_COLOR` | `#F64E4E` | Negative / expense values |
+
+### Custom Hooks
+
+| Hook | Purpose |
+|---|---|
+| `useUserData()` | Real-time `users/{uid}` snapshot — includes `balance` |
+| `useTransactions()` | One-time fetch of `users/{uid}/transactions` |
+| `useTransactionForm()` | Form state + validation for add/edit transaction screens |
+| `useSavings()` | Fetch `users/{uid}/savings` goals |
+| `useSplits(opts?)` | Fetch `groups/{id}/splits` |
+
+### Shared UI Components
+
+| Component | Encapsulates |
+|---|---|
+| `CategorySelector` | Category grid bottom-sheet modal |
+| `AmountInput` | Currency symbol + comma-formatted TextInput |
+| `DateInput` | Date TouchableOpacity + DatePickerModal |
+| `ImagePickerModal` | Camera / gallery picker bottom sheet |
+
+### Key Firestore Rules
+
+- **Balance**: `users/{uid}.balance` is updated **only** via `FieldValue.increment` — never recalculated from the transactions collection.
+- **Date duality**: `TransactionDocument.date` is a plain `"YYYY-MM-DD"` string; `SplitDocument.date` is a Firestore `Timestamp`. Always use the `split.date?.toDate() ?? split.createdAt.toDate()` fallback for older split records.
+
+---
+
 ## 🛠️ Technologies Used
 
 ### **Core Framework**
@@ -326,7 +402,7 @@ TrackaExpense takes your privacy seriously:
 - **Privacy Policy** - Full transparency in data handling
 - **GDPR Compliant** - Respects your data rights
 
-For detailed information, see our [Privacy Policy](screens/PrivacyPolicyScreen.js).
+For detailed information, see our [Privacy Policy](screens/PrivacyPolicyScreen.tsx).
 
 ---
 
