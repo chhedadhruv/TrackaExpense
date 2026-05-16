@@ -359,7 +359,7 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
             ))
           ) : (
             <View style={styles.emptyState}>
-              <MaterialCommunityIcons name="receipt-text-outline" size={64} color="#CBD3EE" />
+              <MaterialCommunityIcons name="note-text-outline" size={64} color="#CBD3EE" />
               <Text style={styles.emptyStateTitle}>No transactions found</Text>
               <Text style={styles.emptyStateSubtitle}>
                 {searchQuery ? 'Try adjusting your search terms' : 'Transactions will appear here once you add them'}
