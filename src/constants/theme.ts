@@ -9,7 +9,12 @@ export const SUCCESS_COLOR = '#25B07F';
 export const ORANGE_COLOR = '#F5A623';
 export const TEXT_PRIMARY = '#333333';
 export const TEXT_SECONDARY = '#666666';
+export const TEXT_DARK = '#2C2C2C';
+export const TEXT_MUTED = '#888888';
+export const TEXT_PLACEHOLDER = '#999999';
 export const BORDER_COLOR = '#E0E0E0';
+export const CARD_BORDER = '#E8EBF7';
+export const SURFACE_COLOR = '#F4F6FA';
 export const WHITE = '#FFFFFF';
 export const BLACK = '#000000';
 
