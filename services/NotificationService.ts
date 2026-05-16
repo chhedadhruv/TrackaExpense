@@ -119,19 +119,23 @@ class NotificationService {
 
   async requestPermission(): Promise<void> {
     if (Platform.OS === 'android') {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
-        {
-          title: 'Notification Permission',
-          message:
-            'TrackaExpense needs notification permission to send you updates about splits and reminders.',
-          buttonNeutral: 'Ask Me Later',
-          buttonNegative: 'Cancel',
-          buttonPositive: 'OK',
-        },
-      );
-      if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-        throw new Error('Notification permission denied');
+      try {
+        const permission = PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS;
+        if (permission) {
+          const alreadyGranted = await PermissionsAndroid.check(permission);
+          if (!alreadyGranted) {
+            await PermissionsAndroid.request(permission, {
+              title: 'Notification Permission',
+              message:
+                'TrackaExpense needs notification permission to send you updates about splits and reminders.',
+              buttonNeutral: 'Ask Me Later',
+              buttonNegative: 'Cancel',
+              buttonPositive: 'OK',
+            });
+          }
+        }
+      } catch (_) {
+        // Activity not yet attached or permission API unavailable — skip
       }
     }
     const authStatus = await messaging().requestPermission();
