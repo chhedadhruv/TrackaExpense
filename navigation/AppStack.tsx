@@ -31,15 +31,15 @@ import ContactUsScreen from '../screens/ContactUsScreen';
 import SavingsScreen from '../screens/SavingsScreen';
 import SavingsHistoryScreen from '../screens/SavingsHistoryScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
-import {PRIMARY_COLOR} from '../src/constants/theme';
+import {PRIMARY_COLOR, HEADER_BG, BORDER_COLOR, TEXT_PRIMARY} from '../src/constants/theme';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const headerStyle = {
-  backgroundColor: '#F5F5F5',
+  backgroundColor: HEADER_BG,
   borderBottomWidth: 1,
-  borderBottomColor: '#ccc',
+  borderBottomColor: BORDER_COLOR,
   elevation: 2,
   shadowColor: '#000',
   shadowOffset: {width: 0, height: 2},
@@ -50,24 +50,25 @@ const headerStyle = {
 const headerTitleStyle = {
   fontFamily: 'Kufam-SemiBoldItalic',
   fontSize: 18,
-  color: '#333',
+  color: TEXT_PRIMARY,
 };
 
 interface ScreenConfig {
   name: string;
   component: React.ComponentType<any>;
   title: string;
+  headerShown?: boolean;
 }
 
 const createStack = (screens: ScreenConfig[]) => (
   <Stack.Navigator>
-    {screens.map(({name, component, title}) => (
+    {screens.map(({name, component, title, headerShown = true}) => (
       <Stack.Screen
         key={name}
         name={name}
         component={component}
         options={{
-          headerShown: true,
+          headerShown,
           headerTitle: title,
           headerTitleAlign: 'center',
           headerStyle,
@@ -80,7 +81,7 @@ const createStack = (screens: ScreenConfig[]) => (
 
 const HomeStack = () =>
   createStack([
-    {name: 'Home', component: HomeScreen, title: 'Home'},
+    {name: 'Home', component: HomeScreen, title: 'Home', headerShown: false},
     {name: 'Transaction', component: TransactionScreen, title: 'Transactions'},
     {name: 'TransactionDetail', component: TransactionDetailScreen, title: 'Transaction Details'},
     {name: 'EditTransaction', component: EditTransactionScreen, title: 'Edit Transaction'},
@@ -91,7 +92,7 @@ const HomeStack = () =>
 
 const ProfileStack = () =>
   createStack([
-    {name: 'Profile', component: ProfileScreen, title: 'Profile'},
+    {name: 'Profile', component: ProfileScreen, title: 'Profile', headerShown: false},
     {name: 'EditProfile', component: EditProfileScreen, title: 'Edit Profile'},
     {name: 'ContactUs', component: ContactUsScreen, title: 'Contact Us'},
     {name: 'PrivacyPolicy', component: PrivacyPolicyScreen, title: 'Privacy Policy'},
@@ -99,13 +100,13 @@ const ProfileStack = () =>
 
 const SavingsStack = () =>
   createStack([
-    {name: 'Savings', component: SavingsScreen, title: 'Savings'},
+    {name: 'Savings', component: SavingsScreen, title: 'Savings', headerShown: false},
     {name: 'SavingsHistory', component: SavingsHistoryScreen, title: 'Savings History'},
   ]);
 
 const StatisticStack = () =>
   createStack([
-    {name: 'Statistic', component: StatisticScreen, title: 'Statistics'},
+    {name: 'Statistic', component: StatisticScreen, title: 'Statistics', headerShown: false},
     {name: 'TransactionDetail', component: TransactionDetailScreen, title: 'Transaction Details'},
     {name: 'EditTransaction', component: EditTransactionScreen, title: 'Edit Transaction'},
     {name: 'Image', component: ImageScreen, title: ''},
@@ -113,7 +114,7 @@ const StatisticStack = () =>
 
 const SplitStack = () =>
   createStack([
-    {name: 'Split', component: SplitScreen, title: 'Split Bills'},
+    {name: 'Split', component: SplitScreen, title: 'Split Bills', headerShown: false},
     {name: 'SplitGroupDetail', component: SplitGroupDetailScreen, title: 'Group Details'},
     {name: 'CreateSplit', component: CreateSplitScreen, title: 'Create Split'},
     {name: 'SplitDetail', component: SplitDetailScreen, title: 'Split Details'},
@@ -127,7 +128,7 @@ const SplitStack = () =>
   ]);
 
 const AppStack = () => (
-  <Tab.Navigator screenOptions={{activeTintColor: '#2e64e5'} as any}>
+  <Tab.Navigator screenOptions={{activeTintColor: PRIMARY_COLOR} as any}>
     <Tab.Screen
       name="Home"
       component={HomeStack}

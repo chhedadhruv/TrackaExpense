@@ -17,6 +17,7 @@ export const CARD_BORDER = '#E8EBF7';
 export const SURFACE_COLOR = '#F4F6FA';
 export const WHITE = '#FFFFFF';
 export const BLACK = '#000000';
+export const HEADER_BG = '#F5F5F5';
 
 export const FONT = {
   regular: 'Lato-Regular',

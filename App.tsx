@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Platform, StatusBar, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { HEADER_BG } from './src/constants/theme';
 import codePush from '@revopush/react-native-code-push';
 import { REVOPUSH_IOS_DEPLOYMENT_KEY, REVOPUSH_ANDROID_DEPLOYMENT_KEY } from '@env';
 import Providers from './navigation';
@@ -28,21 +29,23 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="#F5F5F5"
-        translucent={false}
-      />
-      <Providers />
-    </SafeAreaView>
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor={HEADER_BG}
+          translucent={false}
+        />
+        <Providers />
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: HEADER_BG,
   },
 });
 
