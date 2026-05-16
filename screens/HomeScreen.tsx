@@ -372,7 +372,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
               ))
             ) : (
               <View style={styles.emptyState}>
-                <MaterialCommunityIcons name="receipt-text-outline" size={48} color="#CBD3EE" />
+                <MaterialCommunityIcons name="note-text-outline" size={48} color="#CBD3EE" />
                 {transactions.length === 0 ? (
                   <>
                     <Text style={styles.emptyStateText}>No transactions yet</Text>

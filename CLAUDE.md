@@ -4,27 +4,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
+**Package manager: yarn** — use `yarn add` (not `npm install`) when installing packages.
+
 ```bash
 # Run on device/simulator
-npm run android          # Android debug
-npm run ios              # iOS debug
-npm run android:release  # Android release
-npm run ios:release      # iOS release
+yarn android          # Android debug
+yarn ios              # iOS debug
+yarn android:release  # Android release
+yarn ios:release      # iOS release
 
 # Metro bundler
-npm start                # Start Metro
-npm run start:reset      # Start Metro with cache reset
+yarn start                # Start Metro
+yarn start:reset          # Start Metro with cache reset
 
 # Code quality
-npm run lint             # ESLint
-npm test                 # Jest (no tests currently written)
+yarn lint             # ESLint
+yarn test             # Jest (no tests currently written)
 
 # Android builds
-npm run build:android         # APK
-npm run build:android:bundle  # AAB for Play Store
-npm run build:clean           # Clean Gradle build
+yarn build:android         # APK
+yarn build:android:bundle  # AAB for Play Store
+yarn build:clean           # Clean Gradle build
 
-# iOS setup (after npm install)
+# iOS setup (after yarn install)
 cd ios && pod install
 ```
 

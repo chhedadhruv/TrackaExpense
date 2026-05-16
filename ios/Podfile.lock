@@ -2656,7 +2656,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - react-native-safe-area-context (5.6.1):
+  - react-native-safe-area-context (5.0.0):
     - React-Core
   - React-nativeconfig (0.77.0)
   - React-NativeModulesApple (0.77.0):
@@ -2948,7 +2948,7 @@ PODS:
     - React-perflogger (= 0.77.0)
     - React-utils (= 0.77.0)
   - RecaptchaInterop (101.0.0)
-  - RNAppleAuthentication (2.4.1):
+  - RNAppleAuthentication (2.5.1):
     - React-Core
   - RNCAsyncStorage (2.2.0):
     - React-Core
@@ -2973,6 +2973,8 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - RNDeviceInfo (10.3.0):
+    - React-Core
   - RNFBApp (21.14.0):
     - Firebase/CoreOnly (= 11.11.0)
     - React-Core
@@ -2995,7 +2997,7 @@ PODS:
     - RNFBApp
   - RNFS (2.20.0):
     - React-Core
-  - RNGestureHandler (2.28.0):
+  - RNGestureHandler (2.22.1):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -3016,7 +3018,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNGoogleSignin (16.0.0):
+  - RNGoogleSignin (16.1.2):
     - GoogleSignIn (~> 9.0)
     - React-Core
   - RNNotifee (9.1.8):
@@ -3024,7 +3026,7 @@ PODS:
     - RNNotifee/NotifeeCore (= 9.1.8)
   - RNNotifee/NotifeeCore (9.1.8):
     - React-Core
-  - RNScreens (4.16.0):
+  - RNScreens (4.3.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -3046,7 +3048,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNShare (12.2.0):
+  - RNShare (12.3.1):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -3169,6 +3171,7 @@ DEPENDENCIES:
   - "RNAppleAuthentication (from `../node_modules/@invertase/react-native-apple-authentication`)"
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - "RNCMaskedView (from `../node_modules/@react-native-masked-view/masked-view`)"
+  - RNDeviceInfo (from `../node_modules/react-native-device-info`)
   - "RNFBApp (from `../node_modules/@react-native-firebase/app`)"
   - "RNFBAuth (from `../node_modules/@react-native-firebase/auth`)"
   - "RNFBFirestore (from `../node_modules/@react-native-firebase/firestore`)"
@@ -3365,6 +3368,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-async-storage/async-storage"
   RNCMaskedView:
     :path: "../node_modules/@react-native-masked-view/masked-view"
+  RNDeviceInfo:
+    :path: "../node_modules/react-native-device-info"
   RNFBApp:
     :path: "../node_modules/@react-native-firebase/app"
   RNFBAuth:
@@ -3463,7 +3468,7 @@ SPEC CHECKSUMS:
   React-Mapbuffer: bbd3be71ef32e8198ac0f78b841662103e032ffe
   React-microtasksnativemodule: 8e65fc37744388153b9bca94552d04955d852058
   react-native-image-picker: fbf48a88c16c4e4fa625a4171ad935bbec97dd30
-  react-native-safe-area-context: 2243039f43d10cb1ea30ec5ac57fc6d1448413f4
+  react-native-safe-area-context: 314537f8fca6fe2c06bd53fc8905efa9e6aaaf59
   React-nativeconfig: 334c9961d74ddd3bc203afb92ee574ed01c7c755
   React-NativeModulesApple: bf996c9e3b86e579e6e8635633b721c165a60b2c
   React-perflogger: 721172bda31a65ce7b7a0c3bf3de96f12ef6f45d
@@ -3494,20 +3499,21 @@ SPEC CHECKSUMS:
   ReactCodegen: 58a974a1a86362975fd49596480c5f0f17ee06a2
   ReactCommon: e686c5766f0ebe5293be5a3957b833645cdac8ad
   RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
-  RNAppleAuthentication: c3dddf5918126c9aae85dc2e2ce9fb87835e9e04
+  RNAppleAuthentication: a89c9804592b38ed4ab11f0aee68d05ba12ad432
   RNCAsyncStorage: b44e8a4e798c3e1f56bffccd0f591f674fb9198f
   RNCMaskedView: aef76c02bdf36e6baa5255b36672a640df938964
+  RNDeviceInfo: 32413a6eefa0de704834b9d2afe5be596b44a66d
   RNFBApp: a448037d2df74af9d374a0b765be12ff1e844dc0
   RNFBAuth: 006c81cb97cd6597a36f14ec332b229626283823
   RNFBFirestore: 03f3648f47529a14b54e9b427c722898c9046917
   RNFBMessaging: 0f0498a95c605e3afcf13ac5f349d0b201ea65f6
   RNFBStorage: f058204f5e684a95797ac78e2d3918fc3dd07b17
   RNFS: 89de7d7f4c0f6bafa05343c578f61118c8282ed8
-  RNGestureHandler: deab6e613dc2d73d0fba468d891e9351037bb9dc
-  RNGoogleSignin: 2792145770d2bbd5656bf91c5c83db4cadb5ebe0
+  RNGestureHandler: 6545b46eb0acadcbeea25e3d9f82f759ab70107e
+  RNGoogleSignin: b11289afb825c32c250272e4d92446f71091814e
   RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
-  RNScreens: 1d84139259b7999ee93e00764556a9042d43d0b5
-  RNShare: a83e617f2a1151bdd4ee124130392b95e38b8c0d
+  RNScreens: 489d91568f0a81299179a2fffd5e5ec254d741ae
+  RNShare: b963ddd47d0ad812e78fb3b0b32e3bcaf1e22d32
   RNSVG: 9c5d38d0f7a6aead4fb831d678768947473ce161
   RNVectorIcons: 9220340395b3a94edad59be7d507ca0aa443e6fb
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
