@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform} from 'react-native';
-import {Card} from 'react-native-paper';
+import {Card, Switch} from 'react-native-paper';
 import UserAvatar from 'react-native-user-avatar';
 import firestore from '@react-native-firebase/firestore';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -43,6 +43,7 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
   const [selectedBorrower, setSelectedBorrower] = useState<GroupMember | null>(null);
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  const [includeInTransactions, setIncludeInTransactions] = useState(true);
 
   useEffect(() => {
     const currentUserEmail = auth().currentUser?.email;
@@ -145,25 +146,27 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
         await firestore().collection('groups').doc(group.id).collection('splitHistory').add(historyPayload);
       } catch (_) {}
 
-      try {
-        const todayStr = new Date().toISOString().split('T')[0];
-        const txCol = firestore().collection('users').doc(currentUser.uid).collection('transactions');
-        if (selectedBorrower.email === currentUserEmail) {
-          await txCol.add({
-            title: note.trim() || `Settlement: ${group.name}`, type: 'expense',
-            category: 'Settlement', amount: String(settlementAmount), date: todayStr,
-            source: 'split', splitId: splitRef.id, groupId: group.id, groupName: group.name,
-            splitRole: 'settlement_payer', createdAt: firestore.FieldValue.serverTimestamp(),
-          });
-        } else if (selectedLender.email === currentUserEmail) {
-          await txCol.add({
-            title: note.trim() || `Settlement: ${group.name}`, type: 'income',
-            category: 'Settlement', amount: String(settlementAmount), date: todayStr,
-            source: 'split', splitId: splitRef.id, groupId: group.id, groupName: group.name,
-            splitRole: 'settlement_receiver', createdAt: firestore.FieldValue.serverTimestamp(),
-          });
-        }
-      } catch (_) {}
+      if (includeInTransactions) {
+        try {
+          const todayStr = new Date().toISOString().split('T')[0];
+          const txCol = firestore().collection('users').doc(currentUser.uid).collection('transactions');
+          if (selectedBorrower.email === currentUserEmail) {
+            await txCol.add({
+              title: note.trim() || `Settlement: ${group.name}`, type: 'expense',
+              category: 'Settlement', amount: String(settlementAmount), date: todayStr,
+              source: 'split', splitId: splitRef.id, groupId: group.id, groupName: group.name,
+              splitRole: 'settlement_payer', createdAt: firestore.FieldValue.serverTimestamp(),
+            });
+          } else if (selectedLender.email === currentUserEmail) {
+            await txCol.add({
+              title: note.trim() || `Settlement: ${group.name}`, type: 'income',
+              category: 'Settlement', amount: String(settlementAmount), date: todayStr,
+              source: 'split', splitId: splitRef.id, groupId: group.id, groupName: group.name,
+              splitRole: 'settlement_receiver', createdAt: firestore.FieldValue.serverTimestamp(),
+            });
+          }
+        } catch (_) {}
+      }
 
       if (selectedBorrower.email === currentUserEmail) {
         await firestore().runTransaction(async tx => {
@@ -306,6 +309,21 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
               <Text style={styles.characterCount}>{note.length}/200</Text>
             </View>
           </Card>
+          <Card style={[styles.sectionCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
+            <View style={styles.cardContent}>
+              <View style={styles.toggleRow}>
+                <View>
+                  <Text style={styles.toggleLabel}>Add to my transactions</Text>
+                  <Text style={styles.toggleSubtext}>Record your share as a personal expense</Text>
+                </View>
+                <Switch
+                  value={includeInTransactions}
+                  onValueChange={setIncludeInTransactions}
+                  color={PRIMARY_COLOR}
+                />
+              </View>
+            </View>
+          </Card>
           {selectedLender && selectedBorrower && amount ? (
             <Card style={[styles.sectionCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
               <View style={styles.cardContent}>
@@ -378,4 +396,7 @@ const styles = StyleSheet.create({
   youPayBadge: {alignSelf: 'flex-start', backgroundColor: EXPENSE_COLOR + '20', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2},
   youPayText: {fontSize: 11, color: EXPENSE_COLOR, fontFamily: 'Lato-Bold', fontWeight: '700'},
   cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
+  toggleRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
+  toggleLabel: {fontSize: 14, fontWeight: '600', color: '#2C2C2C', fontFamily: 'Lato-Bold'},
+  toggleSubtext: {fontSize: 12, color: '#888', fontFamily: 'Lato-Regular', marginTop: 2},
 });
