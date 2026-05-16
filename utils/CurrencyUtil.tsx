@@ -103,8 +103,8 @@ export const CurrencyProvider = ({children}: {children: React.ReactNode}) => {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     });
-    if (showSymbol && showCode) return `${currency.symbol} ${formattedNumber} ${currency.code}`;
-    if (showSymbol) return `${currency.symbol} ${formattedNumber}`;
+    if (showSymbol && showCode) return `${currency.symbol}${formattedNumber} ${currency.code}`;
+    if (showSymbol) return `${currency.symbol}${formattedNumber}`;
     if (showCode) return `${formattedNumber} ${currency.code}`;
     return formattedNumber;
   };
@@ -134,5 +134,5 @@ export const formatCurrency = (amount: number | string, currencyCode = 'INR'): s
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   });
-  return `${cur.symbol} ${formattedNumber}`;
+  return `${cur.symbol}${formattedNumber}`;
 };
