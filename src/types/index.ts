@@ -38,8 +38,12 @@ export interface TransactionDocument {
   /** Alias used by some legacy writes */
   image?: string | null;
   createdAt: FirebaseFirestoreTypes.Timestamp;
+  /** Firestore document ID (also available as `id` after client-side mapping) */
+  id?: string;
   /** 'split' when this transaction was created via a split settlement */
   source?: string;
+  /** Role of the current user in a split transaction */
+  splitRole?: 'payer' | 'participant' | 'settled';
 }
 
 // ─── Groups & Splits ──────────────────────────────────────────────────────

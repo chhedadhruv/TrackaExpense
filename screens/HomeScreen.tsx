@@ -1,15 +1,18 @@
-import {View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform, Modal, TextInput, Image, KeyboardAvoidingView} from 'react-native';
+import {View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform, Modal, TextInput, Image, KeyboardAvoidingView, RefreshControl} from 'react-native';
 import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {ActivityIndicator, Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
-import {useFocusEffect} from '@react-navigation/native';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {getCategoryIcon} from '../utils/CategoryData';
-import {PRIMARY_COLOR, BACKGROUND_COLOR, INCOME_COLOR, EXPENSE_COLOR} from '../src/constants/theme';
+import {
+  PRIMARY_COLOR, BACKGROUND_COLOR, INCOME_COLOR, EXPENSE_COLOR,
+  FONT, SPACING, WHITE, TEXT_SECONDARY, TEXT_DARK, TEXT_MUTED,
+  TEXT_PLACEHOLDER, CARD_BORDER, SURFACE_COLOR,
+} from '../src/constants/theme';
 import {formatInputAmount} from '../src/utils/formatters';
 import type {TransactionDocument, UserDocument} from '../src/types';
 
@@ -25,6 +28,8 @@ const TIME_RANGES: {key: TimeRange; label: string; icon: string}[] = [
   {key: 'custom', label: 'Custom Range', icon: 'calendar-range'},
 ];
 
+const RECENT_LIMIT = 5;
+
 const HomeScreen = ({navigation}: {navigation: any}) => {
   const {formatAmount} = useCurrency();
   const [userData, setUserData] = useState<UserDocument | null>(null);
@@ -32,8 +37,10 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
   const [totalIncome, setTotalIncome] = useState(0);
   const [transactions, setTransactions] = useState<TransactionDocument[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<TransactionDocument[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [userLoading, setUserLoading] = useState(true);
+  const [txLoading, setTxLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
   const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
@@ -42,10 +49,62 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
   const [editBalanceVisible, setEditBalanceVisible] = useState(false);
   const [newBalanceInput, setNewBalanceInput] = useState('');
   const [balanceSaving, setBalanceSaving] = useState(false);
+  const [balanceSaved, setBalanceSaved] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const currentUser = auth().currentUser!;
-  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current); }, []);
+  const uid = currentUser.uid;
+  const saveSuccessTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => { if (saveSuccessTimeout.current) clearTimeout(saveSuccessTimeout.current); }, []);
+
+  // Realtime listener for user data
+  useEffect(() => {
+    setUserLoading(true);
+    const unsub = firestore()
+      .collection('users')
+      .doc(uid)
+      .onSnapshot(
+        doc => {
+          if (doc.exists) {
+            setUserData(doc.data() as UserDocument);
+            setError(null);
+          }
+          setUserLoading(false);
+        },
+        _ => {
+          setError('Error fetching user data. Please check your connection and try again.');
+          setUserLoading(false);
+        },
+      );
+    return () => unsub();
+  }, [retryKey, uid]);
+
+  // Realtime listener for transactions
+  useEffect(() => {
+    setTxLoading(true);
+    const unsub = firestore()
+      .collection('users')
+      .doc(uid)
+      .collection('transactions')
+      .orderBy('createdAt', 'desc')
+      .onSnapshot(
+        snapshot => {
+          const arr = snapshot.docs.map(doc => ({
+            id: doc.id,
+            userId: uid,
+            ...doc.data(),
+          })) as TransactionDocument[];
+          setTransactions(arr);
+          setTxLoading(false);
+        },
+        _ => {
+          setError('Error fetching transactions. Please check your connection.');
+          setTxLoading(false);
+        },
+      );
+    return () => unsub();
+  }, [retryKey, uid]);
 
   const filterByRange = useCallback(
     (txns: TransactionDocument[], range: TimeRange): TransactionDocument[] => {
@@ -68,98 +127,42 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
     [customStartDate, customEndDate],
   );
 
-  const fetchTransactions = async () => {
-    try {
-      const snapshot = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('transactions')
-        .get();
-      const arr = snapshot.docs.map(doc => ({
-        id: doc.id,
-        userId: currentUser.uid,
-        ...doc.data(),
-      })) as TransactionDocument[];
-      setTransactions(arr.sort((a, b) => ((b.createdAt as any)?.seconds ?? 0) - ((a.createdAt as any)?.seconds ?? 0)));
-    } catch (_) {
-      setError('Error fetching transactions');
-    }
-  };
-
-  const getUserData = async (retryCount = 0) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const snap = await firestore().collection('users').doc(currentUser.uid).get();
-      if (snap.exists) {
-        setUserData(snap.data() as UserDocument);
-        setLoading(false);
-      } else if (retryCount < 2) {
-        retryTimeoutRef.current = setTimeout(() => getUserData(retryCount + 1), 2000 * (retryCount + 1));
-      } else {
-        setError('User data not found. Please try signing in again.');
-        setLoading(false);
-      }
-    } catch (_) {
-      if (retryCount < 1) {
-        retryTimeoutRef.current = setTimeout(() => getUserData(retryCount + 1), 2000);
-      } else {
-        setError('Error fetching user data. Please check your connection and try again.');
-        setLoading(false);
-      }
-    }
-  };
-
   useEffect(() => {
-    const t = setTimeout(() => { getUserData(); fetchTransactions(); }, 1000);
-    return () => clearTimeout(t);
-  }, []);
-
-  useEffect(() => {
-    if (!currentUser?.uid) return;
-    const unsub = firestore()
-      .collection('users')
-      .doc(currentUser.uid)
-      .onSnapshot(
-        doc => { if (doc.exists) { setUserData(doc.data() as UserDocument); setError(null); setLoading(false); } },
-        _ => { setError('Error fetching user data. Please check your connection and try again.'); setLoading(false); },
-      );
-    return () => unsub();
-  }, []);
-
-  useFocusEffect(useCallback(() => { getUserData(); fetchTransactions(); }, []));
-
-  useEffect(() => {
-    const nav = navigation.addListener('focus', () => { getUserData(); fetchTransactions(); });
-    return nav;
-  }, [navigation]);
-
-  useEffect(() => {
-    const filtered = filterByRange(transactions, timeRange);
-    setFilteredTransactions(filtered);
+    setFilteredTransactions(filterByRange(transactions, timeRange));
   }, [transactions, timeRange, filterByRange]);
 
   useEffect(() => {
     const income = filteredTransactions.reduce((sum, t) =>
-      t.type === 'income' && (t as any).source !== 'split' ? sum + (parseFloat(t.amount as any) || 0) : sum, 0);
+      t.type === 'income' && t.source !== 'split' ? sum + (parseFloat(t.amount as any) || 0) : sum, 0);
     const expense = filteredTransactions.reduce((sum, t) =>
-      t.type === 'expense' && (t as any).source !== 'split' ? sum + (parseFloat(t.amount as any) || 0) : sum, 0);
+      t.type === 'expense' && t.source !== 'split' ? sum + (parseFloat(t.amount as any) || 0) : sum, 0);
     setTotalIncome(income);
     setTotalExpense(expense);
   }, [filteredTransactions]);
+
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 800);
+  }, []);
 
   const handleSaveBalance = async () => {
     const parsed = parseFloat(newBalanceInput);
     if (isNaN(parsed) || parsed > 999999999) return;
     setBalanceSaving(true);
     try {
-      await firestore().collection('users').doc(currentUser.uid).update({balance: parsed});
-      setEditBalanceVisible(false);
+      await firestore().collection('users').doc(uid).update({balance: parsed});
+      setBalanceSaved(true);
+      saveSuccessTimeout.current = setTimeout(() => {
+        setBalanceSaved(false);
+        setEditBalanceVisible(false);
+      }, 800);
     } catch (_) {
     } finally {
       setBalanceSaving(false);
     }
   };
+
+  const loading = userLoading || txLoading;
 
   if (loading) {
     return (
@@ -174,7 +177,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
       <View style={styles.errorContainer}>
         <MaterialCommunityIcons name="alert-circle-outline" size={48} color={EXPENSE_COLOR} />
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => getUserData()}>
+        <TouchableOpacity style={styles.retryButton} onPress={() => { setError(null); setRetryKey(k => k + 1); }}>
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -182,10 +185,16 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
   }
 
   const balance = userData?.balance ?? 0;
+  const recentTransactions = filteredTransactions.slice(0, RECENT_LIMIT);
+  const hasMore = filteredTransactions.length > RECENT_LIMIT;
+  const customRangeIncomplete = timeRange === 'custom' && (!customStartDate || !customEndDate);
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        style={styles.scrollContainer}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={PRIMARY_COLOR} />}>
         {/* Hero */}
         <View style={styles.heroSection}>
           <View style={styles.heroTopRow}>
@@ -205,10 +214,10 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
             <Text style={styles.balanceHeroLabel}>Total Balance</Text>
             <View style={styles.balanceHeroRow}>
               <Text style={[styles.balanceHeroAmount, {color: balance >= 0 ? INCOME_COLOR : EXPENSE_COLOR}]}>
-                {balance < 0 ? '- ' : ''}{formatAmount(Math.abs(balance))}
+                {balance < 0 ? `-${formatAmount(Math.abs(balance))}` : formatAmount(balance)}
               </Text>
               <TouchableOpacity
-                onPress={() => { setNewBalanceInput(String(balance)); setEditBalanceVisible(true); }}
+                onPress={() => { setBalanceSaved(false); setNewBalanceInput(String(balance)); setEditBalanceVisible(true); }}
                 style={styles.balanceEditBtn}
                 hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
                 <MaterialCommunityIcons name="pencil-outline" size={18} color={PRIMARY_COLOR} />
@@ -222,7 +231,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
           <Card style={[styles.summaryCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
             <View style={styles.cardContent}>
               <View style={styles.cardHeader}>
-                <View style={styles.cardIcon}><MaterialCommunityIcons name="arrow-down" size={20} color={INCOME_COLOR} /></View>
+                <View style={styles.cardIcon}><MaterialCommunityIcons name="arrow-down-bold" size={20} color={INCOME_COLOR} /></View>
                 <Text style={styles.cardTitle}>Total Income</Text>
               </View>
               <Text style={[styles.cardAmount, {color: INCOME_COLOR}]}>{formatAmount(totalIncome)}</Text>
@@ -231,7 +240,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
           <Card style={[styles.summaryCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
             <View style={styles.cardContent}>
               <View style={styles.cardHeader}>
-                <View style={styles.cardIcon}><MaterialCommunityIcons name="arrow-up" size={20} color={EXPENSE_COLOR} /></View>
+                <View style={styles.cardIcon}><MaterialCommunityIcons name="arrow-up-bold" size={20} color={EXPENSE_COLOR} /></View>
                 <Text style={styles.cardTitle}>Total Expense</Text>
               </View>
               <Text style={[styles.cardAmount, {color: EXPENSE_COLOR}]}>{formatAmount(totalExpense)}</Text>
@@ -246,7 +255,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
               const active = timeRange === key;
               return (
                 <TouchableOpacity key={key} onPress={() => setTimeRange(key)} style={[styles.filterButton, active && styles.filterButtonActive]}>
-                  <MaterialCommunityIcons name={icon} size={16} color={active ? '#FFFFFF' : PRIMARY_COLOR} />
+                  <MaterialCommunityIcons name={icon} size={16} color={active ? WHITE : PRIMARY_COLOR} />
                   <Text style={active ? styles.filterButtonTextActive : styles.filterButtonText}>{label}</Text>
                 </TouchableOpacity>
               );
@@ -276,6 +285,9 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
                 </View>
               </TouchableOpacity>
             </View>
+            {customRangeIncomplete && (
+              <Text style={styles.customRangeHint}>Select both dates to filter transactions</Text>
+            )}
           </View>
         )}
 
@@ -301,11 +313,11 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
           <Text style={styles.quickActionsTitle}>Quick Actions</Text>
           <View style={styles.quickActionsContainer}>
             <TouchableOpacity style={[styles.quickActionButton, styles.addIncomeButton]} onPress={() => navigation.navigate('AddIncome')}>
-              <MaterialCommunityIcons name="cash-plus" size={20} color="#FFFFFF" />
+              <MaterialCommunityIcons name="cash-plus" size={20} color={WHITE} />
               <Text style={styles.quickActionText}>Add Income</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.quickActionButton, styles.addExpenseButton]} onPress={() => navigation.navigate('AddExpense')}>
-              <MaterialCommunityIcons name="cash-minus" size={20} color="#FFFFFF" />
+              <MaterialCommunityIcons name="cash-minus" size={20} color={WHITE} />
               <Text style={styles.quickActionText}>Add Expense</Text>
             </TouchableOpacity>
           </View>
@@ -317,7 +329,9 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
             <View>
               <Text style={styles.transactionsHeaderText}>Recent Transactions</Text>
               <Text style={styles.transactionsSubHeaderText}>
-                {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}
+                {hasMore
+                  ? `${RECENT_LIMIT} of ${filteredTransactions.length}`
+                  : `${filteredTransactions.length} transaction${filteredTransactions.length !== 1 ? 's' : ''}`}
               </Text>
             </View>
             <TouchableOpacity onPress={() => navigation.navigate('Transaction')} style={styles.seeAllButton}>
@@ -326,8 +340,8 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
             </TouchableOpacity>
           </View>
           <View style={styles.transactionsList}>
-            {filteredTransactions.length > 0 ? (
-              filteredTransactions.map(transaction => (
+            {recentTransactions.length > 0 ? (
+              recentTransactions.map(transaction => (
                 <Card
                   key={transaction.id}
                   style={[styles.transactionsCard, Platform.OS === 'android' && styles.cardAndroid]}
@@ -338,9 +352,9 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
                       <View style={styles.transactionsCardIcon}>
                         <MaterialCommunityIcons
                           name={
-                            (transaction as any).source === 'split' && transaction.category === 'Settlement'
+                            transaction.source === 'split' && transaction.category === 'Settlement'
                               ? 'handshake'
-                              : (transaction as any).source === 'split'
+                              : transaction.source === 'split'
                               ? 'account-group'
                               : getCategoryIcon(transaction.category)
                           }
@@ -348,16 +362,16 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
                           color={PRIMARY_COLOR}
                         />
                       </View>
-                      <View style={{flexDirection: 'column', marginLeft: 5}}>
+                      <View style={styles.transactionsCardMeta}>
                         <Text style={styles.transactionsCardTitle} numberOfLines={1}>
-                          {transaction.title.length > 25 ? transaction.title.slice(0, 25) + '...' : transaction.title}
+                          {transaction.title}
                         </Text>
                         <View style={styles.transactionsCardDateAndTime}>
                           <Text style={styles.transactionsCardDate}>{transaction.date}</Text>
                         </View>
-                        {(transaction as any).source === 'split' && (
+                        {transaction.source === 'split' && (
                           <Text style={styles.splitRoleLabel}>
-                            {(transaction as any).splitRole === 'payer' ? 'Given' : (transaction as any).splitRole === 'participant' ? 'Taken' : 'Settled'}
+                            {transaction.splitRole === 'payer' ? 'Given' : transaction.splitRole === 'participant' ? 'Taken' : 'Settled'}
                           </Text>
                         )}
                       </View>
@@ -403,15 +417,18 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
                 onChangeText={text => setNewBalanceInput(text.replace(/,/g, ''))}
                 keyboardType="numeric"
                 placeholder="Enter balance"
-                placeholderTextColor="#999"
+                placeholderTextColor={TEXT_PLACEHOLDER}
                 autoFocus
               />
               <View style={styles.modalActions}>
                 <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setEditBalanceVisible(false)}>
                   <Text style={styles.modalCancelText}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.modalSaveBtn} onPress={handleSaveBalance} disabled={balanceSaving}>
-                  <Text style={styles.modalSaveText}>{balanceSaving ? 'Saving...' : 'Save'}</Text>
+                <TouchableOpacity
+                  style={[styles.modalSaveBtn, balanceSaved && styles.modalSaveBtnSuccess]}
+                  onPress={handleSaveBalance}
+                  disabled={balanceSaving || balanceSaved}>
+                  <Text style={styles.modalSaveText}>{balanceSaved ? 'Saved!' : balanceSaving ? 'Saving...' : 'Save'}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -425,87 +442,144 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
 export default HomeScreen;
 
 const styles = StyleSheet.create({
-  splitRoleLabel: {fontSize: 10, color: PRIMARY_COLOR, fontWeight: '600', marginTop: 1},
+  splitRoleLabel: {fontSize: 10, color: PRIMARY_COLOR, fontWeight: '600', marginTop: 1, fontFamily: FONT.bold},
   loadingContainer: {flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BACKGROUND_COLOR},
   container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
   scrollContainer: {flex: 1},
   heroSection: {
-    backgroundColor: PRIMARY_COLOR, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 28,
-    borderBottomLeftRadius: 28, borderBottomRightRadius: 28, marginBottom: 20,
+    backgroundColor: PRIMARY_COLOR,
+    paddingHorizontal: SPACING.md + 4,
+    paddingTop: SPACING.md + 4,
+    paddingBottom: SPACING.lg + 4,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    marginBottom: SPACING.md + 4,
   },
-  heroTopRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20},
-  heroGreeting: {fontSize: 24, fontWeight: 'bold', color: '#FFFFFF', fontFamily: 'Kufam-SemiBoldItalic'},
-  heroSubGreeting: {fontSize: 14, color: 'rgba(255,255,255,0.75)', marginTop: 4, fontFamily: 'Lato-Regular'},
+  heroTopRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md + 4},
+  heroGreeting: {fontSize: 24, fontWeight: 'bold', color: WHITE, fontFamily: FONT.heading},
+  heroSubGreeting: {fontSize: 14, color: 'rgba(255,255,255,0.75)', marginTop: SPACING.xs, fontFamily: FONT.regular},
   heroAvatar: {width: 46, height: 46, borderRadius: 23, borderWidth: 2, borderColor: 'rgba(255,255,255,0.6)'},
-  heroAvatarInitials: {width: 46, height: 46, borderRadius: 23, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.5)'},
-  heroAvatarInitialsText: {fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', fontFamily: 'Lato-Bold'},
-  balanceHeroCard: {backgroundColor: '#FFFFFF', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 16},
-  balanceHeroLabel: {fontSize: 13, color: '#666', fontFamily: 'Lato-Regular', marginBottom: 6},
+  heroAvatarInitials: {
+    width: 46, height: 46, borderRadius: 23,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.5)',
+  },
+  heroAvatarInitialsText: {fontSize: 20, fontWeight: 'bold', color: WHITE, fontFamily: FONT.bold},
+  balanceHeroCard: {backgroundColor: WHITE, borderRadius: 16, paddingHorizontal: SPACING.md + 4, paddingVertical: SPACING.md},
+  balanceHeroLabel: {fontSize: 13, color: TEXT_SECONDARY, fontFamily: FONT.regular, marginBottom: SPACING.sm - 2},
   balanceHeroRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
-  balanceHeroAmount: {fontSize: 30, fontWeight: 'bold', fontFamily: 'Lato-Bold'},
-  balanceEditBtn: {backgroundColor: '#F4F6FA', borderRadius: 8, padding: 8},
-  modalOverlay: {flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20},
-  modalCard: {backgroundColor: '#FFFFFF', borderRadius: 20, padding: 24, width: '100%'},
-  modalTitle: {fontSize: 20, fontWeight: 'bold', color: '#2C2C2C', fontFamily: 'Kufam-SemiBoldItalic', marginBottom: 4},
-  modalSubtitle: {fontSize: 14, color: '#888', fontFamily: 'Lato-Regular', marginBottom: 20},
-  modalInput: {borderWidth: 1, borderColor: '#E8EBF7', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, fontSize: 18, color: '#2C2C2C', fontFamily: 'Lato-Regular', backgroundColor: '#F4F6FA', marginBottom: 20},
+  balanceHeroAmount: {fontSize: 30, fontWeight: 'bold', fontFamily: FONT.bold},
+  balanceEditBtn: {backgroundColor: SURFACE_COLOR, borderRadius: 8, padding: SPACING.sm},
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center', alignItems: 'center',
+    paddingHorizontal: SPACING.md + 4,
+  },
+  modalCard: {backgroundColor: WHITE, borderRadius: 20, padding: SPACING.lg, width: '100%'},
+  modalTitle: {fontSize: 20, fontWeight: 'bold', color: TEXT_DARK, fontFamily: FONT.heading, marginBottom: SPACING.xs},
+  modalSubtitle: {fontSize: 14, color: TEXT_MUTED, fontFamily: FONT.regular, marginBottom: SPACING.md + 4},
+  modalInput: {
+    borderWidth: 1, borderColor: CARD_BORDER, borderRadius: 12,
+    paddingHorizontal: SPACING.md, paddingVertical: 12,
+    fontSize: 18, color: TEXT_DARK,
+    fontFamily: FONT.regular, backgroundColor: SURFACE_COLOR,
+    marginBottom: SPACING.md + 4,
+  },
   modalActions: {flexDirection: 'row', justifyContent: 'flex-end', gap: 12},
-  modalCancelBtn: {paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: '#E8EBF7'},
-  modalCancelText: {fontSize: 15, fontWeight: '600', color: '#666', fontFamily: 'Lato-Bold'},
-  modalSaveBtn: {paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10, backgroundColor: PRIMARY_COLOR},
-  modalSaveText: {fontSize: 15, fontWeight: '600', color: '#FFFFFF', fontFamily: 'Lato-Bold'},
-  filterSection: {marginHorizontal: 20, marginBottom: 20},
+  modalCancelBtn: {paddingHorizontal: SPACING.md + 4, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: CARD_BORDER},
+  modalCancelText: {fontSize: 15, fontWeight: '600', color: TEXT_SECONDARY, fontFamily: FONT.bold},
+  modalSaveBtn: {paddingHorizontal: SPACING.lg, paddingVertical: 12, borderRadius: 10, backgroundColor: PRIMARY_COLOR},
+  modalSaveBtnSuccess: {backgroundColor: INCOME_COLOR},
+  modalSaveText: {fontSize: 15, fontWeight: '600', color: WHITE, fontFamily: FONT.bold},
+  filterSection: {marginHorizontal: SPACING.md + 4, marginBottom: SPACING.md + 4},
   filterScrollView: {flexGrow: 0},
-  filterButton: {flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, backgroundColor: '#FFFFFF', marginRight: 10, borderWidth: 1, borderColor: '#E8EBF7'},
+  filterButton: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: SPACING.md, paddingVertical: 10,
+    borderRadius: 20, backgroundColor: WHITE,
+    marginRight: 10, borderWidth: 1, borderColor: CARD_BORDER,
+  },
   filterButtonActive: {backgroundColor: PRIMARY_COLOR, borderColor: PRIMARY_COLOR},
-  filterButtonText: {fontSize: 14, fontWeight: '600', color: PRIMARY_COLOR, marginLeft: 6, fontFamily: 'Lato-Bold'},
-  filterButtonTextActive: {color: '#FFFFFF', marginLeft: 6, fontSize: 14, fontWeight: '600', fontFamily: 'Lato-Bold'},
-  customDateSection: {marginHorizontal: 20, marginBottom: 20, padding: 16, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E8EBF7'},
-  customDateTitle: {fontSize: 14, fontWeight: '600', color: '#2C2C2C', marginBottom: 12, fontFamily: 'Lato-Bold'},
+  filterButtonText: {fontSize: 14, fontWeight: '600', color: PRIMARY_COLOR, marginLeft: SPACING.sm - 2, fontFamily: FONT.bold},
+  filterButtonTextActive: {color: WHITE, marginLeft: SPACING.sm - 2, fontSize: 14, fontWeight: '600', fontFamily: FONT.bold},
+  customDateSection: {
+    marginHorizontal: SPACING.md + 4, marginBottom: SPACING.md + 4,
+    padding: SPACING.md, backgroundColor: WHITE,
+    borderRadius: 16, borderWidth: 1, borderColor: CARD_BORDER,
+  },
+  customDateTitle: {fontSize: 14, fontWeight: '600', color: TEXT_DARK, marginBottom: 12, fontFamily: FONT.bold},
   customDateContainer: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
-  dateInput: {flex: 1, backgroundColor: '#F4F6FA', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#E8EBF7'},
+  customRangeHint: {fontSize: 12, color: TEXT_MUTED, marginTop: SPACING.sm, textAlign: 'center', fontFamily: FONT.regular},
+  dateInput: {flex: 1, backgroundColor: SURFACE_COLOR, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: CARD_BORDER},
   dateInputContent: {flexDirection: 'row', alignItems: 'center'},
-  dateInputText: {fontSize: 14, color: '#2C2C2C', marginLeft: 8, fontFamily: 'Lato-Regular', fontWeight: '500'},
-  dateInputPlaceholder: {color: '#999'},
+  dateInputText: {fontSize: 14, color: TEXT_DARK, marginLeft: SPACING.sm, fontFamily: FONT.regular, fontWeight: '500'},
+  dateInputPlaceholder: {color: TEXT_PLACEHOLDER},
   dateSeparator: {marginHorizontal: 10},
-  dateSeparatorText: {fontSize: 12, color: '#999', fontFamily: 'Lato-Regular'},
-  cardSection: {flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: 20, marginBottom: 20},
-  summaryCard: {width: '48%', borderRadius: 16, backgroundColor: '#FFFFFF'},
-  cardContent: {padding: 16},
+  dateSeparatorText: {fontSize: 12, color: TEXT_MUTED, fontFamily: FONT.regular},
+  cardSection: {flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: SPACING.md + 4, marginBottom: SPACING.md + 4},
+  summaryCard: {width: '48%', borderRadius: 16, backgroundColor: WHITE},
+  cardContent: {padding: SPACING.md},
   cardHeader: {flexDirection: 'row', alignItems: 'center', marginBottom: 12},
-  cardIcon: {width: 32, height: 32, borderRadius: 8, backgroundColor: '#F4F6FA', alignItems: 'center', justifyContent: 'center', marginRight: 8},
-  cardTitle: {fontSize: 14, fontWeight: '500', color: '#666', fontFamily: 'Lato-Regular'},
-  cardAmount: {fontSize: 20, fontWeight: 'bold', fontFamily: 'Lato-Bold'},
-  quickActionsSection: {marginTop: 20, paddingHorizontal: 20},
-  quickActionsTitle: {fontSize: 20, fontWeight: 'bold', color: '#2C2C2C', marginBottom: 15, fontFamily: 'Kufam-SemiBoldItalic'},
+  cardIcon: {
+    width: 32, height: 32, borderRadius: SPACING.sm,
+    backgroundColor: SURFACE_COLOR,
+    alignItems: 'center', justifyContent: 'center', marginRight: SPACING.sm,
+  },
+  cardTitle: {fontSize: 14, fontWeight: '500', color: TEXT_SECONDARY, fontFamily: FONT.regular},
+  cardAmount: {fontSize: 20, fontWeight: 'bold', fontFamily: FONT.bold},
+  quickActionsSection: {marginTop: SPACING.md + 4, paddingHorizontal: SPACING.md + 4},
+  quickActionsTitle: {fontSize: 20, fontWeight: 'bold', color: TEXT_DARK, marginBottom: 15, fontFamily: FONT.heading},
   quickActionsContainer: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10},
-  quickActionButton: {flex: 0.48, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center'},
+  quickActionButton: {
+    flex: 0.48, borderRadius: 14,
+    paddingVertical: 14, paddingHorizontal: SPACING.md,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+  },
   addIncomeButton: {backgroundColor: INCOME_COLOR},
   addExpenseButton: {backgroundColor: EXPENSE_COLOR},
-  quickActionText: {fontSize: 14, fontWeight: '600', color: '#FFFFFF', fontFamily: 'Lato-Bold', marginLeft: 8},
-  transactionsSection: {marginTop: 10, paddingHorizontal: 20},
+  quickActionText: {fontSize: 14, fontWeight: '600', color: WHITE, fontFamily: FONT.bold, marginLeft: SPACING.sm},
+  transactionsSection: {marginTop: 10, paddingHorizontal: SPACING.md + 4},
   transactionsHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15},
-  transactionsHeaderText: {fontSize: 20, fontWeight: 'bold', color: '#2C2C2C', fontFamily: 'Kufam-SemiBoldItalic'},
-  transactionsSubHeaderText: {fontSize: 14, color: '#666', marginTop: 2, fontFamily: 'Lato-Regular'},
-  seeAllButton: {flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(103, 124, 210, 0.1)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10},
-  seeAllText: {fontSize: 14, fontWeight: '600', color: PRIMARY_COLOR, marginRight: 4, fontFamily: 'Lato-Bold'},
+  transactionsHeaderText: {fontSize: 20, fontWeight: 'bold', color: TEXT_DARK, fontFamily: FONT.heading},
+  transactionsSubHeaderText: {fontSize: 14, color: TEXT_SECONDARY, marginTop: 2, fontFamily: FONT.regular},
+  seeAllButton: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: `${PRIMARY_COLOR}1A`,
+    paddingHorizontal: 12, paddingVertical: SPACING.sm, borderRadius: 10,
+  },
+  seeAllText: {fontSize: 14, fontWeight: '600', color: PRIMARY_COLOR, marginRight: SPACING.xs, fontFamily: FONT.bold},
   transactionsList: {marginBottom: 30},
-  transactionsCard: {flexDirection: 'row', alignItems: 'center', padding: 18, marginVertical: 6, backgroundColor: '#FFFFFF', borderRadius: 16},
+  transactionsCard: {
+    flexDirection: 'row', alignItems: 'center',
+    padding: 18, marginVertical: SPACING.sm - 2,
+    backgroundColor: WHITE, borderRadius: 16,
+  },
   transactionsCardContent: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%'},
-  transactionsCardDetails: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center'},
-  transactionsCardIcon: {width: 50, height: 50, borderRadius: 14, backgroundColor: '#E8EBF7', alignItems: 'center', justifyContent: 'center', marginRight: 15},
-  transactionsCardTitle: {fontSize: 16, fontWeight: '600', color: '#2C2C2C', fontFamily: 'Lato-Bold'},
-  transactionsCardDateAndTime: {flexDirection: 'row', alignItems: 'center', marginTop: 4},
-  transactionsCardDate: {fontSize: 13, color: '#888', fontFamily: 'Lato-Regular'},
+  transactionsCardDetails: {flexDirection: 'row', alignItems: 'center', flex: 1},
+  transactionsCardIcon: {
+    width: 50, height: 50, borderRadius: 14,
+    backgroundColor: CARD_BORDER,
+    alignItems: 'center', justifyContent: 'center', marginRight: 15,
+  },
+  transactionsCardMeta: {flexDirection: 'column', flex: 1},
+  transactionsCardTitle: {fontSize: 16, fontWeight: '600', color: TEXT_DARK, fontFamily: FONT.bold},
+  transactionsCardDateAndTime: {flexDirection: 'row', alignItems: 'center', marginTop: SPACING.xs},
+  transactionsCardDate: {fontSize: 13, color: TEXT_MUTED, fontFamily: FONT.regular},
   transactionsCardAmount: {flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center'},
-  amountIncome: {fontSize: 16, fontWeight: 'bold', color: INCOME_COLOR, fontFamily: 'Lato-Bold'},
-  amountExpense: {fontSize: 16, fontWeight: 'bold', color: EXPENSE_COLOR, fontFamily: 'Lato-Bold'},
-  emptyState: {alignItems: 'center', paddingVertical: 40, paddingHorizontal: 20},
-  emptyStateText: {fontSize: 18, fontWeight: '600', color: '#666', marginTop: 15, fontFamily: 'Lato-Bold'},
-  emptyStateSubText: {fontSize: 14, color: '#888', textAlign: 'center', marginTop: 8, fontFamily: 'Lato-Regular'},
-  errorContainer: {flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BACKGROUND_COLOR, paddingHorizontal: 20},
-  errorText: {fontSize: 16, color: EXPENSE_COLOR, textAlign: 'center', fontFamily: 'Lato-Regular', marginTop: 15, marginBottom: 20},
-  retryButton: {backgroundColor: PRIMARY_COLOR, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8, elevation: Platform.OS === 'android' ? 0 : 2, shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.2, shadowRadius: 2},
-  retryButtonText: {color: '#FFFFFF', fontSize: 16, fontWeight: '600', fontFamily: 'Lato-Bold'},
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
+  amountIncome: {fontSize: 16, fontWeight: 'bold', color: INCOME_COLOR, fontFamily: FONT.bold},
+  amountExpense: {fontSize: 16, fontWeight: 'bold', color: EXPENSE_COLOR, fontFamily: FONT.bold},
+  emptyState: {alignItems: 'center', paddingVertical: 40, paddingHorizontal: SPACING.md + 4},
+  emptyStateText: {fontSize: 18, fontWeight: '600', color: TEXT_SECONDARY, marginTop: 15, fontFamily: FONT.bold},
+  emptyStateSubText: {fontSize: 14, color: TEXT_MUTED, textAlign: 'center', marginTop: SPACING.sm, fontFamily: FONT.regular},
+  errorContainer: {flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BACKGROUND_COLOR, paddingHorizontal: SPACING.md + 4},
+  errorText: {fontSize: 16, color: EXPENSE_COLOR, textAlign: 'center', fontFamily: FONT.regular, marginTop: 15, marginBottom: SPACING.md + 4},
+  retryButton: {
+    backgroundColor: PRIMARY_COLOR,
+    paddingHorizontal: SPACING.lg, paddingVertical: 12, borderRadius: 8,
+    elevation: Platform.OS === 'android' ? 0 : 2,
+    shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.2, shadowRadius: 2,
+  },
+  retryButtonText: {color: WHITE, fontSize: 16, fontWeight: '600', fontFamily: FONT.bold},
+  cardAndroid: {borderWidth: 1, borderColor: CARD_BORDER},
 });
