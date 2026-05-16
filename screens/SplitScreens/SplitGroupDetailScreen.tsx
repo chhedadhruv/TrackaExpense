@@ -66,7 +66,8 @@ const getSplitCardColor = (split: SplitItem, currentEmail: string | undefined): 
   }
   const isPayer = split.paidBy?.email?.toLowerCase() === currentEmail;
   const isInSplitUsers = split.splitUsers?.some(u => u.email?.toLowerCase() === currentEmail);
-  if (isPayer && (split.splitUsers?.length ?? 0) > 1) return SUCCESS_COLOR;
+  const payerOwedByOthers = isPayer && (split.splitUsers?.some(u => u.email?.toLowerCase() !== currentEmail) ?? false);
+  if (payerOwedByOthers) return SUCCESS_COLOR;
   if (!isPayer && isInSplitUsers) return EXPENSE_COLOR;
   return PRIMARY_COLOR;
 };

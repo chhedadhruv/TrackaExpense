@@ -682,6 +682,8 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         .doc(u.uid)
         .collection('transactions');
 
+      const isPayer = data.paidBy?.email?.toLowerCase() === email;
+
       if (!include) {
         if (isEdit) {
           const snap = await txCol.where('splitId', '==', splitId).get();
@@ -692,34 +694,21 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         return;
       }
 
-      const isPayer = data.paidBy?.email?.toLowerCase() === email;
-      const isParticipant = data.splitUsers?.some(
-        su => su.email?.toLowerCase() === email,
-      );
-      if (!isPayer && !isParticipant) return;
-
-      let userShare: number;
-      if (data.splitType === 'percentage') {
-        const entry = data.splitUsers?.find(
-          su => su.email?.toLowerCase() === email,
-        );
-        userShare = amount * ((entry?.percentage || 0) / 100);
-      } else {
-        userShare = amount / (data.splitUsers?.length || 1);
-      }
+      // Only the payer gets a transaction; participants record theirs via SettleUp
+      if (!isPayer) return;
 
       const dateStr = data.date.toDate().toISOString().split('T')[0];
       const txData = {
         title: data.title,
         type: 'expense',
         category: data.category || 'Split',
-        amount: String(parseFloat(userShare.toFixed(2))),
+        amount: String(parseFloat(amount.toFixed(2))),
         date: dateStr,
         source: 'split',
         splitId,
         groupId: group.id,
         groupName: group.name,
-        splitRole: isPayer ? 'payer' : 'participant',
+        splitRole: 'payer',
         createdAt: firestore.FieldValue.serverTimestamp(),
       };
 
