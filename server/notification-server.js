@@ -244,6 +244,332 @@ async function sendDailyFunNotifications() {
 cron.schedule('*/15 * * * *', sendDailyFunNotifications);
 
 // ---------------------------------------------------------------------------
+// Email automation (writes to `mail` collection → Trigger Email extension)
+// ---------------------------------------------------------------------------
+
+function formatCurrencyAmount(amount, currencyCode) {
+  try {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: currencyCode || 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch (_) {
+    return `${currencyCode || '₹'}${amount}`;
+  }
+}
+
+// Returns the ISO week string (YYYY-Www) for the given date
+function getISOWeekString(date) {
+  const d = new Date(date);
+  const dayOfWeek = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayOfWeek);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+
+function getISTMonthString() {
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+  const d = new Date(Date.now() + IST_OFFSET_MS);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+async function sendWeeklySummaryEmails() {
+  const db = admin.firestore();
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+  const weekKey = getISOWeekString(new Date(Date.now() + IST_OFFSET_MS));
+
+  // Date range: last 7 days
+  const today = getISTDateString();
+  const sevenDaysAgo = getISTDateString(6);
+
+  let usersSnap;
+  try {
+    usersSnap = await db.collection('users').get();
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[WeeklyEmail] Failed to fetch users:', err.message);
+    return;
+  }
+
+  const tasks = usersSnap.docs.map(async (doc) => {
+    const { email, name, currency } = doc.data();
+    if (!email) return;
+
+    const logRef = db.collection('users').doc(doc.id).collection('reminderLogs').doc(`email_week_${weekKey}`);
+    const logDoc = await logRef.get();
+    if (logDoc.exists) return; // already sent this week
+
+    try {
+      const txSnap = await db
+        .collection('users').doc(doc.id)
+        .collection('transactions')
+        .where('date', '>=', sevenDaysAgo)
+        .where('date', '<=', today)
+        .get();
+
+      if (txSnap.empty) return; // no activity this week, skip
+
+      let totalExpense = 0;
+      let totalIncome = 0;
+      const categoryMap = {};
+
+      txSnap.docs.forEach((t) => {
+        const { amount, type, category } = t.data();
+        const amt = Number(amount) || 0;
+        if (type === 'expense') {
+          totalExpense += amt;
+          categoryMap[category] = (categoryMap[category] || 0) + amt;
+        } else {
+          totalIncome += amt;
+        }
+      });
+
+      const topCategory = Object.entries(categoryMap).sort((a, b) => b[1] - a[1])[0];
+      const savings = totalIncome - totalExpense;
+      const currencyCode = currency || 'INR';
+
+      const topCategoryLine = topCategory
+        ? `<tr><td style="padding:8px 0;color:#666">Top category</td><td style="padding:8px 0;font-weight:600;text-align:right">${topCategory[0]} (${formatCurrencyAmount(topCategory[1], currencyCode)})</td></tr>`
+        : '';
+
+      const savingsColor = savings >= 0 ? '#25B07F' : '#F64E4E';
+      const savingsLabel = savings >= 0 ? 'Saved' : 'Overspent';
+
+      const html = `
+<!DOCTYPE html><html><body style="font-family:sans-serif;background:#F4F6FA;margin:0;padding:24px">
+<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
+  <h2 style="color:#677CD2;margin-top:0">Weekly Summary 📊</h2>
+  <p style="color:#444">Hey ${name || 'there'}, here's how your week looked:</p>
+  <table style="width:100%;border-collapse:collapse;margin:16px 0">
+    <tr><td style="padding:8px 0;color:#666">Total income</td><td style="padding:8px 0;font-weight:600;text-align:right;color:#25B07F">${formatCurrencyAmount(totalIncome, currencyCode)}</td></tr>
+    <tr><td style="padding:8px 0;color:#666">Total expenses</td><td style="padding:8px 0;font-weight:600;text-align:right;color:#F64E4E">${formatCurrencyAmount(totalExpense, currencyCode)}</td></tr>
+    ${topCategoryLine}
+    <tr style="border-top:1px solid #eee"><td style="padding:12px 0 0;font-weight:700">${savingsLabel}</td><td style="padding:12px 0 0;font-weight:700;text-align:right;color:${savingsColor}">${formatCurrencyAmount(Math.abs(savings), currencyCode)}</td></tr>
+  </table>
+  <p style="color:#888;font-size:13px;margin-bottom:0">Keep tracking your expenses to reach your financial goals. Open <strong>TrackaExpense</strong> to see the full breakdown.</p>
+</div>
+</body></html>`;
+
+      await db.collection('mail').add({
+        to: email,
+        message: {
+          subject: `Your Weekly Summary — ${formatCurrencyAmount(totalExpense, currencyCode)} spent this week`,
+          html,
+          text: `Weekly Summary\n\nIncome: ${formatCurrencyAmount(totalIncome, currencyCode)}\nExpenses: ${formatCurrencyAmount(totalExpense, currencyCode)}\n${topCategory ? `Top category: ${topCategory[0]}\n` : ''}${savingsLabel}: ${formatCurrencyAmount(Math.abs(savings), currencyCode)}\n\nOpen TrackaExpense for the full breakdown.`,
+        },
+      });
+
+      await logRef.set({ sentAt: admin.firestore.FieldValue.serverTimestamp(), weekKey });
+      // eslint-disable-next-line no-console
+      console.log(`[WeeklyEmail] Sent to ${email}`);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(`[WeeklyEmail] Failed for ${email}:`, err.message);
+    }
+  });
+
+  await Promise.allSettled(tasks);
+}
+
+async function sendMonthlySummaryEmails() {
+  const db = admin.firestore();
+  const monthKey = getISTMonthString();
+
+  // Date range: current month so far
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+  const nowIST = new Date(Date.now() + IST_OFFSET_MS);
+  const year = nowIST.getUTCFullYear();
+  const month = nowIST.getUTCMonth() + 1;
+  const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+  const monthEnd = getISTDateString();
+
+  // The previous month label for the email (this runs on the 1st so we report last month)
+  const prevMonth = new Date(Date.UTC(year, month - 2, 1));
+  const prevMonthLabel = prevMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+  const prevMonthStart = `${prevMonth.getUTCFullYear()}-${String(prevMonth.getUTCMonth() + 1).padStart(2, '0')}-01`;
+  const prevMonthEnd = getISTDateString(1); // yesterday = last day of prev month
+
+  let usersSnap;
+  try {
+    usersSnap = await db.collection('users').get();
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[MonthlyEmail] Failed to fetch users:', err.message);
+    return;
+  }
+
+  const tasks = usersSnap.docs.map(async (doc) => {
+    const { email, name, currency } = doc.data();
+    if (!email) return;
+
+    const logRef = db.collection('users').doc(doc.id).collection('reminderLogs').doc(`email_month_${monthKey}`);
+    const logDoc = await logRef.get();
+    if (logDoc.exists) return;
+
+    try {
+      const txSnap = await db
+        .collection('users').doc(doc.id)
+        .collection('transactions')
+        .where('date', '>=', prevMonthStart)
+        .where('date', '<=', prevMonthEnd)
+        .get();
+
+      if (txSnap.empty) return;
+
+      let totalExpense = 0;
+      let totalIncome = 0;
+      const categoryMap = {};
+      const dailyExpense = {};
+
+      txSnap.docs.forEach((t) => {
+        const { amount, type, category, date } = t.data();
+        const amt = Number(amount) || 0;
+        if (type === 'expense') {
+          totalExpense += amt;
+          categoryMap[category] = (categoryMap[category] || 0) + amt;
+          dailyExpense[date] = (dailyExpense[date] || 0) + amt;
+        } else {
+          totalIncome += amt;
+        }
+      });
+
+      const topCategories = Object.entries(categoryMap)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3);
+      const avgDailyExpense = totalExpense / Object.keys(dailyExpense).length || 0;
+      const savings = totalIncome - totalExpense;
+      const currencyCode = currency || 'INR';
+      const savingsColor = savings >= 0 ? '#25B07F' : '#F64E4E';
+      const savingsLabel = savings >= 0 ? 'Net savings' : 'Net deficit';
+
+      const categoryRows = topCategories
+        .map(([cat, amt]) => `<tr><td style="padding:6px 0;color:#666">${cat}</td><td style="padding:6px 0;text-align:right;font-weight:600">${formatCurrencyAmount(amt, currencyCode)}</td></tr>`)
+        .join('');
+
+      const html = `
+<!DOCTYPE html><html><body style="font-family:sans-serif;background:#F4F6FA;margin:0;padding:24px">
+<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
+  <h2 style="color:#677CD2;margin-top:0">${prevMonthLabel} Report 📈</h2>
+  <p style="color:#444">Hey ${name || 'there'}, here's your complete month at a glance:</p>
+  <table style="width:100%;border-collapse:collapse;margin:16px 0">
+    <tr><td style="padding:8px 0;color:#666">Total income</td><td style="padding:8px 0;font-weight:600;text-align:right;color:#25B07F">${formatCurrencyAmount(totalIncome, currencyCode)}</td></tr>
+    <tr><td style="padding:8px 0;color:#666">Total expenses</td><td style="padding:8px 0;font-weight:600;text-align:right;color:#F64E4E">${formatCurrencyAmount(totalExpense, currencyCode)}</td></tr>
+    <tr><td style="padding:8px 0;color:#666">Avg daily spend</td><td style="padding:8px 0;font-weight:600;text-align:right">${formatCurrencyAmount(Math.round(avgDailyExpense), currencyCode)}</td></tr>
+    <tr style="border-top:1px solid #eee"><td style="padding:12px 0 0;font-weight:700">${savingsLabel}</td><td style="padding:12px 0 0;font-weight:700;text-align:right;color:${savingsColor}">${formatCurrencyAmount(Math.abs(savings), currencyCode)}</td></tr>
+  </table>
+  ${topCategories.length ? `<h3 style="color:#333;font-size:15px">Top spending categories</h3><table style="width:100%;border-collapse:collapse">${categoryRows}</table>` : ''}
+  <p style="color:#888;font-size:13px;margin-bottom:0">Open <strong>TrackaExpense</strong> to explore your full monthly breakdown and set goals for next month.</p>
+</div>
+</body></html>`;
+
+      await db.collection('mail').add({
+        to: email,
+        message: {
+          subject: `Your ${prevMonthLabel} Report — ${formatCurrencyAmount(totalExpense, currencyCode)} spent`,
+          html,
+          text: `${prevMonthLabel} Report\n\nIncome: ${formatCurrencyAmount(totalIncome, currencyCode)}\nExpenses: ${formatCurrencyAmount(totalExpense, currencyCode)}\n${savingsLabel}: ${formatCurrencyAmount(Math.abs(savings), currencyCode)}\n\nOpen TrackaExpense for the full breakdown.`,
+        },
+      });
+
+      await logRef.set({ sentAt: admin.firestore.FieldValue.serverTimestamp(), monthKey });
+      // eslint-disable-next-line no-console
+      console.log(`[MonthlyEmail] Sent to ${email}`);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(`[MonthlyEmail] Failed for ${email}:`, err.message);
+    }
+  });
+
+  await Promise.allSettled(tasks);
+}
+
+async function sendSavingsGoalCompletionEmails() {
+  const db = admin.firestore();
+
+  let usersSnap;
+  try {
+    usersSnap = await db.collection('users').get();
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[GoalEmail] Failed to fetch users:', err.message);
+    return;
+  }
+
+  const tasks = usersSnap.docs.map(async (doc) => {
+    const { email, name, currency } = doc.data();
+    if (!email) return;
+
+    try {
+      const goalsSnap = await db
+        .collection('users').doc(doc.id)
+        .collection('savings')
+        .get();
+
+      const completedGoals = goalsSnap.docs.filter((g) => {
+        const { currentAmount, targetAmount, goalReachedEmailSent } = g.data();
+        return (
+          !goalReachedEmailSent &&
+          targetAmount > 0 &&
+          Number(currentAmount) >= Number(targetAmount)
+        );
+      });
+
+      if (completedGoals.length === 0) return;
+
+      const currencyCode = currency || 'INR';
+
+      for (const goalDoc of completedGoals) {
+        const { name: goalName, targetAmount } = goalDoc.data();
+
+        const html = `
+<!DOCTYPE html><html><body style="font-family:sans-serif;background:#F4F6FA;margin:0;padding:24px">
+<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.08);text-align:center">
+  <div style="font-size:64px;margin-bottom:16px">🎉</div>
+  <h2 style="color:#677CD2;margin-top:0">Goal Reached!</h2>
+  <p style="color:#444">Hey ${name || 'there'}, you did it!</p>
+  <div style="background:#F0F4FF;border-radius:12px;padding:20px;margin:20px 0">
+    <p style="color:#677CD2;font-size:18px;font-weight:700;margin:0">${goalName}</p>
+    <p style="color:#25B07F;font-size:24px;font-weight:700;margin:8px 0 0">${formatCurrencyAmount(targetAmount, currencyCode)}</p>
+  </div>
+  <p style="color:#444">You've reached your savings goal. Open <strong>TrackaExpense</strong> to celebrate and set your next goal!</p>
+</div>
+</body></html>`;
+
+        await db.collection('mail').add({
+          to: email,
+          message: {
+            subject: `🎉 You reached your "${goalName}" savings goal!`,
+            html,
+            text: `Goal Reached!\n\nHey ${name || 'there'}, you've reached your "${goalName}" savings goal of ${formatCurrencyAmount(targetAmount, currencyCode)}!\n\nOpen TrackaExpense to celebrate and set your next goal.`,
+          },
+        });
+
+        await goalDoc.ref.update({ goalReachedEmailSent: true });
+        // eslint-disable-next-line no-console
+        console.log(`[GoalEmail] Sent goal completion email to ${email} for goal: ${goalName}`);
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(`[GoalEmail] Failed for ${email}:`, err.message);
+    }
+  });
+
+  await Promise.allSettled(tasks);
+}
+
+// Weekly summary — every Sunday at 8:00 AM IST (02:30 UTC)
+cron.schedule('30 2 * * 0', sendWeeklySummaryEmails);
+
+// Monthly report — 1st of each month at 9:00 AM IST (03:30 UTC)
+cron.schedule('30 3 1 * *', sendMonthlySummaryEmails);
+
+// Savings goal completion check — every 6 hours
+cron.schedule('0 */6 * * *', sendSavingsGoalCompletionEmails);
+
+// ---------------------------------------------------------------------------
 // HTTP endpoints
 // ---------------------------------------------------------------------------
 
