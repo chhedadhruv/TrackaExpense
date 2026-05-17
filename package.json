@@ -1,7 +1,8 @@
 {
   "name": "TrackaExpense",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "private": true,
+  "keywords": ["expense tracker", "budget planner", "personal finance", "bill splitter", "money manager", "savings goals", "receipt scanner", "ad-free", "split expenses", "expense log", "income tracker", "finance app"],
   "scripts": {
     "android": "react-native run-android",
     "android:release": "react-native run-android --variant=release",

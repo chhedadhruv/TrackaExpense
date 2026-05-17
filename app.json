@@ -1,9 +1,9 @@
 {
   "name": "TrackaExpense",
   "displayName": "Tracka Expense",
-  "description": "A comprehensive expense tracking app to manage your finances efficiently",
-  "version": "1.2.8",
+  "description": "TrackaExpense is the all-in-one, ad-free personal finance app. Track daily expenses, plan monthly budgets, split bills with friends, capture receipts, and reach savings goals — with real-time cloud sync across Android & iOS.",
+  "version": "1.3.3",
   "category": "Finance",
   "author": "TrackaExpense Team",
-  "keywords": ["expense", "finance", "tracking", "budget", "money"]
+  "keywords": ["expense tracker", "budget planner", "personal finance", "bill splitter", "money manager", "savings goals", "receipt scanner", "ad-free", "split expenses", "expense log", "income tracker", "finance app"]
 }
