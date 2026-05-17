@@ -5,6 +5,8 @@ import UserAvatar from 'react-native-user-avatar';
 import firestore from '@react-native-firebase/firestore';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import auth from '@react-native-firebase/auth';
+import crashlytics from '@react-native-firebase/crashlytics';
+import * as AnalyticsService from '../../src/services/AnalyticsService';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
@@ -182,9 +184,11 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
         });
       }
 
+      AnalyticsService.logSettleUp(AnalyticsService.getAmountRange(settlementAmount));
       Alert.alert('Success', 'Settlement recorded successfully');
       navigation.goBack();
-    } catch (_) {
+    } catch (e) {
+      crashlytics().recordError(e as Error);
       Alert.alert('Error', 'Failed to record settlement');
     } finally {
       setLoading(false);

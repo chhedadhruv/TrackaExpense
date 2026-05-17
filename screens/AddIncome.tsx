@@ -3,6 +3,8 @@ import React, {useState, useEffect, useRef} from 'react';
 import {Card, ActivityIndicator} from 'react-native-paper';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
+import crashlytics from '@react-native-firebase/crashlytics';
+import * as AnalyticsService from '../src/services/AnalyticsService';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -64,9 +66,14 @@ const AddIncome = ({navigation}: {navigation: any}) => {
           balance: firestore.FieldValue.increment(parseFloat(amount)),
         });
       });
+      AnalyticsService.logAddIncome({
+        amount_range: AnalyticsService.getAmountRange(parseFloat(amount)),
+        category: category ?? 'uncategorized',
+      });
       setSuccessMessage('Income added successfully!');
       navTimeoutRef.current = setTimeout(() => navigation.goBack(), 1500);
-    } catch (_) {
+    } catch (e) {
+      crashlytics().recordError(e as Error);
       setErrorMessage('An error occurred while adding the income. Please try again.');
     } finally {
       setIsSubmitting(false);

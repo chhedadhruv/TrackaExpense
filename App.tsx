@@ -4,9 +4,12 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { HEADER_BG } from './src/constants/theme';
 import codePush from '@revopush/react-native-code-push';
 import { REVOPUSH_IOS_DEPLOYMENT_KEY, REVOPUSH_ANDROID_DEPLOYMENT_KEY } from '@env';
+import crashlytics from '@react-native-firebase/crashlytics';
 import Providers from './navigation';
 import NotificationService from './services/NotificationService';
 import UpdateService from './services/UpdateService';
+import ErrorBoundary from './components/ErrorBoundary';
+import {initRemoteConfig} from './src/services/RemoteConfigService';
 
 const App: React.FC = () => {
   useEffect(() => {
@@ -16,7 +19,7 @@ const App: React.FC = () => {
         await NotificationService.initialize();
         await NotificationService.getFCMToken();
       } catch (e) {
-        // Silent error handling
+        crashlytics().recordError(e as Error);
       }
     })();
 
@@ -24,7 +27,18 @@ const App: React.FC = () => {
     (async () => {
       try {
         await UpdateService.checkForUpdate();
-      } catch (e) {}
+      } catch (e) {
+        crashlytics().recordError(e as Error);
+      }
+    })();
+
+    // Initialize Remote Config — fetch and activate values, apply defaults on failure
+    (async () => {
+      try {
+        await initRemoteConfig();
+      } catch (e) {
+        crashlytics().recordError(e as Error);
+      }
     })();
   }, []);
 
@@ -36,7 +50,9 @@ const App: React.FC = () => {
           backgroundColor={HEADER_BG}
           translucent={false}
         />
-        <Providers />
+        <ErrorBoundary>
+          <Providers />
+        </ErrorBoundary>
       </SafeAreaView>
     </SafeAreaProvider>
   );

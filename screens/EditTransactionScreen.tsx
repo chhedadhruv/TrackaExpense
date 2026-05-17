@@ -4,6 +4,9 @@ import {Card, ActivityIndicator} from 'react-native-paper';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
+import crashlytics from '@react-native-firebase/crashlytics';
+import * as PerformanceService from '../src/services/PerformanceService';
+import * as AnalyticsService from '../src/services/AnalyticsService';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
@@ -61,9 +64,12 @@ const EditTransactionScreen = ({route, navigation}: {route: any; navigation: any
       setTransferred(Math.round(snapshot.bytesTransferred / snapshot.totalBytes) * 100);
     });
     try {
+      const stopTrace = await PerformanceService.traceUploadReceipt();
       await task;
+      await stopTrace?.();
       return await storageRef.getDownloadURL();
-    } catch (_) {
+    } catch (e) {
+      crashlytics().recordError(e as Error);
       return null;
     }
   };
@@ -107,9 +113,15 @@ const EditTransactionScreen = ({route, navigation}: {route: any; navigation: any
         }
       });
 
+      AnalyticsService.logEditTransaction({
+        type: transaction.type,
+        category: category ?? 'uncategorized',
+        amount_changed: parseFloat(amount) !== parseFloat(transaction.amount.toString()),
+      });
       setSuccessMessage('Transaction updated successfully!');
       navTimeoutRef.current = setTimeout(() => navigation.navigate('Home'), 1500);
-    } catch (_) {
+    } catch (e) {
+      crashlytics().recordError(e as Error);
       setErrorMessage('An error occurred while updating the transaction. Please try again.');
     } finally {
       setUploading(false);

@@ -14,12 +14,16 @@ import {BarChart, PieChart} from 'react-native-gifted-charts';
 import {useFocusEffect} from '@react-navigation/native';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
+import crashlytics from '@react-native-firebase/crashlytics';
+import * as PerformanceService from '../src/services/PerformanceService';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {getCategoryIcon} from '../utils/CategoryData';
 import {PRIMARY_COLOR, BACKGROUND_COLOR, INCOME_COLOR, EXPENSE_COLOR} from '../src/constants/theme';
 import {formatDisplayDate} from '../src/utils/formatters';
+import {getConfig} from '../src/services/RemoteConfigService';
+import * as AnalyticsService from '../src/services/AnalyticsService';
 import type {TransactionDocument} from '../src/types';
 
 type TimeRange = 'all' | '7days' | '30days' | '3months' | '6months' | 'year' | 'custom';
@@ -63,7 +67,7 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
   const [error, setError] = useState<string | null>(null);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
-  const [timeRange, setTimeRange] = useState<TimeRange>('all');
+  const [timeRange, setTimeRange] = useState<TimeRange>((getConfig().stats_default_time_range as TimeRange) || 'all');
   const [filteredTransactions, setFilteredTransactions] = useState<TransactionDocument[]>([]);
   const [selectedBtn, setSelectedBtn] = useState<ChartBtn>('Income');
   const [categoryPieData, setCategoryPieData] = useState<PieEntry[]>([]);
@@ -79,14 +83,18 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
     try {
       setError(null);
       setLoading(true);
+      const stopTrace = await PerformanceService.traceCalculateStatistics();
       const snapshot = await firestore()
         .collection('users')
         .doc(auth().currentUser!.uid)
         .collection('transactions')
         .get();
       const txns = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})) as unknown as TransactionDocument[];
-      setAllTransactions(txns);
-    } catch (_) {
+      setAllTransactions(txns.slice(0, getConfig().max_transactions_displayed));
+      AnalyticsService.logViewStatistics({chart_type: selectedBtn.toLowerCase(), time_range: timeRange});
+      await stopTrace?.();
+    } catch (e) {
+      crashlytics().recordError(e as Error);
       setError('Failed to load transactions. Tap to retry.');
     } finally {
       setLoading(false);
@@ -262,7 +270,7 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
               return (
                 <TouchableOpacity
                   key={key}
-                  onPress={() => setTimeRange(key)}
+                  onPress={() => { setTimeRange(key); AnalyticsService.logStatisticsTimeRangeChanged(key); }}
                   style={[styles.filterButton, active && styles.filterButtonActive]}>
                   <MaterialCommunityIcons name={icon} size={16} color={active ? '#FFFFFF' : PRIMARY_COLOR} />
                   <Text style={active ? styles.filterButtonTextActive : styles.filterButtonText}>{label}</Text>

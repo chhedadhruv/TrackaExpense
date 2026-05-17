@@ -14,6 +14,8 @@ import {Card, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import crashlytics from '@react-native-firebase/crashlytics';
+import * as AnalyticsService from '../src/services/AnalyticsService';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {DatePickerModal} from 'react-native-paper-dates';
@@ -142,6 +144,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
 
       setLoading(false);
     } catch (error: any) {
+      crashlytics().recordError(error as Error);
       Alert.alert('Error', 'Failed to load savings data. Please try again.');
       setLoading(false);
     }
@@ -277,6 +280,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
       setEditingGoalId(null);
       Alert.alert('Success', 'Savings goal updated successfully');
     } catch (error: any) {
+      crashlytics().recordError(error as Error);
       Alert.alert('Error', `Failed to update savings goal: ${error.message}`);
     } finally {
       setIsSubmitting(false);
@@ -329,8 +333,13 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
 
       await userDocRef.update({savingsGoals: updatedGoals});
       setSavingsGoals(updatedGoals);
+      AnalyticsService.logAddFundsToGoal({
+        amount_range: AnalyticsService.getAmountRange(parsed),
+        goal_category: savingsGoals.find(g => g.id === selectedGoalId)?.category ?? 'other',
+      });
       Alert.alert('Success', `${formatCurrencyAmount(parsed)} added to ${savingsGoals.find(g => g.id === selectedGoalId)?.name}`);
     } catch (error: any) {
+      crashlytics().recordError(error as Error);
       Alert.alert('Error', `Failed to add to savings: ${error.message}`);
     } finally {
       setIsSubmitting(false);
@@ -390,8 +399,10 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
 
       await userDocRef.update({savingsGoals: updatedGoals});
       setSavingsGoals(updatedGoals);
+      AnalyticsService.logWithdrawFromGoal({amount_range: AnalyticsService.getAmountRange(parsed)});
       Alert.alert('Success', `${formatCurrencyAmount(parsed)} withdrawn from ${selectedGoal.name}`);
     } catch (error: any) {
+      crashlytics().recordError(error as Error);
       Alert.alert('Error', `Failed to withdraw from savings: ${error.message}`);
     } finally {
       setIsSubmitting(false);
@@ -543,8 +554,14 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
       setSavingsGoals(updatedGoals);
       setShowCreateModal(false);
       setEditValues(EMPTY_EDIT_VALUES);
+      AnalyticsService.logCreateSavingsGoal({
+        category: editValues.category || 'other',
+        has_target_date: !!editValues.targetDate,
+        has_monthly_target: parseFloat(editValues.monthly) > 0,
+      });
       Alert.alert('Success', 'Savings goal created successfully');
     } catch (error: any) {
+      crashlytics().recordError(error as Error);
       Alert.alert('Error', `Failed to create savings goal: ${error.message}`);
     } finally {
       setIsSubmitting(false);
@@ -579,8 +596,10 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
       setSavingsGoals(updatedGoals);
       setShowDeleteModal(false);
       setGoalToDelete(null);
+      AnalyticsService.logDeleteSavingsGoal();
       Alert.alert('Success', 'Savings goal deleted successfully');
     } catch (error: any) {
+      crashlytics().recordError(error as Error);
       Alert.alert('Error', `Failed to delete savings goal: ${error.message}`);
     } finally {
       setIsSubmitting(false);
@@ -619,7 +638,9 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         await ReminderNotificationService.sendSavingsGoalReminder(goal, currentUser.uid);
         Alert.alert('Reminder Set', `You'll receive ${frequency} reminders for "${goal?.name}".`);
       }
-    } catch (_) {}
+    } catch (e) {
+      crashlytics().recordError(e as Error);
+    }
   };
 
   const resetEditValues = () => {

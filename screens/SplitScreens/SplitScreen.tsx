@@ -12,6 +12,7 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import ReminderNotificationService from '../../services/ReminderNotificationService';
+import {getConfig} from '../../src/services/RemoteConfigService';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../../src/constants/theme';
 
 interface UserDetail {
@@ -397,10 +398,12 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
               <MaterialCommunityIcons name="account-multiple" size={22} color={PRIMARY_COLOR} />
               <Text style={styles.quickAccessText}>Friends</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.quickAccessButton} onPress={() => navigation.navigate('IOU')}>
-              <MaterialCommunityIcons name="handshake" size={22} color={PRIMARY_COLOR} />
-              <Text style={styles.quickAccessText}>IOUs</Text>
-            </TouchableOpacity>
+            {getConfig().enable_iou_feature && (
+              <TouchableOpacity style={styles.quickAccessButton} onPress={() => navigation.navigate('IOU')}>
+                <MaterialCommunityIcons name="handshake" size={22} color={PRIMARY_COLOR} />
+                <Text style={styles.quickAccessText}>IOUs</Text>
+              </TouchableOpacity>
+            )}
           </View>
           <Card style={[styles.createGroupCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
             <View style={styles.cardContent}>

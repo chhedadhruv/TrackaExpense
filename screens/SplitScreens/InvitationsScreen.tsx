@@ -5,6 +5,8 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import crashlytics from '@react-native-firebase/crashlytics';
+import * as AnalyticsService from '../../src/services/AnalyticsService';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../../src/constants/theme';
 
@@ -68,8 +70,10 @@ const InvitationsScreen = () => {
         status: 'accepted',
         respondedAt: firestore.Timestamp.fromDate(new Date()),
       });
+      AnalyticsService.logAcceptInvitation();
       Alert.alert('Joined', `You have joined ${invite.groupName}`);
-    } catch (_) {
+    } catch (e) {
+      crashlytics().recordError(e as Error);
       Alert.alert('Error', 'Failed to accept invitation');
     }
   }, [currentUser?.email]);
@@ -85,7 +89,9 @@ const InvitationsScreen = () => {
         status: 'declined',
         respondedAt: firestore.Timestamp.fromDate(new Date()),
       });
-    } catch (_) {
+      AnalyticsService.logDeclineInvitation();
+    } catch (e) {
+      crashlytics().recordError(e as Error);
       Alert.alert('Error', 'Failed to decline invitation');
     }
   }, [currentUser?.email]);

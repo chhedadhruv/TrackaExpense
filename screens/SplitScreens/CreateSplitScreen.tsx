@@ -17,6 +17,9 @@ import {requestCameraPermission} from '../../utils/Permissions';
 import {Card, Checkbox, ActivityIndicator, Switch} from 'react-native-paper';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import crashlytics from '@react-native-firebase/crashlytics';
+import * as PerformanceService from '../../src/services/PerformanceService';
+import * as AnalyticsService from '../../src/services/AnalyticsService';
 import FormButton from '../../components/FormButton';
 import {DatePickerModal} from 'react-native-paper-dates';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -217,6 +220,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       setSelectedPercentages(initialSelectedPercentages);
       setLoading(false);
     } catch (error) {
+      crashlytics().recordError(error as Error);
       Alert.alert('Error', 'Failed to load group members');
       navigation.goBack();
     }
@@ -371,7 +375,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         if (profileName && profileName.toLowerCase() !== 'me') {
           actorNameResolved = profileName;
         }
-      } catch (_) {}
+      } catch (e) { crashlytics().recordError(e as Error); }
 
       let imageUrl: string | null = null;
       if (receiptImage && !receiptImage.startsWith('http')) {
@@ -443,7 +447,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
             actorNameResolved,
             {},
           );
-        } catch (_) {}
+        } catch (e) { crashlytics().recordError(e as Error); }
 
         try {
           const changeItems: Array<{
@@ -589,7 +593,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
             .doc(group.id)
             .collection('splitHistory')
             .add(historyEntry);
-        } catch (_) {}
+        } catch (e) { crashlytics().recordError(e as Error); }
 
         await writeSplitTransaction(
           split.id,
@@ -613,7 +617,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
             groupDataForNotify,
             actorNameResolved,
           );
-        } catch (_) {}
+        } catch (e) { crashlytics().recordError(e as Error); }
 
         try {
           const historyEntry = {
@@ -644,7 +648,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
             .doc(group.id)
             .collection('splitHistory')
             .add(historyEntry);
-        } catch (_) {}
+        } catch (e) { crashlytics().recordError(e as Error); }
 
         await writeSplitTransaction(
           splitRef.id,
@@ -655,9 +659,18 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         );
       }
 
+      if (!isEditMode) {
+        AnalyticsService.logCreateSplit({
+          split_type: splitType || 'equal',
+          is_recurring: recurringEnabled,
+          category: category ?? 'other',
+          member_count: selectedUsersList.length,
+        });
+      }
       setLoading(false);
       navigation.goBack();
     } catch (error) {
+      crashlytics().recordError(error as Error);
       setLoading(false);
       Alert.alert(
         'Error',
@@ -722,7 +735,9 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       } else {
         await txCol.add(txData);
       }
-    } catch (_) {}
+    } catch (e) {
+      crashlytics().recordError(e as Error);
+    }
   };
 
   const uploadReceiptImage = async (): Promise<string | null> => {
@@ -731,7 +746,9 @@ const CreateSplitScreen = ({route, navigation}: any) => {
     if (!currentUser) return null;
     const path = `bills/${currentUser.uid}/${Date.now()}-split-receipt.jpg`;
     const ref = storage().ref(path);
+    const stopTrace = await PerformanceService.traceUploadReceipt();
     await ref.putFile(receiptImage);
+    await stopTrace?.();
     return await ref.getDownloadURL();
   };
 

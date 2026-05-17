@@ -1,6 +1,8 @@
 import {useState, useCallback} from 'react';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import crashlytics from '@react-native-firebase/crashlytics';
+import * as PerformanceService from '../services/PerformanceService';
 import type {TransactionDocument} from '../types';
 
 interface UseTransactionsReturn {
@@ -27,11 +29,13 @@ export function useTransactions(): UseTransactionsReturn {
     setError(null);
 
     try {
+      const stopTrace = await PerformanceService.traceFetchTransactions();
       const snapshot = await firestore()
         .collection('users')
         .doc(currentUser.uid)
         .collection('transactions')
         .get();
+      await stopTrace?.();
 
       const docs = snapshot.docs.map(doc => ({
         documentId: doc.id,
@@ -48,6 +52,7 @@ export function useTransactions(): UseTransactionsReturn {
 
       setTransactions(docs);
     } catch (err) {
+      crashlytics().recordError(err as Error);
       setError('Error fetching transactions');
     } finally {
       setLoading(false);
