@@ -1,6 +1,7 @@
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import NotificationService from './NotificationService';
+import {getConfig} from '../src/services/RemoteConfigService';
 import moment from 'moment';
 
 type ReminderType = 'income' | 'expense' | 'savings' | 'general';
@@ -67,6 +68,7 @@ class ReminderNotificationService {
   }
 
   async sendDailyReminders(): Promise<void> {
+    if (!getConfig().enable_reminder_notifications) return;
     try {
       const currentUser = auth().currentUser;
       if (!currentUser) return;

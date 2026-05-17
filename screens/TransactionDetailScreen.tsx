@@ -13,6 +13,8 @@ import {Text, Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
+import crashlytics from '@react-native-firebase/crashlytics';
+import * as AnalyticsService from '../src/services/AnalyticsService';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {PRIMARY_COLOR, BACKGROUND_COLOR, EXPENSE_COLOR, INCOME_COLOR} from '../src/constants/theme';
 
@@ -52,9 +54,11 @@ const TransactionDetailScreen = ({route, navigation}: {route: any; navigation: a
         const imageRef = storage().refFromURL(imageUrl);
         await imageRef.delete();
       }
+      AnalyticsService.logDeleteTransaction({type: transaction.type, category: transaction.category});
       Alert.alert('Transaction deleted successfully!');
       navigation.goBack();
-    } catch (_) {
+    } catch (e) {
+      crashlytics().recordError(e as Error);
       setError('An error occurred while deleting the transaction.');
       Alert.alert('Error', 'An error occurred while deleting the transaction.');
     } finally {

@@ -3,6 +3,7 @@ import UserAvatar from 'react-native-user-avatar';
 import {AuthContext} from '../navigation/AuthProvider';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
+import crashlytics from '@react-native-firebase/crashlytics';
 import {useFocusEffect} from '@react-navigation/native';
 import codePush from '@revopush/react-native-code-push';
 import {version as appVersion} from '../package.json';
@@ -46,6 +47,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
         throw new Error('User data not found');
       }
     } catch (e: any) {
+      crashlytics().recordError(e as Error);
       setLoading(false);
       setError(e.message);
     }
@@ -70,7 +72,8 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
             try {
               await auth().sendPasswordResetEmail(user.email!);
               Alert.alert('Email Sent', 'A password reset email has been sent to your email address.', [{text: 'OK'}]);
-            } catch (_) {
+            } catch (e) {
+              crashlytics().recordError(e as Error);
               Alert.alert('Error', 'Failed to send password reset email. Please try again later.');
             }
           },
@@ -91,6 +94,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
       await currentUser.delete();
       Alert.alert('Account Deleted', 'Your account has been permanently deleted.', [{text: 'OK'}]);
     } catch (e: any) {
+      crashlytics().recordError(e as Error);
       setLoading(false);
       if (e.code === 'auth/requires-recent-login') {
         Alert.alert('Authentication Required', 'Please log out and log back in, then try deleting your account again.', [{text: 'OK'}]);
@@ -122,7 +126,8 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
       await setCurrency(currencyCode);
       setCurrencyModalVisible(false);
       Alert.alert('Success', 'Currency updated successfully!');
-    } catch (_) {
+    } catch (e) {
+      crashlytics().recordError(e as Error);
       Alert.alert('Error', 'Failed to update currency. Please try again.');
     }
   };

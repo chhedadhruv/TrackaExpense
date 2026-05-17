@@ -1,6 +1,7 @@
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import NotificationService from './NotificationService';
+import {getConfig} from '../src/services/RemoteConfigService';
 import moment from 'moment';
 
 type FunContext =
@@ -121,6 +122,7 @@ class FunNotificationService {
   }
 
   async sendFunNotification(userEmail: string, context: FunContext = 'general'): Promise<void> {
+    if (!getConfig().enable_fun_notifications) return;
     try {
       const currentUser = auth().currentUser;
       if (!currentUser) return;

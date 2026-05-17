@@ -2,6 +2,8 @@ import {Alert} from 'react-native';
 import React, {createContext, useState} from 'react';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
+import crashlytics from '@react-native-firebase/crashlytics';
+import * as AnalyticsService from '../src/services/AnalyticsService';
 import type {FirebaseAuthTypes} from '@react-native-firebase/auth';
 
 interface AuthContextValue {
@@ -32,7 +34,7 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
       const userDoc = await firestore().collection('users').doc(firebaseUser.uid).get();
       return userDoc.exists;
     } catch (error) {
-      console.error('Error validating user data:', error);
+      crashlytics().recordError(error as Error);
       return false;
     }
   };
@@ -94,6 +96,9 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
           try {
             const userCredential = await auth().signInWithEmailAndPassword(email, password);
             const currentUser = userCredential.user;
+            crashlytics().setUserId(currentUser.uid);
+            crashlytics().setAttribute('auth_method', 'email');
+            AnalyticsService.logLogin('email');
             if (!currentUser.emailVerified) {
               await auth().signOut();
               Alert.alert(
@@ -149,6 +154,9 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
               userImg: null,
               balance: 0,
             });
+            crashlytics().setUserId(newUser.uid);
+            crashlytics().setAttribute('auth_method', 'email');
+            AnalyticsService.logSignUp('email', currency);
             await auth().signOut();
             Alert.alert(
               'Account Created Successfully!',
@@ -163,6 +171,7 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
         logout: async () => {
           try {
             await auth().signOut();
+            crashlytics().setUserId('');
           } catch (_) {
             Alert.alert('Error', 'Failed to log out. Please try again.', [{text: 'OK'}]);
           }
@@ -174,6 +183,7 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
           }
           try {
             await auth().sendPasswordResetEmail(email);
+            AnalyticsService.logPasswordResetRequested();
             Alert.alert('Password Reset Email Sent', 'Check your inbox for instructions to reset your password.', [{text: 'OK'}]);
           } catch (error) {
             handleAuthError(error as {code?: string; message: string});

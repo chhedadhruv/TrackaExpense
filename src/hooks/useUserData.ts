@@ -1,6 +1,8 @@
 import {useState, useEffect, useRef, useCallback} from 'react';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import crashlytics from '@react-native-firebase/crashlytics';
+import * as AnalyticsService from '../services/AnalyticsService';
 import type {UserDocument} from '../types';
 
 interface UseUserDataReturn {
@@ -39,7 +41,10 @@ export function useUserData(): UseUserDataReturn {
     try {
       const doc = await firestore().collection('users').doc(currentUser.uid).get();
       if (doc.exists) {
-        setUserData(doc.data() as UserDocument);
+        const data = doc.data() as UserDocument;
+        setUserData(data);
+        crashlytics().setAttribute('currency', data.currency ?? 'INR');
+        AnalyticsService.setUserProperties({currency: data.currency ?? 'INR'});
         setError(null);
         setLoading(false);
       } else if (retryCount < 2) {
@@ -52,6 +57,7 @@ export function useUserData(): UseUserDataReturn {
         setLoading(false);
       }
     } catch (err) {
+      crashlytics().recordError(err as Error);
       if (retryCount < 1) {
         retryTimeoutRef.current = setTimeout(() => {
           fetchUserData(retryCount + 1);

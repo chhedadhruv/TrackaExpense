@@ -11,6 +11,7 @@ import {
 import {Card, Searchbar, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import firestore from '@react-native-firebase/firestore';
+import crashlytics from '@react-native-firebase/crashlytics';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import auth from '@react-native-firebase/auth';
@@ -20,6 +21,8 @@ import {requestStoragePermission} from '../utils/Permissions';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {getCategoryIcon} from '../utils/CategoryData';
 import {PRIMARY_COLOR, BACKGROUND_COLOR, INCOME_COLOR, EXPENSE_COLOR} from '../src/constants/theme';
+import {getConfig} from '../src/services/RemoteConfigService';
+import * as AnalyticsService from '../src/services/AnalyticsService';
 import type {TransactionDocument} from '../src/types';
 
 type FilterType = 'all' | '7days' | '30days' | 'custom';
@@ -58,8 +61,9 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
         userId: currentUser.uid,
         ...doc.data(),
       })) as TransactionDocument[];
-      setTransactions(fetched);
-    } catch (_) {
+      setTransactions(fetched.slice(0, getConfig().max_transactions_displayed));
+    } catch (e) {
+      crashlytics().recordError(e as Error);
     } finally {
       setLoading(false);
     }
@@ -253,7 +257,7 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
               return (
                 <TouchableOpacity
                   key={f}
-                  onPress={() => setFilter(f)}
+                  onPress={() => { setFilter(f); AnalyticsService.logTransactionFilterChanged(f); }}
                   style={[styles.filterButton, active && styles.filterButtonActive]}>
                   <MaterialCommunityIcons name={icons[f]} size={16} color={active ? '#FFFFFF' : PRIMARY_COLOR} />
                   <Text style={active ? styles.filterButtonTextActive : styles.filterButtonText}>{labels[f]}</Text>

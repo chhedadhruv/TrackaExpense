@@ -1,6 +1,7 @@
 import messaging from '@react-native-firebase/messaging';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import crashlytics from '@react-native-firebase/crashlytics';
 import notifee, {AndroidImportance, EventType} from '@notifee/react-native';
 import {Platform, PermissionsAndroid} from 'react-native';
 import * as RootNavigation from '../navigation/Routes';
@@ -87,6 +88,7 @@ function handleNotificationNavigation(data: NotificationData | undefined): void 
         break;
     }
   } catch (error) {
+    crashlytics().recordError(error as Error);
     console.error('Failed to handle notification navigation:', error);
   }
 }
@@ -113,6 +115,7 @@ class NotificationService {
       await this.saveTokenToFirestore();
       this.isInitialized = true;
     } catch (error) {
+      crashlytics().recordError(error as Error);
       console.error('Failed to initialize NotificationService:', error);
     }
   }
@@ -150,6 +153,7 @@ class NotificationService {
       this.fcmToken = await messaging().getToken();
       return this.fcmToken;
     } catch (error) {
+      crashlytics().recordError(error as Error);
       console.error('Failed to get FCM token:', error);
       throw error;
     }
@@ -166,6 +170,7 @@ class NotificationService {
           lastTokenUpdate: firestore.FieldValue.serverTimestamp(),
         });
     } catch (error) {
+      crashlytics().recordError(error as Error);
       console.error('Failed to save FCM token:', error);
     }
   }

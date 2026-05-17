@@ -11,6 +11,8 @@ import firestore from '@react-native-firebase/firestore';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {configureGoogleSignIn} from '../utils/GoogleSignInConfig';
 import {configureAppleSignIn, performAppleSignIn} from '../utils/AppleSignInConfig';
+import crashlytics from '@react-native-firebase/crashlytics';
+import * as AnalyticsService from '../src/services/AnalyticsService';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../src/constants/theme';
 
 interface PasswordValidation {
@@ -81,6 +83,9 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
         const googleCredential = auth.GoogleAuthProvider.credential(idToken);
         const userCredential = await auth().signInWithCredential(googleCredential);
         const user = userCredential.user;
+        crashlytics().setUserId(user.uid);
+        crashlytics().setAttribute('auth_method', 'google');
+        AnalyticsService.logLogin('google');
         const userDoc = await firestore().collection('users').doc(user.uid).get();
         if (!userDoc.exists) {
           await firestore().collection('users').doc(user.uid).set({
@@ -119,6 +124,9 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
         const appleCredential = auth.AppleAuthProvider.credential(result.identityToken, result.nonce);
         const userCredential = await auth().signInWithCredential(appleCredential);
         const user = userCredential.user;
+        crashlytics().setUserId(user.uid);
+        crashlytics().setAttribute('auth_method', 'apple');
+        AnalyticsService.logLogin('apple');
         const userDoc = await firestore().collection('users').doc(user.uid).get();
         if (!userDoc.exists) {
           const displayName = result.fullName ? `${result.fullName.givenName || ''} ${result.fullName.familyName || ''}`.trim() : 'Apple User';
