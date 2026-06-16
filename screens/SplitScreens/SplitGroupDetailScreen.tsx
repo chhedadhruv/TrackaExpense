@@ -1,6 +1,6 @@
-import React, {useState, useEffect, useContext} from 'react';
-import {View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Platform} from 'react-native';
-import {ActivityIndicator, Card, Button} from 'react-native-paper';
+import React, {useState, useEffect, useContext, useRef} from 'react';
+import {View, Text, StyleSheet, TouchableOpacity, Alert, Platform} from 'react-native';
+import {ActivityIndicator, Card, Button, Snackbar} from 'react-native-paper';
 import {useFocusEffect} from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import UserAvatar from 'react-native-user-avatar';
@@ -86,6 +86,49 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [filteredSplits, setFilteredSplits] = useState<SplitItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [pendingInvites, setPendingInvites] = useState<string[]>([]);
+  const hasLoadedOnce = useRef(false);
+  const groupId = group?.id ?? '';
+
+  useEffect(() => {
+    if (!groupId) return;
+    const newSplit = route.params?.newSplit;
+    if (newSplit?.id) {
+      setSplits(prev => {
+        if (prev.some(s => s.id === newSplit.id)) return prev;
+        return [newSplit as SplitItem, ...prev].sort((a, b) => {
+          const aTs = (a.date || a.createdAt)?.toMillis?.() ?? 0;
+          const bTs = (b.date || b.createdAt)?.toMillis?.() ?? 0;
+          return bTs - aTs;
+        });
+      });
+    }
+    // Improvement 4: success snackbar when navigated back from create
+    if (route.params?.showSuccessToast) {
+      setSnackbarVisible(true);
+    }
+  }, [route.params?.newSplit, route.params?.showSuccessToast, groupId]);
+
+  useEffect(() => {
+    const gp = route.params?.group;
+    if (gp?.pendingInvites) setPendingInvites(gp.pendingInvites);
+  }, [route.params?.group]);
+
+  useEffect(() => {
+    if (splits.length > 0) setDetailedLendingInfo(calculateNetLendingBalances(splits));
+  }, [splits]);
+
+  useEffect(() => { setFilteredSplits(splits); }, [splits]);
+
+  useFocusEffect(
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    React.useCallback(() => {
+      if (!groupId) return;
+      fetchGroupSplits(!hasLoadedOnce.current);
+      fetchGroupMembers();
+    }, [groupId]),
+  );
 
   if (!group || !group.id) {
     return (
@@ -98,17 +141,12 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
     );
   }
 
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchGroupSplits();
-      fetchGroupMembers();
-    }, [group.id]),
-  );
-
   const fetchGroupMembers = async () => {
     try {
       const groupDoc = await firestore().collection('groups').doc(group!.id).get();
       const membersData: string[] = groupDoc.data()?.members || [];
+      const pending: string[] = groupDoc.data()?.pendingInvites || [];
+      setPendingInvites(pending);
       const memberPromises = membersData.map(async (email: string) => {
         const snap = await firestore().collection('users').where('email', '==', email).get();
         if (!snap.empty) {
@@ -121,9 +159,9 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
     } catch (_) {}
   };
 
-  const fetchGroupSplits = async () => {
+  const fetchGroupSplits = async (showSpinner = true) => {
     try {
-      setLoading(true);
+      if (showSpinner) setLoading(true);
       const snap = await firestore().collection('groups').doc(group!.id).collection('splits').get();
       const fetched = snap.docs
         .map(doc => ({id: doc.id, ...doc.data()} as SplitItem))
@@ -134,6 +172,7 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
         });
       setTotalSplitAmount(fetched.reduce((sum, s) => sum + parseFloat(String(s.amount)), 0));
       setSplits(fetched);
+      hasLoadedOnce.current = true;
     } catch (_) {
       Alert.alert('Error', 'Failed to fetch group splits');
     } finally {
@@ -141,13 +180,13 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
     }
   };
 
-  const handleDeleteSplit = async (split: SplitItem) => {
+  const _handleDeleteSplit = async (split: SplitItem) => {
     try {
       await firestore().collection('groups').doc(group!.id).collection('splits').doc(split.id).delete();
       try {
         await SplitNotificationService.notifySplitDeleted(
-          split,
-          {id: group!.id, name: group!.name, members: groupMembers.map(m => m.email)},
+          split as any,
+          {id: group!.id, name: group!.name, members: groupMembers.map(m => m.email)} as any,
           user?.displayName || user?.email?.split('@')[0] || 'Someone',
         );
       } catch (_) {}
@@ -161,15 +200,30 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
   const calculateNetLendingBalances = (splitsArr: SplitItem[]): LendingDetail[] => {
     const balances: Record<string, Record<string, number>> = {};
     splitsArr.forEach(split => {
-      const paidByEmail = split.paidBy?.email;
+      // Skip settlements — they are already recorded in the splits list and handled separately
+      if (split.type === 'settlement' || split.isSettlement) {
+        const fromEmail = split.paidBy?.email?.toLowerCase();
+        const toEmail = split.splitUsers?.[0]?.email?.toLowerCase();
+        const amt = parseFloat(String(split.amount));
+        if (!fromEmail || !toEmail || fromEmail === toEmail || isNaN(amt)) return;
+        // Borrower paid lender: reduce what borrower owes lender
+        if (!balances[toEmail]) balances[toEmail] = {};
+        balances[toEmail][fromEmail] = (balances[toEmail][fromEmail] || 0) - amt;
+        return;
+      }
+      const paidByEmail = split.paidBy?.email?.toLowerCase();
       const splitUsers = split.splitUsers || [];
       const amount = parseFloat(String(split.amount));
-      const perUser = amount / splitUsers.length;
-      if (!paidByEmail) return;
+      if (!paidByEmail || isNaN(amount)) return;
       if (!balances[paidByEmail]) balances[paidByEmail] = {};
       splitUsers.forEach(u => {
-        if (!u.email || u.email === paidByEmail) return;
-        balances[paidByEmail][u.email] = (balances[paidByEmail][u.email] || 0) + perUser;
+        const uEmail = u.email?.toLowerCase();
+        if (!uEmail || uEmail === paidByEmail) return;
+        // Improvement 3: use actual percentage share instead of always dividing equally
+        const share = split.splitType === 'percentage'
+          ? amount * ((u.percentage ?? 0) / 100)
+          : amount / splitUsers.length;
+        balances[paidByEmail][uEmail] = (balances[paidByEmail][uEmail] || 0) + share;
       });
     });
     const net: LendingDetail[] = [];
@@ -199,13 +253,7 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
     }, []);
   };
 
-  useEffect(() => {
-    if (splits.length > 0) setDetailedLendingInfo(calculateNetLendingBalances(splits));
-  }, [splits]);
-
-  useEffect(() => { setFilteredSplits(splits); }, [splits]);
-
-  const handleSearch = (query: string) => {
+  const _handleSearch = (query: string) => {
     setSearchQuery(query);
     if (!query.trim()) { setFilteredSplits(splits); return; }
     const filtered = splits.filter(split => {
@@ -227,6 +275,34 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
     });
   };
 
+  const handleResendInvite = async (email: string) => {
+    try {
+      const actorName = user?.displayName || user?.email?.split('@')[0] || 'Someone';
+      // Update existing declined invitation back to pending, or create a new one
+      const existing = await firestore().collection('invitations')
+        .where('groupId', '==', group!.id)
+        .where('email', '==', email)
+        .get();
+      if (!existing.empty) {
+        await existing.docs[0].ref.update({status: 'pending', createdAt: firestore.Timestamp.fromDate(new Date())});
+      } else {
+        await firestore().collection('invitations').add({
+          email, groupId: group!.id, groupName: group!.name,
+          inviterUid: user?.uid, inviterEmail: user?.email, inviterName: actorName,
+          status: 'pending', createdAt: firestore.Timestamp.fromDate(new Date()),
+        });
+      }
+      await SplitNotificationService.notifySplitInvite(
+        {id: group!.id, name: group!.name, members: groupMembers.map(m => m.email)} as any,
+        actorName,
+        email,
+      );
+      Alert.alert('Sent', `Invitation resent to ${email}`);
+    } catch (_) {
+      Alert.alert('Error', 'Failed to resend invitation');
+    }
+  };
+
   const renderGroupSummaryCard = () => (
     <Card style={[styles.groupSummaryCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
       <View style={styles.cardContent}>
@@ -244,6 +320,21 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
             </View>
           )}
         </View>
+        {pendingInvites.length > 0 && (
+          <View style={styles.pendingInvitesContainer}>
+            <Text style={styles.pendingInvitesLabel}>Pending Invites</Text>
+            {pendingInvites.map(email => (
+              <View key={email} style={styles.pendingInviteRow}>
+                <MaterialCommunityIcons name="clock-outline" size={14} color="rgba(255,255,255,0.7)" />
+                <Text style={styles.pendingInviteEmail} numberOfLines={1}>{email}</Text>
+                <TouchableOpacity onPress={() => handleResendInvite(email)} style={styles.resendButton}>
+                  <MaterialCommunityIcons name="email-send-outline" size={16} color="#fff" />
+                  <Text style={styles.resendText}>Resend</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
         <View style={styles.actionButtonsRow}>
           <TouchableOpacity style={[styles.iconButton, styles.editButton]} onPress={() => navigation.navigate('Split', {editGroup: group})} accessibilityLabel="Edit group" accessibilityRole="button">
             <MaterialCommunityIcons name="pencil" size={24} color={PRIMARY_COLOR} />
@@ -372,7 +463,7 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
                           const lenderDoc = await firestore().collection('users').where('email', '==', user?.email).get();
                           const lenderName = lenderDoc.docs[0]?.data()?.name || user?.email?.split('@')[0] || 'Someone';
                           const result = await SplitNotificationService.notifyPaymentReminder(
-                            group, detail.borrower, {name: lenderName, email: user?.email}, amountStr,
+                            group as any, detail.borrower as any, {name: lenderName, email: user?.email} as any, detail.amount,
                           );
                           if (result?.reason === 'cooldown') {
                             Alert.alert('Already Reminded', 'You already sent a reminder in the last 24 hours.');
@@ -478,6 +569,14 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
         <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('CreateSplit', {group})} accessibilityLabel="Add split" accessibilityRole="button">
           <MaterialCommunityIcons name="plus" size={28} color="#fff" />
         </TouchableOpacity>
+        {/* Improvement 4: success snackbar after creating a split */}
+        <Snackbar
+          visible={snackbarVisible}
+          onDismiss={() => setSnackbarVisible(false)}
+          duration={2500}
+          style={{backgroundColor: '#25B07F'}}>
+          Split added successfully
+        </Snackbar>
       </View>
     </SafeAreaProvider>
   );
@@ -543,4 +642,10 @@ const styles = StyleSheet.create({
   statIconCircle: {width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 6},
   statCardLabel: {fontSize: 11, color: '#888', marginBottom: 3, fontFamily: 'Lato-Regular', textAlign: 'center'},
   statCardValue: {fontSize: 15, fontWeight: '700', fontFamily: 'Lato-Bold', textAlign: 'center'},
+  pendingInvitesContainer: {width: '100%', marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)'},
+  pendingInvitesLabel: {color: 'rgba(255,255,255,0.8)', fontSize: 12, marginBottom: 6, fontWeight: '600'},
+  pendingInviteRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 6},
+  pendingInviteEmail: {flex: 1, color: 'rgba(255,255,255,0.9)', fontSize: 12},
+  resendButton: {flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12},
+  resendText: {color: '#fff', fontSize: 12},
 });

@@ -62,6 +62,7 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
         setAmount(myDebt.amount.toString());
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSettleUp = async () => {
@@ -120,8 +121,8 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
 
       try {
         await SplitNotificationService.notifySettlementMade(
-          {id: group.id, name: group.name, members: (group.members || []).map((m: GroupMember) => m.email || m)},
-          {id: splitRef.id, amount: settlementAmount},
+          {id: group.id, name: group.name, members: (group.members || []).map((m: GroupMember) => m.email || m)} as any,
+          {id: splitRef.id, amount: settlementAmount} as any,
           actorNameResolved,
         );
       } catch (_) {}
@@ -171,16 +172,34 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
       }
 
       if (selectedBorrower.email === currentUserEmail) {
+        // Borrower pays: decrement borrower's balance, increment lender's balance
         await firestore().runTransaction(async tx => {
-          const userDoc = await tx.get(firestore().collection('users').doc(currentUser.uid));
-          const userData = userDoc.data()!;
-          tx.update(userDoc.ref, {balance: userData.balance - settlementAmount});
+          const borrowerDoc = await tx.get(firestore().collection('users').doc(currentUser.uid));
+          const borrowerData = borrowerDoc.data()!;
+          tx.update(borrowerDoc.ref, {balance: borrowerData.balance - settlementAmount});
+          // Update lender's balance if we have their userId
+          if (selectedLender.userId) {
+            const lenderRef = firestore().collection('users').doc(selectedLender.userId);
+            const lenderDoc = await tx.get(lenderRef);
+            if (lenderDoc.exists) {
+              tx.update(lenderRef, {balance: lenderDoc.data()!.balance + settlementAmount});
+            }
+          }
         });
       } else if (selectedLender.email === currentUserEmail) {
+        // Lender receives: increment lender's balance, decrement borrower's balance
         await firestore().runTransaction(async tx => {
-          const userDoc = await tx.get(firestore().collection('users').doc(currentUser.uid));
-          const userData = userDoc.data()!;
-          tx.update(userDoc.ref, {balance: userData.balance + settlementAmount});
+          const lenderDoc = await tx.get(firestore().collection('users').doc(currentUser.uid));
+          const lenderData = lenderDoc.data()!;
+          tx.update(lenderDoc.ref, {balance: lenderData.balance + settlementAmount});
+          // Update borrower's balance if we have their userId
+          if (selectedBorrower.userId) {
+            const borrowerRef = firestore().collection('users').doc(selectedBorrower.userId);
+            const borrowerDoc = await tx.get(borrowerRef);
+            if (borrowerDoc.exists) {
+              tx.update(borrowerRef, {balance: borrowerDoc.data()!.balance - settlementAmount});
+            }
+          }
         });
       }
 

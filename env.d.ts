@@ -13,6 +13,8 @@ declare module 'react-native-vector-icons/Octicons';
 declare module 'react-native-vector-icons/SimpleLineIcons';
 declare module 'react-native-vector-icons/Zocial';
 
+declare module 'react-native-user-avatar';
+
 declare module '@env' {
   export const GOOGLE_WEB_CLIENT_ID: string;
   export const GOOGLE_IOS_CLIENT_ID: string;

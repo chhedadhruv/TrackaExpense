@@ -1,10 +1,9 @@
 import React, {useState, useEffect} from 'react';
-import {View, TouchableOpacity, Alert, StyleSheet, TextInput, ScrollView, Platform} from 'react-native';
+import {View, TouchableOpacity, Alert, StyleSheet, TextInput, Platform} from 'react-native';
 import {Text, Checkbox, Card, ActivityIndicator} from 'react-native-paper';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import {useFocusEffect} from '@react-navigation/native';
-import AntDesign from 'react-native-vector-icons/AntDesign';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import UserAvatar from 'react-native-user-avatar';
 import DropDownPicker from 'react-native-dropdown-picker';
@@ -67,8 +66,9 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
   const [openCategoryDropdown, setOpenCategoryDropdown] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [unregisteredName, setUnregisteredName] = useState('');
-  const [splitHistory, setSplitHistory] = useState<object[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [_unregisteredName, setUnregisteredName] = useState('');
+  const [_splitHistory, setSplitHistory] = useState<object[]>([]);
   const [invitationsCount, setInvitationsCount] = useState(0);
   const currentUser = auth().currentUser;
 
@@ -104,6 +104,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
   };
 
   useFocusEffect(
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     React.useCallback(() => {
       fetchGroups();
       ReminderNotificationService.processRecurringSplits().catch(() => {});
@@ -120,6 +121,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
     return () => unsub && unsub();
   }, [currentUser?.email]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (route?.params?.editGroupId && groups.length > 0) {
       const target = groups.find(g => g.id === route.params.editGroupId);
@@ -127,6 +129,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
     }
   }, [route?.params?.editGroupId, groups]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (route?.params?.editGroup && groups.length > 0) {
       handleEditGroup(route.params.editGroup);
@@ -134,6 +137,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
     }
   }, [route?.params?.editGroup, groups]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (route?.params?.editGroup && !loading && groups.length === 0) {
       handleEditGroup(route.params.editGroup);
@@ -213,11 +217,18 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
     } catch (_) {}
   };
 
+  const resetGroupForm = () => {
+    setGroupName(''); setCategory(null); setSelectedUsers([]);
+    setIsFormVisible(false); setEditingGroupId(null);
+  };
+
   const createGroup = async () => {
     if (!groupName.trim()) { Alert.alert('Validation Error', 'Group name is required'); return; }
     if (groupName.trim().length > 50) { Alert.alert('Validation Error', 'Group name must be 50 characters or less'); return; }
     if (!category) { Alert.alert('Validation Error', 'Please select a category'); return; }
     if (selectedUsers.length === 0) { Alert.alert('Validation Error', 'Please select at least one user to add to the group'); return; }
+    if (saving) return;
+    setSaving(true);
     try {
       const prevGroup = editingGroupId ? groups.find(g => g.id === editingGroupId) : null;
       const memberNames = selectedUsers.reduce<Record<string, string>>((acc, u) => {
@@ -246,11 +257,13 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
         } catch (_) {}
         try {
           await SplitNotificationService.notifyGroupUpdated(
-            {id: editingGroupId, name: groupName, category, members: [currentUser?.email, ...inviteeEmails]},
+            {id: editingGroupId, name: groupName, category, members: [currentUser?.email ?? '', ...inviteeEmails]} as any,
             currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Someone', {},
           );
         } catch (_) {}
-        Alert.alert('Success', 'Group updated successfully');
+        // Bug 4 edit: show alert AFTER saving ends; close form inside onPress
+        setSaving(false);
+        Alert.alert('Success', 'Group updated successfully', [{text: 'OK', onPress: resetGroupForm}]);
       } else {
         groupData.createdAt = firestore.FieldValue.serverTimestamp();
         const groupRef = await firestore().collection('groups').add(groupData);
@@ -267,12 +280,12 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
         await batch.commit();
         try {
           await SplitNotificationService.notifyGroupCreated(
-            {id: groupRef.id, name: groupName, category, pendingInvites: inviteeEmails},
+            {id: groupRef.id, name: groupName, category, pendingInvites: inviteeEmails} as any,
             currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Someone',
           );
           for (const email of inviteeEmails) {
             await SplitNotificationService.notifySplitInvite(
-              {id: groupRef.id, name: groupName, category},
+              {id: groupRef.id, name: groupName, category} as any,
               currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Someone',
               email,
             );
@@ -292,17 +305,18 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
           });
           await refreshHistory();
         } catch (_) {}
-        Alert.alert('Success', 'Group created successfully');
+        // Bug 4 create: show alert AFTER saving ends; close form inside onPress
+        setSaving(false);
+        Alert.alert('Success', 'Group created successfully', [{text: 'OK', onPress: resetGroupForm}]);
       }
     } catch (_) {
+      // Bug 4: on error, keep form open so user can retry — don't call resetGroupForm
       Alert.alert('Error', 'Failed to create/update group');
-    } finally {
-      setGroupName(''); setCategory(null); setSelectedUsers([]);
-      setIsFormVisible(false); setEditingGroupId(null);
+      setSaving(false);
     }
   };
 
-  const deleteGroup = async (groupId: string) => {
+  const _deleteGroup = async (groupId: string) => {
     Alert.alert('Delete Group', 'Are you sure you want to delete this group? This action cannot be undone.', [
       {text: 'Cancel', style: 'cancel'},
       {text: 'Delete', style: 'destructive', onPress: async () => {
@@ -475,9 +489,17 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                     {selectedUsers.length === 0 && <Text style={styles.emptySelectionText}>No users selected yet. Search and add members above.</Text>}
                   </View>
                   <View style={styles.buttonContainer}>
-                    <TouchableOpacity style={styles.createGroupButton} onPress={createGroup}>
-                      <Text style={styles.createGroupButtonText}>{editingGroupId ? 'Update Group' : 'Create Group'}</Text>
-                      <MaterialCommunityIcons name={editingGroupId ? 'pencil' : 'check'} size={20} color="#fff" />
+                    <TouchableOpacity
+                      style={[styles.createGroupButton, saving && {opacity: 0.6}]}
+                      onPress={createGroup}
+                      disabled={saving}>
+                      {saving
+                        ? <ActivityIndicator size="small" color="#fff" />
+                        : <>
+                            <Text style={styles.createGroupButtonText}>{editingGroupId ? 'Update Group' : 'Create Group'}</Text>
+                            <MaterialCommunityIcons name={editingGroupId ? 'pencil' : 'check'} size={20} color="#fff" />
+                          </>
+                      }
                     </TouchableOpacity>
                     {editingGroupId && (
                       <TouchableOpacity style={styles.cancelButton} onPress={() => {
