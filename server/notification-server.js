@@ -15,7 +15,6 @@ const {
 } = process.env;
 
 if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
-  // eslint-disable-next-line no-console
   console.error(
     'Missing Firebase Admin env vars. Please set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY.'
   );
@@ -184,7 +183,6 @@ async function sendDailyFunNotifications() {
   try {
     usersSnap = await db.collection('users').where('fcmToken', '!=', null).get();
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('[FunNotification] Failed to fetch users:', err.message);
     return;
   }
@@ -229,10 +227,8 @@ async function sendDailyFunNotifications() {
           sentAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-      // eslint-disable-next-line no-console
       console.log(`[FunNotification] Sent to ${email} (context: ${context})`);
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error(`[FunNotification] Failed for ${email}:`, err.message);
     }
   });
@@ -289,7 +285,6 @@ async function sendWeeklySummaryEmails() {
   try {
     usersSnap = await db.collection('users').get();
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('[WeeklyEmail] Failed to fetch users:', err.message);
     return;
   }
@@ -363,10 +358,8 @@ async function sendWeeklySummaryEmails() {
       });
 
       await logRef.set({ sentAt: admin.firestore.FieldValue.serverTimestamp(), weekKey });
-      // eslint-disable-next-line no-console
       console.log(`[WeeklyEmail] Sent to ${email}`);
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error(`[WeeklyEmail] Failed for ${email}:`, err.message);
     }
   });
@@ -396,7 +389,6 @@ async function sendMonthlySummaryEmails() {
   try {
     usersSnap = await db.collection('users').get();
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('[MonthlyEmail] Failed to fetch users:', err.message);
     return;
   }
@@ -475,10 +467,8 @@ async function sendMonthlySummaryEmails() {
       });
 
       await logRef.set({ sentAt: admin.firestore.FieldValue.serverTimestamp(), monthKey });
-      // eslint-disable-next-line no-console
       console.log(`[MonthlyEmail] Sent to ${email}`);
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error(`[MonthlyEmail] Failed for ${email}:`, err.message);
     }
   });
@@ -493,7 +483,6 @@ async function sendSavingsGoalCompletionEmails() {
   try {
     usersSnap = await db.collection('users').get();
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('[GoalEmail] Failed to fetch users:', err.message);
     return;
   }
@@ -548,11 +537,9 @@ async function sendSavingsGoalCompletionEmails() {
         });
 
         await goalDoc.ref.update({ goalReachedEmailSent: true });
-        // eslint-disable-next-line no-console
         console.log(`[GoalEmail] Sent goal completion email to ${email} for goal: ${goalName}`);
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error(`[GoalEmail] Failed for ${email}:`, err.message);
     }
   });
@@ -634,13 +621,56 @@ app.post('/send-notification', async (req, res) => {
     const response = await admin.messaging().sendEach(messages);
     return res.json({ success: true, response });
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('send-notification error:', error);
     return res.status(500).json({ error: error.message });
   }
 });
 
+app.post('/createSplitTransaction', async (req, res) => {
+  try {
+    const { targetUserId, txData, balanceDelta, isEdit } = req.body || {};
+    if (!targetUserId || !txData) {
+      return res.status(400).json({ error: 'targetUserId and txData are required' });
+    }
+
+    const db = admin.firestore();
+    const txCol = db.collection('users').doc(targetUserId).collection('transactions');
+    const userRef = db.collection('users').doc(targetUserId);
+
+    const txPayload = {
+      ...txData,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    if (isEdit) {
+      const snap = await txCol.where('splitId', '==', txData.splitId).get();
+      if (!snap.empty) {
+        const oldAmount = parseFloat(snap.docs[0].data().amount || '0');
+        await snap.docs[0].ref.update(txPayload);
+        const delta = oldAmount - parseFloat(txData.amount || '0');
+        if (Math.abs(delta) > 0.001) {
+          await userRef.update({ balance: admin.firestore.FieldValue.increment(delta) });
+        }
+      } else {
+        await txCol.add(txPayload);
+        if (typeof balanceDelta === 'number') {
+          await userRef.update({ balance: admin.firestore.FieldValue.increment(balanceDelta) });
+        }
+      }
+    } else {
+      await txCol.add(txPayload);
+      if (typeof balanceDelta === 'number') {
+        await userRef.update({ balance: admin.firestore.FieldValue.increment(balanceDelta) });
+      }
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('createSplitTransaction error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(PORT, () => {
-  // eslint-disable-next-line no-console
   console.log(`Notification server listening on http://localhost:${PORT}`);
 });

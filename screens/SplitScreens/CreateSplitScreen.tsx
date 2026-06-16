@@ -6,11 +6,11 @@ import {
   StyleSheet,
   Alert,
   TouchableOpacity,
-  Dimensions,
   Platform,
   Image,
   Modal,
 } from 'react-native';
+import {NOTIFICATION_SERVER_URL, EXPO_PUBLIC_NOTIFICATION_SERVER_URL} from '@env';
 import storage from '@react-native-firebase/storage';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {requestCameraPermission} from '../../utils/Permissions';
@@ -20,7 +20,6 @@ import auth from '@react-native-firebase/auth';
 import crashlytics from '@react-native-firebase/crashlytics';
 import * as PerformanceService from '../../src/services/PerformanceService';
 import * as AnalyticsService from '../../src/services/AnalyticsService';
-import FormButton from '../../components/FormButton';
 import {DatePickerModal} from 'react-native-paper-dates';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
@@ -35,8 +34,6 @@ import {
 } from '../../utils/CategoryData';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../../src/constants/theme';
 import {formatInputAmount} from '../../src/utils/formatters';
-
-const {width} = Dimensions.get('window');
 
 type SplitType = 'equal' | 'percentage';
 type RecurringFrequency = 'weekly' | 'monthly';
@@ -98,7 +95,7 @@ interface Group {
 }
 
 const CreateSplitScreen = ({route, navigation}: any) => {
-  const {currency, formatAmount} = useCurrency();
+  const {currency} = useCurrency();
   const [isSplitByPercentage, setIsSplitByPercentage] = useState(false);
   const {group, split}: {group: Group; split?: ExistingSplit} =
     route.params || {};
@@ -121,13 +118,14 @@ const CreateSplitScreen = ({route, navigation}: any) => {
   const [notes, setNotes] = useState('');
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
   const [imageModalVisible, setImageModalVisible] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [_uploading, _setUploading] = useState(false);
   const [recurringEnabled, setRecurringEnabled] = useState(false);
   const [recurringFrequency, setRecurringFrequency] =
     useState<RecurringFrequency>('monthly');
   const [includeInTransactions, setIncludeInTransactions] = useState(true);
   const isEditMode = !!split;
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!group || !group.id) {
       Alert.alert('Error', 'Group information is missing');
@@ -137,6 +135,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
     fetchGroupMembers();
   }, [group]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (isEditMode && groupMembers.length > 0 && split) {
       setTitle(split.title);
@@ -230,6 +229,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
     setIsSplitByPercentage(splitType === 'percentage');
   }, [splitType]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (title.trim().length < 3 || category) return;
     const lower = title.toLowerCase();
@@ -361,6 +361,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
     }
 
     setLoading(true);
+    let newSplitId: string | null = null;
     try {
       const currentUser = auth().currentUser;
       if (!currentUser) throw new Error('Not authenticated');
@@ -442,8 +443,8 @@ const CreateSplitScreen = ({route, navigation}: any) => {
             members: groupMembers.map(m => m.email),
           };
           await SplitNotificationService.notifySplitUpdated(
-            {id: split.id, ...splitData},
-            groupDataForNotify,
+            {id: split.id, ...splitData} as any,
+            groupDataForNotify as any,
             actorNameResolved,
             {},
           );
@@ -602,9 +603,9 @@ const CreateSplitScreen = ({route, navigation}: any) => {
           true,
           includeInTransactions,
         );
-        Alert.alert('Success', 'Split updated successfully');
       } else {
         const splitRef = await splitsCollection.add(splitData);
+        newSplitId = splitRef.id;
 
         try {
           const groupDataForNotify = {
@@ -613,8 +614,8 @@ const CreateSplitScreen = ({route, navigation}: any) => {
             members: groupMembers.map(m => m.email),
           };
           await SplitNotificationService.notifySplitCreated(
-            {id: splitRef.id, ...splitData},
-            groupDataForNotify,
+            {id: splitRef.id, ...splitData} as any,
+            groupDataForNotify as any,
             actorNameResolved,
           );
         } catch (e) { crashlytics().recordError(e as Error); }
@@ -668,7 +669,17 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         });
       }
       setLoading(false);
-      navigation.goBack();
+      if (isEditMode) {
+        Alert.alert('Success', 'Split updated successfully', [
+          {text: 'OK', onPress: () => navigation.goBack()},
+        ]);
+      } else {
+        navigation.navigate('SplitGroupDetail', {
+          group,
+          newSplit: newSplitId ? {id: newSplitId, ...splitData} : undefined,
+          showSuccessToast: true,
+        });
+      }
     } catch (error) {
       crashlytics().recordError(error as Error);
       setLoading(false);
@@ -690,25 +701,57 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       const u = auth().currentUser;
       if (!u) return;
       const email = u.email?.toLowerCase();
-      const txCol = firestore()
-        .collection('users')
-        .doc(u.uid)
-        .collection('transactions');
-
       const isPayer = data.paidBy?.email?.toLowerCase() === email;
+
+      if (!isPayer && data.paidBy?.userId && include) {
+        try {
+          const endpoint = NOTIFICATION_SERVER_URL || EXPO_PUBLIC_NOTIFICATION_SERVER_URL || '';
+          if (endpoint) {
+            const dateStr = data.date.toDate().toISOString().split('T')[0];
+            await fetch(`${endpoint.replace(/\/$/, '')}/createSplitTransaction`, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({
+                targetUserId: data.paidBy.userId,
+                txData: {
+                  title: data.title,
+                  type: 'expense',
+                  category: data.category || 'Split',
+                  amount: String(parseFloat(amount.toFixed(2))),
+                  date: dateStr,
+                  source: 'split',
+                  splitId,
+                  groupId: group.id,
+                  groupName: group.name,
+                  splitRole: 'payer',
+                },
+                balanceDelta: -amount,
+                isEdit,
+              }),
+            });
+          }
+        } catch (_) {}
+        return;
+      }
+
+      if (!isPayer) return;
+
+      const txCol = firestore().collection('users').doc(u.uid).collection('transactions');
+      const userRef = firestore().collection('users').doc(u.uid);
 
       if (!include) {
         if (isEdit) {
           const snap = await txCol.where('splitId', '==', splitId).get();
           if (!snap.empty) {
+            const oldAmount = parseFloat(snap.docs[0].data().amount || '0');
             await snap.docs[0].ref.delete();
+            if (oldAmount > 0) {
+              await userRef.update({balance: firestore.FieldValue.increment(oldAmount)});
+            }
           }
         }
         return;
       }
-
-      // Only the payer gets a transaction; participants record theirs via SettleUp
-      if (!isPayer) return;
 
       const dateStr = data.date.toDate().toISOString().split('T')[0];
       const txData = {
@@ -728,12 +771,19 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       if (isEdit) {
         const snap = await txCol.where('splitId', '==', splitId).get();
         if (!snap.empty) {
+          const oldAmount = parseFloat(snap.docs[0].data().amount || '0');
           await snap.docs[0].ref.update(txData);
+          const delta = oldAmount - amount;
+          if (Math.abs(delta) > 0.001) {
+            await userRef.update({balance: firestore.FieldValue.increment(delta)});
+          }
         } else {
           await txCol.add(txData);
+          await userRef.update({balance: firestore.FieldValue.increment(-amount)});
         }
       } else {
         await txCol.add(txData);
+        await userRef.update({balance: firestore.FieldValue.increment(-amount)});
       }
     } catch (e) {
       crashlytics().recordError(e as Error);
@@ -995,7 +1045,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                   visible={datePickerVisible}
                   onDismiss={onDismissDatePicker}
                   date={date}
-                  onConfirm={onConfirmDate}
+                  onConfirm={onConfirmDate as any}
                   saveLabel="Confirm"
                   label="Select date"
                   uppercase={false}
