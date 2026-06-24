@@ -67,12 +67,13 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
       .onSnapshot(
         doc => {
           if (doc.exists) {
-            setUserData(doc.data() as UserDocument);
+            const data = doc.data() as UserDocument;
+            setUserData(data);
             setError(null);
           }
           setUserLoading(false);
         },
-        _ => {
+        err => {
           setError('Error fetching user data. Please check your connection and try again.');
           setUserLoading(false);
         },
@@ -98,7 +99,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
           setTransactions(arr);
           setTxLoading(false);
         },
-        _ => {
+        err => {
           setError('Error fetching transactions. Please check your connection.');
           setTxLoading(false);
         },
@@ -156,7 +157,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
         setBalanceSaved(false);
         setEditBalanceVisible(false);
       }, 800);
-    } catch (_) {
+    } catch (err) {
     } finally {
       setBalanceSaving(false);
     }

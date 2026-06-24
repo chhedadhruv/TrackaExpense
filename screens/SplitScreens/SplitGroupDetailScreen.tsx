@@ -155,13 +155,16 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
         }
         return {email, name: email.split('@')[0], avatar: null, userId: null};
       });
-      setGroupMembers(await Promise.all(memberPromises));
-    } catch (_) {}
+      const resolved = await Promise.all(memberPromises);
+      setGroupMembers(resolved);
+    } catch (err) {}
   };
 
   const fetchGroupSplits = async (showSpinner = true) => {
     try {
-      if (showSpinner) setLoading(true);
+      if (showSpinner) {
+        setLoading(true);
+      }
       const snap = await firestore().collection('groups').doc(group!.id).collection('splits').get();
       const fetched = snap.docs
         .map(doc => ({id: doc.id, ...doc.data()} as SplitItem))
@@ -173,7 +176,7 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
       setTotalSplitAmount(fetched.reduce((sum, s) => sum + parseFloat(String(s.amount)), 0));
       setSplits(fetched);
       hasLoadedOnce.current = true;
-    } catch (_) {
+    } catch (err) {
       Alert.alert('Error', 'Failed to fetch group splits');
     } finally {
       setLoading(false);
@@ -189,10 +192,10 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
           {id: group!.id, name: group!.name, members: groupMembers.map(m => m.email)} as any,
           user?.displayName || user?.email?.split('@')[0] || 'Someone',
         );
-      } catch (_) {}
+      } catch (notifErr) {}
       fetchGroupSplits();
       Alert.alert('Success', 'Split deleted successfully');
-    } catch (_) {
+    } catch (err) {
       Alert.alert('Error', 'Failed to delete split');
     }
   };
@@ -229,6 +232,7 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
     const net: LendingDetail[] = [];
     Object.keys(balances).forEach(lenderEmail => {
       Object.keys(balances[lenderEmail]).forEach(borrowerEmail => {
+        if (lenderEmail >= borrowerEmail) return;
         const lTob = balances[lenderEmail][borrowerEmail] || 0;
         const bToL = (balances[borrowerEmail]?.[lenderEmail]) || 0;
         const netAmt = lTob - bToL;
@@ -243,7 +247,7 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
         }
       });
     });
-    return net.reduce<LendingDetail[]>((acc, cur) => {
+    const result = net.reduce<LendingDetail[]>((acc, cur) => {
       const exists = acc.find(e =>
         (e.lender.email === cur.lender.email && e.borrower.email === cur.borrower.email) ||
         (e.lender.email === cur.borrower.email && e.borrower.email === cur.lender.email),
@@ -251,6 +255,7 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
       if (!exists) acc.push(cur);
       return acc;
     }, []);
+    return result;
   };
 
   const _handleSearch = (query: string) => {

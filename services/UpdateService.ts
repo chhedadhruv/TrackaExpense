@@ -35,7 +35,7 @@ class UpdateService {
 
   private async _startAndroidUpdate(): Promise<void> {
     try {
-      await this.inAppUpdates.startUpdate({updateType: IAUUpdateKind.FLEXIBLE});
+      await this.inAppUpdates.startUpdate({updateType: IAUUpdateKind.IMMEDIATE});
     } catch (_) {}
   }
 

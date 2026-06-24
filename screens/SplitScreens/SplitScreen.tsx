@@ -96,7 +96,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
         }),
       );
       setGroups(fetchedGroups);
-    } catch (_) {
+    } catch (err) {
       Alert.alert('Error', 'Failed to fetch groups');
     } finally {
       setLoading(false);
@@ -228,6 +228,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
     if (!category) { Alert.alert('Validation Error', 'Please select a category'); return; }
     if (selectedUsers.length === 0) { Alert.alert('Validation Error', 'Please select at least one user to add to the group'); return; }
     if (saving) return;
+    const isEdit = !!editingGroupId;
     setSaving(true);
     try {
       const prevGroup = editingGroupId ? groups.find(g => g.id === editingGroupId) : null;
@@ -254,14 +255,11 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
             createdAt: firestore.Timestamp.fromDate(new Date()),
           });
           await refreshHistory();
-        } catch (_) {}
-        try {
-          await SplitNotificationService.notifyGroupUpdated(
-            {id: editingGroupId, name: groupName, category, members: [currentUser?.email ?? '', ...inviteeEmails]} as any,
-            currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Someone', {},
-          );
-        } catch (_) {}
-        // Bug 4 edit: show alert AFTER saving ends; close form inside onPress
+        } catch (histErr) {}
+        SplitNotificationService.notifyGroupUpdated(
+          {id: editingGroupId, name: groupName, category, members: [currentUser?.email ?? '', ...inviteeEmails]} as any,
+          currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Someone', {},
+        ).catch(() => {});
         setSaving(false);
         Alert.alert('Success', 'Group updated successfully', [{text: 'OK', onPress: resetGroupForm}]);
       } else {
@@ -278,39 +276,39 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
           });
         });
         await batch.commit();
-        try {
-          await SplitNotificationService.notifyGroupCreated(
-            {id: groupRef.id, name: groupName, category, pendingInvites: inviteeEmails} as any,
+        SplitNotificationService.notifyGroupCreated(
+          {id: groupRef.id, name: groupName, category, pendingInvites: inviteeEmails} as any,
+          currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Someone',
+        ).catch(() => {});
+        for (const email of inviteeEmails) {
+          SplitNotificationService.notifySplitInvite(
+            {id: groupRef.id, name: groupName, category} as any,
             currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Someone',
-          );
-          for (const email of inviteeEmails) {
-            await SplitNotificationService.notifySplitInvite(
-              {id: groupRef.id, name: groupName, category} as any,
-              currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Someone',
-              email,
-            );
-          }
-        } catch (_) {}
+            email,
+          ).catch(() => {});
+        }
         const memberPromises = [{email: currentUser?.email ?? ''}].map(async u => {
           const snap = await firestore().collection('users').where('email', '==', u.email).get();
           const data = snap.docs[0]?.data();
           return data ? {email: u.email, name: data.name || data.displayName || null, ...data} : {email: u.email, name: memberNames[u.email] || null};
         });
         const memberDetails = await Promise.all(memberPromises);
-        setGroups(prev => [...prev, {id: groupRef.id, ...groupData, memberDetails} as Group]);
+        setGroups(prev =>
+          prev.some(g => g.id === groupRef.id)
+            ? prev
+            : [...prev, {id: groupRef.id, ...groupData, memberDetails} as Group]
+        );
         try {
           await firestore().collection('users').doc(currentUser!.uid).collection('splitHistory').add({
             type: 'create', groupId: groupRef.id, groupName: groupName, category, membersCount: 1,
             createdAt: firestore.Timestamp.fromDate(new Date()),
           });
           await refreshHistory();
-        } catch (_) {}
-        // Bug 4 create: show alert AFTER saving ends; close form inside onPress
+        } catch (histErr) {}
         setSaving(false);
         Alert.alert('Success', 'Group created successfully', [{text: 'OK', onPress: resetGroupForm}]);
       }
-    } catch (_) {
-      // Bug 4: on error, keep form open so user can retry — don't call resetGroupForm
+    } catch (err) {
       Alert.alert('Error', 'Failed to create/update group');
       setSaving(false);
     }

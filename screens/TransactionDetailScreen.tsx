@@ -38,6 +38,7 @@ const TransactionDetailScreen = ({route, navigation}: {route: any; navigation: a
     setLoading(true);
     setError('');
     const {userId, id, imageUrl, amount, type} = transaction;
+    const balanceIncrement = type === 'expense' ? +amount : -amount;
     try {
       await firestore()
         .collection('users')
@@ -45,7 +46,6 @@ const TransactionDetailScreen = ({route, navigation}: {route: any; navigation: a
         .collection('transactions')
         .doc(id)
         .delete();
-      const balanceIncrement = type === 'expense' ? +amount : -amount;
       await firestore()
         .collection('users')
         .doc(userId)
