@@ -134,9 +134,9 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
 
   useEffect(() => {
     const income = filteredTransactions.reduce((sum, t) =>
-      t.type === 'income' && t.source !== 'split' ? sum + (parseFloat(t.amount as any) || 0) : sum, 0);
+      t.type === 'income' ? sum + (parseFloat(t.amount as any) || 0) : sum, 0);
     const expense = filteredTransactions.reduce((sum, t) =>
-      t.type === 'expense' && t.source !== 'split' ? sum + (parseFloat(t.amount as any) || 0) : sum, 0);
+      t.type === 'expense' ? sum + (parseFloat(t.amount as any) || 0) : sum, 0);
     setTotalIncome(income);
     setTotalExpense(expense);
   }, [filteredTransactions]);

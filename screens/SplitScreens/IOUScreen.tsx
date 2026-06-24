@@ -10,6 +10,7 @@ import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {useFocusEffect} from '@react-navigation/native';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {PRIMARY_COLOR, BACKGROUND_COLOR, INCOME_COLOR as SUCCESS_COLOR, EXPENSE_COLOR} from '../../src/constants/theme';
+import {NOTIFICATION_SERVER_URL, EXPO_PUBLIC_NOTIFICATION_SERVER_URL} from '@env';
 
 interface IOU {
   id: string;
@@ -32,6 +33,7 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
   const [refreshing, setRefreshing] = useState(false);
   const [iOwe, setIOwe] = useState<IOU[]>([]);
   const [owedToMe, setOwedToMe] = useState<IOU[]>([]);
+  const [settlingId, setSettlingId] = useState<string | null>(null);
 
   const loadIOUs = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -59,18 +61,88 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
     loadIOUs();
   }, [loadIOUs]));
 
-  const markSettled = (iou: IOU) => {
-    Alert.alert('Mark Settled', 'Mark this IOU as settled?', [
-      {text: 'Cancel', style: 'cancel'},
-      {text: 'Settle', onPress: async () => {
+  const settleIOU = async (iou: IOU) => {
+    if (settlingId) return;
+    setSettlingId(iou.id);
+    try {
+      const currentUser = auth().currentUser;
+      if (!currentUser) return;
+      const currentEmail = currentUser.email?.toLowerCase();
+      const amount = Number(iou.amount) || 0;
+      const todayStr = new Date().toISOString().split('T')[0];
+      const isDebtor = iou.fromEmail?.toLowerCase() === currentEmail;
+      const counterpartyEmail = (isDebtor ? iou.toEmail : iou.fromEmail)?.toLowerCase();
+      const counterpartyName = isDebtor ? iou.toName || iou.toEmail : iou.fromName || iou.fromEmail;
+      const currentUserName = currentUser.displayName || currentEmail?.split('@')[0] || 'Me';
+
+      await firestore().collection('ious').doc(iou.id).update({
+        status: 'settled', settledAt: firestore.FieldValue.serverTimestamp(),
+      });
+
+      if (amount > 0) {
+        // Current user: debtor pays (expense), creditor receives (income).
         try {
-          await firestore().collection('ious').doc(iou.id).update({status: 'settled', settledAt: firestore.FieldValue.serverTimestamp()});
-          loadIOUs(true);
-        } catch (_) {
-          Alert.alert('Error', 'Failed to mark as settled');
+          await firestore().collection('users').doc(currentUser.uid).collection('transactions').add({
+            title: iou.notes?.trim() || `IOU: ${counterpartyName}`,
+            type: isDebtor ? 'expense' : 'income',
+            category: 'IOU', amount: String(amount), date: todayStr,
+            source: 'iou', iouId: iou.id,
+            splitRole: isDebtor ? 'iou_payer' : 'iou_receiver',
+            createdAt: firestore.FieldValue.serverTimestamp(),
+          });
+          await firestore().collection('users').doc(currentUser.uid).update({
+            balance: firestore.FieldValue.increment(isDebtor ? -amount : amount),
+          });
+        } catch (_) {}
+
+        // Counterparty (opposite entry) via notification server, if registered.
+        let counterpartyUserId: string | null = null;
+        if (counterpartyEmail) {
+          try {
+            const snap = await firestore().collection('users').where('email', '==', counterpartyEmail).get();
+            if (!snap.empty) counterpartyUserId = snap.docs[0].id;
+          } catch (_) {}
         }
-      }},
-    ]);
+        if (counterpartyUserId) {
+          try {
+            const endpoint = NOTIFICATION_SERVER_URL || EXPO_PUBLIC_NOTIFICATION_SERVER_URL || '';
+            if (endpoint) {
+              await fetch(`${endpoint.replace(/\/$/, '')}/createSplitTransaction`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                  targetUserId: counterpartyUserId,
+                  txData: {
+                    title: iou.notes?.trim() || `IOU: ${currentUserName}`,
+                    type: isDebtor ? 'income' : 'expense',
+                    category: 'IOU', amount: String(amount), date: todayStr,
+                    source: 'iou', iouId: iou.id,
+                    splitRole: isDebtor ? 'iou_receiver' : 'iou_payer',
+                  },
+                  balanceDelta: isDebtor ? amount : -amount,
+                }),
+              });
+            }
+          } catch (_) {}
+        }
+      }
+      loadIOUs(true);
+    } catch (_) {
+      Alert.alert('Error', 'Failed to mark as settled');
+    } finally {
+      setSettlingId(null);
+    }
+  };
+
+  const markSettled = (iou: IOU) => {
+    Alert.alert(
+      'Mark Settled',
+      'Mark this IOU as settled? This records matching income/expense entries and updates both balances.',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {text: 'Settle', onPress: () => settleIOU(iou)},
+      ],
+    );
   };
 
   const renderIOU = (iou: IOU, isDebtor: boolean) => {
@@ -90,8 +162,10 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
           </View>
           <View style={styles.iouRight}>
             <Text style={[styles.iouAmount, {color}]}>{formatAmount(iou.amount)}</Text>
-            <TouchableOpacity onPress={() => markSettled(iou)} style={styles.settleButton}>
-              <Text style={styles.settleButtonText}>Settle</Text>
+            <TouchableOpacity onPress={() => markSettled(iou)} disabled={settlingId === iou.id} style={styles.settleButton}>
+              {settlingId === iou.id
+                ? <ActivityIndicator size={16} color="#fff" />
+                : <Text style={styles.settleButtonText}>Settle</Text>}
             </TouchableOpacity>
           </View>
         </View>
