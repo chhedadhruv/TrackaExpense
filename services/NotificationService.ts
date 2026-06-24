@@ -65,6 +65,9 @@ function handleNotificationNavigation(data: NotificationData | undefined): void 
       case 'group_deleted':
         RootNavigation.navigate('Split', {screen: 'Split'});
         break;
+      case 'settlement_reminder':
+        RootNavigation.navigate('Split', {screen: 'FriendsBalance'});
+        break;
       case 'reminder':
         if (data.action === 'add_income') {
           RootNavigation.navigate('Home', {screen: 'AddIncome'});

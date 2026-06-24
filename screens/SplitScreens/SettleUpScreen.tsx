@@ -13,6 +13,7 @@ import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {PRIMARY_COLOR, BACKGROUND_COLOR, INCOME_COLOR as SUCCESS_COLOR, EXPENSE_COLOR} from '../../src/constants/theme';
 import {formatInputAmount} from '../../src/utils/formatters';
+import {NOTIFICATION_SERVER_URL, EXPO_PUBLIC_NOTIFICATION_SERVER_URL} from '@env';
 
 interface GroupMember {
   email: string;
@@ -66,6 +67,7 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
   }, []);
 
   const handleSettleUp = async () => {
+    if (loading) return;
     if (!selectedLender || !selectedBorrower || !amount) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
@@ -147,9 +149,13 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
         await firestore().collection('groups').doc(group.id).collection('splitHistory').add(historyPayload);
       } catch (histErr) {}
 
+      const todayStr = new Date().toISOString().split('T')[0];
+      const counterparty = selectedBorrower.email === currentUserEmail ? selectedLender : selectedBorrower;
+      const counterpartyIsPayer = counterparty.email === selectedBorrower.email;
+
+      // Current user's own transaction entry (respects their includeInTransactions toggle)
       if (includeInTransactions) {
         try {
-          const todayStr = new Date().toISOString().split('T')[0];
           const txCol = firestore().collection('users').doc(currentUser.uid).collection('transactions');
           if (selectedBorrower.email === currentUserEmail) {
             await txCol.add({
@@ -169,35 +175,47 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
         } catch (txErr) {}
       }
 
-      if (selectedBorrower.email === currentUserEmail) {
-        // Borrower pays: decrement borrower's balance, increment lender's balance
-        await firestore().runTransaction(async tx => {
-          const borrowerDoc = await tx.get(firestore().collection('users').doc(currentUser.uid));
-          const borrowerData = borrowerDoc.data()!;
-          tx.update(borrowerDoc.ref, {balance: borrowerData.balance - settlementAmount});
-          if (selectedLender.userId) {
-            const lenderRef = firestore().collection('users').doc(selectedLender.userId);
-            const lenderDoc = await tx.get(lenderRef);
-            if (lenderDoc.exists) {
-              tx.update(lenderRef, {balance: lenderDoc.data()!.balance + settlementAmount});
-            }
+      // Counterparty's transaction entry via notification server (balance handled separately below).
+      // Borrower (payer) gets an expense; lender (receiver) gets an income.
+      if (counterparty.userId && counterparty.email !== currentUserEmail) {
+        try {
+          const endpoint = NOTIFICATION_SERVER_URL || EXPO_PUBLIC_NOTIFICATION_SERVER_URL || '';
+          if (endpoint) {
+            await fetch(`${endpoint.replace(/\/$/, '')}/createSplitTransaction`, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({
+                targetUserId: counterparty.userId,
+                txData: {
+                  title: note.trim() || `Settlement: ${group.name}`,
+                  type: counterpartyIsPayer ? 'expense' : 'income',
+                  category: 'Settlement',
+                  amount: String(settlementAmount),
+                  date: todayStr,
+                  source: 'split',
+                  splitId: splitRef.id,
+                  groupId: group.id,
+                  groupName: group.name,
+                  splitRole: counterpartyIsPayer ? 'settlement_payer' : 'settlement_receiver',
+                },
+              }),
+            });
           }
-        });
-      } else if (selectedLender.email === currentUserEmail) {
-        // Lender receives: increment lender's balance, decrement borrower's balance
-        await firestore().runTransaction(async tx => {
-          const lenderDoc = await tx.get(firestore().collection('users').doc(currentUser.uid));
-          const lenderData = lenderDoc.data()!;
-          tx.update(lenderDoc.ref, {balance: lenderData.balance + settlementAmount});
-          if (selectedBorrower.userId) {
-            const borrowerRef = firestore().collection('users').doc(selectedBorrower.userId);
-            const borrowerDoc = await tx.get(borrowerRef);
-            if (borrowerDoc.exists) {
-              tx.update(borrowerRef, {balance: borrowerDoc.data()!.balance - settlementAmount});
-            }
-          }
-        });
+        } catch (serverErr) {}
       }
+
+      // Balance updates for both parties via FieldValue.increment.
+      // Borrower (payer) balance decreases; lender (receiver) balance increases.
+      const borrowerRef = selectedBorrower.email === currentUserEmail
+        ? firestore().collection('users').doc(currentUser.uid)
+        : selectedBorrower.userId ? firestore().collection('users').doc(selectedBorrower.userId) : null;
+      const lenderRef = selectedLender.email === currentUserEmail
+        ? firestore().collection('users').doc(currentUser.uid)
+        : selectedLender.userId ? firestore().collection('users').doc(selectedLender.userId) : null;
+      const balanceUpdates: Promise<void>[] = [];
+      if (borrowerRef) balanceUpdates.push(borrowerRef.update({balance: firestore.FieldValue.increment(-settlementAmount)}));
+      if (lenderRef) balanceUpdates.push(lenderRef.update({balance: firestore.FieldValue.increment(settlementAmount)}));
+      await Promise.all(balanceUpdates);
 
       AnalyticsService.logSettleUp(AnalyticsService.getAmountRange(settlementAmount));
       Alert.alert('Success', 'Settlement recorded successfully');

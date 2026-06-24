@@ -1,5 +1,5 @@
 import React, {useState, useCallback} from 'react';
-import {View, StyleSheet, RefreshControl, Platform} from 'react-native';
+import {View, StyleSheet, RefreshControl, Platform, TouchableOpacity, Alert} from 'react-native';
 import {Text, Card, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import UserAvatar from 'react-native-user-avatar';
@@ -10,12 +10,13 @@ import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {useFocusEffect} from '@react-navigation/native';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {PRIMARY_COLOR, BACKGROUND_COLOR, INCOME_COLOR as SUCCESS_COLOR, EXPENSE_COLOR} from '../../src/constants/theme';
+import SplitNotificationService from '../../services/SplitNotificationService';
 
 interface Balance {
   email: string;
   name: string;
   net: number;
-  groups: {name: string; amount: number}[];
+  groups: {groupId: string; name: string; amount: number}[];
 }
 
 interface SplitDoc {
@@ -40,6 +41,7 @@ const FriendsBalanceScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [balances, setBalances] = useState<Balance[]>([]);
+  const [remindingEmail, setRemindingEmail] = useState<string | null>(null);
 
   const calculateBalancesForSplits = (splits: SplitDoc[], currentEmail: string): {email: string; name: string; net: number}[] => {
     const netMap: Record<string, {email: string; name: string; net: number}> = {};
@@ -108,12 +110,12 @@ const FriendsBalanceScreen = () => {
         if (!perGroupBalances[groupKey]) perGroupBalances[groupKey] = {name: split.groupName || '', splits: []};
         perGroupBalances[groupKey].splits.push(split);
       });
-      Object.values(perGroupBalances).forEach(({name: groupName, splits: groupSplits}) => {
+      Object.entries(perGroupBalances).forEach(([groupId, {name: groupName, splits: groupSplits}]) => {
         const bals = calculateBalancesForSplits(groupSplits, currentEmail);
         bals.forEach(b => {
           if (!aggregated[b.email]) aggregated[b.email] = {email: b.email, name: b.name, net: 0, groups: []};
           aggregated[b.email].net += b.net;
-          aggregated[b.email].groups.push({name: groupName, amount: b.net});
+          aggregated[b.email].groups.push({groupId, name: groupName, amount: b.net});
         });
       });
       const result = Object.values(aggregated)
@@ -131,6 +133,44 @@ const FriendsBalanceScreen = () => {
   useFocusEffect(useCallback(() => {
     loadBalances();
   }, [loadBalances]));
+
+  const handleRemind = async (b: Balance) => {
+    if (remindingEmail) return;
+    const currentUser = auth().currentUser;
+    if (!currentUser) return;
+    const lender = {
+      email: currentUser.email ?? '',
+      name: currentUser.displayName || currentUser.email?.split('@')[0] || 'Someone',
+    };
+    const borrower = {email: b.email, name: b.name};
+    // Friend owes the user in these groups (positive amount).
+    const owingGroups = b.groups.filter(g => g.amount > 0.009);
+    if (owingGroups.length === 0) return;
+    setRemindingEmail(b.email);
+    try {
+      const results = await Promise.all(
+        owingGroups.map(g =>
+          SplitNotificationService.notifyPaymentReminder(
+            {id: g.groupId, name: g.name} as any,
+            borrower,
+            lender,
+            g.amount,
+          ).catch(() => ({success: false, reason: 'error'})),
+        ),
+      );
+      const sent = results.filter(r => r.success).length;
+      const cooled = results.filter(r => !r.success && r.reason === 'cooldown').length;
+      if (sent > 0) {
+        Alert.alert('Reminder Sent', `${b.name} has been reminded to pay you.`);
+      } else if (cooled > 0) {
+        Alert.alert('Already Reminded', 'You already reminded them in the last 24 hours.');
+      } else {
+        Alert.alert('Error', 'Failed to send reminder.');
+      }
+    } finally {
+      setRemindingEmail(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -207,7 +247,19 @@ const FriendsBalanceScreen = () => {
                         </Text>
                       ))}
                     </View>
-                    <Text style={[styles.balanceAmount, {color}]}>{fmtAmt(b.net)}</Text>
+                    <View style={styles.balanceRight}>
+                      <Text style={[styles.balanceAmount, {color}]}>{fmtAmt(b.net)}</Text>
+                      {owesYou && (
+                        <TouchableOpacity
+                          style={styles.remindButton}
+                          disabled={remindingEmail === b.email}
+                          onPress={() => handleRemind(b)}>
+                          {remindingEmail === b.email
+                            ? <ActivityIndicator size={14} color={PRIMARY_COLOR} />
+                            : <Text style={styles.remindButtonText}>Remind</Text>}
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
                 </Card>
               );
@@ -249,5 +301,8 @@ const styles = StyleSheet.create({
   balanceName: {fontSize: 16, fontWeight: '600', color: '#2C2C2C', fontFamily: 'Lato-Bold'},
   balanceLabel: {fontSize: 13, fontFamily: 'Lato-Regular', marginTop: 2},
   groupBreakdown: {fontSize: 11, color: '#888', fontFamily: 'Lato-Regular', marginTop: 1},
+  balanceRight: {alignItems: 'flex-end'},
   balanceAmount: {fontSize: 18, fontWeight: 'bold', fontFamily: 'Kufam-SemiBoldItalic'},
+  remindButton: {marginTop: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14, backgroundColor: '#EEF0FB'},
+  remindButtonText: {fontSize: 12, color: PRIMARY_COLOR, fontFamily: 'Lato-Bold', fontWeight: '600'},
 });

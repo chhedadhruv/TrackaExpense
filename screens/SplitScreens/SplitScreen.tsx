@@ -248,19 +248,15 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
         setGroups(prev => prev.map(g => g.id === editingGroupId
           ? {...g, ...groupData, memberDetails: [...selectedUsers, {email: currentUser?.email ?? '', name: currentUser?.displayName || 'You'}]}
           : g));
-        try {
-          await firestore().collection('users').doc(currentUser!.uid).collection('splitHistory').add({
-            type: 'update', groupId: editingGroupId, groupName: groupName,
-            previousGroupName: prevGroup?.name, category, membersCount: 1,
-            createdAt: firestore.Timestamp.fromDate(new Date()),
-          });
-          await refreshHistory();
-        } catch (histErr) {}
+        firestore().collection('users').doc(currentUser!.uid).collection('splitHistory').add({
+          type: 'update', groupId: editingGroupId, groupName: groupName,
+          previousGroupName: prevGroup?.name, category, membersCount: 1,
+          createdAt: firestore.Timestamp.fromDate(new Date()),
+        }).then(() => refreshHistory()).catch(() => {});
         SplitNotificationService.notifyGroupUpdated(
           {id: editingGroupId, name: groupName, category, members: [currentUser?.email ?? '', ...inviteeEmails]} as any,
           currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Someone', {},
         ).catch(() => {});
-        setSaving(false);
         Alert.alert('Success', 'Group updated successfully', [{text: 'OK', onPress: resetGroupForm}]);
       } else {
         groupData.createdAt = firestore.FieldValue.serverTimestamp();
@@ -287,29 +283,24 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
             email,
           ).catch(() => {});
         }
-        const memberPromises = [{email: currentUser?.email ?? ''}].map(async u => {
-          const snap = await firestore().collection('users').where('email', '==', u.email).get();
-          const data = snap.docs[0]?.data();
-          return data ? {email: u.email, name: data.name || data.displayName || null, ...data} : {email: u.email, name: memberNames[u.email] || null};
-        });
-        const memberDetails = await Promise.all(memberPromises);
+        const memberDetails = [{
+          email: currentUser?.email ?? '',
+          name: currentUser?.displayName || memberNames[currentUser?.email ?? ''] || 'You',
+        }];
         setGroups(prev =>
           prev.some(g => g.id === groupRef.id)
             ? prev
             : [...prev, {id: groupRef.id, ...groupData, memberDetails} as Group]
         );
-        try {
-          await firestore().collection('users').doc(currentUser!.uid).collection('splitHistory').add({
-            type: 'create', groupId: groupRef.id, groupName: groupName, category, membersCount: 1,
-            createdAt: firestore.Timestamp.fromDate(new Date()),
-          });
-          await refreshHistory();
-        } catch (histErr) {}
-        setSaving(false);
+        firestore().collection('users').doc(currentUser!.uid).collection('splitHistory').add({
+          type: 'create', groupId: groupRef.id, groupName: groupName, category, membersCount: 1,
+          createdAt: firestore.Timestamp.fromDate(new Date()),
+        }).then(() => refreshHistory()).catch(() => {});
         Alert.alert('Success', 'Group created successfully', [{text: 'OK', onPress: resetGroupForm}]);
       }
     } catch (err) {
       Alert.alert('Error', 'Failed to create/update group');
+    } finally {
       setSaving(false);
     }
   };

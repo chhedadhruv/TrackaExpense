@@ -557,6 +557,176 @@ cron.schedule('30 3 1 * *', sendMonthlySummaryEmails);
 cron.schedule('0 */6 * * *', sendSavingsGoalCompletionEmails);
 
 // ---------------------------------------------------------------------------
+// Settlement reminders (push) — nudges debtors about outstanding balances
+// ---------------------------------------------------------------------------
+
+const SETTLE_REMINDER_COOLDOWN_DAYS = 13; // ~bi-weekly per user (cron fires weekly)
+
+// Computes net pairwise debts for a group's splits, mirroring the client's
+// calculateNetLendingBalances. Returns [{ borrower, lender, amount }].
+function computeNetDebts(splits) {
+  const balances = {}; // balances[a][b] = amount b owes a
+  const add = (a, b, amt) => {
+    if (!balances[a]) balances[a] = {};
+    balances[a][b] = (balances[a][b] || 0) + amt;
+  };
+  for (const split of splits) {
+    const amount = parseFloat(split.amount) || 0;
+    if (isNaN(amount)) continue;
+    if (split.type === 'settlement' || split.isSettlement) {
+      const fromEmail = (split.paidBy && split.paidBy.email || '').toLowerCase();
+      const toEmail = (split.splitUsers && split.splitUsers[0] && split.splitUsers[0].email || '').toLowerCase();
+      if (!fromEmail || !toEmail || fromEmail === toEmail) continue;
+      add(toEmail, fromEmail, -amount); // borrower paid lender → reduces what borrower owes
+      continue;
+    }
+    const paidByEmail = (split.paidBy && split.paidBy.email || '').toLowerCase();
+    const splitUsers = split.splitUsers || [];
+    if (!paidByEmail || splitUsers.length === 0) continue;
+    for (const u of splitUsers) {
+      const uEmail = (u.email || '').toLowerCase();
+      if (!uEmail || uEmail === paidByEmail) continue;
+      const share = split.splitType === 'percentage'
+        ? amount * ((u.percentage || 0) / 100)
+        : amount / splitUsers.length;
+      add(paidByEmail, uEmail, share);
+    }
+  }
+  const result = [];
+  const seen = new Set();
+  for (const a of Object.keys(balances)) {
+    for (const b of Object.keys(balances[a])) {
+      const key = [a, b].sort().join('|');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const bOwesA = balances[a] && balances[a][b] || 0;
+      const aOwesB = balances[b] && balances[b][a] || 0;
+      const net = bOwesA - aOwesB;
+      if (Math.abs(net) < 0.01) continue;
+      if (net > 0) result.push({ borrower: b, lender: a, amount: net });
+      else result.push({ borrower: a, lender: b, amount: -net });
+    }
+  }
+  return result;
+}
+
+async function sendSettlementReminders() {
+  const db = admin.firestore();
+
+  // 1. Build an email -> user map (uid, token, currency).
+  let usersSnap;
+  try {
+    usersSnap = await db.collection('users').get();
+  } catch (err) {
+    console.error('[SettleReminder] Failed to fetch users:', err.message);
+    return;
+  }
+  const byEmail = {};
+  usersSnap.docs.forEach((d) => {
+    const data = d.data();
+    if (data.email) {
+      byEmail[data.email.toLowerCase()] = {
+        uid: d.id,
+        fcmToken: data.fcmToken,
+        currency: data.currency,
+      };
+    }
+  });
+
+  // 2. Accumulate what each user owes across groups + pending IOUs.
+  const owed = {}; // email -> { total, count }
+  const addOwed = (email, amt) => {
+    if (!email || !(amt > 0)) return;
+    const e = email.toLowerCase();
+    if (!owed[e]) owed[e] = { total: 0, count: 0 };
+    owed[e].total += amt;
+    owed[e].count += 1;
+  };
+
+  let groupsSnap;
+  try {
+    groupsSnap = await db.collection('groups').get();
+  } catch (err) {
+    console.error('[SettleReminder] Failed to fetch groups:', err.message);
+    groupsSnap = { docs: [] };
+  }
+  for (const g of groupsSnap.docs) {
+    try {
+      const splitsSnap = await db.collection('groups').doc(g.id).collection('splits').get();
+      const debts = computeNetDebts(splitsSnap.docs.map((s) => s.data()));
+      debts.forEach((d) => addOwed(d.borrower, d.amount));
+    } catch (err) {
+      console.error(`[SettleReminder] Failed for group ${g.id}:`, err.message);
+    }
+  }
+
+  try {
+    const iousSnap = await db.collection('ious').where('status', '==', 'pending').get();
+    iousSnap.docs.forEach((d) => {
+      const iou = d.data();
+      addOwed(iou.fromEmail, Number(iou.amount) || 0);
+    });
+  } catch (err) {
+    console.error('[SettleReminder] Failed to fetch IOUs:', err.message);
+  }
+
+  // 3. Send a combined reminder to each debtor (respecting per-user cooldown).
+  const now = Date.now();
+  const tasks = Object.entries(owed).map(async ([email, info]) => {
+    if (info.total < 1) return; // ignore sub-unit noise
+    const user = byEmail[email];
+    if (!user || !user.fcmToken) return; // unregistered or no device token
+
+    const logRef = db.collection('users').doc(user.uid).collection('reminderLogs').doc('settle_reminder');
+    const logDoc = await logRef.get();
+    if (logDoc.exists) {
+      const lastSent = logDoc.data() && logDoc.data().lastSentAt && logDoc.data().lastSentAt.toMillis
+        ? logDoc.data().lastSentAt.toMillis() : 0;
+      if ((now - lastSent) / 86400000 < SETTLE_REMINDER_COOLDOWN_DAYS) return;
+    }
+
+    const amountStr = formatCurrencyAmount(info.total, user.currency);
+    const body = info.count > 1
+      ? `You have ${info.count} outstanding balances totalling ${amountStr}. Time to settle up! 🤝`
+      : `You owe ${amountStr}. Time to settle up! 🤝`;
+
+    try {
+      await admin.messaging().send({
+        token: user.fcmToken,
+        notification: { title: 'Settle Up Reminder 💸', body },
+        data: {
+          type: 'settlement_reminder',
+          action: 'view_balances',
+          url: 'trackaexpense://split/friends',
+        },
+        android: {
+          priority: 'high',
+          notification: { sound: 'default', channelId: 'trackaexpense_default_alerts' },
+        },
+        apns: {
+          headers: { 'apns-priority': '10' },
+          payload: { aps: { sound: 'default', badge: 1 } },
+        },
+      });
+      await logRef.set({
+        lastSentAt: admin.firestore.FieldValue.serverTimestamp(),
+        total: info.total,
+        count: info.count,
+      });
+      console.log(`[SettleReminder] Sent to ${email}: ${amountStr} (${info.count} balances)`);
+    } catch (err) {
+      console.error(`[SettleReminder] Failed for ${email}:`, err.message);
+    }
+  });
+
+  await Promise.allSettled(tasks);
+}
+
+// Settlement reminders — every Sunday at 10:00 AM IST (04:30 UTC).
+// Per-user 13-day cooldown enforces an effective bi-weekly cadence.
+cron.schedule('30 4 * * 0', sendSettlementReminders);
+
+// ---------------------------------------------------------------------------
 // HTTP endpoints
 // ---------------------------------------------------------------------------
 
@@ -565,6 +735,17 @@ const sentNotifications = new Set();
 
 // Health endpoint
 app.get('/health', (_req, res) => res.json({ ok: true }));
+
+// Manual trigger for settlement reminders (testing/ops). Respects per-user cooldown.
+app.post('/run-settlement-reminders', async (_req, res) => {
+  try {
+    await sendSettlementReminders();
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('run-settlement-reminders error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
 
 // Send FCM notification to multiple device tokens
 app.post('/send-notification', async (req, res) => {
