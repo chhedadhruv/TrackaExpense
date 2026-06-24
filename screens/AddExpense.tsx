@@ -96,8 +96,9 @@ const AddExpense = ({navigation}: {navigation: any}) => {
         };
         const expenseDocRef = await transactionRef.add(expenseData);
         transaction.update(expenseDocRef, {documentId: expenseDocRef.id});
+        const balanceDelta = -parseFloat(amount);
         transaction.update(userDocRef, {
-          balance: firestore.FieldValue.increment(-parseFloat(amount)),
+          balance: firestore.FieldValue.increment(balanceDelta),
         });
       });
       AnalyticsService.logAddExpense({

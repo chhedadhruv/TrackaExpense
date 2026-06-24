@@ -224,6 +224,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
     const monthly = parseFloat(editValues.monthly);
     if (!validateGoalValues(editValues, current, target, monthly)) return;
 
+    const oldGoalSnapshot = savingsGoals.find(g => g.id === editingGoalId);
     setIsSubmitting(true);
     try {
       const currentUser = auth().currentUser;
@@ -301,6 +302,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
       Alert.alert('Error', 'Please select a savings goal first');
       return;
     }
+    const goalSnapshot = savingsGoals.find(g => g.id === selectedGoalId);
     setIsSubmitting(true);
     try {
       const currentUser = auth().currentUser;
@@ -367,6 +369,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
       return;
     }
 
+    const withdrawGoal = savingsGoals.find(g => g.id === selectedGoalId);
     setIsSubmitting(true);
     try {
       const currentUser = auth().currentUser;
@@ -570,6 +573,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
 
   const deleteGoal = async (goalId: string | undefined) => {
     if (!goalId) return;
+    const goal = savingsGoals.find(g => g.id === goalId);
     setIsSubmitting(true);
     try {
       const currentUser = auth().currentUser;

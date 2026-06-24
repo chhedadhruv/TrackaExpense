@@ -119,13 +119,11 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
       };
       const splitRef = await firestore().collection('groups').doc(group.id).collection('splits').add(settlementSplit);
 
-      try {
-        await SplitNotificationService.notifySettlementMade(
-          {id: group.id, name: group.name, members: (group.members || []).map((m: GroupMember) => m.email || m)} as any,
-          {id: splitRef.id, amount: settlementAmount} as any,
-          actorNameResolved,
-        );
-      } catch (_) {}
+      SplitNotificationService.notifySettlementMade(
+        {id: group.id, name: group.name, members: (group.members || []).map((m: GroupMember) => m.email || m)} as any,
+        {id: splitRef.id, amount: settlementAmount} as any,
+        actorNameResolved,
+      ).catch(() => {});
 
       const historyPayload = {
         type: 'settlement_create',
@@ -147,7 +145,7 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
       try {
         await firestore().collection('users').doc(currentUser.uid).collection('splitHistory').add(historyPayload);
         await firestore().collection('groups').doc(group.id).collection('splitHistory').add(historyPayload);
-      } catch (_) {}
+      } catch (histErr) {}
 
       if (includeInTransactions) {
         try {
@@ -168,7 +166,7 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
               splitRole: 'settlement_receiver', createdAt: firestore.FieldValue.serverTimestamp(),
             });
           }
-        } catch (_) {}
+        } catch (txErr) {}
       }
 
       if (selectedBorrower.email === currentUserEmail) {
@@ -177,7 +175,6 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
           const borrowerDoc = await tx.get(firestore().collection('users').doc(currentUser.uid));
           const borrowerData = borrowerDoc.data()!;
           tx.update(borrowerDoc.ref, {balance: borrowerData.balance - settlementAmount});
-          // Update lender's balance if we have their userId
           if (selectedLender.userId) {
             const lenderRef = firestore().collection('users').doc(selectedLender.userId);
             const lenderDoc = await tx.get(lenderRef);
@@ -192,7 +189,6 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
           const lenderDoc = await tx.get(firestore().collection('users').doc(currentUser.uid));
           const lenderData = lenderDoc.data()!;
           tx.update(lenderDoc.ref, {balance: lenderData.balance + settlementAmount});
-          // Update borrower's balance if we have their userId
           if (selectedBorrower.userId) {
             const borrowerRef = firestore().collection('users').doc(selectedBorrower.userId);
             const borrowerDoc = await tx.get(borrowerRef);

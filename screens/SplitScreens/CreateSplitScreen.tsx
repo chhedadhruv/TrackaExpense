@@ -360,6 +360,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       }
     }
 
+    const isEdit = !!split;
     setLoading(true);
     let newSplitId: string | null = null;
     try {
@@ -594,7 +595,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
             .doc(group.id)
             .collection('splitHistory')
             .add(historyEntry);
-        } catch (e) { crashlytics().recordError(e as Error); }
+        } catch (histErr) { crashlytics().recordError(histErr as Error); }
 
         await writeSplitTransaction(
           split.id,
@@ -607,18 +608,11 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         const splitRef = await splitsCollection.add(splitData);
         newSplitId = splitRef.id;
 
-        try {
-          const groupDataForNotify = {
-            id: group.id,
-            name: group.name,
-            members: groupMembers.map(m => m.email),
-          };
-          await SplitNotificationService.notifySplitCreated(
-            {id: splitRef.id, ...splitData} as any,
-            groupDataForNotify as any,
-            actorNameResolved,
-          );
-        } catch (e) { crashlytics().recordError(e as Error); }
+        SplitNotificationService.notifySplitCreated(
+          {id: splitRef.id, ...splitData} as any,
+          {id: group.id, name: group.name, members: groupMembers.map(m => m.email)} as any,
+          actorNameResolved,
+        ).catch(e => crashlytics().recordError(e as Error));
 
         try {
           const historyEntry = {
@@ -649,7 +643,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
             .doc(group.id)
             .collection('splitHistory')
             .add(historyEntry);
-        } catch (e) { crashlytics().recordError(e as Error); }
+        } catch (histErr) { crashlytics().recordError(histErr as Error); }
 
         await writeSplitTransaction(
           splitRef.id,
@@ -730,11 +724,16 @@ const CreateSplitScreen = ({route, navigation}: any) => {
               }),
             });
           }
-        } catch (_) {}
+        } catch (serverErr) {}
         return;
       }
 
-      if (!isPayer) return;
+      if (!isPayer) {
+        if (!include) {
+        } else {
+        }
+        return;
+      }
 
       const txCol = firestore().collection('users').doc(u.uid).collection('transactions');
       const userRef = firestore().collection('users').doc(u.uid);
@@ -748,6 +747,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
             if (oldAmount > 0) {
               await userRef.update({balance: firestore.FieldValue.increment(oldAmount)});
             }
+          } else {
           }
         }
         return;
@@ -772,10 +772,11 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         const snap = await txCol.where('splitId', '==', splitId).get();
         if (!snap.empty) {
           const oldAmount = parseFloat(snap.docs[0].data().amount || '0');
-          await snap.docs[0].ref.update(txData);
           const delta = oldAmount - amount;
+          await snap.docs[0].ref.update(txData);
           if (Math.abs(delta) > 0.001) {
             await userRef.update({balance: firestore.FieldValue.increment(delta)});
+          } else {
           }
         } else {
           await txCol.add(txData);

@@ -62,8 +62,9 @@ const AddIncome = ({navigation}: {navigation: any}) => {
         };
         const incomeDocRef = await transactionRef.add(incomeData);
         transaction.update(incomeDocRef, {documentId: incomeDocRef.id});
+        const balanceDelta = parseFloat(amount);
         transaction.update(userDocRef, {
-          balance: firestore.FieldValue.increment(parseFloat(amount)),
+          balance: firestore.FieldValue.increment(balanceDelta),
         });
       });
       AnalyticsService.logAddIncome({
