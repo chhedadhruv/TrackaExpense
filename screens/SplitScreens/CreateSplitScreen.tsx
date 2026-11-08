@@ -10,14 +10,17 @@ import {
   Image,
   Modal,
 } from 'react-native';
-import {NOTIFICATION_SERVER_URL, EXPO_PUBLIC_NOTIFICATION_SERVER_URL} from '@env';
+import {
+  NOTIFICATION_SERVER_URL,
+  EXPO_PUBLIC_NOTIFICATION_SERVER_URL,
+} from '@env';
 import storage from '@react-native-firebase/storage';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {requestCameraPermission} from '../../utils/Permissions';
 import {Card, Checkbox, ActivityIndicator, Switch} from 'react-native-paper';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
-import crashlytics from '@react-native-firebase/crashlytics';
+import {reportError} from '../../src/services/ErrorReporter';
 import * as PerformanceService from '../../src/services/PerformanceService';
 import * as AnalyticsService from '../../src/services/AnalyticsService';
 import {DatePickerModal} from 'react-native-paper-dates';
@@ -125,7 +128,6 @@ const CreateSplitScreen = ({route, navigation}: any) => {
   const [includeInTransactions, setIncludeInTransactions] = useState(true);
   const isEditMode = !!split;
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!group || !group.id) {
       Alert.alert('Error', 'Group information is missing');
@@ -133,9 +135,9 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       return;
     }
     fetchGroupMembers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [group]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (isEditMode && groupMembers.length > 0 && split) {
       setTitle(split.title);
@@ -154,7 +156,9 @@ const CreateSplitScreen = ({route, navigation}: any) => {
 
       const resolvedSplitType: SplitType =
         split.splitType ||
-        (split.splitUsers.some(user => user.percentage) ? 'percentage' : 'equal');
+        (split.splitUsers.some(user => user.percentage)
+          ? 'percentage'
+          : 'equal');
       setIsSplitByPercentage(resolvedSplitType === 'percentage');
 
       const initialSelectedUsers: Record<string, boolean> = {};
@@ -171,6 +175,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       setSelectedUsers(initialSelectedUsers);
       setSelectedPercentages(initialSelectedPercentages);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [split, groupMembers]);
 
   const fetchGroupMembers = async () => {
@@ -219,7 +224,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       setSelectedPercentages(initialSelectedPercentages);
       setLoading(false);
     } catch (error) {
-      crashlytics().recordError(error as Error);
+      reportError(error as Error);
       Alert.alert('Error', 'Failed to load group members');
       navigation.goBack();
     }
@@ -229,28 +234,36 @@ const CreateSplitScreen = ({route, navigation}: any) => {
     setIsSplitByPercentage(splitType === 'percentage');
   }, [splitType]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (title.trim().length < 3 || category) return;
+    if (title.trim().length < 3 || category) {
+      return;
+    }
     const lower = title.toLowerCase();
     const match = Object.keys(EXPENSE_KEYWORD_MAP).find(kw =>
       lower.includes(kw),
     );
     const suggested = match ? EXPENSE_KEYWORD_MAP[match] : null;
     const validSplitValues = SPLIT_CATEGORIES.map((c: any) => c.value);
-    if (suggested && validSplitValues.includes(suggested)) setCategory(suggested);
+    if (suggested && validSplitValues.includes(suggested)) {
+      setCategory(suggested);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title]);
 
   const updatePercentages = (email: string, newValue: string) => {
     const selectedEmails = Object.entries(selectedUsers)
       .filter(([, isSelected]) => isSelected)
       .map(([e]) => e);
-    if (selectedEmails.length === 0) return;
+    if (selectedEmails.length === 0) {
+      return;
+    }
 
     const newPercentage = parseFloat(newValue) || 0;
     const remainingPercentage = 100 - newPercentage;
     const otherSelectedUsers = selectedEmails.filter(e => e !== email);
-    if (otherSelectedUsers.length === 0) return;
+    if (otherSelectedUsers.length === 0) {
+      return;
+    }
 
     const percentagePerUser = (
       remainingPercentage / otherSelectedUsers.length
@@ -272,7 +285,10 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       currentlySelected[0] === userEmail &&
       selectedUsers[userEmail]
     ) {
-      Alert.alert('Error', 'At least one person must be included in the split.');
+      Alert.alert(
+        'Error',
+        'At least one person must be included in the split.',
+      );
       return;
     }
     const newSelectedUsers = {
@@ -319,10 +335,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       return;
     }
     if (parseFloat(amount) > 999999999) {
-      Alert.alert(
-        'Validation Error',
-        'Amount must be less than 999,999,999',
-      );
+      Alert.alert('Validation Error', 'Amount must be less than 999,999,999');
       return;
     }
     if (!paidBy) {
@@ -360,12 +373,13 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       }
     }
 
-    const isEdit = !!split;
     setLoading(true);
     let newSplitId: string | null = null;
     try {
       const currentUser = auth().currentUser;
-      if (!currentUser) throw new Error('Not authenticated');
+      if (!currentUser) {
+        throw new Error('Not authenticated');
+      }
       const currentUserEmail = currentUser.email;
       let actorNameResolved = currentUserEmail?.split('@')[0] || 'Someone';
       try {
@@ -377,7 +391,9 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         if (profileName && profileName.toLowerCase() !== 'me') {
           actorNameResolved = profileName;
         }
-      } catch (e) { crashlytics().recordError(e as Error); }
+      } catch (e) {
+        reportError(e as Error);
+      }
 
       let imageUrl: string | null = null;
       if (receiptImage && !receiptImage.startsWith('http')) {
@@ -449,7 +465,9 @@ const CreateSplitScreen = ({route, navigation}: any) => {
             actorNameResolved,
             {},
           );
-        } catch (e) { crashlytics().recordError(e as Error); }
+        } catch (e) {
+          reportError(e as Error);
+        }
 
         try {
           const changeItems: Array<{
@@ -520,21 +538,25 @@ const CreateSplitScreen = ({route, navigation}: any) => {
             const nextUsers = Array.isArray(next?.splitUsers)
               ? next.splitUsers
               : [];
-            if (prevUsers.length !== nextUsers.length) return true;
+            if (prevUsers.length !== nextUsers.length) {
+              return true;
+            }
             const toKey = (u: SplitUser) =>
               (u.email || u.name || '').toLowerCase();
             const prevMap = new Map(prevUsers.map(u => [toKey(u), u]));
             for (const u of nextUsers) {
               const key = toKey(u);
               const pu = prevMap.get(key);
-              if (!pu) return true;
+              if (!pu) {
+                return true;
+              }
               const prevPct =
-                pu.percentage != null
-                  ? Number(pu.percentage).toFixed(2)
-                  : null;
+                pu.percentage != null ? Number(pu.percentage).toFixed(2) : null;
               const nextPct =
                 u.percentage != null ? Number(u.percentage).toFixed(2) : null;
-              if (prevPct !== nextPct) return true;
+              if (prevPct !== nextPct) {
+                return true;
+              }
             }
             return false;
           };
@@ -595,7 +617,9 @@ const CreateSplitScreen = ({route, navigation}: any) => {
             .doc(group.id)
             .collection('splitHistory')
             .add(historyEntry);
-        } catch (histErr) { crashlytics().recordError(histErr as Error); }
+        } catch (histErr) {
+          reportError(histErr as Error);
+        }
 
         await writeSplitTransaction(
           split.id,
@@ -610,9 +634,13 @@ const CreateSplitScreen = ({route, navigation}: any) => {
 
         SplitNotificationService.notifySplitCreated(
           {id: splitRef.id, ...splitData} as any,
-          {id: group.id, name: group.name, members: groupMembers.map(m => m.email)} as any,
+          {
+            id: group.id,
+            name: group.name,
+            members: groupMembers.map(m => m.email),
+          } as any,
           actorNameResolved,
-        ).catch(e => crashlytics().recordError(e as Error));
+        ).catch(e => reportError(e as Error));
 
         try {
           const historyEntry = {
@@ -643,7 +671,9 @@ const CreateSplitScreen = ({route, navigation}: any) => {
             .doc(group.id)
             .collection('splitHistory')
             .add(historyEntry);
-        } catch (histErr) { crashlytics().recordError(histErr as Error); }
+        } catch (histErr) {
+          reportError(histErr as Error);
+        }
 
         await writeSplitTransaction(
           splitRef.id,
@@ -675,11 +705,13 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         });
       }
     } catch (error) {
-      crashlytics().recordError(error as Error);
+      reportError(error as Error);
       setLoading(false);
       Alert.alert(
         'Error',
-        `Failed to ${isEditMode ? 'update' : 'create'} split. Please try again.`,
+        `Failed to ${
+          isEditMode ? 'update' : 'create'
+        } split. Please try again.`,
       );
     }
   };
@@ -693,36 +725,44 @@ const CreateSplitScreen = ({route, navigation}: any) => {
   ) => {
     try {
       const u = auth().currentUser;
-      if (!u) return;
+      if (!u) {
+        return;
+      }
       const email = u.email?.toLowerCase();
       const isPayer = data.paidBy?.email?.toLowerCase() === email;
 
       if (!isPayer && data.paidBy?.userId && include) {
         try {
-          const endpoint = NOTIFICATION_SERVER_URL || EXPO_PUBLIC_NOTIFICATION_SERVER_URL || '';
+          const endpoint =
+            NOTIFICATION_SERVER_URL ||
+            EXPO_PUBLIC_NOTIFICATION_SERVER_URL ||
+            '';
           if (endpoint) {
             const dateStr = data.date.toDate().toISOString().split('T')[0];
-            await fetch(`${endpoint.replace(/\/$/, '')}/createSplitTransaction`, {
-              method: 'POST',
-              headers: {'Content-Type': 'application/json'},
-              body: JSON.stringify({
-                targetUserId: data.paidBy.userId,
-                txData: {
-                  title: data.title,
-                  type: 'expense',
-                  category: data.category || 'Split',
-                  amount: String(parseFloat(amount.toFixed(2))),
-                  date: dateStr,
-                  source: 'split',
-                  splitId,
-                  groupId: group.id,
-                  groupName: group.name,
-                  splitRole: 'payer',
-                },
-                balanceDelta: -amount,
-                isEdit,
-              }),
-            });
+            await fetch(
+              `${endpoint.replace(/\/$/, '')}/createSplitTransaction`,
+              {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                  targetUserId: data.paidBy.userId,
+                  txData: {
+                    title: data.title,
+                    type: 'expense',
+                    category: data.category || 'Split',
+                    amount: String(parseFloat(amount.toFixed(2))),
+                    date: dateStr,
+                    source: 'split',
+                    splitId,
+                    groupId: group.id,
+                    groupName: group.name,
+                    splitRole: 'payer',
+                  },
+                  balanceDelta: -amount,
+                  isEdit,
+                }),
+              },
+            );
           }
         } catch (serverErr) {}
         return;
@@ -735,7 +775,10 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         return;
       }
 
-      const txCol = firestore().collection('users').doc(u.uid).collection('transactions');
+      const txCol = firestore()
+        .collection('users')
+        .doc(u.uid)
+        .collection('transactions');
       const userRef = firestore().collection('users').doc(u.uid);
 
       if (!include) {
@@ -745,7 +788,9 @@ const CreateSplitScreen = ({route, navigation}: any) => {
             const oldAmount = parseFloat(snap.docs[0].data().amount || '0');
             await snap.docs[0].ref.delete();
             if (oldAmount > 0) {
-              await userRef.update({balance: firestore.FieldValue.increment(oldAmount)});
+              await userRef.update({
+                balance: firestore.FieldValue.increment(oldAmount),
+              });
             }
           } else {
           }
@@ -775,26 +820,36 @@ const CreateSplitScreen = ({route, navigation}: any) => {
           const delta = oldAmount - amount;
           await snap.docs[0].ref.update(txData);
           if (Math.abs(delta) > 0.001) {
-            await userRef.update({balance: firestore.FieldValue.increment(delta)});
+            await userRef.update({
+              balance: firestore.FieldValue.increment(delta),
+            });
           } else {
           }
         } else {
           await txCol.add(txData);
-          await userRef.update({balance: firestore.FieldValue.increment(-amount)});
+          await userRef.update({
+            balance: firestore.FieldValue.increment(-amount),
+          });
         }
       } else {
         await txCol.add(txData);
-        await userRef.update({balance: firestore.FieldValue.increment(-amount)});
+        await userRef.update({
+          balance: firestore.FieldValue.increment(-amount),
+        });
       }
     } catch (e) {
-      crashlytics().recordError(e as Error);
+      reportError(e as Error);
     }
   };
 
   const uploadReceiptImage = async (): Promise<string | null> => {
-    if (!receiptImage) return null;
+    if (!receiptImage) {
+      return null;
+    }
     const currentUser = auth().currentUser;
-    if (!currentUser) return null;
+    if (!currentUser) {
+      return null;
+    }
     const path = `bills/${currentUser.uid}/${Date.now()}-split-receipt.jpg`;
     const ref = storage().ref(path);
     const stopTrace = await PerformanceService.traceUploadReceipt();
@@ -805,7 +860,9 @@ const CreateSplitScreen = ({route, navigation}: any) => {
 
   const takePhotoFromCamera = async () => {
     const hasPermission = await requestCameraPermission();
-    if (!hasPermission) return;
+    if (!hasPermission) {
+      return;
+    }
     launchCamera(
       {mediaType: 'photo', includeBase64: false, quality: 0.8},
       response => {
@@ -897,9 +954,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
             isSelected && styles.memberCardSelected,
             Platform.OS === 'android' && styles.cardAndroid,
           ]}
-          elevation={
-            Platform.OS === 'android' ? 0 : isSelected ? 2 : 1
-          }>
+          elevation={Platform.OS === 'android' ? 0 : isSelected ? 2 : 1}>
           <View style={styles.memberCheckboxContainer}>
             <View style={styles.memberInfo}>
               <View style={styles.memberNameContainer}>
@@ -937,9 +992,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                     style={styles.percentageInput}
                     keyboardType="numeric"
                     value={selectedPercentages[member.email]}
-                    onChangeText={text =>
-                      updatePercentages(member.email, text)
-                    }
+                    onChangeText={text => updatePercentages(member.email, text)}
                     placeholder="0"
                     onFocus={e => e.stopPropagation()}
                   />
@@ -1318,9 +1371,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
               onPress={() => setCategoryModalVisible(false)}>
               <View style={styles.categoryModalSheet}>
                 <View style={styles.categoryModalHeader}>
-                  <Text style={styles.categoryModalTitle}>
-                    Select Category
-                  </Text>
+                  <Text style={styles.categoryModalTitle}>Select Category</Text>
                   <TouchableOpacity
                     onPress={() => setCategoryModalVisible(false)}>
                     <MaterialCommunityIcons

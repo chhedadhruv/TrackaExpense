@@ -92,10 +92,11 @@ Planned commands: EAS build and update scripts (Phase 1b).
 
 ## 9. Third-party services
 
-- Sentry (target): user context is uid only, no email or name; source maps uploaded on every build.
-- Mixpanel (target): approved events only; `reset()` on logout.
-- OneSignal (target): sends only from Cloud Functions; permission prompt deferred until after the first expense.
-- Today: Firebase Analytics, Crashlytics, Perf, FCM, Notifee.
+- Sentry (live in code, `src/services/ErrorReporter.ts`): user context is uid only, no email or name. Handled errors go through `reportError()` (never call `crashlytics().recordError` directly). Source map upload is NOT set up yet (needs a Sentry auth token from the owner).
+- Mixpanel (live in code, `src/services/MixpanelService.ts` and `src/services/AnalyticsService.ts`): only the approved event names, uid as distinct ID, `reset()` on logout. Add events only through `AnalyticsService`.
+- OneSignal (live in code, `src/services/PushService.ts`): identity is the Firebase uid (login/logout in `navigation/Routes.tsx`); the permission prompt is deferred until after the first saved expense. Push credentials (Firebase service account for Android, APNs key for iOS) must be added in the OneSignal dashboard before any push is delivered. All sends must come from Cloud Functions, never the client.
+- Still running side by side until the next release: Firebase Analytics, Crashlytics, Perf, FCM and Notifee. Remove Crashlytics and Firebase Analytics once Sentry and Mixpanel are confirmed in production.
+- Keys (`SENTRY_DSN`, `MIXPANEL_TOKEN`, `ONESIGNAL_APP_ID`) live in the gitignored `.env`; names are in `.env.example`. Empty values disable the service.
 
 ## 10. How to work
 
@@ -123,6 +124,9 @@ Phase 1a is complete (tooling, local quality gates, minimum-version gate, server
 - Live data: 126 users; transaction `amount` is a string on 97 percent of documents (up to 4 decimals); savings goals are in the embedded `users.savingsGoals` array.
 - No Expo packages exist; the earlier Expo migration was abandoned (tag `pre-expo-migration` is not in `main`'s history).
 - `app.json` version (1.3.3) lags `package.json` (1.3.5): `app.json`.
+- `metro.config.js` blocks only this project's `server/` folder (anchored path). A looser pattern broke Sentry's `mcp-server` folder; do not loosen it.
+- After adding or changing native dependencies, restart Metro with `yarn start --reset-cache` and reinstall the app (`yarn android` / rebuild iOS); an emulator can revert to an older installed build after a restart.
+- OneSignal 5.4.3 is the newest release that supports React Native 0.77 (5.4.4 and later need 0.79).
 - Do not add `firebase-tools` (or anything that pulls in `node-fetch` 3) to this package's dependencies: it changes which `node-fetch` is hoisted and breaks the React Native bundle. Install the Firebase CLI globally instead.
 - Remote Config `min_supported_version` (default `0.0.0`, check disabled) blocks older app versions with an update screen: `App.tsx`, `components/ForceUpdateScreen.tsx`. Setting it in the console is a live change that needs owner approval.
 - Jest runs only pure utility tests (`__tests__/`); rendering `App` in Jest needs Firebase and native module mocks that do not exist yet.

@@ -14,7 +14,7 @@ import {BarChart, PieChart} from 'react-native-gifted-charts';
 import {useFocusEffect} from '@react-navigation/native';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
-import crashlytics from '@react-native-firebase/crashlytics';
+import {reportError} from '../src/services/ErrorReporter';
 import * as PerformanceService from '../src/services/PerformanceService';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
@@ -127,7 +127,7 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
       });
       await stopTrace?.();
     } catch (e) {
-      crashlytics().recordError(e as Error);
+      reportError(e as Error);
       setError('Failed to load transactions. Tap to retry.');
     } finally {
       setLoading(false);
