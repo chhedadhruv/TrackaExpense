@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import {Card, ActivityIndicator} from 'react-native-paper';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {
   Timestamp,
   addDoc,
@@ -37,6 +37,7 @@ import {
 } from '../src/constants/theme';
 import {formatDisplayDate} from '../src/utils/formatters';
 import type {SavingsGoal} from '../src/types';
+import type {McIconName} from '../src/types/icons';
 
 const SUCCESS_COLOR = '#25B07F';
 const ORANGE_COLOR = '#F5A623';
@@ -44,7 +45,7 @@ const ORANGE_COLOR = '#F5A623';
 interface GoalCategory {
   id: string;
   label: string;
-  icon: string;
+  icon: McIconName;
 }
 
 const GOAL_CATEGORIES: GoalCategory[] = [
@@ -493,7 +494,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
     return EXPENSE_COLOR;
   };
 
-  const getCategoryIcon = (category: string): string => {
+  const getCategoryIcon = (category: string): McIconName => {
     const cat = GOAL_CATEGORIES.find(c => c.id === category);
     return cat ? cat.icon : 'piggy-bank';
   };

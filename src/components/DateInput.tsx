@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import {View, Text, TouchableOpacity, Platform, StyleSheet} from 'react-native';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {PRIMARY_COLOR} from '../constants/theme';
 import {formatDisplayDate} from '../utils/formatters';
 
@@ -14,7 +14,12 @@ interface DateInputProps {
   label?: string;
 }
 
-const DateInput = ({date, onConfirm, disabled = false, label}: DateInputProps) => {
+const DateInput = ({
+  date,
+  onConfirm,
+  disabled = false,
+  label,
+}: DateInputProps) => {
   const [open, setOpen] = useState(false);
 
   const handleConfirm = (params: any) => {

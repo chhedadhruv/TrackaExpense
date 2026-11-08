@@ -1,12 +1,6 @@
 import React, {useState} from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  StyleSheet,
-} from 'react-native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {View, Text, TouchableOpacity, Modal, StyleSheet} from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {PRIMARY_COLOR} from '../constants/theme';
 import type {Category} from '../types';
 
@@ -42,13 +36,22 @@ const CategorySelector = ({
         accessibilityLabel={label ?? 'Select category'}>
         {selected ? (
           <>
-            <MaterialCommunityIcons name={selected.icon} size={20} color={PRIMARY_COLOR} />
+            <MaterialCommunityIcons
+              name={selected.icon}
+              size={20}
+              color={PRIMARY_COLOR}
+            />
             <Text style={styles.triggerText}>{selected.label}</Text>
           </>
         ) : (
           <Text style={styles.triggerPlaceholder}>{placeholder}</Text>
         )}
-        <MaterialCommunityIcons name="chevron-down" size={20} color="#999" style={styles.chevron} />
+        <MaterialCommunityIcons
+          name="chevron-down"
+          size={20}
+          color="#999"
+          style={styles.chevron}
+        />
       </TouchableOpacity>
 
       <Modal
@@ -83,7 +86,11 @@ const CategorySelector = ({
                       size={22}
                       color={isSelected ? '#FFFFFF' : PRIMARY_COLOR}
                     />
-                    <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                    <Text
+                      style={[
+                        styles.chipText,
+                        isSelected && styles.chipTextSelected,
+                      ]}>
                       {cat.label}
                     </Text>
                   </TouchableOpacity>

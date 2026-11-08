@@ -1,4 +1,4 @@
-const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
+const {getDefaultConfig} = require('expo/metro-config');
 const path = require('path');
 
 /**
@@ -26,4 +26,20 @@ const config = {
   },
 };
 
-module.exports = mergeConfig(getDefaultConfig(__dirname), config);
+const defaults = getDefaultConfig(__dirname);
+
+module.exports = {
+  ...defaults,
+  watchFolders: [...(defaults.watchFolders || []), ...config.watchFolders],
+  resolver: {
+    ...defaults.resolver,
+    blockList: [
+      ...[].concat(defaults.resolver.blockList || []),
+      ...config.resolver.blockList,
+    ],
+    extraNodeModules: {
+      ...defaults.resolver.extraNodeModules,
+      ...config.resolver.extraNodeModules,
+    },
+  },
+};

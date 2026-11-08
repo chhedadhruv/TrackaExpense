@@ -1,4 +1,5 @@
 import type {FirebaseFirestoreTypes} from '@react-native-firebase/firestore';
+import type {McIconName} from './icons';
 
 // ─── Firestore Documents ───────────────────────────────────────────────────
 
@@ -161,7 +162,7 @@ export interface Currency {
 export interface Category {
   value: string;
   label: string;
-  icon: string;
+  icon: McIconName;
 }
 
 // ─── Settle Up ────────────────────────────────────────────────────────────
@@ -202,12 +203,22 @@ export type HomeStackParamList = {
 
 export type SplitStackParamList = {
   Split: undefined;
-  SplitGroupDetail: {group: GroupDocument} | {groupId: string; groupName?: string};
+  SplitGroupDetail:
+    | {group: GroupDocument}
+    | {groupId: string; groupName?: string};
   CreateSplit: {group: GroupDocument; split?: SplitDocument};
-  SplitDetail: {split: SplitDocument; group: GroupDocument; transaction?: TransactionDocument};
+  SplitDetail: {
+    split: SplitDocument;
+    group: GroupDocument;
+    transaction?: TransactionDocument;
+  };
   SplitTransaction: {split: SplitDocument; group: GroupDocument};
   SplitHistory: {groupId: string};
-  SettleUp: {group: GroupDocument; lendingDetails: LendingDetail[]; preselect?: PreselectSettle};
+  SettleUp: {
+    group: GroupDocument;
+    lendingDetails: LendingDetail[];
+    preselect?: PreselectSettle;
+  };
   FriendsBalance: undefined;
   Invitations: undefined;
   IOU: undefined;

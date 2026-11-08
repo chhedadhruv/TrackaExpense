@@ -7,7 +7,7 @@ import OnboardingScreen from '../screens/OnboardingScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import type {StackNavigationProp} from '@react-navigation/stack';
 import type {AuthStackParamList} from '../src/types';
 
@@ -57,13 +57,21 @@ const AuthStack = () => {
         component={OnboardingScreen}
         options={{headerShown: false}}
       />
-      <Stack.Screen name="Login" component={LoginScreen} options={{headerShown: false}} />
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={{headerShown: false}}
+      />
       <Stack.Screen
         name="Signup"
         component={SignupScreen}
         options={({navigation}) => ({
           title: '',
-          headerStyle: {backgroundColor: '#f9fafd', shadowColor: '#f9fafd', elevation: 0},
+          headerStyle: {
+            backgroundColor: '#f9fafd',
+            shadowColor: '#f9fafd',
+            elevation: 0,
+          },
           headerLeft: () => renderHeaderLeft(navigation as any, 'Login'),
         })}
       />
@@ -72,7 +80,11 @@ const AuthStack = () => {
         component={ForgotPasswordScreen}
         options={({navigation}) => ({
           title: '',
-          headerStyle: {backgroundColor: '#f9fafd', shadowColor: '#f9fafd', elevation: 0},
+          headerStyle: {
+            backgroundColor: '#f9fafd',
+            shadowColor: '#f9fafd',
+            elevation: 0,
+          },
           headerLeft: () => renderHeaderLeft(navigation as any, 'Login'),
         })}
       />

@@ -1,9 +1,8 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, Platform} from 'react-native';
 import {Modal, Portal} from 'react-native-paper';
-import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import {requestCameraPermission} from '../../utils/Permissions';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import {pickImageFromCamera, pickImageFromLibrary} from '../utils/imagePicker';
 import {PRIMARY_COLOR, EXPENSE_COLOR} from '../constants/theme';
 
 interface ImagePickerModalProps {
@@ -12,32 +11,25 @@ interface ImagePickerModalProps {
   onImageSelected: (uri: string) => void;
 }
 
-const ImagePickerModal = ({visible, onDismiss, onImageSelected}: ImagePickerModalProps) => {
+const ImagePickerModal = ({
+  visible,
+  onDismiss,
+  onImageSelected,
+}: ImagePickerModalProps) => {
   const handleTakePhoto = async () => {
-    const hasPermission = await requestCameraPermission();
-    if (!hasPermission) return;
-
-    launchCamera(
-      {mediaType: 'photo', includeBase64: false, quality: 0.8},
-      response => {
-        if (!response.didCancel && !response.errorCode && response.assets?.[0]?.uri) {
-          onImageSelected(response.assets[0].uri);
-        }
-        onDismiss();
-      },
-    );
+    const uri = await pickImageFromCamera();
+    if (uri) {
+      onImageSelected(uri);
+    }
+    onDismiss();
   };
 
-  const handleChooseFromLibrary = () => {
-    launchImageLibrary(
-      {mediaType: 'photo', includeBase64: false, quality: 0.8},
-      response => {
-        if (!response.didCancel && !response.errorCode && response.assets?.[0]?.uri) {
-          onImageSelected(response.assets[0].uri);
-        }
-        onDismiss();
-      },
-    );
+  const handleChooseFromLibrary = async () => {
+    const uri = await pickImageFromLibrary();
+    if (uri) {
+      onImageSelected(uri);
+    }
+    onDismiss();
   };
 
   return (
@@ -47,18 +39,34 @@ const ImagePickerModal = ({visible, onDismiss, onImageSelected}: ImagePickerModa
         contentContainerStyle={styles.container}
         onDismiss={onDismiss}>
         <View style={styles.header}>
-          <MaterialCommunityIcons name="camera" size={32} color={PRIMARY_COLOR} />
+          <MaterialCommunityIcons
+            name="camera"
+            size={32}
+            color={PRIMARY_COLOR}
+          />
           <Text style={styles.title}>Add Receipt Image</Text>
         </View>
         <TouchableOpacity style={styles.button} onPress={handleTakePhoto}>
-          <MaterialCommunityIcons name="camera" size={24} color={PRIMARY_COLOR} />
+          <MaterialCommunityIcons
+            name="camera"
+            size={24}
+            color={PRIMARY_COLOR}
+          />
           <Text style={styles.buttonText}>Take Photo</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handleChooseFromLibrary}>
-          <MaterialCommunityIcons name="image-multiple" size={24} color={PRIMARY_COLOR} />
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleChooseFromLibrary}>
+          <MaterialCommunityIcons
+            name="image-multiple"
+            size={24}
+            color={PRIMARY_COLOR}
+          />
           <Text style={styles.buttonText}>Choose from Gallery</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onDismiss}>
+        <TouchableOpacity
+          style={[styles.button, styles.cancelButton]}
+          onPress={onDismiss}>
           <Text style={styles.cancelText}>Cancel</Text>
         </TouchableOpacity>
       </Modal>
@@ -75,7 +83,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     ...Platform.select({
-      ios: {shadowColor: '#000', shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.15, shadowRadius: 12},
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 4},
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
       android: {elevation: 8},
     }),
   },

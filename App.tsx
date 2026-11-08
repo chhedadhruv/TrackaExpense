@@ -1,13 +1,8 @@
 import React, {useEffect, useState} from 'react';
-import {Platform, StatusBar, StyleSheet} from 'react-native';
+import {StatusBar, StyleSheet} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {KeyboardProvider} from 'react-native-keyboard-controller';
 import {HEADER_BG} from './src/constants/theme';
-import codePush from '@revopush/react-native-code-push';
-import {
-  REVOPUSH_IOS_DEPLOYMENT_KEY,
-  REVOPUSH_ANDROID_DEPLOYMENT_KEY,
-} from '@env';
 import {
   initErrorReporting,
   reportError,
@@ -19,7 +14,7 @@ import Providers from './navigation';
 import NotificationService from './services/NotificationService';
 import UpdateService from './services/UpdateService';
 import ErrorBoundary from './components/ErrorBoundary';
-import DeviceInfo from 'react-native-device-info';
+import * as Application from 'expo-application';
 import ForceUpdateScreen from './components/ForceUpdateScreen';
 import {getConfig, initRemoteConfig} from './src/services/RemoteConfigService';
 import {isVersionBelow} from './src/utils/version';
@@ -63,7 +58,10 @@ const App: React.FC = () => {
         // Block versions below the minimum supported version set in Remote Config.
         const config = getConfig();
         if (
-          isVersionBelow(DeviceInfo.getVersion(), config.min_supported_version)
+          isVersionBelow(
+            Application.nativeApplicationVersion ?? '0.0.0',
+            config.min_supported_version,
+          )
         ) {
           setForceUpdateMessage(config.update_message);
         }
@@ -77,11 +75,7 @@ const App: React.FC = () => {
     <SafeAreaProvider>
       <KeyboardProvider>
         <SafeAreaView style={styles.container} edges={['top']}>
-          <StatusBar
-            barStyle="dark-content"
-            backgroundColor={HEADER_BG}
-            translucent={false}
-          />
+          <StatusBar barStyle="dark-content" />
           <ErrorBoundary>
             {forceUpdateMessage !== null ? (
               <ForceUpdateScreen message={forceUpdateMessage} />
@@ -102,9 +96,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default codePush({
-  deploymentKey: Platform.select({
-    ios: REVOPUSH_IOS_DEPLOYMENT_KEY,
-    android: REVOPUSH_ANDROID_DEPLOYMENT_KEY,
-  }),
-})(wrapWithErrorReporting(App));
+export default wrapWithErrorReporting(App);
