@@ -17,10 +17,12 @@ const safe = (fn: () => Promise<void>): void => {
 };
 
 // Sends one event to Firebase Analytics (the modular API needs the analytics instance each time).
-const logFirebaseEvent = (
+const logFirebaseEvent = async (
   name: string,
   params: Record<string, string | number>,
-): Promise<void> => logFirebaseAnalyticsEvent(getAnalytics(), name, params);
+): Promise<void> => {
+  logFirebaseAnalyticsEvent(getAnalytics(), name, params);
+};
 
 // ─── Utility ────────────────────────────────────────────────────────────────
 

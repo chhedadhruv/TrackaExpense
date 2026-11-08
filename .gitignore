@@ -96,3 +96,6 @@ NOTIFICATION_ENV.md
 # Firebase config files used by the Expo prebuild (never commit)
 /google-services.json
 /GoogleService-Info.plist
+
+# Kotlin compiler session files
+.kotlin/

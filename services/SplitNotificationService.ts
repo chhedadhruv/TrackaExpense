@@ -375,7 +375,7 @@ class SplitNotificationService {
         borrower.email.replace(/[.@]/g, '_'),
       );
       const cooldownDoc = await getDoc(cooldownRef);
-      if (cooldownDoc.exists) {
+      if (cooldownDoc.exists()) {
         const lastSent = cooldownDoc.data()?.lastSentAt?.toMillis?.() || 0;
         const hoursSince = (Date.now() - lastSent) / (1000 * 60 * 60);
         if (hoursSince < 24) {

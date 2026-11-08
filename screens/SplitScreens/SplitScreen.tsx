@@ -26,7 +26,7 @@ import {
   where,
   writeBatch,
 } from '@react-native-firebase/firestore';
-import type {FirebaseFirestoreTypes} from '@react-native-firebase/firestore';
+import type {DocumentData} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {useFocusEffect} from '@react-navigation/native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -454,7 +454,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
         memberNames[currentUser.email] = currentUser.displayName || 'You';
       }
       const inviteeEmails = selectedUsers.map(u => u.email);
-      const groupData: FirebaseFirestoreTypes.DocumentData = {
+      const groupData: DocumentData = {
         name: groupName,
         category,
         members: [currentUser?.email],

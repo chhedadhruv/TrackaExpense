@@ -180,7 +180,7 @@ const SignupScreen = ({navigation}: {navigation: any}) => {
         );
         const user = userCredential.user;
         const userDoc = await getDoc(doc(getFirestore(), 'users', user.uid));
-        if (!userDoc.exists) {
+        if (!userDoc.exists()) {
           await setDoc(doc(getFirestore(), 'users', user.uid), {
             name: user.displayName || 'Google User',
             email: user.email,
@@ -226,7 +226,7 @@ const SignupScreen = ({navigation}: {navigation: any}) => {
         );
         const user = userCredential.user;
         const userDoc = await getDoc(doc(getFirestore(), 'users', user.uid));
-        if (!userDoc.exists) {
+        if (!userDoc.exists()) {
           const displayName = result.fullName
             ? `${result.fullName.givenName || ''} ${
                 result.fullName.familyName || ''

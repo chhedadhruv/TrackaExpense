@@ -149,7 +149,7 @@ class FunNotificationService {
           `fun_${today}`,
         ),
       );
-      if (funCheck.exists) {
+      if (funCheck.exists()) {
         return;
       }
       const message = this.getFunMessage(context);
