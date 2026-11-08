@@ -10,7 +10,12 @@ import {
   Platform,
 } from 'react-native';
 import {Card, Text, ActivityIndicator, Divider} from 'react-native-paper';
-import firestore from '@react-native-firebase/firestore';
+import {
+  Timestamp,
+  addDoc,
+  collection,
+  getFirestore,
+} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
@@ -78,17 +83,15 @@ const ContactUsScreen = ({navigation}: {navigation: any}) => {
     }
     try {
       setLoading(true);
-      await firestore()
-        .collection('contact_messages')
-        .add({
-          userId: user.uid,
-          name: user.displayName || user.email,
-          email: user.email,
-          category: selectedCategory,
-          messageText: feedbackText.trim(),
-          createdAt: firestore.Timestamp.fromDate(new Date()),
-          status: 'pending',
-        });
+      await addDoc(collection(getFirestore(), 'contact_messages'), {
+        userId: user.uid,
+        name: user.displayName || user.email,
+        email: user.email,
+        category: selectedCategory,
+        messageText: feedbackText.trim(),
+        createdAt: Timestamp.fromDate(new Date()),
+        status: 'pending',
+      });
       setFeedbackText('');
       Alert.alert(
         'Message Sent! 🎉',

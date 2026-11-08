@@ -11,7 +11,13 @@ import {
 } from 'react-native';
 import {Text, Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import firestore from '@react-native-firebase/firestore';
+import {
+  deleteDoc,
+  doc,
+  getFirestore,
+  increment,
+  updateDoc,
+} from '@react-native-firebase/firestore';
 import {
   deleteObject,
   getStorage,
@@ -55,16 +61,10 @@ const TransactionDetailScreen = ({
     const {userId, id, imageUrl, amount, type} = transaction;
     const balanceIncrement = type === 'expense' ? +amount : -amount;
     try {
-      await firestore()
-        .collection('users')
-        .doc(userId)
-        .collection('transactions')
-        .doc(id)
-        .delete();
-      await firestore()
-        .collection('users')
-        .doc(userId)
-        .update({balance: firestore.FieldValue.increment(balanceIncrement)});
+      await deleteDoc(doc(getFirestore(), 'users', userId, 'transactions', id));
+      await updateDoc(doc(getFirestore(), 'users', userId), {
+        balance: increment(balanceIncrement),
+      });
       if (imageUrl) {
         const imageRef = refFromURL(getStorage(), imageUrl);
         await deleteObject(imageRef);

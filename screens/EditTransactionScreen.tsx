@@ -10,7 +10,14 @@ import {
 } from 'react-native';
 import {Card, ActivityIndicator} from 'react-native-paper';
 import {getAuth} from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
+import {
+  Timestamp,
+  collection,
+  doc,
+  getFirestore,
+  increment,
+  runTransaction,
+} from '@react-native-firebase/firestore';
 import {
   getDownloadURL,
   getStorage,
@@ -137,12 +144,13 @@ const EditTransactionScreen = ({
     try {
       const imageUrl = isLocalFile ? await uploadImageAsync() : image ?? null;
       const uid = getUid();
-      const userDocRef = firestore().collection('users').doc(uid);
-      const transactionRef = userDocRef
-        .collection('transactions')
-        .doc(transaction.id);
+      const userDocRef = doc(getFirestore(), 'users', uid);
+      const transactionRef = doc(
+        collection(userDocRef, 'transactions'),
+        transaction.id,
+      );
 
-      await firestore().runTransaction(async txn => {
+      await runTransaction(getFirestore(), async txn => {
         const snap = await txn.get(transactionRef);
         const existing = snap.data();
 
@@ -152,7 +160,7 @@ const EditTransactionScreen = ({
           amount: parseFloat(amount),
           category,
           date,
-          createdAt: firestore.Timestamp.fromDate(new Date()),
+          createdAt: Timestamp.fromDate(new Date()),
         };
         if (existing?.type === 'expense') {
           updatePayload.imageUrl = imageUrl;
@@ -168,7 +176,7 @@ const EditTransactionScreen = ({
             : newAmount - oldAmount;
         if (delta !== 0) {
           txn.update(userDocRef, {
-            balance: firestore.FieldValue.increment(delta),
+            balance: increment(delta),
           });
         }
       });

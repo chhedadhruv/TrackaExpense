@@ -5,7 +5,12 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import FormButton from '../components/FormButton';
 import FormInput from '../components/FormInput';
-import firestore from '@react-native-firebase/firestore';
+import {
+  doc,
+  getDoc,
+  getFirestore,
+  updateDoc,
+} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../src/constants/theme';
 
@@ -35,10 +40,9 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
           navigation.goBack();
           return;
         }
-        const snap = await firestore()
-          .collection('users')
-          .doc(currentUser.uid)
-          .get();
+        const snap = await getDoc(
+          doc(getFirestore(), 'users', currentUser.uid),
+        );
         if (snap.exists) {
           const data = snap.data()!;
           setUserData({
@@ -91,7 +95,7 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
       return;
     }
     try {
-      await firestore().collection('users').doc(currentUser.uid).update({
+      await updateDoc(doc(getFirestore(), 'users', currentUser.uid), {
         name: userData.name,
         email: userData.email,
         phone: userData.phone,
