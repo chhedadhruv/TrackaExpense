@@ -22,7 +22,7 @@ Guidance for working in this repository. Detail lives in `../trackaexpense-audit
 | Firebase | RN Firebase v21: auth, firestore, storage, messaging, analytics, crashlytics, perf, remote-config | Auth, Firestore, Storage, Functions (`asia-south1`), Remote Config |
 | Errors | Crashlytics | Sentry |
 | Analytics | Firebase Analytics | Mixpanel |
-| Push | FCM + Notifee, Express server (not deployed) | OneSignal, sends from Cloud Functions only |
+| Push | FCM token registration and OneSignal, Express server (not deployed) | OneSignal, sends from Cloud Functions only |
 | OTA | None right now (CodePush removed); EAS Update is planned | EAS Update |
 
 ## 3. Commands (scripts that exist today)
@@ -96,7 +96,7 @@ Planned commands: EAS build and update scripts (Phase 1b).
 - Sentry (live in code, `src/services/ErrorReporter.ts`): user context is uid only, no email or name. Handled errors go through `reportError()` (never call `crashlytics().recordError` directly). Source map upload is NOT set up yet (needs a Sentry auth token from the owner).
 - Mixpanel (live in code, `src/services/MixpanelService.ts` and `src/services/AnalyticsService.ts`): only the approved event names, uid as distinct ID, `reset()` on logout. Add events only through `AnalyticsService`.
 - OneSignal (live in code, `src/services/PushService.ts`): identity is the Firebase uid (login/logout in `navigation/Routes.tsx`); the permission prompt is deferred until after the first saved expense. Push credentials (Firebase service account for Android, APNs key for iOS) must be added in the OneSignal dashboard before any push is delivered. All sends must come from Cloud Functions, never the client.
-- Still running side by side until the next release: Firebase Analytics, Crashlytics, Perf, FCM and Notifee. Remove Crashlytics and Firebase Analytics once Sentry and Mixpanel are confirmed in production.
+- Still running side by side until the next release: Firebase Analytics, Crashlytics, Perf and FCM. Remove Crashlytics and Firebase Analytics once Sentry and Mixpanel are confirmed in production.
 - Keys (`SENTRY_DSN`, `MIXPANEL_TOKEN`, `ONESIGNAL_APP_ID`) live in the gitignored `.env`; names are in `.env.example`. Empty values disable the service.
 
 ## 10. How to work
@@ -128,7 +128,8 @@ Phase 1a is complete (tooling, local quality gates, minimum-version gate, server
 - Config plugin mods run in reverse order of the `plugins` list in `app.json`: `plugins/with-firebase-gradle-versions` must stay first so it runs after the React Native Firebase plugin has added its lines. It forces Firebase Gradle plugins that work with AGP 9.
 - `app.config.js` injects `config/android-proguard-rules.pro` (the R8 rules) through `expo-build-properties`. `plugins/with-release-signing.js` signs local release builds from `android/keystore.properties`; without that file the release build uses the debug key, which Play rejects.
 - `react-native-gifted-charts` needs a gradient package at startup (`expo-linear-gradient` is installed for it). Removing it crashes the app on launch even though no app file imports it. Check what a package needs at runtime before calling it unused.
-- `snapshot.exists` is still a boolean property (19 uses in 14 files) on RN Firebase v21; newer versions make it a method. Convert them together with the Firebase upgrade.
+- RN Firebase is on v27: `snapshot.exists()` is a method (a property access is always truthy and fails silently, so grep for `.exists` without a call when adding Firestore code), Remote Config uses `remoteConfig.defaultConfig` and `remoteConfig.settings` assignments, and Storage uses `ref(storage, url)` for URLs. The Firebase Android SDK needs Kotlin 2.4.0 (`kotlinVersion` in the `expo-build-properties` plugin in `app.json`).
+- Notifee is removed and `expo-notifications` must not be added: it registers a second Android Firebase messaging service that competes with RN Firebase and OneSignal. Notification taps are handled by the OneSignal click listener (`src/services/PushService.ts`) and `services/NotificationNavigation.ts`.
 - `app.json` version (1.3.3) lags `package.json` (1.3.5): `app.json`.
 - `metro.config.js` blocks only this project's `server/` folder (anchored path). A looser pattern broke Sentry's `mcp-server` folder; do not loosen it.
 - After adding or changing native dependencies, restart Metro with `yarn start --reset-cache` and reinstall the app (`yarn android` / rebuild iOS); an emulator can revert to an older installed build after a restart.
@@ -153,4 +154,4 @@ Phase 1a is complete (tooling, local quality gates, minimum-version gate, server
 - `ios/GoogleService-Info.plist` is untracked now but exists in git history.
 - Two overlapping shared-code locations: `components/` and `utils/` versus `src/`.
 - The Android release keystore has a single copy on the owner's machine: `android/keystore.properties` (gitignored).
-- Native modules that force a new binary when changed include Firebase, Notifee, Google and Apple sign-in, every Expo module, `react-native-reanimated` (4.7.1 with `react-native-worklets`; `babel-preset-expo` adds the worklets plugin), `react-native-keyboard-controller`, `react-native-svg`.
+- Native modules that force a new binary when changed include Firebase, Google and Apple sign-in, every Expo module, `react-native-reanimated` (4.7.1 with `react-native-worklets`; `babel-preset-expo` adds the worklets plugin), `react-native-keyboard-controller`, `react-native-svg`.

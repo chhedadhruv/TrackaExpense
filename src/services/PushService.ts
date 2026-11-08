@@ -1,5 +1,9 @@
 import {Platform} from 'react-native';
-import {LogLevel, OneSignal} from 'react-native-onesignal';
+import {
+  LogLevel,
+  OneSignal,
+  type NotificationClickEvent,
+} from 'react-native-onesignal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Application from 'expo-application';
 import {ONESIGNAL_APP_ID} from '@env';
@@ -11,7 +15,9 @@ const PROMPTED_KEY = 'push_permission_prompted';
  * after the user saves their first expense (see requestPushPermissionAfterFirstExpense).
  * Does nothing when no app id is configured.
  */
-export const initPush = (): void => {
+export const initPush = (
+  onNotificationClick?: (data: Record<string, unknown> | undefined) => void,
+): void => {
   if (!ONESIGNAL_APP_ID) {
     return;
   }
@@ -21,6 +27,18 @@ export const initPush = (): void => {
       OneSignal.Debug.setLogLevel(LogLevel.Verbose);
     }
     OneSignal.initialize(ONESIGNAL_APP_ID);
+    if (onNotificationClick) {
+      // On a cold start the click arrives before the navigator is mounted, so wait briefly.
+      OneSignal.Notifications.addEventListener(
+        'click',
+        (event: NotificationClickEvent) => {
+          const data = event.notification.additionalData as
+            | Record<string, unknown>
+            | undefined;
+          setTimeout(() => onNotificationClick(data), 1000);
+        },
+      );
+    }
   } catch (_) {}
 };
 

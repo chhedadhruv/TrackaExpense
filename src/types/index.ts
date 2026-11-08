@@ -1,4 +1,4 @@
-import type {FirebaseFirestoreTypes} from '@react-native-firebase/firestore';
+import type {Timestamp} from '@react-native-firebase/firestore';
 import type {McIconName} from './icons';
 
 // ─── Firestore Documents ───────────────────────────────────────────────────
@@ -16,7 +16,7 @@ export interface UserDocument {
   /** Running total — incremental only, never recalculate */
   balance: number;
   userImg: string | null;
-  createdAt: FirebaseFirestoreTypes.Timestamp;
+  createdAt: Timestamp;
   verified: boolean;
 }
 
@@ -38,7 +38,7 @@ export interface TransactionDocument {
   imageUrl?: string | null;
   /** Alias used by some legacy writes */
   image?: string | null;
-  createdAt: FirebaseFirestoreTypes.Timestamp;
+  createdAt: Timestamp;
   /** Firestore document ID (also available as `id` after client-side mapping) */
   id?: string;
   /** 'split' when this transaction was created via a split settlement */
@@ -59,7 +59,7 @@ export interface GroupDocument {
   /** email → display name */
   memberNames: Record<string, string>;
   createdBy: string;
-  createdAt: FirebaseFirestoreTypes.Timestamp;
+  createdAt: Timestamp;
 }
 
 export interface SplitUser {
@@ -84,8 +84,8 @@ export interface SplitDocument {
   splitUsers: SplitUser[];
   category: string;
   /** Always a Timestamp; use `|| createdAt` fallback for legacy records */
-  date: FirebaseFirestoreTypes.Timestamp;
-  createdAt: FirebaseFirestoreTypes.Timestamp;
+  date: Timestamp;
+  createdAt: Timestamp;
   type?: 'settlement';
   isSettlement?: boolean;
   notes?: string;
@@ -102,7 +102,7 @@ export interface SavingsHistoryEntry {
   id: string;
   type: 'deposit' | 'withdrawal';
   amount: number;
-  createdAt: FirebaseFirestoreTypes.Timestamp;
+  createdAt: Timestamp;
   goalName?: string;
 }
 
@@ -121,8 +121,8 @@ export interface SavingsGoal {
   targetDate?: string;
   reminderEnabled: boolean;
   reminderFrequency: string | null;
-  createdAt: FirebaseFirestoreTypes.Timestamp;
-  updatedAt: FirebaseFirestoreTypes.Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 
 // ─── IOU ──────────────────────────────────────────────────────────────────
@@ -136,7 +136,7 @@ export interface IOUDocument {
   amount: number;
   notes?: string;
   status: 'pending' | 'settled';
-  createdAt: FirebaseFirestoreTypes.Timestamp;
+  createdAt: Timestamp;
 }
 
 // ─── Invitations ──────────────────────────────────────────────────────────

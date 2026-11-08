@@ -66,7 +66,7 @@ export const CurrencyProvider = ({children}: {children: React.ReactNode}) => {
         const userDoc = await getDoc(
           doc(getFirestore(), 'users', currentUser.uid),
         );
-        if (userDoc.exists) {
+        if (userDoc.exists()) {
           const userData = userDoc.data();
           if (userData?.currency) {
             const userCurrency = CURRENCIES.find(
