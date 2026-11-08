@@ -31,7 +31,11 @@ Guidance for working in this repository. Detail lives in `../trackaexpense-audit
 - `yarn start` / `yarn start:reset` : Metro, optionally clearing cache.
 - `yarn android` / `yarn ios` : run debug builds. `yarn android:release`, `yarn ios:release` : release configuration.
 - `yarn lint` : ESLint.
-- `yarn test` : Jest (currently fails to load, see gotchas).
+- `yarn type-check` : `tsc --noEmit` (must stay at 0 errors).
+- `yarn format <files>` / `yarn format:check <files>` : Prettier on the given files.
+- `yarn check:ratchet` : compares ESLint, TypeScript and Prettier counts with `docs/quality-baseline.json`; `--update` lowers the baseline.
+- `yarn test` : Jest unit tests.
+- `yarn emulators` : starts the Firestore and Storage emulators (needs the Firebase CLI installed globally and JDK 21 or newer).
 - `yarn test:rules` : Firestore and Storage rules tests in the local emulator (needs JDK 21 or newer; no live project is touched).
 - `yarn build:android` : release APK. `yarn build:android:bundle` : release AAB. `yarn build:clean` : Gradle clean.
 - `yarn version:bump` : `scripts/bump-version.js`.
@@ -39,7 +43,7 @@ Guidance for working in this repository. Detail lives in `../trackaexpense-audit
 - iOS after dependency changes: `cd ios && pod install`.
 - iOS simulator build when `yarn ios` fails (no `Simulator.app`): `xcodebuild` with `-destination id=<simulator>`, then `xcrun simctl install` and `launch`; the app target needs an iOS 26 simulator.
 
-Planned commands (added in Phase 1a): `yarn type-check`, `yarn format`, `yarn format:check`. Later: EAS build and update scripts.
+Planned commands: EAS build and update scripts (Phase 1b).
 
 ## 4. Folder map
 
@@ -49,7 +53,7 @@ Planned commands (added in Phase 1a): `yarn type-check`, `yarn format`, `yarn fo
 - `src/` : newer shared code: `components/`, `constants/theme.ts`, `hooks/`, `services/` (analytics, performance, remote config), `types/`, `utils/`.
 - `components/`, `utils/` : older shared components and utilities (currency, sign-in config, category data, permissions).
 - `firebase/` : Firestore and Storage rules, indexes, rules tests (`firebase/tests`), and `baseline/` (old open rules, rollback only). `firebase.json` at the root.
-- `server/` : Express notification server (cron, push, emails; not deployed). Uses npm today.
+- `server/` : Express notification server (cron, push, emails; not deployed). Uses yarn (`server/yarn.lock`).
 - `android/`, `ios/` : native projects. `patches/` : patch-package patches. `scripts/` : version bump.
 - `examples/`, `store-screenshots/`, `vendor/` : non-app material.
 
@@ -65,7 +69,7 @@ Planned commands (added in Phase 1a): `yarn type-check`, `yarn format`, `yarn fo
 ## 6. Quality gates
 
 - Pre-commit: ESLint, TypeScript, Prettier, related Jest tests. Pre-push: full tests. GitHub Actions runs the same on `ubuntu-latest`. (Being added in Phase 1a; check `package.json` and `.husky/` for what exists.)
-- Ratchet baseline from the audit: ESLint 37 errors and 389 warnings; `tsc --noEmit` 162 errors; Jest 1 suite failing to load, 0 tests.
+- Ratchet baseline: `docs/quality-baseline.json` (started at ESLint 37 errors and 389 warnings, `tsc` 162 errors, Jest not running; `tsc` is now 0).
 - Rule: no new violations; touched files must be clean; counts only go down.
 - Never commit while a gate is failing. Never use `--no-verify`.
 
@@ -118,8 +122,10 @@ Phase 1a in progress (tooling, quality gates, CI; no native changes). Phase 1b (
 - Live data: 126 users; transaction `amount` is a string on 97 percent of documents (up to 4 decimals); savings goals are in the embedded `users.savingsGoals` array.
 - No Expo packages exist; the earlier Expo migration was abandoned (tag `pre-expo-migration` is not in `main`'s history).
 - `app.json` version (1.3.3) lags `package.json` (1.3.5): `app.json`.
-- `__tests__/App.test.tsx` fails to load `App.tsx`, so Jest runs 0 tests.
-- `tsc` reports 162 errors (JSX component type errors, for example `screens/TransactionDetailScreen.tsx`).
+- Do not add `firebase-tools` (or anything that pulls in `node-fetch` 3) to this package's dependencies: it changes which `node-fetch` is hoisted and breaks the React Native bundle. Install the Firebase CLI globally instead.
+- Remote Config `min_supported_version` (default `0.0.0`, check disabled) blocks older app versions with an update screen: `App.tsx`, `components/ForceUpdateScreen.tsx`. Setting it in the console is a live change that needs owner approval.
+- Jest runs only pure utility tests (`__tests__/`); rendering `App` in Jest needs Firebase and native module mocks that do not exist yet.
+- ESLint warnings and errors and unformatted files still exist in legacy code; the current counts are in `docs/quality-baseline.json` and may only go down.
 - `users/{uid}.balance` is incremental only; never recalculate it in a batch (`src/types/index.ts`).
 - Transaction `date` is a "YYYY-MM-DD" string; split `date` is a Timestamp with a `createdAt` fallback (`src/types/index.ts`).
 - Group membership and invitations are keyed by email, and clients query `users` by email and phone: `screens/SplitScreens/SplitScreen.tsx`.
@@ -131,7 +137,6 @@ Phase 1a in progress (tooling, quality gates, CI; no native changes). Phase 1b (
 - Xcode 27 needs the Pod deployment-target floor in `ios/Podfile`; `yarn ios` fails where `Simulator.app` is missing from the Xcode path.
 - The Gradle wrapper download can time out; fetch the distribution zip with curl into `~/.gradle/wrapper/dists/` if it does.
 - `ios/GoogleService-Info.plist` is untracked now but exists in git history.
-- `server/package-lock.json` is tracked (npm); the root uses yarn.
 - Two overlapping shared-code locations: `components/` and `utils/` versus `src/`.
 - The Android release keystore has a single copy on the owner's machine: `android/keystore.properties` (gitignored).
 - Native modules that force a new binary when changed include Firebase, Notifee, Google and Apple sign-in, CodePush, `react-native-fs`, `react-native-svg` (patched in `patches/`).

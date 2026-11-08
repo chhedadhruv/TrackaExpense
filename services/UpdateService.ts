@@ -4,6 +4,9 @@ import {IOS_APP_STORE_ID} from '@env';
 
 const IOS_STORE_URL = `itms-apps://apps.apple.com/app/id${IOS_APP_STORE_ID}`;
 const IOS_STORE_URL_FALLBACK = `https://apps.apple.com/app/id${IOS_APP_STORE_ID}`;
+const ANDROID_STORE_URL = 'market://details?id=com.trackaexpense';
+const ANDROID_STORE_URL_FALLBACK =
+  'https://play.google.com/store/apps/details?id=com.trackaexpense';
 
 class UpdateService {
   private inAppUpdates: SpInAppUpdates;
@@ -15,7 +18,9 @@ class UpdateService {
   }
 
   async checkForUpdate(): Promise<void> {
-    if (this.isChecking) return;
+    if (this.isChecking) {
+      return;
+    }
     this.isChecking = true;
     try {
       const result = await this.inAppUpdates.checkNeedsUpdate();
@@ -35,8 +40,23 @@ class UpdateService {
 
   private async _startAndroidUpdate(): Promise<void> {
     try {
-      await this.inAppUpdates.startUpdate({updateType: IAUUpdateKind.IMMEDIATE});
+      await this.inAppUpdates.startUpdate({
+        updateType: IAUUpdateKind.IMMEDIATE,
+      });
     } catch (_) {}
+  }
+
+  /** Opens this app's page in the Play Store or App Store. */
+  openStorePage(): void {
+    if (Platform.OS === 'android') {
+      Linking.openURL(ANDROID_STORE_URL).catch(() =>
+        Linking.openURL(ANDROID_STORE_URL_FALLBACK).catch(() => {}),
+      );
+    } else {
+      Linking.openURL(IOS_STORE_URL).catch(() =>
+        Linking.openURL(IOS_STORE_URL_FALLBACK).catch(() => {}),
+      );
+    }
   }
 
   private _showIOSUpdateAlert(): void {
