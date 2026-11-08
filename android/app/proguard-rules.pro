@@ -362,3 +362,12 @@
 
 # Suppress warnings for Coil3 (optional image loading library)
 -dontwarn coil3.PlatformContext
+
+# ===== SENTRY, MIXPANEL, ONESIGNAL =====
+# R8 reported this annotation as missing (referenced by a library bundled in Sentry's dependencies).
+-dontwarn org.osgi.annotation.bundle.Export
+
+# React Native bridge classes of the three SDKs
+-keep class io.sentry.react.** { *; }
+-keep class com.mixpanel.reactnative.** { *; }
+-keep class com.onesignal.rnonesignalandroid.** { *; }

@@ -1,5 +1,5 @@
 import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+import {getAuth} from '@react-native-firebase/auth';
 import NotificationService from './NotificationService';
 import type {GroupDocument, SplitDocument} from '../src/types';
 
@@ -27,11 +27,16 @@ class SplitNotificationService {
     creatorName: string,
   ): Promise<void> {
     try {
-      const allUsers = [...(groupData.members || []), ...(groupData.pendingInvites || [])];
+      const allUsers = [
+        ...(groupData.members || []),
+        ...(groupData.pendingInvites || []),
+      ];
       const usersToNotify = [...new Set(allUsers)].filter(
-        email => email !== auth().currentUser?.email,
+        email => email !== getAuth().currentUser?.email,
       );
-      if (usersToNotify.length === 0) return;
+      if (usersToNotify.length === 0) {
+        return;
+      }
       await this.notificationService.sendNotificationToUsers(usersToNotify, {
         type: 'split_created',
         title: 'New Split Created! 💰',
@@ -44,7 +49,9 @@ class SplitNotificationService {
           splitTitle: splitData.title,
           amount: splitData.amount,
           creatorName,
-          url: `trackaexpense://split/group/${groupData.id}?groupName=${encodeURIComponent(groupData.name)}`,
+          url: `trackaexpense://split/group/${
+            groupData.id
+          }?groupName=${encodeURIComponent(groupData.name)}`,
         },
         icon: '💰',
         priority: 'high',
@@ -62,9 +69,11 @@ class SplitNotificationService {
   ): Promise<void> {
     try {
       const usersToNotify = [...new Set(groupData.members || [])].filter(
-        email => email !== auth().currentUser?.email,
+        email => email !== getAuth().currentUser?.email,
       );
-      if (usersToNotify.length === 0) return;
+      if (usersToNotify.length === 0) {
+        return;
+      }
       await this.notificationService.sendNotificationToUsers(usersToNotify, {
         type: 'split_updated',
         title: 'Split Updated! ✏️',
@@ -78,7 +87,9 @@ class SplitNotificationService {
           amount: splitData.amount,
           updaterName,
           changes,
-          url: `trackaexpense://split/group/${groupData.id}?groupName=${encodeURIComponent(groupData.name)}`,
+          url: `trackaexpense://split/group/${
+            groupData.id
+          }?groupName=${encodeURIComponent(groupData.name)}`,
         },
         icon: '✏️',
         priority: 'normal',
@@ -90,14 +101,16 @@ class SplitNotificationService {
 
   async notifySplitDeleted(
     splitData: Pick<SplitDocument, 'id' | 'title' | 'amount'>,
-    groupData: GroupDocument,
+    groupData: Pick<GroupDocument, 'id' | 'name' | 'members'>,
     deleterName: string,
   ): Promise<void> {
     try {
       const usersToNotify = [...new Set(groupData.members || [])].filter(
-        email => email !== auth().currentUser?.email,
+        email => email !== getAuth().currentUser?.email,
       );
-      if (usersToNotify.length === 0) return;
+      if (usersToNotify.length === 0) {
+        return;
+      }
       await this.notificationService.sendNotificationToUsers(usersToNotify, {
         type: 'split_deleted',
         title: 'Split Deleted! 🗑️',
@@ -110,7 +123,9 @@ class SplitNotificationService {
           splitTitle: splitData.title,
           amount: splitData.amount,
           deleterName,
-          url: `trackaexpense://split/group/${groupData.id}?groupName=${encodeURIComponent(groupData.name)}`,
+          url: `trackaexpense://split/group/${
+            groupData.id
+          }?groupName=${encodeURIComponent(groupData.name)}`,
         },
         icon: '🗑️',
         priority: 'high',
@@ -147,12 +162,17 @@ class SplitNotificationService {
     }
   }
 
-  async notifyUserJoinedGroup(groupData: GroupDocument, joinerName: string): Promise<void> {
+  async notifyUserJoinedGroup(
+    groupData: GroupDocument,
+    joinerName: string,
+  ): Promise<void> {
     try {
       const usersToNotify = [...new Set(groupData.members || [])].filter(
-        email => email !== auth().currentUser?.email,
+        email => email !== getAuth().currentUser?.email,
       );
-      if (usersToNotify.length === 0) return;
+      if (usersToNotify.length === 0) {
+        return;
+      }
       await this.notificationService.sendNotificationToUsers(usersToNotify, {
         type: 'user_joined_group',
         title: 'New Member Joined! 👋',
@@ -162,7 +182,9 @@ class SplitNotificationService {
           groupId: groupData.id,
           groupName: groupData.name,
           joinerName,
-          url: `trackaexpense://split/group/${groupData.id}?groupName=${encodeURIComponent(groupData.name)}`,
+          url: `trackaexpense://split/group/${
+            groupData.id
+          }?groupName=${encodeURIComponent(groupData.name)}`,
         },
         icon: '👋',
         priority: 'normal',
@@ -172,12 +194,17 @@ class SplitNotificationService {
     }
   }
 
-  async notifyUserLeftGroup(groupData: GroupDocument, leaverName: string): Promise<void> {
+  async notifyUserLeftGroup(
+    groupData: GroupDocument,
+    leaverName: string,
+  ): Promise<void> {
     try {
       const usersToNotify = [...new Set(groupData.members || [])].filter(
-        email => email !== auth().currentUser?.email,
+        email => email !== getAuth().currentUser?.email,
       );
-      if (usersToNotify.length === 0) return;
+      if (usersToNotify.length === 0) {
+        return;
+      }
       await this.notificationService.sendNotificationToUsers(usersToNotify, {
         type: 'user_left_group',
         title: 'Member Left Group 👋',
@@ -187,7 +214,9 @@ class SplitNotificationService {
           groupId: groupData.id,
           groupName: groupData.name,
           leaverName,
-          url: `trackaexpense://split/group/${groupData.id}?groupName=${encodeURIComponent(groupData.name)}`,
+          url: `trackaexpense://split/group/${
+            groupData.id
+          }?groupName=${encodeURIComponent(groupData.name)}`,
         },
         icon: '👋',
         priority: 'normal',
@@ -204,9 +233,11 @@ class SplitNotificationService {
   ): Promise<void> {
     try {
       const usersToNotify = [...new Set(groupData.members || [])].filter(
-        email => email !== auth().currentUser?.email,
+        email => email !== getAuth().currentUser?.email,
       );
-      if (usersToNotify.length === 0) return;
+      if (usersToNotify.length === 0) {
+        return;
+      }
       await this.notificationService.sendNotificationToUsers(usersToNotify, {
         type: 'settlement_made',
         title: 'Settlement Made! ✅',
@@ -218,7 +249,9 @@ class SplitNotificationService {
           settlementId: settlementData.id,
           amount: settlementData.amount,
           settlerName,
-          url: `trackaexpense://split/group/${groupData.id}?groupName=${encodeURIComponent(groupData.name)}`,
+          url: `trackaexpense://split/group/${
+            groupData.id
+          }?groupName=${encodeURIComponent(groupData.name)}`,
         },
         icon: '✅',
         priority: 'high',
@@ -234,7 +267,9 @@ class SplitNotificationService {
   ): Promise<void> {
     try {
       const pendingInvites = groupData.pendingInvites || [];
-      if (pendingInvites.length === 0) return;
+      if (pendingInvites.length === 0) {
+        return;
+      }
       await this.notificationService.sendNotificationToUsers(pendingInvites, {
         type: 'group_created',
         title: 'New Split Group Created! 🎉',
@@ -262,9 +297,11 @@ class SplitNotificationService {
   ): Promise<void> {
     try {
       const usersToNotify = [...new Set(groupData.members || [])].filter(
-        email => email !== auth().currentUser?.email,
+        email => email !== getAuth().currentUser?.email,
       );
-      if (usersToNotify.length === 0) return;
+      if (usersToNotify.length === 0) {
+        return;
+      }
       await this.notificationService.sendNotificationToUsers(usersToNotify, {
         type: 'group_updated',
         title: 'Group Updated! ✏️',
@@ -275,7 +312,9 @@ class SplitNotificationService {
           groupName: groupData.name,
           updaterName,
           changes,
-          url: `trackaexpense://split/group/${groupData.id}?groupName=${encodeURIComponent(groupData.name)}`,
+          url: `trackaexpense://split/group/${
+            groupData.id
+          }?groupName=${encodeURIComponent(groupData.name)}`,
         },
         icon: '✏️',
         priority: 'normal',
@@ -285,12 +324,17 @@ class SplitNotificationService {
     }
   }
 
-  async notifyGroupDeleted(groupData: GroupDocument, deleterName: string): Promise<void> {
+  async notifyGroupDeleted(
+    groupData: GroupDocument,
+    deleterName: string,
+  ): Promise<void> {
     try {
       const usersToNotify = [...new Set(groupData.members || [])].filter(
-        email => email !== auth().currentUser?.email,
+        email => email !== getAuth().currentUser?.email,
       );
-      if (usersToNotify.length === 0) return;
+      if (usersToNotify.length === 0) {
+        return;
+      }
       await this.notificationService.sendNotificationToUsers(usersToNotify, {
         type: 'group_deleted',
         title: 'Group Deleted! 🗑️',
@@ -326,9 +370,13 @@ class SplitNotificationService {
       if (cooldownDoc.exists) {
         const lastSent = cooldownDoc.data()?.lastSentAt?.toMillis?.() || 0;
         const hoursSince = (Date.now() - lastSent) / (1000 * 60 * 60);
-        if (hoursSince < 24) return {success: false, reason: 'cooldown'};
+        if (hoursSince < 24) {
+          return {success: false, reason: 'cooldown'};
+        }
       }
-      await cooldownRef.set({lastSentAt: firestore.FieldValue.serverTimestamp()});
+      await cooldownRef.set({
+        lastSentAt: firestore.FieldValue.serverTimestamp(),
+      });
       await this.notificationService.sendNotificationToUsers([borrower.email], {
         type: 'payment_reminder',
         title: 'Payment Reminder 💸',
@@ -339,7 +387,9 @@ class SplitNotificationService {
           groupName: group.name,
           amount,
           lenderName: lender.name,
-          url: `trackaexpense://split/group/${group.id}?groupName=${encodeURIComponent(group.name)}`,
+          url: `trackaexpense://split/group/${
+            group.id
+          }?groupName=${encodeURIComponent(group.name)}`,
         },
         icon: '💸',
         priority: 'high',

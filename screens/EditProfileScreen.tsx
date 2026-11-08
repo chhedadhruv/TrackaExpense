@@ -5,8 +5,13 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import FormButton from '../components/FormButton';
 import FormInput from '../components/FormInput';
-import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+import {
+  doc,
+  getDoc,
+  getFirestore,
+  updateDoc,
+} from '@react-native-firebase/firestore';
+import {getAuth} from '@react-native-firebase/auth';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../src/constants/theme';
 
 interface ProfileData {
@@ -17,7 +22,11 @@ interface ProfileData {
 }
 
 const EditProfileScreen = ({navigation}: {navigation: any}) => {
-  const [userData, setUserData] = useState<ProfileData>({name: '', email: '', phone: ''});
+  const [userData, setUserData] = useState<ProfileData>({
+    name: '',
+    email: '',
+    phone: '',
+  });
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -25,16 +34,23 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const currentUser = auth().currentUser;
+        const currentUser = getAuth().currentUser;
         if (!currentUser) {
           Alert.alert('Error', 'No user is logged in');
           navigation.goBack();
           return;
         }
-        const snap = await firestore().collection('users').doc(currentUser.uid).get();
+        const snap = await getDoc(
+          doc(getFirestore(), 'users', currentUser.uid),
+        );
         if (snap.exists) {
           const data = snap.data()!;
-          setUserData({name: data.name ?? '', email: data.email ?? '', phone: data.phone ?? '', balance: data.balance});
+          setUserData({
+            name: data.name ?? '',
+            email: data.email ?? '',
+            phone: data.phone ?? '',
+            balance: data.balance,
+          });
         } else {
           setErrorMessage('User data not found');
         }
@@ -45,9 +61,11 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
       }
     };
     fetchUserData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const validateEmail = (email: string) => /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/.test(email);
+  const validateEmail = (email: string) =>
+    /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/.test(email);
 
   const validateInputs = () => {
     if (!userData.name || userData.name.trim().length < 2) {
@@ -67,21 +85,32 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
 
   const handleUpdate = async () => {
     setErrorMessage('');
-    if (!validateInputs()) return;
+    if (!validateInputs()) {
+      return;
+    }
     setUpdating(true);
-    const currentUser = auth().currentUser;
-    if (!currentUser) { setUpdating(false); return; }
+    const currentUser = getAuth().currentUser;
+    if (!currentUser) {
+      setUpdating(false);
+      return;
+    }
     try {
-      await firestore().collection('users').doc(currentUser.uid).update({
+      await updateDoc(doc(getFirestore(), 'users', currentUser.uid), {
         name: userData.name,
         email: userData.email,
         phone: userData.phone,
         balance: userData.balance,
       });
-      Alert.alert('Success! 🎉', 'Your profile has been updated successfully.', [{text: 'OK', onPress: () => navigation.goBack()}]);
+      Alert.alert(
+        'Success! 🎉',
+        'Your profile has been updated successfully.',
+        [{text: 'OK', onPress: () => navigation.goBack()}],
+      );
     } catch (_) {
       setUpdating(false);
-      setErrorMessage('Failed to update profile. Please check your connection and try again.');
+      setErrorMessage(
+        'Failed to update profile. Please check your connection and try again.',
+      );
     }
   };
 
@@ -103,17 +132,32 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
         showsVerticalScrollIndicator={false}>
         <View style={styles.headerSection}>
           <View style={styles.iconContainer}>
-            <MaterialCommunityIcons name="account-edit" size={48} color={PRIMARY_COLOR} />
+            <MaterialCommunityIcons
+              name="account-edit"
+              size={48}
+              color={PRIMARY_COLOR}
+            />
           </View>
           <Text style={styles.titleText}>Edit Profile</Text>
-          <Text style={styles.subtitleText}>Update your personal information</Text>
+          <Text style={styles.subtitleText}>
+            Update your personal information
+          </Text>
         </View>
 
-        <Card style={[styles.formCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 4}>
+        <Card
+          style={[
+            styles.formCard,
+            Platform.OS === 'android' && styles.cardAndroid,
+          ]}
+          elevation={Platform.OS === 'android' ? 0 : 4}>
           <View style={styles.cardContent}>
             {errorMessage ? (
               <View style={styles.errorContainer}>
-                <MaterialCommunityIcons name="alert-circle" size={20} color="#C62828" />
+                <MaterialCommunityIcons
+                  name="alert-circle"
+                  size={20}
+                  color="#C62828"
+                />
                 <Text style={styles.errorMessage}>{errorMessage}</Text>
               </View>
             ) : null}
@@ -121,7 +165,12 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
               <Text style={styles.sectionTitle}>Personal Information</Text>
               <FormInput
                 labelValue={userData.name}
-                onChangeText={(name: string) => { setUserData({...userData, name}); if (errorMessage) setErrorMessage(''); }}
+                onChangeText={(name: string) => {
+                  setUserData({...userData, name});
+                  if (errorMessage) {
+                    setErrorMessage('');
+                  }
+                }}
                 placeholderText="Full Name"
                 iconType="user"
                 autoCapitalize="words"
@@ -129,7 +178,12 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
               />
               <FormInput
                 labelValue={userData.email}
-                onChangeText={(email: string) => { setUserData({...userData, email}); if (errorMessage) setErrorMessage(''); }}
+                onChangeText={(email: string) => {
+                  setUserData({...userData, email});
+                  if (errorMessage) {
+                    setErrorMessage('');
+                  }
+                }}
                 placeholderText="Email Address"
                 iconType="mail"
                 keyboardType="email-address"
@@ -138,7 +192,12 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
               />
               <FormInput
                 labelValue={userData.phone}
-                onChangeText={(phone: string) => { setUserData({...userData, phone}); if (errorMessage) setErrorMessage(''); }}
+                onChangeText={(phone: string) => {
+                  setUserData({...userData, phone});
+                  if (errorMessage) {
+                    setErrorMessage('');
+                  }
+                }}
                 placeholderText="Phone Number"
                 iconType="phone"
                 keyboardType="phone-pad"
@@ -159,12 +218,24 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
 
         <View style={styles.infoSection}>
           <View style={styles.infoItem}>
-            <MaterialCommunityIcons name="shield-check" size={20} color={PRIMARY_COLOR} />
-            <Text style={styles.infoText}>Your information is secure and encrypted</Text>
+            <MaterialCommunityIcons
+              name="shield-check"
+              size={20}
+              color={PRIMARY_COLOR}
+            />
+            <Text style={styles.infoText}>
+              Your information is secure and encrypted
+            </Text>
           </View>
           <View style={styles.infoItem}>
-            <MaterialCommunityIcons name="sync" size={20} color={PRIMARY_COLOR} />
-            <Text style={styles.infoText}>Changes will sync across all your devices</Text>
+            <MaterialCommunityIcons
+              name="sync"
+              size={20}
+              color={PRIMARY_COLOR}
+            />
+            <Text style={styles.infoText}>
+              Changes will sync across all your devices
+            </Text>
           </View>
         </View>
       </KeyboardAwareScrollView>
@@ -178,28 +249,91 @@ const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
   scrollView: {flex: 1},
   scrollContent: {padding: 20, paddingBottom: 40},
-  loadingContainer: {flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BACKGROUND_COLOR},
-  updatingContainer: {alignItems: 'center', justifyContent: 'center', paddingVertical: 20},
-  loadingText: {fontSize: 16, color: '#666', fontFamily: 'Lato-Regular', marginTop: 12},
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: BACKGROUND_COLOR,
+  },
+  updatingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    fontFamily: 'Lato-Regular',
+    marginTop: 12,
+  },
   headerSection: {alignItems: 'center', marginBottom: 30, paddingTop: 20},
-  iconContainer: {width: 80, height: 80, borderRadius: 40, backgroundColor: '#E8EBF7', alignItems: 'center', justifyContent: 'center', marginBottom: 20},
-  titleText: {fontSize: 28, fontWeight: 'bold', color: '#2C2C2C', fontFamily: 'Kufam-SemiBoldItalic', marginBottom: 8, textAlign: 'center'},
-  subtitleText: {fontSize: 16, color: '#666', textAlign: 'center', fontFamily: 'Lato-Regular'},
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#E8EBF7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  titleText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    fontFamily: 'Kufam-SemiBoldItalic',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitleText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    fontFamily: 'Lato-Regular',
+  },
   formCard: {backgroundColor: '#FFFFFF', borderRadius: 20, marginBottom: 20},
   cardContent: {padding: 30},
   errorContainer: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFEBEE',
-    borderRadius: 12, padding: 16, marginBottom: 20, borderLeftWidth: 4, borderLeftColor: '#F44336',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFEBEE',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F44336',
   },
-  errorMessage: {color: '#C62828', fontSize: 14, fontFamily: 'Lato-Regular', marginLeft: 8, flex: 1},
+  errorMessage: {
+    color: '#C62828',
+    fontSize: 14,
+    fontFamily: 'Lato-Regular',
+    marginLeft: 8,
+    flex: 1,
+  },
   inputSection: {marginBottom: 25},
-  sectionTitle: {fontSize: 18, fontWeight: '600', color: '#2C2C2C', fontFamily: 'Lato-Bold', marginBottom: 20},
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
+    marginBottom: 20,
+  },
   infoSection: {
-    backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
     elevation: Platform.OS === 'android' ? 0 : 3,
-    shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.05, shadowRadius: 4,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   infoItem: {flexDirection: 'row', alignItems: 'center', marginBottom: 12},
-  infoText: {fontSize: 14, color: '#666', fontFamily: 'Lato-Regular', marginLeft: 12, flex: 1},
+  infoText: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Lato-Regular',
+    marginLeft: 12,
+    flex: 1,
+  },
   cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
 });

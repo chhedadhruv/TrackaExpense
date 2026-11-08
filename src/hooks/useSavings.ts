@@ -1,6 +1,10 @@
 import {useState, useCallback} from 'react';
-import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+import {
+  collection,
+  getDocs,
+  getFirestore,
+} from '@react-native-firebase/firestore';
+import {getAuth} from '@react-native-firebase/auth';
 import type {SavingsGoal} from '../types';
 
 interface UseSavingsReturn {
@@ -20,18 +24,18 @@ export function useSavings(): UseSavingsReturn {
   const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(async (): Promise<void> => {
-    const currentUser = auth().currentUser;
-    if (!currentUser?.uid) return;
+    const currentUser = getAuth().currentUser;
+    if (!currentUser?.uid) {
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      const snapshot = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('savings')
-        .get();
+      const snapshot = await getDocs(
+        collection(getFirestore(), 'users', currentUser.uid, 'savings'),
+      );
 
       const docs = snapshot.docs.map(doc => ({
         id: doc.id,

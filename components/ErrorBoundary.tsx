@@ -1,6 +1,7 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
-import crashlytics from '@react-native-firebase/crashlytics';
+import {getCrashlytics, log} from '@react-native-firebase/crashlytics';
+import {reportError} from '../src/services/ErrorReporter';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../src/constants/theme';
 
 interface Props {
@@ -21,15 +22,17 @@ class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo): void {
-    crashlytics().recordError(error);
-    crashlytics().log(`Component stack: ${info.componentStack}`);
+    reportError(error, {componentStack: info.componentStack ?? ''});
+    log(getCrashlytics(), `Component stack: ${info.componentStack}`);
   }
 
   handleReset = () => this.setState({hasError: false, error: null});
 
   render() {
     if (this.state.hasError) {
-      if (this.props.fallback) { return this.props.fallback; }
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
       return (
         <View style={styles.container}>
           <Text style={styles.title}>Something went wrong</Text>
