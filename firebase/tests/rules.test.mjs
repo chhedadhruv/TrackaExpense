@@ -1,0 +1,280 @@
+// Rules tests. Run with: yarn test:rules (starts the emulators; touches no live project).
+import {describe, it, before, after, beforeEach} from 'node:test';
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {
+  initializeTestEnvironment,
+  assertSucceeds,
+  assertFails,
+} from '@firebase/rules-unit-testing';
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  addDoc,
+  collection,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  increment,
+  arrayUnion,
+  arrayRemove,
+} from 'firebase/firestore';
+
+const dir = path.dirname(fileURLToPath(import.meta.url));
+const read = f => fs.readFileSync(path.join(dir, '..', f), 'utf8');
+
+let env;
+const ALICE = {uid: 'alice', email: 'alice@example.com'};
+const BOB = {uid: 'bob', email: 'bob@example.com'};
+const CAROL = {uid: 'carol', email: 'carol@example.com'};
+
+const as = u => env.authenticatedContext(u.uid, {email: u.email});
+const dbOf = u => as(u).firestore();
+const anonDb = () => env.unauthenticatedContext().firestore();
+
+async function seed() {
+  await env.clearFirestore();
+  await env.clearStorage();
+  await env.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'users/alice'), {name: 'Alice', email: ALICE.email, phone: '1', balance: 100, fcmToken: 't'});
+    await setDoc(doc(db, 'users/bob'), {name: 'Bob', email: BOB.email, phone: '2', balance: 50});
+    await setDoc(doc(db, 'users/alice/transactions/t1'), {title: 'x', amount: '10', type: 'expense', date: '2026-01-01'});
+    await setDoc(doc(db, 'groups/g1'), {
+      name: 'Trip',
+      members: [ALICE.email],
+      memberNames: {[ALICE.email]: 'Alice'},
+      pendingInvites: [BOB.email],
+      createdBy: 'alice',
+    });
+    await setDoc(doc(db, 'groups/g1/splits/s1'), {title: 'Dinner', amount: 100});
+    await setDoc(doc(db, 'groups/g1/splits/s1/history/h1'), {action: 'create'});
+    await setDoc(doc(db, 'invitations/i1'), {
+      email: BOB.email,
+      groupId: 'g1',
+      status: 'pending',
+      inviterUid: 'alice',
+    });
+    await setDoc(doc(db, 'ious/o1'), {fromEmail: ALICE.email, toEmail: BOB.email, status: 'pending', amount: 5});
+    await setDoc(doc(db, 'mail/m1'), {to: 'x@example.com'});
+  });
+}
+
+before(async () => {
+  env = await initializeTestEnvironment({
+    projectId: 'demo-trackaexpense-rules',
+    firestore: {rules: read('firestore.rules')},
+    storage: {rules: read('storage.rules')},
+  });
+});
+after(async () => {
+  await env.cleanup();
+});
+beforeEach(seed);
+
+describe('firestore: unauthenticated', () => {
+  it('cannot read users, groups, invitations', async () => {
+    const db = anonDb();
+    await assertFails(getDoc(doc(db, 'users/alice')));
+    await assertFails(getDoc(doc(db, 'groups/g1')));
+    await assertFails(getDocs(collection(db, 'invitations')));
+  });
+  it('cannot write anything', async () => {
+    await assertFails(setDoc(doc(anonDb(), 'users/new'), {name: 'x'}));
+  });
+});
+
+describe('firestore: users', () => {
+  it('signed-in user can read another profile and look users up by email and phone', async () => {
+    const db = dbOf(ALICE);
+    await assertSucceeds(getDoc(doc(db, 'users/bob')));
+    await assertSucceeds(getDocs(query(collection(db, 'users'), where('email', '==', BOB.email))));
+    await assertSucceeds(getDocs(query(collection(db, 'users'), where('phone', '==', '2'))));
+  });
+  it('can create and update own document only', async () => {
+    await assertSucceeds(setDoc(doc(dbOf(CAROL), 'users/carol'), {name: 'Carol', email: CAROL.email, balance: 0}));
+    await assertSucceeds(updateDoc(doc(dbOf(ALICE), 'users/alice'), {name: 'Alice B'}));
+    await assertFails(setDoc(doc(dbOf(CAROL), 'users/mallory'), {name: 'x'}));
+    await assertFails(updateDoc(doc(dbOf(ALICE), 'users/bob'), {name: 'Hacked'}));
+  });
+  it('settle-up may change only the balance of another user', async () => {
+    await assertSucceeds(updateDoc(doc(dbOf(ALICE), 'users/bob'), {balance: increment(-10)}));
+    await assertFails(updateDoc(doc(dbOf(ALICE), 'users/bob'), {balance: 'free'}));
+    await assertFails(updateDoc(doc(dbOf(ALICE), 'users/bob'), {balance: increment(1), email: 'x@y.z'}));
+  });
+  it('cannot delete another user', async () => {
+    await assertFails(deleteDoc(doc(dbOf(ALICE), 'users/bob')));
+    await assertSucceeds(deleteDoc(doc(dbOf(BOB), 'users/bob')));
+  });
+  it('subcollections are owner-only', async () => {
+    await assertSucceeds(getDoc(doc(dbOf(ALICE), 'users/alice/transactions/t1')));
+    await assertSucceeds(addDoc(collection(dbOf(ALICE), 'users/alice/transactions'), {title: 'y'}));
+    await assertSucceeds(
+      getDocs(query(collection(dbOf(ALICE), 'users/alice/transactions'), orderBy('title'))),
+    );
+    await assertFails(getDoc(doc(dbOf(BOB), 'users/alice/transactions/t1')));
+    await assertFails(addDoc(collection(dbOf(BOB), 'users/alice/transactions'), {title: 'y'}));
+  });
+});
+
+describe('firestore: groups', () => {
+  it('member can list their groups with array-contains and read the group', async () => {
+    const db = dbOf(ALICE);
+    await assertSucceeds(getDocs(query(collection(db, 'groups'), where('members', 'array-contains', ALICE.email))));
+    await assertSucceeds(getDoc(doc(db, 'groups/g1')));
+  });
+  it('a non-member cannot read the group or list all groups', async () => {
+    await assertFails(getDoc(doc(dbOf(CAROL), 'groups/g1')));
+    await assertFails(getDocs(collection(dbOf(CAROL), 'groups')));
+    await assertFails(
+      getDocs(query(collection(dbOf(CAROL), 'groups'), where('members', 'array-contains', ALICE.email))),
+    );
+  });
+  it('create requires createdBy to be the caller', async () => {
+    const db = dbOf(CAROL);
+    await assertSucceeds(
+      addDoc(collection(db, 'groups'), {name: 'N', members: [CAROL.email], createdBy: 'carol', pendingInvites: []}),
+    );
+    await assertFails(
+      addDoc(collection(db, 'groups'), {name: 'N', members: [CAROL.email], createdBy: 'alice', pendingInvites: []}),
+    );
+  });
+  it('invitee can read the group, accept, and decline', async () => {
+    const db = dbOf(BOB);
+    await assertSucceeds(getDoc(doc(db, 'groups/g1')));
+    await assertSucceeds(
+      updateDoc(doc(db, 'groups/g1'), {
+        members: arrayUnion(BOB.email),
+        pendingInvites: arrayRemove(BOB.email),
+      }),
+    );
+  });
+  it('invitee can decline', async () => {
+    await assertSucceeds(updateDoc(doc(dbOf(BOB), 'groups/g1'), {pendingInvites: arrayRemove(BOB.email)}));
+  });
+  it('an outsider cannot update or delete the group', async () => {
+    await assertFails(updateDoc(doc(dbOf(CAROL), 'groups/g1'), {name: 'Mine now'}));
+    await assertFails(deleteDoc(doc(dbOf(CAROL), 'groups/g1')));
+  });
+  it('member can delete the group', async () => {
+    await assertSucceeds(deleteDoc(doc(dbOf(ALICE), 'groups/g1')));
+  });
+});
+
+describe('firestore: group subcollections', () => {
+  it('members can read and write splits and nested history', async () => {
+    const db = dbOf(ALICE);
+    await assertSucceeds(getDocs(query(collection(db, 'groups/g1/splits'), orderBy('amount', 'desc'))));
+    await assertSucceeds(addDoc(collection(db, 'groups/g1/splits'), {title: 'Lunch', amount: 20}));
+    await assertSucceeds(addDoc(collection(db, 'groups/g1/splitHistory'), {action: 'x'}));
+    await assertSucceeds(getDoc(doc(db, 'groups/g1/splits/s1/history/h1')));
+  });
+  it('non-members and invitees cannot access splits', async () => {
+    await assertFails(getDocs(collection(dbOf(CAROL), 'groups/g1/splits')));
+    await assertFails(addDoc(collection(dbOf(CAROL), 'groups/g1/splits'), {title: 'x'}));
+    await assertFails(getDocs(collection(dbOf(BOB), 'groups/g1/splits')));
+  });
+});
+
+describe('firestore: invitations', () => {
+  it('invitee lists pending invitations by email and status', async () => {
+    await assertSucceeds(
+      getDocs(
+        query(collection(dbOf(BOB), 'invitations'), where('email', '==', BOB.email), where('status', '==', 'pending')),
+      ),
+    );
+  });
+  it('inviter can look up an invitation by group and email', async () => {
+    await assertSucceeds(
+      getDocs(
+        query(collection(dbOf(ALICE), 'invitations'), where('groupId', '==', 'g1'), where('email', '==', BOB.email)),
+      ),
+    );
+  });
+  it('create requires inviterUid to be the caller', async () => {
+    await assertSucceeds(
+      addDoc(collection(dbOf(ALICE), 'invitations'), {email: CAROL.email, groupId: 'g1', inviterUid: 'alice'}),
+    );
+    await assertFails(
+      addDoc(collection(dbOf(CAROL), 'invitations'), {email: CAROL.email, groupId: 'g1', inviterUid: 'alice'}),
+    );
+  });
+  it('invitee can respond, a stranger cannot', async () => {
+    await assertSucceeds(updateDoc(doc(dbOf(BOB), 'invitations/i1'), {status: 'accepted'}));
+    await assertFails(updateDoc(doc(dbOf(CAROL), 'invitations/i1'), {status: 'accepted'}));
+  });
+});
+
+describe('firestore: ious', () => {
+  it('parties can query and update, others cannot', async () => {
+    await assertSucceeds(
+      getDocs(
+        query(
+          collection(dbOf(ALICE), 'ious'),
+          where('fromEmail', '==', ALICE.email),
+          where('status', '==', 'pending'),
+          orderBy('createdAt', 'desc'),
+        ),
+      ),
+    );
+    await assertSucceeds(updateDoc(doc(dbOf(BOB), 'ious/o1'), {status: 'settled'}));
+    await assertFails(getDoc(doc(dbOf(CAROL), 'ious/o1')));
+    await assertFails(getDocs(collection(dbOf(CAROL), 'ious')));
+  });
+  it('create requires the caller to be a party', async () => {
+    await assertSucceeds(addDoc(collection(dbOf(ALICE), 'ious'), {fromEmail: ALICE.email, toEmail: BOB.email}));
+    await assertFails(addDoc(collection(dbOf(CAROL), 'ious'), {fromEmail: ALICE.email, toEmail: BOB.email}));
+  });
+});
+
+describe('firestore: other collections', () => {
+  it('contact messages can be created by the sender but never read', async () => {
+    await assertSucceeds(addDoc(collection(dbOf(ALICE), 'contact_messages'), {userId: 'alice', messageText: 'hi'}));
+    await assertFails(addDoc(collection(dbOf(ALICE), 'contact_messages'), {userId: 'bob', messageText: 'hi'}));
+    await assertFails(getDocs(collection(dbOf(ALICE), 'contact_messages')));
+  });
+  it('mail and unknown collections are closed to clients', async () => {
+    await assertFails(getDoc(doc(dbOf(ALICE), 'mail/m1')));
+    await assertFails(addDoc(collection(dbOf(ALICE), 'mail'), {to: 'x@example.com'}));
+    await assertFails(setDoc(doc(dbOf(ALICE), 'anything/else'), {a: 1}));
+  });
+});
+
+// The rules-unit-testing storage context exposes the compat API (ref().put()).
+const png = new Uint8Array([137, 80, 78, 71]);
+describe('storage', () => {
+  const st = u => as(u).storage();
+  const putAdmin = async p => {
+    await env.withSecurityRulesDisabled(async ctx => {
+      await ctx.storage().ref(p).put(png, {contentType: 'image/png'});
+    });
+  };
+  it('owner can upload an image to bills/{uid}/', async () => {
+    await assertSucceeds(st(ALICE).ref('bills/alice/a.png').put(png, {contentType: 'image/png'}));
+  });
+  it('another user cannot write into someone else path', async () => {
+    await assertFails(st(BOB).ref('bills/alice/a.png').put(png, {contentType: 'image/png'}));
+  });
+  it('non-image content is rejected', async () => {
+    await assertFails(st(ALICE).ref('bills/alice/a.txt').put(png, {contentType: 'text/plain'}));
+  });
+  it('signed-in users can read receipts, anonymous cannot', async () => {
+    await putAdmin('bills/alice/r.png');
+    await assertSucceeds(st(BOB).ref('bills/alice/r.png').getMetadata());
+    await assertFails(env.unauthenticatedContext().storage().ref('bills/alice/r.png').getMetadata());
+  });
+  it('only the owner can delete', async () => {
+    await putAdmin('bills/alice/d.png');
+    await assertFails(st(BOB).ref('bills/alice/d.png').delete());
+    await assertSucceeds(st(ALICE).ref('bills/alice/d.png').delete());
+  });
+  it('every other path is closed', async () => {
+    await assertFails(st(ALICE).ref('other/a.png').put(png, {contentType: 'image/png'}));
+    await assertFails(st(ALICE).ref('bills/alice/sub/a.png').put(png, {contentType: 'image/png'}));
+  });
+});

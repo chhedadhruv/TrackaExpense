@@ -1,0 +1,11 @@
+// Copy of the rules deployed on project trackaexpense when the audit was done (read via the Firebase console tools).
+// Kept only as a record and for rollback. DO NOT deploy.
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+  }
+}
