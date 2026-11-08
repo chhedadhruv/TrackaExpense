@@ -33,7 +33,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import UserAvatar from '../../src/components/Avatar';
 import SelectModal from '../../src/components/SelectModal';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
+import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import ReminderNotificationService from '../../services/ReminderNotificationService';
 import {getConfig} from '../../src/services/RemoteConfigService';

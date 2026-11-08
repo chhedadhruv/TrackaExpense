@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {Platform, StatusBar, StyleSheet} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
+import {KeyboardProvider} from 'react-native-keyboard-controller';
 import {HEADER_BG} from './src/constants/theme';
 import codePush from '@revopush/react-native-code-push';
 import {
@@ -74,20 +75,22 @@ const App: React.FC = () => {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <StatusBar
-          barStyle="dark-content"
-          backgroundColor={HEADER_BG}
-          translucent={false}
-        />
-        <ErrorBoundary>
-          {forceUpdateMessage !== null ? (
-            <ForceUpdateScreen message={forceUpdateMessage} />
-          ) : (
-            <Providers />
-          )}
-        </ErrorBoundary>
-      </SafeAreaView>
+      <KeyboardProvider>
+        <SafeAreaView style={styles.container} edges={['top']}>
+          <StatusBar
+            barStyle="dark-content"
+            backgroundColor={HEADER_BG}
+            translucent={false}
+          />
+          <ErrorBoundary>
+            {forceUpdateMessage !== null ? (
+              <ForceUpdateScreen message={forceUpdateMessage} />
+            ) : (
+              <Providers />
+            )}
+          </ErrorBoundary>
+        </SafeAreaView>
+      </KeyboardProvider>
     </SafeAreaProvider>
   );
 };

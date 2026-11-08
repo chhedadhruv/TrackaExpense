@@ -18,7 +18,7 @@ import {
 } from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
+import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
 import FormButton from '../components/FormButton';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../src/constants/theme';
 
