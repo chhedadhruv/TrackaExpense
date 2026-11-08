@@ -2,9 +2,9 @@
   "description": "Quality ratchet baseline. Counts may only go down. See docs/quality-baseline.md.",
   "updated": "2026-11-08",
   "counts": {
-    "eslintErrors": 1,
-    "eslintWarnings": 146,
+    "eslintErrors": 0,
+    "eslintWarnings": 68,
     "tscErrors": 0,
-    "prettierUnformattedFiles": 18
+    "prettierUnformattedFiles": 9
   }
 }
