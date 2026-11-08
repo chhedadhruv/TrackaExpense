@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useContext, useCallback} from 'react';
-import UserAvatar from 'react-native-user-avatar';
+import UserAvatar from '../src/components/Avatar';
 import {AuthContext} from '../navigation/AuthProvider';
 import {
   deleteUser,
