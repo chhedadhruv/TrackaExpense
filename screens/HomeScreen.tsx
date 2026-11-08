@@ -15,7 +15,15 @@ import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {ActivityIndicator, Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {getAuth} from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
+import {
+  collection,
+  doc as fsDoc,
+  getFirestore,
+  onSnapshot,
+  orderBy,
+  query,
+  updateDoc,
+} from '@react-native-firebase/firestore';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {useCurrency} from '../utils/CurrencyUtil';
@@ -99,53 +107,48 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
   // Realtime listener for user data
   useEffect(() => {
     setUserLoading(true);
-    const unsub = firestore()
-      .collection('users')
-      .doc(uid)
-      .onSnapshot(
-        doc => {
-          if (doc.exists) {
-            const data = doc.data() as UserDocument;
-            setUserData(data);
-            setError(null);
-          }
-          setUserLoading(false);
-        },
-        _err => {
-          setError(
-            'Error fetching user data. Please check your connection and try again.',
-          );
-          setUserLoading(false);
-        },
-      );
+    const unsub = onSnapshot(
+      fsDoc(getFirestore(), 'users', uid),
+      doc => {
+        if (doc.exists) {
+          const data = doc.data() as UserDocument;
+          setUserData(data);
+          setError(null);
+        }
+        setUserLoading(false);
+      },
+      _err => {
+        setError(
+          'Error fetching user data. Please check your connection and try again.',
+        );
+        setUserLoading(false);
+      },
+    );
     return () => unsub();
   }, [retryKey, uid]);
 
   // Realtime listener for transactions
   useEffect(() => {
     setTxLoading(true);
-    const unsub = firestore()
-      .collection('users')
-      .doc(uid)
-      .collection('transactions')
-      .orderBy('createdAt', 'desc')
-      .onSnapshot(
-        snapshot => {
-          const arr = snapshot.docs.map(doc => ({
-            id: doc.id,
-            userId: uid,
-            ...doc.data(),
-          })) as TransactionDocument[];
-          setTransactions(arr);
-          setTxLoading(false);
-        },
-        _err => {
-          setError(
-            'Error fetching transactions. Please check your connection.',
-          );
-          setTxLoading(false);
-        },
-      );
+    const unsub = onSnapshot(
+      query(
+        collection(getFirestore(), 'users', uid, 'transactions'),
+        orderBy('createdAt', 'desc'),
+      ),
+      snapshot => {
+        const arr = snapshot.docs.map(doc => ({
+          id: doc.id,
+          userId: uid,
+          ...doc.data(),
+        })) as TransactionDocument[];
+        setTransactions(arr);
+        setTxLoading(false);
+      },
+      _err => {
+        setError('Error fetching transactions. Please check your connection.');
+        setTxLoading(false);
+      },
+    );
     return () => unsub();
   }, [retryKey, uid]);
 
@@ -212,7 +215,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
     }
     setBalanceSaving(true);
     try {
-      await firestore().collection('users').doc(uid).update({balance: parsed});
+      await updateDoc(fsDoc(getFirestore(), 'users', uid), {balance: parsed});
       setBalanceSaved(true);
       saveSuccessTimeout.current = setTimeout(() => {
         setBalanceSaved(false);

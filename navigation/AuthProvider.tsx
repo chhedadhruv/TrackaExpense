@@ -8,7 +8,13 @@ import {
   signInWithEmailAndPassword,
   signOut as signOutOfFirebase,
 } from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
+import {
+  Timestamp,
+  doc,
+  getDoc,
+  getFirestore,
+  setDoc,
+} from '@react-native-firebase/firestore';
 import {
   getCrashlytics,
   setAttribute,
@@ -49,10 +55,9 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
       return false;
     }
     try {
-      const userDoc = await firestore()
-        .collection('users')
-        .doc(firebaseUser.uid)
-        .get();
+      const userDoc = await getDoc(
+        doc(getFirestore(), 'users', firebaseUser.uid),
+      );
       return userDoc.exists;
     } catch (error) {
       reportError(error as Error);
@@ -198,20 +203,17 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
             );
             const newUser = userCredential.user;
             await sendEmailVerification(newUser);
-            await firestore()
-              .collection('users')
-              .doc(newUser.uid)
-              .set({
-                name,
-                email,
-                phone,
-                currency,
-                transactions: [],
-                verified: false,
-                createdAt: firestore.Timestamp.fromDate(new Date()),
-                userImg: null,
-                balance: 0,
-              });
+            await setDoc(doc(getFirestore(), 'users', newUser.uid), {
+              name,
+              email,
+              phone,
+              currency,
+              transactions: [],
+              verified: false,
+              createdAt: Timestamp.fromDate(new Date()),
+              userImg: null,
+              balance: 0,
+            });
             setUserId(getCrashlytics(), newUser.uid);
             setAttribute(getCrashlytics(), 'auth_method', 'email');
             AnalyticsService.logSignUp('email', currency);

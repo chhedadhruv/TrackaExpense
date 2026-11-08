@@ -13,7 +13,11 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import {BarChart, PieChart} from 'react-native-gifted-charts';
 import {useFocusEffect} from '@react-navigation/native';
 import {getAuth} from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
+import {
+  collection,
+  getDocs,
+  getFirestore,
+} from '@react-native-firebase/firestore';
 import {reportError} from '../src/services/ErrorReporter';
 import * as PerformanceService from '../src/services/PerformanceService';
 import moment from 'moment';
@@ -111,11 +115,14 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
       setError(null);
       setLoading(true);
       const stopTrace = await PerformanceService.traceCalculateStatistics();
-      const snapshot = await firestore()
-        .collection('users')
-        .doc(getAuth().currentUser!.uid)
-        .collection('transactions')
-        .get();
+      const snapshot = await getDocs(
+        collection(
+          getFirestore(),
+          'users',
+          getAuth().currentUser!.uid,
+          'transactions',
+        ),
+      );
       const txns = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),

@@ -10,7 +10,13 @@ import {
 } from 'react-native';
 import {Card, Searchbar, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import firestore from '@react-native-firebase/firestore';
+import {
+  collection,
+  getDocs,
+  getFirestore,
+  orderBy,
+  query as fsQuery,
+} from '@react-native-firebase/firestore';
 import {reportError} from '../src/services/ErrorReporter';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
@@ -58,12 +64,12 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
   const fetchTransactions = async () => {
     try {
       const currentUser = getAuth().currentUser!;
-      const snapshot = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('transactions')
-        .orderBy('createdAt', 'desc')
-        .get();
+      const snapshot = await getDocs(
+        fsQuery(
+          collection(getFirestore(), 'users', currentUser.uid, 'transactions'),
+          orderBy('createdAt', 'desc'),
+        ),
+      );
       const fetched = snapshot.docs.map(doc => ({
         id: doc.id,
         userId: currentUser.uid,
