@@ -1,4 +1,10 @@
-import messaging from '@react-native-firebase/messaging';
+import {
+  AuthorizationStatus,
+  getMessaging,
+  getToken,
+  onMessage,
+  requestPermission,
+} from '@react-native-firebase/messaging';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import {reportError} from '../src/services/ErrorReporter';
@@ -157,10 +163,10 @@ class NotificationService {
         // Activity not yet attached or permission API unavailable — skip
       }
     }
-    const authStatus = await messaging().requestPermission();
+    const authStatus = await requestPermission(getMessaging());
     const enabled =
-      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+      authStatus === AuthorizationStatus.AUTHORIZED ||
+      authStatus === AuthorizationStatus.PROVISIONAL;
     if (!enabled) {
       throw new Error('Notification permission not granted');
     }
@@ -168,7 +174,7 @@ class NotificationService {
 
   async getFCMToken(): Promise<string | null> {
     try {
-      this.fcmToken = await messaging().getToken();
+      this.fcmToken = await getToken(getMessaging());
       return this.fcmToken;
     } catch (error) {
       reportError(error as Error);
@@ -196,7 +202,7 @@ class NotificationService {
   }
 
   setupMessageHandlers(): void {
-    messaging().onMessage(async remoteMessage => {
+    onMessage(getMessaging(), async remoteMessage => {
       await this.showLocalNotification(remoteMessage);
     });
   }
