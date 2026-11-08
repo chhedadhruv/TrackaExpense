@@ -29,7 +29,7 @@ import {
 import type {FirebaseFirestoreTypes} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {useFocusEffect} from '@react-navigation/native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import UserAvatar from '../../src/components/Avatar';
 import SelectModal from '../../src/components/SelectModal';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
@@ -38,6 +38,7 @@ import SplitNotificationService from '../../services/SplitNotificationService';
 import ReminderNotificationService from '../../services/ReminderNotificationService';
 import {getConfig} from '../../src/services/RemoteConfigService';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../../src/constants/theme';
+import type {McIconName} from '../../src/types/icons';
 
 interface UserDetail {
   email: string;
@@ -153,8 +154,8 @@ const GROUP_CATEGORIES = [
   },
 ];
 
-const getCategoryIcon = (value: string): string => {
-  const map: Record<string, string> = {
+const getCategoryIcon = (value: string): McIconName => {
+  const map: Record<string, McIconName> = {
     Work: 'briefcase',
     Family: 'home-heart',
     Couple: 'heart-multiple',

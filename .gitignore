@@ -93,3 +93,6 @@ NOTIFICATION_ENV.md
 
 # Firebase emulator logs
 *-debug.log
+# Firebase config files used by the Expo prebuild (never commit)
+/google-services.json
+/GoogleService-Info.plist

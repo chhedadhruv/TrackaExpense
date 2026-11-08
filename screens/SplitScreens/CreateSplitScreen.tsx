@@ -20,8 +20,10 @@ import {
   putFile,
   ref as createStorageRef,
 } from '@react-native-firebase/storage';
-import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
-import {requestCameraPermission} from '../../utils/Permissions';
+import {
+  pickImageFromCamera,
+  pickImageFromLibrary,
+} from '../../src/utils/imagePicker';
 import {Card, Checkbox, ActivityIndicator, Switch} from 'react-native-paper';
 import {
   Timestamp,
@@ -43,7 +45,7 @@ import {reportError} from '../../src/services/ErrorReporter';
 import * as PerformanceService from '../../src/services/PerformanceService';
 import * as AnalyticsService from '../../src/services/AnalyticsService';
 import {DatePickerModal} from 'react-native-paper-dates';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
 import SplitNotificationService from '../../services/SplitNotificationService';
@@ -885,31 +887,19 @@ const CreateSplitScreen = ({route, navigation}: any) => {
   };
 
   const takePhotoFromCamera = async () => {
-    const hasPermission = await requestCameraPermission();
-    if (!hasPermission) {
-      return;
-    }
-    launchCamera(
-      {mediaType: 'photo', includeBase64: false, quality: 0.8},
-      response => {
-        if (!response.didCancel && !response.errorCode) {
-          setReceiptImage(response.assets![0].uri!);
-        }
-      },
-    );
     setImageModalVisible(false);
+    const uri = await pickImageFromCamera();
+    if (uri) {
+      setReceiptImage(uri);
+    }
   };
 
-  const choosePhotoFromLibrary = () => {
-    launchImageLibrary(
-      {mediaType: 'photo', includeBase64: false, quality: 0.8},
-      response => {
-        if (!response.didCancel && !response.errorCode) {
-          setReceiptImage(response.assets![0].uri!);
-        }
-      },
-    );
+  const choosePhotoFromLibrary = async () => {
     setImageModalVisible(false);
+    const uri = await pickImageFromLibrary();
+    if (uri) {
+      setReceiptImage(uri);
+    }
   };
 
   const renderSplitTypeButtons = () => (

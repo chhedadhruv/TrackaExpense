@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import {Text, Card} from 'react-native-paper';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {
   deleteDoc,
   doc,
