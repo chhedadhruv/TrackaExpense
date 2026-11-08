@@ -1206,8 +1206,6 @@ PODS:
   - BoringSSL-GRPC/Implementation (0.0.37):
     - BoringSSL-GRPC/Interface (= 0.0.37)
   - BoringSSL-GRPC/Interface (0.0.37)
-  - BVLinearGradient (2.8.3):
-    - React-Core
   - CodePush (1.5.1):
     - Base64 (~> 1.1)
     - JWT (~> 3.0.0-beta.12)
@@ -3418,7 +3416,6 @@ PODS:
 
 DEPENDENCIES:
   - boost (from `../node_modules/react-native/third-party-podspecs/boost.podspec`)
-  - BVLinearGradient (from `../node_modules/react-native-linear-gradient`)
   - "CodePush (from `../node_modules/@revopush/react-native-code-push`)"
   - DoubleConversion (from `../node_modules/react-native/third-party-podspecs/DoubleConversion.podspec`)
   - fast_float (from `../node_modules/react-native/third-party-podspecs/fast_float.podspec`)
@@ -3566,8 +3563,6 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   boost:
     :podspec: "../node_modules/react-native/third-party-podspecs/boost.podspec"
-  BVLinearGradient:
-    :path: "../node_modules/react-native-linear-gradient"
   CodePush:
     :path: "../node_modules/@revopush/react-native-code-push"
   DoubleConversion:
@@ -3765,7 +3760,6 @@ SPEC CHECKSUMS:
   Base64: cecfb41a004124895a7bcee567a89bae5a89d49b
   boost: 7e761d76ca2ce687f7cc98e698152abd03a18f90
   BoringSSL-GRPC: dded2a44897e45f28f08ae87a55ee4bcd19bc508
-  BVLinearGradient: cb006ba232a1f3e4f341bb62c42d1098c284da70
   CodePush: 79b0be8640f22953d836248519e6717e96e7baec
   DoubleConversion: cb417026b2400c8f53ae97020b2be961b59470cb
   fast_float: 06eeec4fe712a76acc9376682e4808b05ce978b6

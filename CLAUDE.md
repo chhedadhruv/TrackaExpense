@@ -54,7 +54,7 @@ Planned commands: EAS build and update scripts (Phase 1b).
 - `components/`, `utils/` : older shared components and utilities (currency, sign-in config, category data, permissions).
 - `firebase/` : Firestore and Storage rules, indexes, rules tests (`firebase/tests`), and `baseline/` (old open rules, rollback only). `firebase.json` at the root.
 - `server/` : Express notification server (cron, push, emails; not deployed). Uses yarn (`server/yarn.lock`).
-- `android/`, `ios/` : native projects. `patches/` : patch-package patches. `scripts/` : version bump.
+- `android/`, `ios/` : native projects. `patches/` : patch-package patches (none today). `scripts/` : version bump.
 - `examples/`, `store-screenshots/`, `vendor/` : non-app material.
 
 ## 5. Hard rules
@@ -148,4 +148,4 @@ Phase 1a is complete (tooling, local quality gates, minimum-version gate, server
 - `ios/GoogleService-Info.plist` is untracked now but exists in git history.
 - Two overlapping shared-code locations: `components/` and `utils/` versus `src/`.
 - The Android release keystore has a single copy on the owner's machine: `android/keystore.properties` (gitignored).
-- Native modules that force a new binary when changed include Firebase, Notifee, Google and Apple sign-in, CodePush, `react-native-fs`, `react-native-reanimated` (3.16.7, the newest line for RN 0.77; the babel plugin must stay last in `babel.config.js`), `react-native-keyboard-controller`, `react-native-svg` (patched in `patches/`).
+- Native modules that force a new binary when changed include Firebase, Notifee, Google and Apple sign-in, CodePush, `react-native-fs`, `react-native-reanimated` (3.16.7, the newest line for RN 0.77; the babel plugin must stay last in `babel.config.js`), `react-native-keyboard-controller`, `react-native-svg`.
