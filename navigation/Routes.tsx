@@ -9,7 +9,7 @@ import AppStack from './AppStack';
 import {AuthContext} from './AuthProvider';
 import auth from '@react-native-firebase/auth';
 import messaging from '@react-native-firebase/messaging';
-import analytics from '@react-native-firebase/analytics';
+import {getAnalytics, logScreenView} from '@react-native-firebase/analytics';
 import type {FirebaseAuthTypes} from '@react-native-firebase/auth';
 import {setErrorReportingUser} from '../src/services/ErrorReporter';
 import {identifyUser, resetMixpanel} from '../src/services/MixpanelService';
@@ -116,9 +116,10 @@ const Routes = () => {
       onStateChange={() => {
         const routeName = navigationRef.current?.getCurrentRoute()?.name;
         if (routeName) {
-          analytics()
-            .logScreenView({screen_name: routeName, screen_class: routeName})
-            .catch(() => {});
+          logScreenView(getAnalytics(), {
+            screen_name: routeName,
+            screen_class: routeName,
+          }).catch(() => {});
         }
       }}>
       {user ? <AppStack /> : <AuthStack />}

@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
-import crashlytics from '@react-native-firebase/crashlytics';
+import {getCrashlytics, log} from '@react-native-firebase/crashlytics';
 import {reportError} from '../src/services/ErrorReporter';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../src/constants/theme';
 
@@ -23,7 +23,7 @@ class ErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo): void {
     reportError(error, {componentStack: info.componentStack ?? ''});
-    crashlytics().log(`Component stack: ${info.componentStack}`);
+    log(getCrashlytics(), `Component stack: ${info.componentStack}`);
   }
 
   handleReset = () => this.setState({hasError: false, error: null});
