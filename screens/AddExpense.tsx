@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import React, {useState, useEffect, useRef} from 'react';
 import {Card, ActivityIndicator} from 'react-native-paper';
-import auth from '@react-native-firebase/auth';
+import {getAuth} from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {
   getDownloadURL,
@@ -90,7 +90,7 @@ const AddExpense = ({navigation}: {navigation: any}) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title]);
 
-  const getUid = (): string => auth().currentUser!.uid;
+  const getUid = (): string => getAuth().currentUser!.uid;
 
   const uploadImageAsync = async (): Promise<string | null> => {
     if (!image) {

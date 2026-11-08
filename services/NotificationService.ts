@@ -6,7 +6,7 @@ import {
   requestPermission,
 } from '@react-native-firebase/messaging';
 import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../src/services/ErrorReporter';
 import notifee, {AndroidImportance, EventType} from '@notifee/react-native';
 import {Platform, PermissionsAndroid} from 'react-native';
@@ -184,13 +184,13 @@ class NotificationService {
   }
 
   async saveTokenToFirestore(): Promise<void> {
-    if (!this.fcmToken || !auth().currentUser) {
+    if (!this.fcmToken || !getAuth().currentUser) {
       return;
     }
     try {
       await firestore()
         .collection('users')
-        .doc(auth().currentUser!.uid)
+        .doc(getAuth().currentUser!.uid)
         .update({
           fcmToken: this.fcmToken,
           lastTokenUpdate: firestore.FieldValue.serverTimestamp(),

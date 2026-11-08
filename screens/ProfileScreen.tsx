@@ -1,7 +1,11 @@
 import React, {useState, useEffect, useContext, useCallback} from 'react';
 import UserAvatar from 'react-native-user-avatar';
 import {AuthContext} from '../navigation/AuthProvider';
-import auth from '@react-native-firebase/auth';
+import {
+  deleteUser,
+  getAuth,
+  sendPasswordResetEmail,
+} from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {reportError} from '../src/services/ErrorReporter';
 import {useFocusEffect} from '@react-navigation/native';
@@ -51,7 +55,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
       .catch(() => {});
   }, []);
 
-  const user = auth().currentUser!;
+  const user = getAuth().currentUser!;
 
   const getUser = async () => {
     try {
@@ -70,10 +74,10 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
     }
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useFocusEffect(
     useCallback(() => {
       getUser();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [route.key]),
   );
 
@@ -96,7 +100,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
           text: 'Send Email',
           onPress: async () => {
             try {
-              await auth().sendPasswordResetEmail(user.email!);
+              await sendPasswordResetEmail(getAuth(), user.email!);
               Alert.alert(
                 'Email Sent',
                 'A password reset email has been sent to your email address.',
@@ -118,7 +122,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
   const deleteAccountPermanently = async () => {
     try {
       setLoading(true);
-      const currentUser = auth().currentUser!;
+      const currentUser = getAuth().currentUser!;
       await firestore().collection('users').doc(currentUser.uid).delete();
       const txSnap = await firestore()
         .collection('users')
@@ -128,7 +132,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
       const batch = firestore().batch();
       txSnap.docs.forEach(doc => batch.delete(doc.ref));
       await batch.commit();
-      await currentUser.delete();
+      await deleteUser(currentUser);
       Alert.alert(
         'Account Deleted',
         'Your account has been permanently deleted.',

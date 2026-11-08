@@ -1,6 +1,6 @@
 import {useState, useEffect, useRef, useCallback} from 'react';
 import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+import {getAuth} from '@react-native-firebase/auth';
 import {getCrashlytics, setAttribute} from '@react-native-firebase/crashlytics';
 import {reportError} from '../services/ErrorReporter';
 import * as AnalyticsService from '../services/AnalyticsService';
@@ -35,7 +35,7 @@ export function useUserData(): UseUserDataReturn {
   );
 
   const fetchUserData = useCallback(async (retryCount = 0): Promise<void> => {
-    const currentUser = auth().currentUser;
+    const currentUser = getAuth().currentUser;
     if (!currentUser?.uid) {
       setError('No authenticated user found');
       setLoading(false);

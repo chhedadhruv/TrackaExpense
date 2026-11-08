@@ -13,7 +13,7 @@ import {Card, Switch} from 'react-native-paper';
 import UserAvatar from 'react-native-user-avatar';
 import firestore from '@react-native-firebase/firestore';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import auth from '@react-native-firebase/auth';
+import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../../src/services/ErrorReporter';
 import * as AnalyticsService from '../../src/services/AnalyticsService';
 import SplitNotificationService from '../../services/SplitNotificationService';
@@ -74,7 +74,7 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
   const [includeInTransactions, setIncludeInTransactions] = useState(true);
 
   useEffect(() => {
-    const currentUserEmail = auth().currentUser?.email;
+    const currentUserEmail = getAuth().currentUser?.email;
     const members = group.members || [];
     if (preselect) {
       setSelectedBorrower(
@@ -124,7 +124,7 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
     }
     try {
       setLoading(true);
-      const currentUser = auth().currentUser!;
+      const currentUser = getAuth().currentUser!;
       const currentUserEmail = currentUser.email;
       let actorNameResolved = currentUserEmail?.split('@')[0] || 'Someone';
       try {
@@ -441,7 +441,7 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
               <View style={styles.cardContent}>
                 <Text style={styles.sectionTitle}>Suggestions</Text>
                 {lendingDetails!.map((item, idx) => {
-                  const currentEmail = auth().currentUser?.email;
+                  const currentEmail = getAuth().currentUser?.email;
                   const isActive =
                     selectedBorrower?.email === item.borrower.email &&
                     selectedLender?.email === item.lender.email;

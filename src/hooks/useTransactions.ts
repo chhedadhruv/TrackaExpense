@@ -1,6 +1,6 @@
 import {useState, useCallback} from 'react';
 import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../services/ErrorReporter';
 import * as PerformanceService from '../services/PerformanceService';
 import type {TransactionDocument} from '../types';
@@ -22,7 +22,7 @@ export function useTransactions(): UseTransactionsReturn {
   const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(async (): Promise<void> => {
-    const currentUser = auth().currentUser;
+    const currentUser = getAuth().currentUser;
     if (!currentUser?.uid) {
       return;
     }

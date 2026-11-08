@@ -10,7 +10,7 @@ import {Text, Card, ActivityIndicator} from 'react-native-paper';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../../src/services/ErrorReporter';
 import * as AnalyticsService from '../../src/services/AnalyticsService';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -29,7 +29,7 @@ interface Invitation {
 const InvitationsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const currentUser = auth().currentUser;
+  const currentUser = getAuth().currentUser;
 
   useEffect(() => {
     if (!currentUser?.email) {
@@ -104,8 +104,8 @@ const InvitationsScreen = () => {
         reportError(e as Error);
         Alert.alert('Error', 'Failed to accept invitation');
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [currentUser?.email],
   );
 
@@ -129,8 +129,8 @@ const InvitationsScreen = () => {
         reportError(e as Error);
         Alert.alert('Error', 'Failed to decline invitation');
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [currentUser?.email],
   );
 
