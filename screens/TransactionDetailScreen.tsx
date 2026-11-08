@@ -12,7 +12,11 @@ import {
 import {Text, Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import firestore from '@react-native-firebase/firestore';
-import storage from '@react-native-firebase/storage';
+import {
+  deleteObject,
+  getStorage,
+  refFromURL,
+} from '@react-native-firebase/storage';
 import {reportError} from '../src/services/ErrorReporter';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import {useCurrency} from '../utils/CurrencyUtil';
@@ -62,8 +66,8 @@ const TransactionDetailScreen = ({
         .doc(userId)
         .update({balance: firestore.FieldValue.increment(balanceIncrement)});
       if (imageUrl) {
-        const imageRef = storage().refFromURL(imageUrl);
-        await imageRef.delete();
+        const imageRef = refFromURL(getStorage(), imageUrl);
+        await deleteObject(imageRef);
       }
       AnalyticsService.logDeleteTransaction({
         type: transaction.type,
