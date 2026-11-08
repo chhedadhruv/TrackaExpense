@@ -14,7 +14,7 @@ import {Card, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
-import crashlytics from '@react-native-firebase/crashlytics';
+import {reportError} from '../src/services/ErrorReporter';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
@@ -159,7 +159,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
 
       setLoading(false);
     } catch (error: any) {
-      crashlytics().recordError(error as Error);
+      reportError(error as Error);
       Alert.alert('Error', 'Failed to load savings data. Please try again.');
       setLoading(false);
     }
@@ -305,7 +305,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
       setEditingGoalId(null);
       Alert.alert('Success', 'Savings goal updated successfully');
     } catch (error: any) {
-      crashlytics().recordError(error as Error);
+      reportError(error as Error);
       Alert.alert('Error', `Failed to update savings goal: ${error.message}`);
     } finally {
       setIsSubmitting(false);
@@ -377,7 +377,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         }`,
       );
     } catch (error: any) {
-      crashlytics().recordError(error as Error);
+      reportError(error as Error);
       Alert.alert('Error', `Failed to add to savings: ${error.message}`);
     } finally {
       setIsSubmitting(false);
@@ -452,7 +452,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         `${formatCurrencyAmount(parsed)} withdrawn from ${selectedGoal.name}`,
       );
     } catch (error: any) {
-      crashlytics().recordError(error as Error);
+      reportError(error as Error);
       Alert.alert('Error', `Failed to withdraw from savings: ${error.message}`);
     } finally {
       setIsSubmitting(false);
@@ -657,7 +657,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
       });
       Alert.alert('Success', 'Savings goal created successfully');
     } catch (error: any) {
-      crashlytics().recordError(error as Error);
+      reportError(error as Error);
       Alert.alert('Error', `Failed to create savings goal: ${error.message}`);
     } finally {
       setIsSubmitting(false);
@@ -697,7 +697,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
       AnalyticsService.logDeleteSavingsGoal();
       Alert.alert('Success', 'Savings goal deleted successfully');
     } catch (error: any) {
-      crashlytics().recordError(error as Error);
+      reportError(error as Error);
       Alert.alert('Error', `Failed to delete savings goal: ${error.message}`);
     } finally {
       setIsSubmitting(false);
@@ -753,7 +753,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         );
       }
     } catch (e) {
-      crashlytics().recordError(e as Error);
+      reportError(e as Error);
     }
   };
 

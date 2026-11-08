@@ -1,7 +1,7 @@
 import {useState, useCallback} from 'react';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
-import crashlytics from '@react-native-firebase/crashlytics';
+import {reportError} from '../services/ErrorReporter';
 import * as PerformanceService from '../services/PerformanceService';
 import type {TransactionDocument} from '../types';
 
@@ -23,7 +23,9 @@ export function useTransactions(): UseTransactionsReturn {
 
   const refetch = useCallback(async (): Promise<void> => {
     const currentUser = auth().currentUser;
-    if (!currentUser?.uid) return;
+    if (!currentUser?.uid) {
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -52,7 +54,7 @@ export function useTransactions(): UseTransactionsReturn {
 
       setTransactions(docs);
     } catch (err) {
-      crashlytics().recordError(err as Error);
+      reportError(err as Error);
       setError('Error fetching transactions');
     } finally {
       setLoading(false);
