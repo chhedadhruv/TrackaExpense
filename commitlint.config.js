@@ -1,7 +1,8 @@
 // Conventional Commits, plus a rule that rejects attribution lines of any kind.
-// "CLAUDE.md" (the project guidance file) may be mentioned by name; any other use is blocked.
+// Strict: no mention of these terms anywhere in a commit message. Refer to the project
+// guidance file as "the project guidance file".
 const ATTRIBUTION =
-  /(co-authored-by|generated (with|by)|claude(?!\.md)|anthropic|\bAI\b)/i;
+  /(co-authored-by|generated (with|by)|claude|anthropic|\bAI\b)/i;
 
 module.exports = {
   extends: ['@commitlint/config-conventional'],

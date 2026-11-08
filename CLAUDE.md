@@ -1,4 +1,4 @@
-# CLAUDE.md
+# TrackaExpense project guidance
 
 Guidance for working in this repository. Detail lives in `../trackaexpense-audit/04-updated-master-prompt-and-plan.md`.
 
@@ -68,7 +68,8 @@ Planned commands: EAS build and update scripts (Phase 1b).
 
 ## 6. Quality gates
 
-- Pre-commit: ESLint, TypeScript, Prettier, related Jest tests. Pre-push: full tests. GitHub Actions runs the same on `ubuntu-latest`. (Being added in Phase 1a; check `package.json` and `.husky/` for what exists.)
+- Pre-commit: ESLint, TypeScript, Prettier, related Jest tests (`.husky/pre-commit`). Commit-message check and pre-push (full tests and ratchet) are in `.husky/`.
+- GitHub Actions is NOT running: the workflow in `.github/workflows/ci.yml` exists but runs fail at startup because of an account billing issue, and the owner has chosen to skip CI for now. The local hooks are the only gates; run `yarn type-check`, `yarn test`, `yarn check:ratchet` and `yarn test:rules` yourself before pushing.
 - Ratchet baseline: `docs/quality-baseline.json` (started at ESLint 37 errors and 389 warnings, `tsc` 162 errors, Jest not running; `tsc` is now 0).
 - Rule: no new violations; touched files must be clean; counts only go down.
 - Never commit while a gate is failing. Never use `--no-verify`.
@@ -105,10 +106,10 @@ Planned commands: EAS build and update scripts (Phase 1b).
 
 ## 11. Current phase
 
-Phase 1a in progress (tooling, quality gates, CI; no native changes). Phase 1b (Expo conversion, Sentry, Mixpanel, OneSignal) follows after sign-off.
+Phase 1a is complete (tooling, local quality gates, minimum-version gate, server on yarn; CI skipped because of a billing issue). Phase 1b (Expo conversion, Sentry, Mixpanel, OneSignal) starts only after owner sign-off.
 
 - [x] Phase 0: audit, plus stage 1 Firestore and Storage rules and indexes deployed
-- [ ] Phase 1a: tooling and safety net
+- [x] Phase 1a: tooling and safety net
 - [ ] Phase 1b: Expo conversion and observability SDKs
 - [ ] Phase 2: data and security (money to integers, uid-based membership, tighter rules)
 - [ ] Phase 3: core features
