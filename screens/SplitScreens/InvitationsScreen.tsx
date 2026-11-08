@@ -26,7 +26,7 @@ import {
 import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../../src/services/ErrorReporter';
 import * as AnalyticsService from '../../src/services/AnalyticsService';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../../src/constants/theme';
 
 interface Invitation {

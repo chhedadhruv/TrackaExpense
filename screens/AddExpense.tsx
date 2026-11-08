@@ -31,7 +31,7 @@ import * as PerformanceService from '../src/services/PerformanceService';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import FormButton from '../components/FormButton';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {EXPENSE_CATEGORIES, EXPENSE_KEYWORD_MAP} from '../utils/CategoryData';

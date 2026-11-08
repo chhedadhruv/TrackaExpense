@@ -1,10 +1,10 @@
 import React from 'react';
 import {createStackNavigator} from '@react-navigation/stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
-import FeatherIcons from 'react-native-vector-icons/Feather';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import FeatherIcons from '@expo/vector-icons/Feather';
 
 import HomeScreen from '../screens/HomeScreen';
 import TransactionScreen from '../screens/TransactionScreen';
@@ -31,7 +31,12 @@ import ContactUsScreen from '../screens/ContactUsScreen';
 import SavingsScreen from '../screens/SavingsScreen';
 import SavingsHistoryScreen from '../screens/SavingsHistoryScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
-import {PRIMARY_COLOR, HEADER_BG, BORDER_COLOR, TEXT_PRIMARY} from '../src/constants/theme';
+import {
+  PRIMARY_COLOR,
+  HEADER_BG,
+  BORDER_COLOR,
+  TEXT_PRIMARY,
+} from '../src/constants/theme';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -67,13 +72,15 @@ const createStack = (screens: ScreenConfig[]) => (
         key={name}
         name={name}
         component={component}
-        options={{
-          headerShown,
-          headerTitle: title,
-          headerTitleAlign: 'center',
-          headerStyle,
-          headerTitleStyle,
-        } as any}
+        options={
+          {
+            headerShown,
+            headerTitle: title,
+            headerTitleAlign: 'center',
+            headerStyle,
+            headerTitleStyle,
+          } as any
+        }
       />
     ))}
   </Stack.Navigator>
@@ -83,8 +90,16 @@ const HomeStack = () =>
   createStack([
     {name: 'Home', component: HomeScreen, title: 'Home', headerShown: false},
     {name: 'Transaction', component: TransactionScreen, title: 'Transactions'},
-    {name: 'TransactionDetail', component: TransactionDetailScreen, title: 'Transaction Details'},
-    {name: 'EditTransaction', component: EditTransactionScreen, title: 'Edit Transaction'},
+    {
+      name: 'TransactionDetail',
+      component: TransactionDetailScreen,
+      title: 'Transaction Details',
+    },
+    {
+      name: 'EditTransaction',
+      component: EditTransactionScreen,
+      title: 'Edit Transaction',
+    },
     {name: 'AddIncome', component: AddIncome, title: 'Add Income'},
     {name: 'AddExpense', component: AddExpense, title: 'Add Expense'},
     {name: 'Image', component: ImageScreen, title: ''},
@@ -92,37 +107,89 @@ const HomeStack = () =>
 
 const ProfileStack = () =>
   createStack([
-    {name: 'Profile', component: ProfileScreen, title: 'Profile', headerShown: false},
+    {
+      name: 'Profile',
+      component: ProfileScreen,
+      title: 'Profile',
+      headerShown: false,
+    },
     {name: 'EditProfile', component: EditProfileScreen, title: 'Edit Profile'},
     {name: 'ContactUs', component: ContactUsScreen, title: 'Contact Us'},
-    {name: 'PrivacyPolicy', component: PrivacyPolicyScreen, title: 'Privacy Policy'},
+    {
+      name: 'PrivacyPolicy',
+      component: PrivacyPolicyScreen,
+      title: 'Privacy Policy',
+    },
   ]);
 
 const SavingsStack = () =>
   createStack([
-    {name: 'Savings', component: SavingsScreen, title: 'Savings', headerShown: false},
-    {name: 'SavingsHistory', component: SavingsHistoryScreen, title: 'Savings History'},
+    {
+      name: 'Savings',
+      component: SavingsScreen,
+      title: 'Savings',
+      headerShown: false,
+    },
+    {
+      name: 'SavingsHistory',
+      component: SavingsHistoryScreen,
+      title: 'Savings History',
+    },
   ]);
 
 const StatisticStack = () =>
   createStack([
-    {name: 'Statistic', component: StatisticScreen, title: 'Statistics', headerShown: false},
-    {name: 'TransactionDetail', component: TransactionDetailScreen, title: 'Transaction Details'},
-    {name: 'EditTransaction', component: EditTransactionScreen, title: 'Edit Transaction'},
+    {
+      name: 'Statistic',
+      component: StatisticScreen,
+      title: 'Statistics',
+      headerShown: false,
+    },
+    {
+      name: 'TransactionDetail',
+      component: TransactionDetailScreen,
+      title: 'Transaction Details',
+    },
+    {
+      name: 'EditTransaction',
+      component: EditTransactionScreen,
+      title: 'Edit Transaction',
+    },
     {name: 'Image', component: ImageScreen, title: ''},
   ]);
 
 const SplitStack = () =>
   createStack([
-    {name: 'Split', component: SplitScreen, title: 'Split Bills', headerShown: false},
-    {name: 'SplitGroupDetail', component: SplitGroupDetailScreen, title: 'Group Details'},
+    {
+      name: 'Split',
+      component: SplitScreen,
+      title: 'Split Bills',
+      headerShown: false,
+    },
+    {
+      name: 'SplitGroupDetail',
+      component: SplitGroupDetailScreen,
+      title: 'Group Details',
+    },
     {name: 'CreateSplit', component: CreateSplitScreen, title: 'Create Split'},
     {name: 'SplitDetail', component: SplitDetailScreen, title: 'Split Details'},
     {name: 'SettleUp', component: SettleUpScreen, title: 'Settle Up'},
-    {name: 'SplitTransaction', component: SplitTransactionScreen, title: 'Transactions'},
-    {name: 'SplitHistory', component: SplitHistoryScreen, title: 'Split History'},
+    {
+      name: 'SplitTransaction',
+      component: SplitTransactionScreen,
+      title: 'Transactions',
+    },
+    {
+      name: 'SplitHistory',
+      component: SplitHistoryScreen,
+      title: 'Split History',
+    },
     {name: 'Invitations', component: InvitationsScreen, title: 'Invitations'},
-    {name: 'FriendsBalance', component: FriendsBalanceScreen, title: 'Friends & Balances'},
+    {
+      name: 'FriendsBalance',
+      component: FriendsBalanceScreen,
+      title: 'Friends & Balances',
+    },
     {name: 'IOU', component: IOUScreen, title: 'IOUs'},
     {name: 'CreateIOU', component: CreateIOUScreen, title: 'New IOU'},
   ]);
@@ -135,7 +202,11 @@ const AppStack = () => (
       options={{
         headerShown: false,
         tabBarIcon: ({color, size, focused}) => (
-          <MaterialCommunityIcons name="home" color={focused ? PRIMARY_COLOR : color} size={size} />
+          <MaterialCommunityIcons
+            name="home"
+            color={focused ? PRIMARY_COLOR : color}
+            size={size}
+          />
         ),
       }}
     />
@@ -145,7 +216,11 @@ const AppStack = () => (
       options={{
         headerShown: false,
         tabBarIcon: ({color, size, focused}) => (
-          <FeatherIcons name="bar-chart-2" color={focused ? PRIMARY_COLOR : color} size={size} />
+          <FeatherIcons
+            name="bar-chart-2"
+            color={focused ? PRIMARY_COLOR : color}
+            size={size}
+          />
         ),
       }}
     />
@@ -183,7 +258,11 @@ const AppStack = () => (
       options={{
         headerShown: false,
         tabBarIcon: ({color, size, focused}) => (
-          <Ionicons name="person-outline" color={focused ? PRIMARY_COLOR : color} size={size} />
+          <Ionicons
+            name="person-outline"
+            color={focused ? PRIMARY_COLOR : color}
+            size={size}
+          />
         ),
       }}
     />

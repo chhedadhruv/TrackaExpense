@@ -1,7 +1,7 @@
 import React, {useState, useEffect} from 'react';
 import {View, Alert, StyleSheet, SafeAreaView, Platform} from 'react-native';
 import {ActivityIndicator, Text, Card} from 'react-native-paper';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
 import FormButton from '../components/FormButton';
 import FormInput from '../components/FormInput';

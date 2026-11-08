@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import {ActivityIndicator, Card, Button, Snackbar} from 'react-native-paper';
 import {useFocusEffect} from '@react-navigation/native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import UserAvatar from '../../src/components/Avatar';
 import {
   Timestamp,
@@ -523,7 +523,7 @@ const SplitGroupDetailScreen = ({
                   onPress={() => handleResendInvite(email)}
                   style={styles.resendButton}>
                   <MaterialCommunityIcons
-                    name="email-send-outline"
+                    name="email-fast-outline"
                     size={16}
                     color="#fff"
                   />

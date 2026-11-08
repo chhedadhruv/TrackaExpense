@@ -32,7 +32,7 @@ import {
   getFirestore,
   setDoc,
 } from '@react-native-firebase/firestore';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {configureGoogleSignIn} from '../utils/GoogleSignInConfig';
 import {
   configureAppleSignIn,

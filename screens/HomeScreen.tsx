@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {ActivityIndicator, Card} from 'react-native-paper';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {getAuth} from '@react-native-firebase/auth';
 import {
   collection,
@@ -45,6 +45,7 @@ import {
 } from '../src/constants/theme';
 import {formatInputAmount} from '../src/utils/formatters';
 import type {TransactionDocument, UserDocument} from '../src/types';
+import type {McIconName} from '../src/types/icons';
 
 type TimeRange =
   | 'all'
@@ -55,7 +56,7 @@ type TimeRange =
   | 'year'
   | 'custom';
 
-const TIME_RANGES: {key: TimeRange; label: string; icon: string}[] = [
+const TIME_RANGES: {key: TimeRange; label: string; icon: McIconName}[] = [
   {key: 'all', label: 'All Time', icon: 'format-list-bulleted'},
   {key: '7days', label: 'Last 7 Days', icon: 'calendar-week'},
   {key: '30days', label: 'Last 30 Days', icon: 'calendar-month'},

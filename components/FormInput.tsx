@@ -1,12 +1,20 @@
 import React from 'react';
-import {View, TextInput, StyleSheet, TextInputProps, StyleProp, TextStyle} from 'react-native';
+import {
+  View,
+  TextInput,
+  StyleSheet,
+  TextInputProps,
+  StyleProp,
+  TextStyle,
+} from 'react-native';
 import {windowHeight} from '../utils/Dimentions';
-import AntDesign from 'react-native-vector-icons/AntDesign';
+import AntDesign from '@expo/vector-icons/AntDesign';
+import type {AntIconName} from '../src/types/icons';
 
 interface FormInputProps extends TextInputProps {
   labelValue?: string;
   placeholderText?: string;
-  iconType?: string;
+  iconType?: AntIconName;
   iconSize?: number;
   iconColor?: string;
   inputStyle?: StyleProp<TextStyle>;

@@ -17,7 +17,7 @@ import {
 } from '@react-native-firebase/firestore';
 import {reportError} from '../src/services/ErrorReporter';
 import {useFocusEffect} from '@react-navigation/native';
-import codePush from '@revopush/react-native-code-push';
+import * as Application from 'expo-application';
 import {version as appVersion} from '../package.json';
 import {
   View,
@@ -31,7 +31,7 @@ import {
   Platform,
 } from 'react-native';
 import {Avatar, ActivityIndicator, Card, Divider} from 'react-native-paper';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {useCurrency, CURRENCIES} from '../utils/CurrencyUtil';
 import {
   PRIMARY_COLOR,
@@ -50,18 +50,6 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
   const [error, setError] = useState<string | null>(null);
   const [accountActionsExpanded, setAccountActionsExpanded] = useState(false);
   const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
-  const [codePushLabel, setCodePushLabel] = useState<string | null>(null);
-
-  useEffect(() => {
-    codePush
-      .getUpdateMetadata()
-      .then((meta: any) => {
-        if (meta) {
-          setCodePushLabel(meta.label);
-        }
-      })
-      .catch(() => {});
-  }, []);
 
   const user = getAuth().currentUser!;
 
@@ -533,7 +521,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
         <View style={styles.versionContainer}>
           <Text style={styles.versionText}>TrackaExpense v{appVersion}</Text>
           <Text style={styles.versionSubText}>
-            {codePushLabel ? `CodePush ${codePushLabel}` : 'Binary release'}
+            Build {Application.nativeBuildVersion ?? appVersion}
           </Text>
         </View>
       </ScrollView>
