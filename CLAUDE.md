@@ -23,7 +23,7 @@ Guidance for working in this repository. Detail lives in `../trackaexpense-audit
 | Errors | Crashlytics | Sentry |
 | Analytics | Firebase Analytics | Mixpanel |
 | Push | FCM token registration and OneSignal, Express server (not deployed) | OneSignal, sends from Cloud Functions only |
-| OTA | None right now (CodePush removed); EAS Update is planned | EAS Update |
+| OTA | EAS Update configured (`expo-updates`, nothing published yet); CodePush removed | EAS Update |
 
 ## 3. Commands (scripts that exist today)
 
@@ -39,7 +39,8 @@ Guidance for working in this repository. Detail lives in `../trackaexpense-audit
 - `yarn test:rules` : Firestore and Storage rules tests in the local emulator (needs JDK 21 or newer; no live project is touched).
 - `yarn build:android` : release APK. `yarn build:android:bundle` : release AAB. `yarn build:clean` : Gradle clean.
 - `yarn version:bump` : `scripts/bump-version.js` (stamps `app.json` `version`, `android.versionCode` and `ios.buildNumber` from `package.json` and the current time).
-- There are no OTA release scripts now (the Revopush `release:*` scripts were removed with CodePush).
+- EAS (CLI installed globally, logged in as the owner; project ID in `app.json`, owner `chhedadhruv`): `eas build --profile preview|production --platform android|ios` and `eas update --channel <channel>`. Profiles and channels are in `eas.json` (development, preview, production). `runtimeVersion` uses the `fingerprint` policy, so an update only reaches binaries with identical native code. Nothing has been built or published on EAS yet. Never run `eas update` or `eas build` without owner approval.
+- There are no Revopush release scripts (removed with CodePush).
 - Never use `npx`: run Expo through yarn (`yarn expo prebuild --clean`, `yarn expo install <pkg>`, `yarn expo install --check`). `android/` and `ios/` are gitignored and rebuilt by `yarn expo prebuild --clean --no-install` (`yarn android` and `yarn ios` run it when the folders are missing). Signing files and Firebase config are not committed; a fresh checkout needs these local files first: `credentials/android/keystore.properties` and `credentials/android/<keystore file>` (copied into `android/` by `plugins/with-release-signing.js`), `google-services.json` and `GoogleService-Info.plist` at the repo root (copied in by the Firebase plugin), and `.env`.
 - iOS after dependency changes: `cd ios && pod install`.
 - iOS simulator build when `yarn ios` fails (no `Simulator.app`): `xcodebuild` with `-destination id=<simulator>`, then `xcrun simctl install` and `launch`; the app target needs an iOS 26 simulator.
@@ -135,7 +136,7 @@ Phase 1a is complete (tooling, local quality gates, minimum-version gate, server
 - After adding or changing native dependencies, restart Metro with `yarn start --reset-cache` and reinstall the app (`yarn android` / rebuild iOS); an emulator can revert to an older installed build after a restart.
 - Android release builds upload JavaScript source maps to Sentry through the Sentry Expo plugin (it writes `android/sentry.properties` and applies the Gradle plugin on prebuild); they need `SENTRY_AUTH_TOKEN` in the environment (never in a file). Set `SENTRY_DISABLE_AUTO_UPLOAD=true` for a local release build without a token. Always run `./gradlew :app:assembleRelease` after adding a native dependency: R8 shrinking can fail on missing classes that debug builds never show (rules live in `config/android-proguard-rules.pro`, injected by `app.config.js`).
 - Postponed and owner-dependent work is listed in `docs/deferred-tasks.md`; keep it current.
-- Release plan: the next store build happens after all phases are complete (owner decision). Never publish this JavaScript over the air to the live store binaries: it imports native modules they do not contain (Sentry, Mixpanel, OneSignal, keyboard-controller, Reanimated, Expo modules) and it would crash installed apps on startup. No OTA tool is configured now, so this only matters once EAS Update is set up.
+- Release plan: the next store build happens after all phases are complete (owner decision). Never publish this JavaScript over the air to the live store binaries: it imports native modules they do not contain (Sentry, Mixpanel, OneSignal, keyboard-controller, Reanimated, Expo modules) and it would crash installed apps on startup. With EAS Update configured this rule is enforced by the fingerprint runtime version (the live binaries have no `expo-updates`, so they never check for updates), but still never publish to a channel that a live binary uses.
 - OneSignal is on 5.5.17: 5.4.3 failed to build with AGP 9 and RN 0.88.
 - Do not add `firebase-tools` (or anything that pulls in `node-fetch` 3) to this package's dependencies: it changes which `node-fetch` is hoisted and breaks the React Native bundle. Install the Firebase CLI globally instead.
 - Remote Config `min_supported_version` (default `0.0.0`, check disabled) blocks older app versions with an update screen: `App.tsx`, `components/ForceUpdateScreen.tsx`. Setting it in the console is a live change that needs owner approval.

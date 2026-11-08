@@ -115,6 +115,20 @@
         }
       ],
       "./plugins/with-release-signing"
-    ]
+    ],
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/9656a4c0-2877-41af-afae-7f7b366a1479",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9656a4c0-2877-41af-afae-7f7b366a1479"
+      }
+    },
+    "owner": "chhedadhruv"
   }
 }
