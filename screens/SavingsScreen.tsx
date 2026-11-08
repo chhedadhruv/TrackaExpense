@@ -13,7 +13,7 @@ import {
 import {Card, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../src/services/ErrorReporter';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
@@ -113,7 +113,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
 
   const fetchSavingsData = async () => {
     try {
-      const currentUser = auth().currentUser;
+      const currentUser = getAuth().currentUser;
       if (!currentUser) {
         Alert.alert('Error', 'User not authenticated. Please log in again.');
         setLoading(false);
@@ -251,7 +251,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
 
     setIsSubmitting(true);
     try {
-      const currentUser = auth().currentUser;
+      const currentUser = getAuth().currentUser;
       if (!currentUser) {
         Alert.alert('Error', 'User not authenticated. Please log in again.');
         setIsSubmitting(false);
@@ -331,7 +331,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
     }
     setIsSubmitting(true);
     try {
-      const currentUser = auth().currentUser;
+      const currentUser = getAuth().currentUser;
       if (!currentUser) {
         Alert.alert('Error', 'User not authenticated. Please log in again.');
         setIsSubmitting(false);
@@ -410,7 +410,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
 
     setIsSubmitting(true);
     try {
-      const currentUser = auth().currentUser;
+      const currentUser = getAuth().currentUser;
       if (!currentUser) {
         Alert.alert('Error', 'User not authenticated. Please log in again.');
         setIsSubmitting(false);
@@ -613,7 +613,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
 
     setIsSubmitting(true);
     try {
-      const currentUser = auth().currentUser;
+      const currentUser = getAuth().currentUser;
       if (!currentUser) {
         Alert.alert('Error', 'User not authenticated. Please log in again.');
         setIsSubmitting(false);
@@ -670,7 +670,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
     }
     setIsSubmitting(true);
     try {
-      const currentUser = auth().currentUser;
+      const currentUser = getAuth().currentUser;
       if (!currentUser) {
         Alert.alert('Error', 'User not authenticated. Please log in again.');
         setIsSubmitting(false);
@@ -726,7 +726,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
     frequency: string | null,
   ) => {
     try {
-      const currentUser = auth().currentUser;
+      const currentUser = getAuth().currentUser;
       if (!currentUser) {
         return;
       }

@@ -7,7 +7,10 @@ import {
 import AuthStack from './AuthStack';
 import AppStack from './AppStack';
 import {AuthContext} from './AuthProvider';
-import auth from '@react-native-firebase/auth';
+import {
+  getAuth,
+  onAuthStateChanged as onFirebaseAuthStateChanged,
+} from '@react-native-firebase/auth';
 import {
   getInitialNotification,
   getMessaging,
@@ -104,7 +107,10 @@ const Routes = () => {
   };
 
   useEffect(() => {
-    const subscriber = auth().onAuthStateChanged(onAuthStateChanged);
+    const subscriber = onFirebaseAuthStateChanged(
+      getAuth(),
+      onAuthStateChanged,
+    );
     return () => subscriber();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

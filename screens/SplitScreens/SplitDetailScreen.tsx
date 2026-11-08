@@ -11,7 +11,7 @@ import {
 import {Text, Card} from 'react-native-paper';
 import UserAvatar from 'react-native-user-avatar';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import auth from '@react-native-firebase/auth';
+import {getAuth} from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
@@ -69,7 +69,7 @@ const SplitDetailScreen = ({
     group: Group;
     transaction?: object;
   };
-  const currentUser = auth().currentUser;
+  const currentUser = getAuth().currentUser;
   const [split, setSplit] = React.useState<SplitData>(initialSplit);
   const [, setLoading] = React.useState(false);
   const [, setMenuVisible] = React.useState(false);

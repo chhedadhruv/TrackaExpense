@@ -14,7 +14,7 @@ import firestore from '@react-native-firebase/firestore';
 import {reportError} from '../src/services/ErrorReporter';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
-import auth from '@react-native-firebase/auth';
+import {getAuth} from '@react-native-firebase/auth';
 import Share from 'react-native-share';
 import RNFS from 'react-native-fs';
 import {requestStoragePermission} from '../utils/Permissions';
@@ -57,7 +57,7 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
 
   const fetchTransactions = async () => {
     try {
-      const currentUser = auth().currentUser!;
+      const currentUser = getAuth().currentUser!;
       const snapshot = await firestore()
         .collection('users')
         .doc(currentUser.uid)

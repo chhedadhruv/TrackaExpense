@@ -12,7 +12,7 @@ import {Card, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {BarChart, PieChart} from 'react-native-gifted-charts';
 import {useFocusEffect} from '@react-navigation/native';
-import auth from '@react-native-firebase/auth';
+import {getAuth} from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {reportError} from '../src/services/ErrorReporter';
 import * as PerformanceService from '../src/services/PerformanceService';
@@ -113,7 +113,7 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
       const stopTrace = await PerformanceService.traceCalculateStatistics();
       const snapshot = await firestore()
         .collection('users')
-        .doc(auth().currentUser!.uid)
+        .doc(getAuth().currentUser!.uid)
         .collection('transactions')
         .get();
       const txns = snapshot.docs.map(doc => ({

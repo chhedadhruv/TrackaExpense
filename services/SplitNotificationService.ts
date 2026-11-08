@@ -1,5 +1,5 @@
 import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+import {getAuth} from '@react-native-firebase/auth';
 import NotificationService from './NotificationService';
 import type {GroupDocument, SplitDocument} from '../src/types';
 
@@ -32,7 +32,7 @@ class SplitNotificationService {
         ...(groupData.pendingInvites || []),
       ];
       const usersToNotify = [...new Set(allUsers)].filter(
-        email => email !== auth().currentUser?.email,
+        email => email !== getAuth().currentUser?.email,
       );
       if (usersToNotify.length === 0) {
         return;
@@ -69,7 +69,7 @@ class SplitNotificationService {
   ): Promise<void> {
     try {
       const usersToNotify = [...new Set(groupData.members || [])].filter(
-        email => email !== auth().currentUser?.email,
+        email => email !== getAuth().currentUser?.email,
       );
       if (usersToNotify.length === 0) {
         return;
@@ -106,7 +106,7 @@ class SplitNotificationService {
   ): Promise<void> {
     try {
       const usersToNotify = [...new Set(groupData.members || [])].filter(
-        email => email !== auth().currentUser?.email,
+        email => email !== getAuth().currentUser?.email,
       );
       if (usersToNotify.length === 0) {
         return;
@@ -168,7 +168,7 @@ class SplitNotificationService {
   ): Promise<void> {
     try {
       const usersToNotify = [...new Set(groupData.members || [])].filter(
-        email => email !== auth().currentUser?.email,
+        email => email !== getAuth().currentUser?.email,
       );
       if (usersToNotify.length === 0) {
         return;
@@ -200,7 +200,7 @@ class SplitNotificationService {
   ): Promise<void> {
     try {
       const usersToNotify = [...new Set(groupData.members || [])].filter(
-        email => email !== auth().currentUser?.email,
+        email => email !== getAuth().currentUser?.email,
       );
       if (usersToNotify.length === 0) {
         return;
@@ -233,7 +233,7 @@ class SplitNotificationService {
   ): Promise<void> {
     try {
       const usersToNotify = [...new Set(groupData.members || [])].filter(
-        email => email !== auth().currentUser?.email,
+        email => email !== getAuth().currentUser?.email,
       );
       if (usersToNotify.length === 0) {
         return;
@@ -297,7 +297,7 @@ class SplitNotificationService {
   ): Promise<void> {
     try {
       const usersToNotify = [...new Set(groupData.members || [])].filter(
-        email => email !== auth().currentUser?.email,
+        email => email !== getAuth().currentUser?.email,
       );
       if (usersToNotify.length === 0) {
         return;
@@ -330,7 +330,7 @@ class SplitNotificationService {
   ): Promise<void> {
     try {
       const usersToNotify = [...new Set(groupData.members || [])].filter(
-        email => email !== auth().currentUser?.email,
+        email => email !== getAuth().currentUser?.email,
       );
       if (usersToNotify.length === 0) {
         return;

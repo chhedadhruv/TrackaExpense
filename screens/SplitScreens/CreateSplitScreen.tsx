@@ -24,7 +24,7 @@ import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {requestCameraPermission} from '../../utils/Permissions';
 import {Card, Checkbox, ActivityIndicator, Switch} from 'react-native-paper';
 import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../../src/services/ErrorReporter';
 import * as PerformanceService from '../../src/services/PerformanceService';
 import * as AnalyticsService from '../../src/services/AnalyticsService';
@@ -216,7 +216,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         initialSelectedPercentages[member.email] = defaultPercentage;
       });
 
-      const currentUserEmail = auth().currentUser?.email;
+      const currentUserEmail = getAuth().currentUser?.email;
       const currentUserMember = formattedMembers.find(
         member => member.email === currentUserEmail,
       );
@@ -381,7 +381,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
     setLoading(true);
     let newSplitId: string | null = null;
     try {
-      const currentUser = auth().currentUser;
+      const currentUser = getAuth().currentUser;
       if (!currentUser) {
         throw new Error('Not authenticated');
       }
@@ -729,7 +729,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
     include: boolean,
   ) => {
     try {
-      const u = auth().currentUser;
+      const u = getAuth().currentUser;
       if (!u) {
         return;
       }
@@ -851,7 +851,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
     if (!receiptImage) {
       return null;
     }
-    const currentUser = auth().currentUser;
+    const currentUser = getAuth().currentUser;
     if (!currentUser) {
       return null;
     }
@@ -925,7 +925,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
   );
 
   const renderMemberCheckbox = (member: GroupMember) => {
-    const currentUser = auth().currentUser;
+    const currentUser = getAuth().currentUser;
     const isCurrentUser = member.email === currentUser?.email;
     const isSelected = selectedUsers[member.email];
 
@@ -1305,7 +1305,8 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                           styles.selectedPaidByText,
                       ]}>
                       {member.name}
-                      {member.email === auth().currentUser?.email && ' (You)'}
+                      {member.email === getAuth().currentUser?.email &&
+                        ' (You)'}
                     </Text>
                   </TouchableOpacity>
                 ))}

@@ -1,6 +1,6 @@
 import React, {createContext, useContext, useState, useEffect} from 'react';
 import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+import {getAuth} from '@react-native-firebase/auth';
 import type {Currency} from '../src/types';
 
 export const CURRENCIES: Currency[] = [
@@ -31,7 +31,11 @@ const DEFAULT_CURRENCY = CURRENCIES[0]; // INR
 interface CurrencyContextValue {
   currency: Currency;
   setCurrency: (code: string) => Promise<void>;
-  formatAmount: (amount: number | string, showSymbol?: boolean, showCode?: boolean) => string;
+  formatAmount: (
+    amount: number | string,
+    showSymbol?: boolean,
+    showCode?: boolean,
+  ) => string;
   loading: boolean;
 }
 
@@ -52,7 +56,7 @@ export const CurrencyProvider = ({children}: {children: React.ReactNode}) => {
 
   const fetchUserCurrency = async () => {
     try {
-      const currentUser = auth().currentUser;
+      const currentUser = getAuth().currentUser;
       if (currentUser) {
         const userDoc = await firestore()
           .collection('users')
@@ -61,8 +65,12 @@ export const CurrencyProvider = ({children}: {children: React.ReactNode}) => {
         if (userDoc.exists) {
           const userData = userDoc.data();
           if (userData?.currency) {
-            const userCurrency = CURRENCIES.find(c => c.code === userData.currency);
-            if (userCurrency) setCurrencyState(userCurrency);
+            const userCurrency = CURRENCIES.find(
+              c => c.code === userData.currency,
+            );
+            if (userCurrency) {
+              setCurrencyState(userCurrency);
+            }
           }
         }
       }
@@ -78,7 +86,7 @@ export const CurrencyProvider = ({children}: {children: React.ReactNode}) => {
       const newCurrency = CURRENCIES.find(c => c.code === currencyCode);
       if (newCurrency) {
         setCurrencyState(newCurrency);
-        const currentUser = auth().currentUser;
+        const currentUser = getAuth().currentUser;
         if (currentUser) {
           await firestore()
             .collection('users')
@@ -98,19 +106,28 @@ export const CurrencyProvider = ({children}: {children: React.ReactNode}) => {
     showCode = false,
   ): string => {
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-    if (isNaN(numAmount)) return '0';
+    if (isNaN(numAmount)) {
+      return '0';
+    }
     const formattedNumber = numAmount.toLocaleString(currency.locale, {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     });
-    if (showSymbol && showCode) return `${currency.symbol}${formattedNumber} ${currency.code}`;
-    if (showSymbol) return `${currency.symbol}${formattedNumber}`;
-    if (showCode) return `${formattedNumber} ${currency.code}`;
+    if (showSymbol && showCode) {
+      return `${currency.symbol}${formattedNumber} ${currency.code}`;
+    }
+    if (showSymbol) {
+      return `${currency.symbol}${formattedNumber}`;
+    }
+    if (showCode) {
+      return `${formattedNumber} ${currency.code}`;
+    }
     return formattedNumber;
   };
 
   return (
-    <CurrencyContext.Provider value={{currency, setCurrency, formatAmount, loading}}>
+    <CurrencyContext.Provider
+      value={{currency, setCurrency, formatAmount, loading}}>
       {children}
     </CurrencyContext.Provider>
   );
@@ -118,7 +135,9 @@ export const CurrencyProvider = ({children}: {children: React.ReactNode}) => {
 
 export const useCurrency = (): CurrencyContextValue => {
   const context = useContext(CurrencyContext);
-  if (!context) throw new Error('useCurrency must be used within a CurrencyProvider');
+  if (!context) {
+    throw new Error('useCurrency must be used within a CurrencyProvider');
+  }
   return context;
 };
 
@@ -126,10 +145,15 @@ export const getCurrencyByCode = (code: string): Currency =>
   CURRENCIES.find(c => c.code === code) ?? DEFAULT_CURRENCY;
 
 /** Format currency without context — for backwards compatibility. */
-export const formatCurrency = (amount: number | string, currencyCode = 'INR'): string => {
+export const formatCurrency = (
+  amount: number | string,
+  currencyCode = 'INR',
+): string => {
   const cur = getCurrencyByCode(currencyCode);
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  if (isNaN(numAmount)) return '0';
+  if (isNaN(numAmount)) {
+    return '0';
+  }
   const formattedNumber = numAmount.toLocaleString(cur.locale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
