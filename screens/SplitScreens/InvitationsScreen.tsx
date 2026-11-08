@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import {Text, Card, ActivityIndicator} from 'react-native-paper';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
+import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
 import {
   Timestamp,
   arrayRemove,

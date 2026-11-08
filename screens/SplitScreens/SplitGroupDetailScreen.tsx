@@ -29,7 +29,7 @@ import {
 } from '@react-native-firebase/firestore';
 import moment from 'moment';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
+import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
 import {AuthContext} from '../../navigation/AuthProvider';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import {useCurrency} from '../../utils/CurrencyUtil';
