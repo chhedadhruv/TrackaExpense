@@ -1,5 +1,9 @@
 import {useState, useEffect, useRef, useCallback} from 'react';
-import firestore from '@react-native-firebase/firestore';
+import {
+  doc as fsDoc,
+  getDoc,
+  getFirestore,
+} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {getCrashlytics, setAttribute} from '@react-native-firebase/crashlytics';
 import {reportError} from '../services/ErrorReporter';
@@ -46,10 +50,7 @@ export function useUserData(): UseUserDataReturn {
     setError(null);
 
     try {
-      const doc = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .get();
+      const doc = await getDoc(fsDoc(getFirestore(), 'users', currentUser.uid));
       if (doc.exists) {
         const data = doc.data() as UserDocument;
         setUserData(data);

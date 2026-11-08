@@ -1,5 +1,10 @@
 import React, {createContext, useContext, useState, useEffect} from 'react';
-import firestore from '@react-native-firebase/firestore';
+import {
+  doc,
+  getDoc,
+  getFirestore,
+  updateDoc,
+} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import type {Currency} from '../src/types';
 
@@ -58,10 +63,9 @@ export const CurrencyProvider = ({children}: {children: React.ReactNode}) => {
     try {
       const currentUser = getAuth().currentUser;
       if (currentUser) {
-        const userDoc = await firestore()
-          .collection('users')
-          .doc(currentUser.uid)
-          .get();
+        const userDoc = await getDoc(
+          doc(getFirestore(), 'users', currentUser.uid),
+        );
         if (userDoc.exists) {
           const userData = userDoc.data();
           if (userData?.currency) {
@@ -88,10 +92,9 @@ export const CurrencyProvider = ({children}: {children: React.ReactNode}) => {
         setCurrencyState(newCurrency);
         const currentUser = getAuth().currentUser;
         if (currentUser) {
-          await firestore()
-            .collection('users')
-            .doc(currentUser.uid)
-            .update({currency: currencyCode});
+          await updateDoc(doc(getFirestore(), 'users', currentUser.uid), {
+            currency: currencyCode,
+          });
         }
       }
     } catch (error) {

@@ -9,7 +9,16 @@ import {
 } from 'react-native';
 import {Card, ActivityIndicator, Text} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import firestore from '@react-native-firebase/firestore';
+import {
+  collection,
+  doc as fsDoc,
+  getDoc,
+  getDocs,
+  getFirestore,
+  limit,
+  orderBy,
+  query,
+} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
@@ -57,21 +66,25 @@ const SavingsHistoryScreen = () => {
       if (!currentUser) {
         return;
       }
-      const userDoc = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .get();
+      const userDoc = await getDoc(
+        fsDoc(getFirestore(), 'users', currentUser.uid),
+      );
       const savedGoals = ((userDoc.data()?.savingsGoals ?? []) as any[]).map(
         g => ({id: g.id, name: g.name}),
       );
       setGoals(savedGoals);
-      const snapshot = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('savingsHistory')
-        .orderBy('createdAt', 'desc')
-        .limit(100)
-        .get();
+      const snapshot = await getDocs(
+        query(
+          collection(
+            getFirestore(),
+            'users',
+            currentUser.uid,
+            'savingsHistory',
+          ),
+          orderBy('createdAt', 'desc'),
+          limit(100),
+        ),
+      );
       const items: HistoryItem[] = snapshot.docs.map(doc => {
         const data = doc.data();
         return {

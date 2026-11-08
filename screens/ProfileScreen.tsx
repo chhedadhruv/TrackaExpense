@@ -6,7 +6,15 @@ import {
   getAuth,
   sendPasswordResetEmail,
 } from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
+import {
+  collection,
+  deleteDoc,
+  doc as fsDoc,
+  getDoc,
+  getDocs,
+  getFirestore,
+  writeBatch,
+} from '@react-native-firebase/firestore';
 import {reportError} from '../src/services/ErrorReporter';
 import {useFocusEffect} from '@react-navigation/native';
 import codePush from '@revopush/react-native-code-push';
@@ -60,7 +68,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
   const getUser = async () => {
     try {
       setLoading(true);
-      const snap = await firestore().collection('users').doc(user.uid).get();
+      const snap = await getDoc(fsDoc(getFirestore(), 'users', user.uid));
       if (snap.exists) {
         setUserData(snap.data() as UserDocument);
         setLoading(false);
@@ -123,13 +131,11 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
     try {
       setLoading(true);
       const currentUser = getAuth().currentUser!;
-      await firestore().collection('users').doc(currentUser.uid).delete();
-      const txSnap = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('transactions')
-        .get();
-      const batch = firestore().batch();
+      await deleteDoc(fsDoc(getFirestore(), 'users', currentUser.uid));
+      const txSnap = await getDocs(
+        collection(getFirestore(), 'users', currentUser.uid, 'transactions'),
+      );
+      const batch = writeBatch(getFirestore());
       txSnap.docs.forEach(doc => batch.delete(doc.ref));
       await batch.commit();
       await deleteUser(currentUser);

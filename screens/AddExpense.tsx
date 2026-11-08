@@ -10,7 +10,15 @@ import {
 import React, {useState, useEffect, useRef} from 'react';
 import {Card, ActivityIndicator} from 'react-native-paper';
 import {getAuth} from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
+import {
+  Timestamp,
+  addDoc,
+  collection,
+  doc,
+  getFirestore,
+  increment,
+  runTransaction,
+} from '@react-native-firebase/firestore';
 import {
   getDownloadURL,
   getStorage,
@@ -132,9 +140,9 @@ const AddExpense = ({navigation}: {navigation: any}) => {
     try {
       const imageUrl = image ? await uploadImageAsync() : null;
       const uid = getUid();
-      const userDocRef = firestore().collection('users').doc(uid);
-      await firestore().runTransaction(async transaction => {
-        const transactionRef = userDocRef.collection('transactions');
+      const userDocRef = doc(getFirestore(), 'users', uid);
+      await runTransaction(getFirestore(), async transaction => {
+        const transactionRef = collection(userDocRef, 'transactions');
         const expenseData = {
           userId: uid,
           title: title.trim(),
@@ -143,14 +151,14 @@ const AddExpense = ({navigation}: {navigation: any}) => {
           category,
           date,
           image: imageUrl,
-          createdAt: firestore.Timestamp.fromDate(new Date()),
+          createdAt: Timestamp.fromDate(new Date()),
           type: 'expense',
         };
-        const expenseDocRef = await transactionRef.add(expenseData);
+        const expenseDocRef = await addDoc(transactionRef, expenseData);
         transaction.update(expenseDocRef, {documentId: expenseDocRef.id});
         const balanceDelta = -parseFloat(amount);
         transaction.update(userDocRef, {
-          balance: firestore.FieldValue.increment(balanceDelta),
+          balance: increment(balanceDelta),
         });
       });
       AnalyticsService.logAddExpense({

@@ -23,7 +23,13 @@ import {
   getAuth,
   signInWithCredential,
 } from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
+import {
+  Timestamp,
+  doc,
+  getDoc,
+  getFirestore,
+  setDoc,
+} from '@react-native-firebase/firestore';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {configureGoogleSignIn} from '../utils/GoogleSignInConfig';
 import {
@@ -137,25 +143,19 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
         setUserId(getCrashlytics(), user.uid);
         setAttribute(getCrashlytics(), 'auth_method', 'google');
         AnalyticsService.logLogin('google');
-        const userDoc = await firestore()
-          .collection('users')
-          .doc(user.uid)
-          .get();
+        const userDoc = await getDoc(doc(getFirestore(), 'users', user.uid));
         if (!userDoc.exists) {
-          await firestore()
-            .collection('users')
-            .doc(user.uid)
-            .set({
-              name: user.displayName || 'Google User',
-              email: user.email,
-              phone: user.phoneNumber || '',
-              transactions: [],
-              verified: true,
-              createdAt: firestore.Timestamp.fromDate(new Date()),
-              userImg: user.photoURL || null,
-              balance: 0,
-              currency: 'INR',
-            });
+          await setDoc(doc(getFirestore(), 'users', user.uid), {
+            name: user.displayName || 'Google User',
+            email: user.email,
+            phone: user.phoneNumber || '',
+            transactions: [],
+            verified: true,
+            createdAt: Timestamp.fromDate(new Date()),
+            userImg: user.photoURL || null,
+            balance: 0,
+            currency: 'INR',
+          });
         }
         await new Promise(resolve => setTimeout(resolve, 500));
       } else {
@@ -207,30 +207,24 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
         setUserId(getCrashlytics(), user.uid);
         setAttribute(getCrashlytics(), 'auth_method', 'apple');
         AnalyticsService.logLogin('apple');
-        const userDoc = await firestore()
-          .collection('users')
-          .doc(user.uid)
-          .get();
+        const userDoc = await getDoc(doc(getFirestore(), 'users', user.uid));
         if (!userDoc.exists) {
           const displayName = result.fullName
             ? `${result.fullName.givenName || ''} ${
                 result.fullName.familyName || ''
               }`.trim()
             : 'Apple User';
-          await firestore()
-            .collection('users')
-            .doc(user.uid)
-            .set({
-              name: displayName || 'Apple User',
-              email: result.email || user.email || '',
-              phone: '',
-              transactions: [],
-              verified: true,
-              createdAt: firestore.Timestamp.fromDate(new Date()),
-              userImg: null,
-              balance: 0,
-              currency: 'INR',
-            });
+          await setDoc(doc(getFirestore(), 'users', user.uid), {
+            name: displayName || 'Apple User',
+            email: result.email || user.email || '',
+            phone: '',
+            transactions: [],
+            verified: true,
+            createdAt: Timestamp.fromDate(new Date()),
+            userImg: null,
+            balance: 0,
+            currency: 'INR',
+          });
         }
         await new Promise(resolve => setTimeout(resolve, 500));
       } else {
