@@ -10,7 +10,13 @@ import {
 import {Text, Card, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import UserAvatar from 'react-native-user-avatar';
-import firestore from '@react-native-firebase/firestore';
+import {
+  collection,
+  getDocs,
+  getFirestore,
+  query,
+  where,
+} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
@@ -143,19 +149,17 @@ const FriendsBalanceScreen = () => {
         return;
       }
       const currentEmail = currentUser.email?.toLowerCase() ?? '';
-      const groupsSnap = await firestore()
-        .collection('groups')
-        .where('members', 'array-contains', currentUser.email)
-        .get();
+      const groupsSnap = await getDocs(
+        query(
+          collection(getFirestore(), 'groups'),
+          where('members', 'array-contains', currentUser.email),
+        ),
+      );
       const allSplits: SplitDoc[] = (
         await Promise.all(
           groupsSnap.docs.map(g =>
-            firestore()
-              .collection('groups')
-              .doc(g.id)
-              .collection('splits')
-              .get()
-              .then(s =>
+            getDocs(collection(getFirestore(), 'groups', g.id, 'splits')).then(
+              s =>
                 s.docs.map(
                   d =>
                     ({
@@ -165,7 +169,7 @@ const FriendsBalanceScreen = () => {
                       ...d.data(),
                     } as SplitDoc),
                 ),
-              ),
+            ),
           ),
         )
       ).flat();

@@ -11,7 +11,17 @@ import {
 } from 'react-native';
 import {Card, Switch} from 'react-native-paper';
 import UserAvatar from 'react-native-user-avatar';
-import firestore from '@react-native-firebase/firestore';
+import {
+  Timestamp,
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getFirestore,
+  increment,
+  serverTimestamp,
+  updateDoc,
+} from '@react-native-firebase/firestore';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../../src/services/ErrorReporter';
@@ -128,10 +138,9 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
       const currentUserEmail = currentUser.email;
       let actorNameResolved = currentUserEmail?.split('@')[0] || 'Someone';
       try {
-        const userDoc = await firestore()
-          .collection('users')
-          .doc(currentUser.uid)
-          .get();
+        const userDoc = await getDoc(
+          doc(getFirestore(), 'users', currentUser.uid),
+        );
         const profileName = userDoc.data()?.name;
         if (profileName && profileName.toLowerCase() !== 'me') {
           actorNameResolved = profileName;
@@ -144,14 +153,13 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
         amount: settlementAmount,
         note: note.trim(),
         status: 'completed',
-        createdAt: firestore.FieldValue.serverTimestamp(),
+        createdAt: serverTimestamp(),
         groupId: group.id,
       };
-      await firestore()
-        .collection('groups')
-        .doc(group.id)
-        .collection('settlements')
-        .add(settlementData);
+      await addDoc(
+        collection(getFirestore(), 'groups', group.id, 'settlements'),
+        settlementData,
+      );
 
       const settlementSplit = {
         title: note.trim() || 'Settlement Payment',
@@ -159,8 +167,8 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
         category: 'Settlement',
         paidBy: selectedBorrower,
         splitUsers: [selectedLender],
-        date: firestore.Timestamp.now(),
-        createdAt: firestore.FieldValue.serverTimestamp(),
+        date: Timestamp.now(),
+        createdAt: serverTimestamp(),
         type: 'settlement',
         isSettlement: true,
         settlement: {
@@ -169,11 +177,10 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
           amount: settlementAmount,
         },
       };
-      const splitRef = await firestore()
-        .collection('groups')
-        .doc(group.id)
-        .collection('splits')
-        .add(settlementSplit);
+      const splitRef = await addDoc(
+        collection(getFirestore(), 'groups', group.id, 'splits'),
+        settlementSplit,
+      );
 
       SplitNotificationService.notifySettlementMade(
         {
@@ -193,7 +200,7 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
         splitTitle: settlementSplit.title,
         amount: settlementAmount,
         category: 'Settlement',
-        date: firestore.FieldValue.serverTimestamp(),
+        date: serverTimestamp(),
         paidBy: selectedBorrower,
         splitType: 'settlement',
         settlement: {
@@ -205,19 +212,17 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
         actorUid: currentUser.uid,
         actorEmail: currentUserEmail,
         actorName: actorNameResolved,
-        createdAt: firestore.FieldValue.serverTimestamp(),
+        createdAt: serverTimestamp(),
       };
       try {
-        await firestore()
-          .collection('users')
-          .doc(currentUser.uid)
-          .collection('splitHistory')
-          .add(historyPayload);
-        await firestore()
-          .collection('groups')
-          .doc(group.id)
-          .collection('splitHistory')
-          .add(historyPayload);
+        await addDoc(
+          collection(getFirestore(), 'users', currentUser.uid, 'splitHistory'),
+          historyPayload,
+        );
+        await addDoc(
+          collection(getFirestore(), 'groups', group.id, 'splitHistory'),
+          historyPayload,
+        );
       } catch (histErr) {}
 
       const todayStr = new Date().toISOString().split('T')[0];
@@ -230,12 +235,14 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
       // Current user's own transaction entry (respects their includeInTransactions toggle)
       if (includeInTransactions) {
         try {
-          const txCol = firestore()
-            .collection('users')
-            .doc(currentUser.uid)
-            .collection('transactions');
+          const txCol = collection(
+            getFirestore(),
+            'users',
+            currentUser.uid,
+            'transactions',
+          );
           if (selectedBorrower.email === currentUserEmail) {
-            await txCol.add({
+            await addDoc(txCol, {
               title: note.trim() || `Settlement: ${group.name}`,
               type: 'expense',
               category: 'Settlement',
@@ -246,10 +253,10 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
               groupId: group.id,
               groupName: group.name,
               splitRole: 'settlement_payer',
-              createdAt: firestore.FieldValue.serverTimestamp(),
+              createdAt: serverTimestamp(),
             });
           } else if (selectedLender.email === currentUserEmail) {
-            await txCol.add({
+            await addDoc(txCol, {
               title: note.trim() || `Settlement: ${group.name}`,
               type: 'income',
               category: 'Settlement',
@@ -260,7 +267,7 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
               groupId: group.id,
               groupName: group.name,
               splitRole: 'settlement_receiver',
-              createdAt: firestore.FieldValue.serverTimestamp(),
+              createdAt: serverTimestamp(),
             });
           }
         } catch (txErr) {}
@@ -307,28 +314,28 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
       // Borrower (payer) balance decreases; lender (receiver) balance increases.
       const borrowerRef =
         selectedBorrower.email === currentUserEmail
-          ? firestore().collection('users').doc(currentUser.uid)
+          ? doc(getFirestore(), 'users', currentUser.uid)
           : selectedBorrower.userId
-          ? firestore().collection('users').doc(selectedBorrower.userId)
+          ? doc(getFirestore(), 'users', selectedBorrower.userId)
           : null;
       const lenderRef =
         selectedLender.email === currentUserEmail
-          ? firestore().collection('users').doc(currentUser.uid)
+          ? doc(getFirestore(), 'users', currentUser.uid)
           : selectedLender.userId
-          ? firestore().collection('users').doc(selectedLender.userId)
+          ? doc(getFirestore(), 'users', selectedLender.userId)
           : null;
       const balanceUpdates: Promise<void>[] = [];
       if (borrowerRef) {
         balanceUpdates.push(
-          borrowerRef.update({
-            balance: firestore.FieldValue.increment(-settlementAmount),
+          updateDoc(borrowerRef, {
+            balance: increment(-settlementAmount),
           }),
         );
       }
       if (lenderRef) {
         balanceUpdates.push(
-          lenderRef.update({
-            balance: firestore.FieldValue.increment(settlementAmount),
+          updateDoc(lenderRef, {
+            balance: increment(settlementAmount),
           }),
         );
       }

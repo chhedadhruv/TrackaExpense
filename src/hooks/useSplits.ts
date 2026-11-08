@@ -1,5 +1,11 @@
 import {useState, useCallback} from 'react';
-import firestore from '@react-native-firebase/firestore';
+import {
+  collection,
+  getDocs,
+  getFirestore,
+  orderBy,
+  query,
+} from '@react-native-firebase/firestore';
 import type {SplitDocument} from '../types';
 
 interface UseSplitsOptions {
@@ -23,18 +29,20 @@ export function useSplits({groupId}: UseSplitsOptions): UseSplitsReturn {
   const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(async (): Promise<void> => {
-    if (!groupId) return;
+    if (!groupId) {
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      const snapshot = await firestore()
-        .collection('groups')
-        .doc(groupId)
-        .collection('splits')
-        .orderBy('date', 'desc')
-        .get();
+      const snapshot = await getDocs(
+        query(
+          collection(getFirestore(), 'groups', groupId, 'splits'),
+          orderBy('date', 'desc'),
+        ),
+      );
 
       const docs = snapshot.docs.map(doc => ({
         id: doc.id,

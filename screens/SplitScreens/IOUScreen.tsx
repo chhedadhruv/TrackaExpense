@@ -10,7 +10,19 @@ import {
 import {Text, Card, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import UserAvatar from 'react-native-user-avatar';
-import firestore from '@react-native-firebase/firestore';
+import {
+  addDoc,
+  collection,
+  doc,
+  getDocs,
+  getFirestore,
+  increment,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
@@ -63,18 +75,22 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
       }
       const email = currentUser.email?.toLowerCase();
       const [fromSnap, toSnap] = await Promise.all([
-        firestore()
-          .collection('ious')
-          .where('fromEmail', '==', email)
-          .where('status', '==', 'pending')
-          .orderBy('createdAt', 'desc')
-          .get(),
-        firestore()
-          .collection('ious')
-          .where('toEmail', '==', email)
-          .where('status', '==', 'pending')
-          .orderBy('createdAt', 'desc')
-          .get(),
+        getDocs(
+          query(
+            collection(getFirestore(), 'ious'),
+            where('fromEmail', '==', email),
+            where('status', '==', 'pending'),
+            orderBy('createdAt', 'desc'),
+          ),
+        ),
+        getDocs(
+          query(
+            collection(getFirestore(), 'ious'),
+            where('toEmail', '==', email),
+            where('status', '==', 'pending'),
+            orderBy('createdAt', 'desc'),
+          ),
+        ),
       ]);
       setIOwe(fromSnap.docs.map(d => ({id: d.id, ...d.data()} as IOU)));
       setOwedToMe(toSnap.docs.map(d => ({id: d.id, ...d.data()} as IOU)));
@@ -116,19 +132,22 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
       const currentUserName =
         currentUser.displayName || currentEmail?.split('@')[0] || 'Me';
 
-      await firestore().collection('ious').doc(iou.id).update({
+      await updateDoc(doc(getFirestore(), 'ious', iou.id), {
         status: 'settled',
-        settledAt: firestore.FieldValue.serverTimestamp(),
+        settledAt: serverTimestamp(),
       });
 
       if (amount > 0) {
         // Current user: debtor pays (expense), creditor receives (income).
         try {
-          await firestore()
-            .collection('users')
-            .doc(currentUser.uid)
-            .collection('transactions')
-            .add({
+          await addDoc(
+            collection(
+              getFirestore(),
+              'users',
+              currentUser.uid,
+              'transactions',
+            ),
+            {
               title: iou.notes?.trim() || `IOU: ${counterpartyName}`,
               type: isDebtor ? 'expense' : 'income',
               category: 'IOU',
@@ -137,26 +156,24 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
               source: 'iou',
               iouId: iou.id,
               splitRole: isDebtor ? 'iou_payer' : 'iou_receiver',
-              createdAt: firestore.FieldValue.serverTimestamp(),
-            });
-          await firestore()
-            .collection('users')
-            .doc(currentUser.uid)
-            .update({
-              balance: firestore.FieldValue.increment(
-                isDebtor ? -amount : amount,
-              ),
-            });
+              createdAt: serverTimestamp(),
+            },
+          );
+          await updateDoc(doc(getFirestore(), 'users', currentUser.uid), {
+            balance: increment(isDebtor ? -amount : amount),
+          });
         } catch (_) {}
 
         // Counterparty (opposite entry) via notification server, if registered.
         let counterpartyUserId: string | null = null;
         if (counterpartyEmail) {
           try {
-            const snap = await firestore()
-              .collection('users')
-              .where('email', '==', counterpartyEmail)
-              .get();
+            const snap = await getDocs(
+              query(
+                collection(getFirestore(), 'users'),
+                where('email', '==', counterpartyEmail),
+              ),
+            );
             if (!snap.empty) {
               counterpartyUserId = snap.docs[0].id;
             }

@@ -8,7 +8,25 @@ import {
   Platform,
 } from 'react-native';
 import {Text, Checkbox, Card, ActivityIndicator} from 'react-native-paper';
-import firestore from '@react-native-firebase/firestore';
+import {
+  Timestamp,
+  addDoc,
+  collection,
+  deleteDoc,
+  doc as fsDoc,
+  getDoc,
+  getDocs,
+  getFirestore,
+  limit,
+  onSnapshot,
+  orderBy,
+  query as fsQuery,
+  serverTimestamp,
+  updateDoc,
+  where,
+  writeBatch,
+} from '@react-native-firebase/firestore';
+import type {FirebaseFirestoreTypes} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {useFocusEffect} from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -173,19 +191,23 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
       if (!currentUser) {
         return;
       }
-      const groupSnapshot = await firestore()
-        .collection('groups')
-        .where('members', 'array-contains', currentUser.email)
-        .get();
+      const groupSnapshot = await getDocs(
+        fsQuery(
+          collection(getFirestore(), 'groups'),
+          where('members', 'array-contains', currentUser.email),
+        ),
+      );
       const fetchedGroups = await Promise.all(
         groupSnapshot.docs.map(async doc => {
           const groupData = doc.data();
           const memberPromises = groupData.members.map(
             async (email: string) => {
-              const snap = await firestore()
-                .collection('users')
-                .where('email', '==', email)
-                .get();
+              const snap = await getDocs(
+                fsQuery(
+                  collection(getFirestore(), 'users'),
+                  where('email', '==', email),
+                ),
+              );
               if (!snap.empty) {
                 const ud = snap.docs[0].data();
                 return {
@@ -226,16 +248,17 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
     if (!currentUser?.email) {
       return;
     }
-    const unsub = firestore()
-      .collection('invitations')
-      .where('email', '==', currentUser.email)
-      .where('status', '==', 'pending')
-      .onSnapshot(
-        snapshot => {
-          setInvitationsCount(snapshot.size);
-        },
-        () => {},
-      );
+    const unsub = onSnapshot(
+      fsQuery(
+        collection(getFirestore(), 'invitations'),
+        where('email', '==', currentUser.email),
+        where('status', '==', 'pending'),
+      ),
+      snapshot => {
+        setInvitationsCount(snapshot.size);
+      },
+      () => {},
+    );
     return () => unsub && unsub();
   }, [currentUser?.email]);
 
@@ -272,13 +295,18 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
         if (!currentUser) {
           return;
         }
-        const snap = await firestore()
-          .collection('users')
-          .doc(currentUser.uid)
-          .collection('splitHistory')
-          .orderBy('createdAt', 'desc')
-          .limit(20)
-          .get();
+        const snap = await getDocs(
+          fsQuery(
+            collection(
+              getFirestore(),
+              'users',
+              currentUser.uid,
+              'splitHistory',
+            ),
+            orderBy('createdAt', 'desc'),
+            limit(20),
+          ),
+        );
         setSplitHistory(snap.docs.map(doc => ({id: doc.id, ...doc.data()})));
       } catch (_) {}
     };
@@ -291,15 +319,19 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
       const isPhone = /^\d+$/.test(trimmed);
       let snap;
       if (isPhone) {
-        snap = await firestore()
-          .collection('users')
-          .where('phone', '==', trimmed)
-          .get();
+        snap = await getDocs(
+          fsQuery(
+            collection(getFirestore(), 'users'),
+            where('phone', '==', trimmed),
+          ),
+        );
       } else if (trimmed.includes('@')) {
-        snap = await firestore()
-          .collection('users')
-          .where('email', '==', trimmed.toLowerCase())
-          .get();
+        snap = await getDocs(
+          fsQuery(
+            collection(getFirestore(), 'users'),
+            where('email', '==', trimmed.toLowerCase()),
+          ),
+        );
       } else {
         return;
       }
@@ -359,13 +391,13 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
 
   const refreshHistory = async () => {
     try {
-      const snap = await firestore()
-        .collection('users')
-        .doc(currentUser!.uid)
-        .collection('splitHistory')
-        .orderBy('createdAt', 'desc')
-        .limit(20)
-        .get();
+      const snap = await getDocs(
+        fsQuery(
+          collection(getFirestore(), 'users', currentUser!.uid, 'splitHistory'),
+          orderBy('createdAt', 'desc'),
+          limit(20),
+        ),
+      );
       setSplitHistory(snap.docs.map(doc => ({id: doc.id, ...doc.data()})));
     } catch (_) {}
   };
@@ -422,20 +454,20 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
         memberNames[currentUser.email] = currentUser.displayName || 'You';
       }
       const inviteeEmails = selectedUsers.map(u => u.email);
-      const groupData: Record<string, unknown> = {
+      const groupData: FirebaseFirestoreTypes.DocumentData = {
         name: groupName,
         category,
         members: [currentUser?.email],
         createdBy: currentUser?.uid,
-        updatedAt: firestore.FieldValue.serverTimestamp(),
+        updatedAt: serverTimestamp(),
         memberNames,
         pendingInvites: inviteeEmails,
       };
       if (editingGroupId) {
-        await firestore()
-          .collection('groups')
-          .doc(editingGroupId)
-          .update(groupData);
+        await updateDoc(
+          fsDoc(getFirestore(), 'groups', editingGroupId),
+          groupData,
+        );
         setGroups(prev =>
           prev.map(g =>
             g.id === editingGroupId
@@ -453,19 +485,18 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
               : g,
           ),
         );
-        firestore()
-          .collection('users')
-          .doc(currentUser!.uid)
-          .collection('splitHistory')
-          .add({
+        addDoc(
+          collection(getFirestore(), 'users', currentUser!.uid, 'splitHistory'),
+          {
             type: 'update',
             groupId: editingGroupId,
             groupName: groupName,
             previousGroupName: prevGroup?.name,
             category,
             membersCount: 1,
-            createdAt: firestore.Timestamp.fromDate(new Date()),
-          })
+            createdAt: Timestamp.fromDate(new Date()),
+          },
+        )
           .then(() => refreshHistory())
           .catch(() => {});
         SplitNotificationService.notifyGroupUpdated(
@@ -484,12 +515,15 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
           {text: 'OK', onPress: resetGroupForm},
         ]);
       } else {
-        groupData.createdAt = firestore.FieldValue.serverTimestamp();
-        const groupRef = await firestore().collection('groups').add(groupData);
+        groupData.createdAt = serverTimestamp();
+        const groupRef = await addDoc(
+          collection(getFirestore(), 'groups'),
+          groupData,
+        );
         const inviterName = currentUser?.displayName || currentUser?.email;
-        const batch = firestore().batch();
+        const batch = writeBatch(getFirestore());
         inviteeEmails.forEach(email => {
-          const inviteRef = firestore().collection('invitations').doc();
+          const inviteRef = fsDoc(collection(getFirestore(), 'invitations'));
           batch.set(inviteRef, {
             email,
             groupId: groupRef.id,
@@ -499,7 +533,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
             inviterEmail: currentUser?.email,
             inviterName,
             status: 'pending',
-            createdAt: firestore.Timestamp.fromDate(new Date()),
+            createdAt: Timestamp.fromDate(new Date()),
           });
         });
         await batch.commit();
@@ -540,18 +574,17 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                 {id: groupRef.id, ...groupData, memberDetails} as Group,
               ],
         );
-        firestore()
-          .collection('users')
-          .doc(currentUser!.uid)
-          .collection('splitHistory')
-          .add({
+        addDoc(
+          collection(getFirestore(), 'users', currentUser!.uid, 'splitHistory'),
+          {
             type: 'create',
             groupId: groupRef.id,
             groupName: groupName,
             category,
             membersCount: 1,
-            createdAt: firestore.Timestamp.fromDate(new Date()),
-          })
+            createdAt: Timestamp.fromDate(new Date()),
+          },
+        )
           .then(() => refreshHistory())
           .catch(() => {});
         Alert.alert('Success', 'Group created successfully', [
@@ -579,24 +612,25 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
           onPress: async () => {
             let groupDoc;
             try {
-              groupDoc = await firestore()
-                .collection('groups')
-                .doc(groupId)
-                .get();
+              groupDoc = await getDoc(fsDoc(getFirestore(), 'groups', groupId));
             } catch (_) {}
-            await firestore().collection('groups').doc(groupId).delete();
+            await deleteDoc(fsDoc(getFirestore(), 'groups', groupId));
             setGroups(prev => prev.filter(g => g.id !== groupId));
             try {
-              await firestore()
-                .collection('users')
-                .doc(currentUser!.uid)
-                .collection('splitHistory')
-                .add({
+              await addDoc(
+                collection(
+                  getFirestore(),
+                  'users',
+                  currentUser!.uid,
+                  'splitHistory',
+                ),
+                {
                   type: 'delete',
                   groupId,
                   groupName: (groupDoc as any)?.data()?.name || 'Group',
-                  createdAt: firestore.Timestamp.fromDate(new Date()),
-                });
+                  createdAt: Timestamp.fromDate(new Date()),
+                },
+              );
               await refreshHistory();
             } catch (_) {}
             Alert.alert('Success', 'Group deleted successfully');
