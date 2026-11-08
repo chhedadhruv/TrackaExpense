@@ -1,9 +1,14 @@
-const {withAppBuildGradle} = require('expo/config-plugins');
+const fs = require('fs');
+const path = require('path');
+const {withAppBuildGradle, withDangerousMod} = require('expo/config-plugins');
 
-// Signs local release builds with the upload key described by android/keystore.properties
-// (gitignored). EAS Build supplies its own credentials and replaces this signing config,
-// so the file being absent is fine there. Without the file the release build falls back to
-// the debug key, which Play rejects, so it can never be shipped by accident.
+// Signs local release builds with the upload key described by android/keystore.properties.
+// Because android/ is regenerated on every prebuild, the real files live in the gitignored
+// credentials/android/ folder (keystore.properties plus the keystore it points to) and are
+// copied into android/ and android/app/ during prebuild. EAS Build supplies its own
+// credentials and ignores this signing config, so the folder being absent is fine there.
+// Without the files the release build falls back to the debug key, which Play rejects, so
+// such a build can never be shipped by accident.
 const LOADER = `
 def keystorePropertiesFile = rootProject.file("keystore.properties")
 def keystoreProperties = new Properties()
@@ -22,7 +27,7 @@ const RELEASE_SIGNING = `        release {
         }
 `;
 
-module.exports = config =>
+const withSigningGradle = config =>
   withAppBuildGradle(config, cfg => {
     let gradle = cfg.modResults.contents;
     if (gradle.includes('MYAPP_UPLOAD_STORE_FILE')) {
@@ -47,3 +52,30 @@ module.exports = config =>
     cfg.modResults.contents = gradle;
     return cfg;
   });
+
+const withCopiedCredentials = config =>
+  withDangerousMod(config, [
+    'android',
+    async cfg => {
+      const source = path.join(
+        cfg.modRequest.projectRoot,
+        'credentials',
+        'android',
+      );
+      if (!fs.existsSync(source)) {
+        return cfg;
+      }
+      const androidDir = path.join(cfg.modRequest.projectRoot, 'android');
+      for (const file of fs.readdirSync(source)) {
+        // keystore.properties belongs in android/, the keystore itself in android/app/.
+        const target =
+          file === 'keystore.properties'
+            ? path.join(androidDir, file)
+            : path.join(androidDir, 'app', file);
+        fs.copyFileSync(path.join(source, file), target);
+      }
+      return cfg;
+    },
+  ]);
+
+module.exports = config => withCopiedCredentials(withSigningGradle(config));
