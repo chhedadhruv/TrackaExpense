@@ -14,7 +14,12 @@ import {
   NOTIFICATION_SERVER_URL,
   EXPO_PUBLIC_NOTIFICATION_SERVER_URL,
 } from '@env';
-import storage from '@react-native-firebase/storage';
+import {
+  getDownloadURL,
+  getStorage,
+  putFile,
+  ref as createStorageRef,
+} from '@react-native-firebase/storage';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {requestCameraPermission} from '../../utils/Permissions';
 import {Card, Checkbox, ActivityIndicator, Switch} from 'react-native-paper';
@@ -851,11 +856,11 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       return null;
     }
     const path = `bills/${currentUser.uid}/${Date.now()}-split-receipt.jpg`;
-    const ref = storage().ref(path);
+    const ref = createStorageRef(getStorage(), path);
     const stopTrace = await PerformanceService.traceUploadReceipt();
-    await ref.putFile(receiptImage);
+    await putFile(ref, receiptImage);
     await stopTrace?.();
-    return await ref.getDownloadURL();
+    return await getDownloadURL(ref);
   };
 
   const takePhotoFromCamera = async () => {
