@@ -46,6 +46,17 @@ target 'TrackaExpense' do
       # :ccache_enabled => true
     )
 
+    # Xcode 27 only supports deployment targets of iOS 15.0 and above; some Pods still declare
+    # older ones. Raise any lower target to 15.1 (the app's minimum for Pods).
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |build_config|
+        current = build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if current.nil? || Gem::Version.new(current.to_s) < Gem::Version.new('15.1')
+          build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
+        end
+      end
+    end
+
     # fmt 11.x base.h auto-detects consteval by checking __cpp_consteval, which Xcode 26's
     # Clang defines — so command-line -DFMT_USE_CONSTEVAL=0 gets silently overridden by the
     # detection block inside base.h. Patch the header directly to force FMT_USE_CONSTEVAL=0.
