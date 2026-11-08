@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, staging, production, main]
+  push:
+    branches: [develop, staging, production, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HUSKY: '0'
+
+jobs:
+  checks:
+    name: Lint, types, tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Commit messages (pull requests)
+        if: github.event_name == 'pull_request'
+        run: yarn commitlint --from "origin/${{ github.base_ref }}" --to HEAD
+
+      - name: Quality ratchet (ESLint, TypeScript, Prettier counts)
+        run: yarn check:ratchet
+
+      - name: Type check
+        run: yarn type-check
+
+      - name: Prettier on changed files (pull requests)
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only --diff-filter=d "origin/${{ github.base_ref }}...HEAD" -- '*.ts' '*.tsx' '*.js' '*.mjs' \
+            | xargs -r yarn -s prettier --check
+
+      - name: Unit tests
+        run: yarn test --ci
+
+  rules:
+    name: Firestore and Storage rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      # Installed globally on purpose: as an app dependency it changes which node-fetch version
+      # is hoisted and breaks the React Native bundle (react-native-user-avatar needs node-fetch 2).
+      - name: Install Firebase CLI
+        run: |
+          yarn global add firebase-tools@15
+          echo "$(yarn global bin)" >> "$GITHUB_PATH"
+
+      - name: Rules tests (emulator, no live project)
+        run: yarn test:rules

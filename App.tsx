@@ -1,25 +1,48 @@
-import React, { useEffect } from 'react';
-import { Platform, StatusBar, StyleSheet } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { HEADER_BG } from './src/constants/theme';
+import React, {useEffect, useState} from 'react';
+import {Platform, StatusBar, StyleSheet} from 'react-native';
+import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
+import {HEADER_BG} from './src/constants/theme';
 import codePush from '@revopush/react-native-code-push';
-import { REVOPUSH_IOS_DEPLOYMENT_KEY, REVOPUSH_ANDROID_DEPLOYMENT_KEY } from '@env';
-import crashlytics from '@react-native-firebase/crashlytics';
+import {
+  REVOPUSH_IOS_DEPLOYMENT_KEY,
+  REVOPUSH_ANDROID_DEPLOYMENT_KEY,
+} from '@env';
+import {
+  initErrorReporting,
+  reportError,
+  wrapWithErrorReporting,
+} from './src/services/ErrorReporter';
+import {initMixpanel} from './src/services/MixpanelService';
+import {initPush} from './src/services/PushService';
 import Providers from './navigation';
 import NotificationService from './services/NotificationService';
 import UpdateService from './services/UpdateService';
 import ErrorBoundary from './components/ErrorBoundary';
-import {initRemoteConfig} from './src/services/RemoteConfigService';
+import DeviceInfo from 'react-native-device-info';
+import ForceUpdateScreen from './components/ForceUpdateScreen';
+import {getConfig, initRemoteConfig} from './src/services/RemoteConfigService';
+import {isVersionBelow} from './src/utils/version';
+
+// Start error reporting before anything renders so startup errors are captured.
+initErrorReporting();
 
 const App: React.FC = () => {
+  const [forceUpdateMessage, setForceUpdateMessage] = useState<string | null>(
+    null,
+  );
+
   useEffect(() => {
+    // Analytics and push start here. Neither asks for any permission on start.
+    initMixpanel();
+    initPush();
+
     // Initialize notification service
     (async () => {
       try {
         await NotificationService.initialize();
         await NotificationService.getFCMToken();
       } catch (e) {
-        crashlytics().recordError(e as Error);
+        reportError(e as Error);
       }
     })();
 
@@ -28,7 +51,7 @@ const App: React.FC = () => {
       try {
         await UpdateService.checkForUpdate();
       } catch (e) {
-        crashlytics().recordError(e as Error);
+        reportError(e as Error);
       }
     })();
 
@@ -36,8 +59,15 @@ const App: React.FC = () => {
     (async () => {
       try {
         await initRemoteConfig();
+        // Block versions below the minimum supported version set in Remote Config.
+        const config = getConfig();
+        if (
+          isVersionBelow(DeviceInfo.getVersion(), config.min_supported_version)
+        ) {
+          setForceUpdateMessage(config.update_message);
+        }
       } catch (e) {
-        crashlytics().recordError(e as Error);
+        reportError(e as Error);
       }
     })();
   }, []);
@@ -51,7 +81,11 @@ const App: React.FC = () => {
           translucent={false}
         />
         <ErrorBoundary>
-          <Providers />
+          {forceUpdateMessage !== null ? (
+            <ForceUpdateScreen message={forceUpdateMessage} />
+          ) : (
+            <Providers />
+          )}
         </ErrorBoundary>
       </SafeAreaView>
     </SafeAreaProvider>
@@ -70,4 +104,4 @@ export default codePush({
     ios: REVOPUSH_IOS_DEPLOYMENT_KEY,
     android: REVOPUSH_ANDROID_DEPLOYMENT_KEY,
   }),
-})(App);
+})(wrapWithErrorReporting(App));

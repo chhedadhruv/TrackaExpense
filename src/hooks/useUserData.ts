@@ -1,8 +1,14 @@
 import {useState, useEffect, useRef, useCallback} from 'react';
-import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
-import crashlytics from '@react-native-firebase/crashlytics';
+import {
+  doc as fsDoc,
+  getDoc,
+  getFirestore,
+} from '@react-native-firebase/firestore';
+import {getAuth} from '@react-native-firebase/auth';
+import {getCrashlytics, setAttribute} from '@react-native-firebase/crashlytics';
+import {reportError} from '../services/ErrorReporter';
 import * as AnalyticsService from '../services/AnalyticsService';
+import {setPushCurrency} from '../services/PushService';
 import type {UserDocument} from '../types';
 
 interface UseUserDataReturn {
@@ -23,12 +29,17 @@ export function useUserData(): UseUserDataReturn {
   const [error, setError] = useState<string | null>(null);
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => () => {
-    if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   const fetchUserData = useCallback(async (retryCount = 0): Promise<void> => {
-    const currentUser = auth().currentUser;
+    const currentUser = getAuth().currentUser;
     if (!currentUser?.uid) {
       setError('No authenticated user found');
       setLoading(false);
@@ -39,12 +50,13 @@ export function useUserData(): UseUserDataReturn {
     setError(null);
 
     try {
-      const doc = await firestore().collection('users').doc(currentUser.uid).get();
+      const doc = await getDoc(fsDoc(getFirestore(), 'users', currentUser.uid));
       if (doc.exists) {
         const data = doc.data() as UserDocument;
         setUserData(data);
-        crashlytics().setAttribute('currency', data.currency ?? 'INR');
+        setAttribute(getCrashlytics(), 'currency', data.currency ?? 'INR');
         AnalyticsService.setUserProperties({currency: data.currency ?? 'INR'});
+        setPushCurrency(data.currency ?? 'INR');
         setError(null);
         setLoading(false);
       } else if (retryCount < 2) {
@@ -57,13 +69,15 @@ export function useUserData(): UseUserDataReturn {
         setLoading(false);
       }
     } catch (err) {
-      crashlytics().recordError(err as Error);
+      reportError(err as Error);
       if (retryCount < 1) {
         retryTimeoutRef.current = setTimeout(() => {
           fetchUserData(retryCount + 1);
         }, 2000);
       } else {
-        setError('Error fetching user data. Please check your connection and try again.');
+        setError(
+          'Error fetching user data. Please check your connection and try again.',
+        );
         setLoading(false);
       }
     }

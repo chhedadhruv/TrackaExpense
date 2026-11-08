@@ -1,16 +1,43 @@
 import React, {useState, useCallback} from 'react';
-import {View, StyleSheet, TouchableOpacity, RefreshControl, Platform, Alert} from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  RefreshControl,
+  Platform,
+  Alert,
+} from 'react-native';
 import {Text, Card, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import UserAvatar from 'react-native-user-avatar';
-import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+import {
+  addDoc,
+  collection,
+  doc,
+  getDocs,
+  getFirestore,
+  increment,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+} from '@react-native-firebase/firestore';
+import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {useFocusEffect} from '@react-navigation/native';
 import {useCurrency} from '../../utils/CurrencyUtil';
-import {PRIMARY_COLOR, BACKGROUND_COLOR, INCOME_COLOR as SUCCESS_COLOR, EXPENSE_COLOR} from '../../src/constants/theme';
-import {NOTIFICATION_SERVER_URL, EXPO_PUBLIC_NOTIFICATION_SERVER_URL} from '@env';
+import {
+  PRIMARY_COLOR,
+  BACKGROUND_COLOR,
+  INCOME_COLOR as SUCCESS_COLOR,
+  EXPENSE_COLOR,
+} from '../../src/constants/theme';
+import {
+  NOTIFICATION_SERVER_URL,
+  EXPO_PUBLIC_NOTIFICATION_SERVER_URL,
+} from '@env';
 
 interface IOU {
   id: string;
@@ -36,15 +63,34 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
   const [settlingId, setSettlingId] = useState<string | null>(null);
 
   const loadIOUs = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     try {
-      const currentUser = auth().currentUser;
-      if (!currentUser) return;
+      const currentUser = getAuth().currentUser;
+      if (!currentUser) {
+        return;
+      }
       const email = currentUser.email?.toLowerCase();
       const [fromSnap, toSnap] = await Promise.all([
-        firestore().collection('ious').where('fromEmail', '==', email).where('status', '==', 'pending').orderBy('createdAt', 'desc').get(),
-        firestore().collection('ious').where('toEmail', '==', email).where('status', '==', 'pending').orderBy('createdAt', 'desc').get(),
+        getDocs(
+          query(
+            collection(getFirestore(), 'ious'),
+            where('fromEmail', '==', email),
+            where('status', '==', 'pending'),
+            orderBy('createdAt', 'desc'),
+          ),
+        ),
+        getDocs(
+          query(
+            collection(getFirestore(), 'ious'),
+            where('toEmail', '==', email),
+            where('status', '==', 'pending'),
+            orderBy('createdAt', 'desc'),
+          ),
+        ),
       ]);
       setIOwe(fromSnap.docs.map(d => ({id: d.id, ...d.data()} as IOU)));
       setOwedToMe(toSnap.docs.map(d => ({id: d.id, ...d.data()} as IOU)));
@@ -57,41 +103,64 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => {
-    loadIOUs();
-  }, [loadIOUs]));
+  useFocusEffect(
+    useCallback(() => {
+      loadIOUs();
+    }, [loadIOUs]),
+  );
 
   const settleIOU = async (iou: IOU) => {
-    if (settlingId) return;
+    if (settlingId) {
+      return;
+    }
     setSettlingId(iou.id);
     try {
-      const currentUser = auth().currentUser;
-      if (!currentUser) return;
+      const currentUser = getAuth().currentUser;
+      if (!currentUser) {
+        return;
+      }
       const currentEmail = currentUser.email?.toLowerCase();
       const amount = Number(iou.amount) || 0;
       const todayStr = new Date().toISOString().split('T')[0];
       const isDebtor = iou.fromEmail?.toLowerCase() === currentEmail;
-      const counterpartyEmail = (isDebtor ? iou.toEmail : iou.fromEmail)?.toLowerCase();
-      const counterpartyName = isDebtor ? iou.toName || iou.toEmail : iou.fromName || iou.fromEmail;
-      const currentUserName = currentUser.displayName || currentEmail?.split('@')[0] || 'Me';
+      const counterpartyEmail = (
+        isDebtor ? iou.toEmail : iou.fromEmail
+      )?.toLowerCase();
+      const counterpartyName = isDebtor
+        ? iou.toName || iou.toEmail
+        : iou.fromName || iou.fromEmail;
+      const currentUserName =
+        currentUser.displayName || currentEmail?.split('@')[0] || 'Me';
 
-      await firestore().collection('ious').doc(iou.id).update({
-        status: 'settled', settledAt: firestore.FieldValue.serverTimestamp(),
+      await updateDoc(doc(getFirestore(), 'ious', iou.id), {
+        status: 'settled',
+        settledAt: serverTimestamp(),
       });
 
       if (amount > 0) {
         // Current user: debtor pays (expense), creditor receives (income).
         try {
-          await firestore().collection('users').doc(currentUser.uid).collection('transactions').add({
-            title: iou.notes?.trim() || `IOU: ${counterpartyName}`,
-            type: isDebtor ? 'expense' : 'income',
-            category: 'IOU', amount: String(amount), date: todayStr,
-            source: 'iou', iouId: iou.id,
-            splitRole: isDebtor ? 'iou_payer' : 'iou_receiver',
-            createdAt: firestore.FieldValue.serverTimestamp(),
-          });
-          await firestore().collection('users').doc(currentUser.uid).update({
-            balance: firestore.FieldValue.increment(isDebtor ? -amount : amount),
+          await addDoc(
+            collection(
+              getFirestore(),
+              'users',
+              currentUser.uid,
+              'transactions',
+            ),
+            {
+              title: iou.notes?.trim() || `IOU: ${counterpartyName}`,
+              type: isDebtor ? 'expense' : 'income',
+              category: 'IOU',
+              amount: String(amount),
+              date: todayStr,
+              source: 'iou',
+              iouId: iou.id,
+              splitRole: isDebtor ? 'iou_payer' : 'iou_receiver',
+              createdAt: serverTimestamp(),
+            },
+          );
+          await updateDoc(doc(getFirestore(), 'users', currentUser.uid), {
+            balance: increment(isDebtor ? -amount : amount),
           });
         } catch (_) {}
 
@@ -99,29 +168,45 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
         let counterpartyUserId: string | null = null;
         if (counterpartyEmail) {
           try {
-            const snap = await firestore().collection('users').where('email', '==', counterpartyEmail).get();
-            if (!snap.empty) counterpartyUserId = snap.docs[0].id;
+            const snap = await getDocs(
+              query(
+                collection(getFirestore(), 'users'),
+                where('email', '==', counterpartyEmail),
+              ),
+            );
+            if (!snap.empty) {
+              counterpartyUserId = snap.docs[0].id;
+            }
           } catch (_) {}
         }
         if (counterpartyUserId) {
           try {
-            const endpoint = NOTIFICATION_SERVER_URL || EXPO_PUBLIC_NOTIFICATION_SERVER_URL || '';
+            const endpoint =
+              NOTIFICATION_SERVER_URL ||
+              EXPO_PUBLIC_NOTIFICATION_SERVER_URL ||
+              '';
             if (endpoint) {
-              await fetch(`${endpoint.replace(/\/$/, '')}/createSplitTransaction`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                  targetUserId: counterpartyUserId,
-                  txData: {
-                    title: iou.notes?.trim() || `IOU: ${currentUserName}`,
-                    type: isDebtor ? 'income' : 'expense',
-                    category: 'IOU', amount: String(amount), date: todayStr,
-                    source: 'iou', iouId: iou.id,
-                    splitRole: isDebtor ? 'iou_receiver' : 'iou_payer',
-                  },
-                  balanceDelta: isDebtor ? amount : -amount,
-                }),
-              });
+              await fetch(
+                `${endpoint.replace(/\/$/, '')}/createSplitTransaction`,
+                {
+                  method: 'POST',
+                  headers: {'Content-Type': 'application/json'},
+                  body: JSON.stringify({
+                    targetUserId: counterpartyUserId,
+                    txData: {
+                      title: iou.notes?.trim() || `IOU: ${currentUserName}`,
+                      type: isDebtor ? 'income' : 'expense',
+                      category: 'IOU',
+                      amount: String(amount),
+                      date: todayStr,
+                      source: 'iou',
+                      iouId: iou.id,
+                      splitRole: isDebtor ? 'iou_receiver' : 'iou_payer',
+                    },
+                    balanceDelta: isDebtor ? amount : -amount,
+                  }),
+                },
+              );
             }
           } catch (_) {}
         }
@@ -146,26 +231,47 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
   };
 
   const renderIOU = (iou: IOU, isDebtor: boolean) => {
-    const name = isDebtor ? (iou.toName || iou.toEmail) : (iou.fromName || iou.fromEmail);
+    const name = isDebtor
+      ? iou.toName || iou.toEmail
+      : iou.fromName || iou.fromEmail;
     const color = isDebtor ? EXPENSE_COLOR : SUCCESS_COLOR;
     const labelPrefix = isDebtor ? 'To' : 'From';
     const date = iou.createdAt?.toDate?.()?.toLocaleDateString() || '';
     return (
-      <Card key={iou.id} style={[styles.iouCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
+      <Card
+        key={iou.id}
+        style={[
+          styles.iouCard,
+          Platform.OS === 'android' && styles.cardAndroid,
+        ]}
+        elevation={Platform.OS === 'android' ? 0 : 1}>
         <View style={styles.iouCardContent}>
           <UserAvatar size={44} name={name} />
           <View style={styles.iouInfo}>
             <Text style={styles.iouName}>{name}</Text>
-            <Text style={styles.iouLabel}>{labelPrefix}: {iou.toEmail || iou.fromEmail}</Text>
-            {iou.notes ? <Text style={styles.iouNotes} numberOfLines={2}>{iou.notes}</Text> : null}
+            <Text style={styles.iouLabel}>
+              {labelPrefix}: {iou.toEmail || iou.fromEmail}
+            </Text>
+            {iou.notes ? (
+              <Text style={styles.iouNotes} numberOfLines={2}>
+                {iou.notes}
+              </Text>
+            ) : null}
             <Text style={styles.iouDate}>{date}</Text>
           </View>
           <View style={styles.iouRight}>
-            <Text style={[styles.iouAmount, {color}]}>{formatAmount(iou.amount)}</Text>
-            <TouchableOpacity onPress={() => markSettled(iou)} disabled={settlingId === iou.id} style={styles.settleButton}>
-              {settlingId === iou.id
-                ? <ActivityIndicator size={16} color="#fff" />
-                : <Text style={styles.settleButtonText}>Settle</Text>}
+            <Text style={[styles.iouAmount, {color}]}>
+              {formatAmount(iou.amount)}
+            </Text>
+            <TouchableOpacity
+              onPress={() => markSettled(iou)}
+              disabled={settlingId === iou.id}
+              style={styles.settleButton}>
+              {settlingId === iou.id ? (
+                <ActivityIndicator size={16} color="#fff" />
+              ) : (
+                <Text style={styles.settleButtonText}>Settle</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -191,28 +297,70 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
         <KeyboardAwareScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadIOUs(true)} colors={[PRIMARY_COLOR]} tintColor={PRIMARY_COLOR} />}>
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadIOUs(true)}
+              colors={[PRIMARY_COLOR]}
+              tintColor={PRIMARY_COLOR}
+            />
+          }>
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
-              <MaterialCommunityIcons name="handshake" size={32} color={PRIMARY_COLOR} />
+              <MaterialCommunityIcons
+                name="handshake"
+                size={32}
+                color={PRIMARY_COLOR}
+              />
               <Text style={styles.headerTitle}>IOUs</Text>
             </View>
-            <Text style={styles.headerSubtitle}>Track personal debts without a group</Text>
+            <Text style={styles.headerSubtitle}>
+              Track personal debts without a group
+            </Text>
           </View>
           <View style={styles.tabRow}>
-            <TouchableOpacity style={[styles.tab, tab === 'iowe' && styles.tabActive]} onPress={() => setTab('iowe')}>
-              <Text style={[styles.tabText, tab === 'iowe' && styles.tabTextActive]}>I Owe ({iOwe.length})</Text>
+            <TouchableOpacity
+              style={[styles.tab, tab === 'iowe' && styles.tabActive]}
+              onPress={() => setTab('iowe')}>
+              <Text
+                style={[
+                  styles.tabText,
+                  tab === 'iowe' && styles.tabTextActive,
+                ]}>
+                I Owe ({iOwe.length})
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.tab, tab === 'owedtome' && styles.tabActive]} onPress={() => setTab('owedtome')}>
-              <Text style={[styles.tabText, tab === 'owedtome' && styles.tabTextActive]}>Owed to Me ({owedToMe.length})</Text>
+            <TouchableOpacity
+              style={[styles.tab, tab === 'owedtome' && styles.tabActive]}
+              onPress={() => setTab('owedtome')}>
+              <Text
+                style={[
+                  styles.tabText,
+                  tab === 'owedtome' && styles.tabTextActive,
+                ]}>
+                Owed to Me ({owedToMe.length})
+              </Text>
             </TouchableOpacity>
           </View>
           {activeList.length === 0 ? (
-            <Card style={[styles.emptyCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
+            <Card
+              style={[
+                styles.emptyCard,
+                Platform.OS === 'android' && styles.cardAndroid,
+              ]}
+              elevation={Platform.OS === 'android' ? 0 : 2}>
               <View style={styles.emptyState}>
-                <MaterialCommunityIcons name="handshake" size={64} color="#CBD3EE" />
-                <Text style={styles.emptyTitle}>{tab === 'iowe' ? 'You owe nothing!' : 'Nobody owes you'}</Text>
-                <Text style={styles.emptySubtitle}>Tap + to record a new IOU</Text>
+                <MaterialCommunityIcons
+                  name="handshake"
+                  size={64}
+                  color="#CBD3EE"
+                />
+                <Text style={styles.emptyTitle}>
+                  {tab === 'iowe' ? 'You owe nothing!' : 'Nobody owes you'}
+                </Text>
+                <Text style={styles.emptySubtitle}>
+                  Tap + to record a new IOU
+                </Text>
               </View>
             </Card>
           ) : (
@@ -220,7 +368,9 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
           )}
           <View style={{height: 80}} />
         </KeyboardAwareScrollView>
-        <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('CreateIOU')}>
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => navigation.navigate('CreateIOU')}>
           <MaterialCommunityIcons name="plus" size={28} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -233,32 +383,134 @@ export default IOUScreen;
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
   scrollView: {flex: 1},
-  loadingContainer: {flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BACKGROUND_COLOR},
-  loadingText: {fontSize: 16, color: PRIMARY_COLOR, marginTop: 15, fontFamily: 'Lato-Regular'},
-  headerSection: {alignItems: 'center', paddingHorizontal: 20, paddingTop: 30, paddingBottom: 20},
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: BACKGROUND_COLOR,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: PRIMARY_COLOR,
+    marginTop: 15,
+    fontFamily: 'Lato-Regular',
+  },
+  headerSection: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 30,
+    paddingBottom: 20,
+  },
   headerTitleRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 8},
-  headerTitle: {fontSize: 28, fontWeight: 'bold', color: PRIMARY_COLOR, fontFamily: 'Kufam-SemiBoldItalic', marginLeft: 12},
-  headerSubtitle: {fontSize: 16, color: '#666', textAlign: 'center', fontFamily: 'Lato-Regular'},
-  tabRow: {flexDirection: 'row', marginHorizontal: 20, marginBottom: 15, backgroundColor: '#E8EBF7', borderRadius: 12, padding: 4},
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: PRIMARY_COLOR,
+    fontFamily: 'Kufam-SemiBoldItalic',
+    marginLeft: 12,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    fontFamily: 'Lato-Regular',
+  },
+  tabRow: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 15,
+    backgroundColor: '#E8EBF7',
+    borderRadius: 12,
+    padding: 4,
+  },
   tab: {flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10},
   tabActive: {backgroundColor: PRIMARY_COLOR},
   tabText: {fontSize: 14, color: PRIMARY_COLOR, fontFamily: 'Lato-Bold'},
   tabTextActive: {color: '#FFFFFF'},
-  iouCard: {backgroundColor: '#FFFFFF', borderRadius: 16, marginHorizontal: 20, marginBottom: 12},
+  iouCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginHorizontal: 20,
+    marginBottom: 12,
+  },
   cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
   iouCardContent: {flexDirection: 'row', alignItems: 'center', padding: 16},
   iouInfo: {flex: 1, marginLeft: 14},
-  iouName: {fontSize: 16, fontWeight: '600', color: '#2C2C2C', fontFamily: 'Lato-Bold'},
-  iouLabel: {fontSize: 12, color: '#888', fontFamily: 'Lato-Regular', marginTop: 1},
-  iouNotes: {fontSize: 13, color: '#555', fontFamily: 'Lato-Regular', marginTop: 3},
-  iouDate: {fontSize: 11, color: '#aaa', fontFamily: 'Lato-Regular', marginTop: 2},
+  iouName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
+  },
+  iouLabel: {
+    fontSize: 12,
+    color: '#888',
+    fontFamily: 'Lato-Regular',
+    marginTop: 1,
+  },
+  iouNotes: {
+    fontSize: 13,
+    color: '#555',
+    fontFamily: 'Lato-Regular',
+    marginTop: 3,
+  },
+  iouDate: {
+    fontSize: 11,
+    color: '#aaa',
+    fontFamily: 'Lato-Regular',
+    marginTop: 2,
+  },
   iouRight: {alignItems: 'flex-end'},
-  iouAmount: {fontSize: 18, fontWeight: 'bold', fontFamily: 'Kufam-SemiBoldItalic'},
-  settleButton: {marginTop: 8, backgroundColor: SUCCESS_COLOR, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8},
+  iouAmount: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    fontFamily: 'Kufam-SemiBoldItalic',
+  },
+  settleButton: {
+    marginTop: 8,
+    backgroundColor: SUCCESS_COLOR,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
   settleButtonText: {fontSize: 12, color: '#fff', fontFamily: 'Lato-Bold'},
-  emptyCard: {backgroundColor: '#FFFFFF', borderRadius: 20, marginHorizontal: 20, marginTop: 20},
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    marginHorizontal: 20,
+    marginTop: 20,
+  },
   emptyState: {alignItems: 'center', paddingVertical: 50},
-  emptyTitle: {fontSize: 18, fontWeight: '600', color: '#666', marginTop: 15, fontFamily: 'Lato-Bold'},
-  emptySubtitle: {fontSize: 14, color: '#888', textAlign: 'center', marginTop: 5, fontFamily: 'Lato-Regular'},
-  fab: {position: 'absolute', bottom: 24, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: PRIMARY_COLOR, justifyContent: 'center', alignItems: 'center', elevation: Platform.OS === 'android' ? 0 : 4, ...(Platform.OS !== 'android' && {shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.25, shadowRadius: 4})},
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#666',
+    marginTop: 15,
+    fontFamily: 'Lato-Bold',
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+    marginTop: 5,
+    fontFamily: 'Lato-Regular',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: PRIMARY_COLOR,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: Platform.OS === 'android' ? 0 : 4,
+    ...(Platform.OS !== 'android' && {
+      shadowColor: '#000',
+      shadowOffset: {width: 0, height: 2},
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+    }),
+  },
 });

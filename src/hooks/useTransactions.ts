@@ -1,7 +1,11 @@
 import {useState, useCallback} from 'react';
-import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
-import crashlytics from '@react-native-firebase/crashlytics';
+import {
+  collection,
+  getDocs,
+  getFirestore,
+} from '@react-native-firebase/firestore';
+import {getAuth} from '@react-native-firebase/auth';
+import {reportError} from '../services/ErrorReporter';
 import * as PerformanceService from '../services/PerformanceService';
 import type {TransactionDocument} from '../types';
 
@@ -22,19 +26,19 @@ export function useTransactions(): UseTransactionsReturn {
   const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(async (): Promise<void> => {
-    const currentUser = auth().currentUser;
-    if (!currentUser?.uid) return;
+    const currentUser = getAuth().currentUser;
+    if (!currentUser?.uid) {
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
       const stopTrace = await PerformanceService.traceFetchTransactions();
-      const snapshot = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('transactions')
-        .get();
+      const snapshot = await getDocs(
+        collection(getFirestore(), 'users', currentUser.uid, 'transactions'),
+      );
       await stopTrace?.();
 
       const docs = snapshot.docs.map(doc => ({
@@ -52,7 +56,7 @@ export function useTransactions(): UseTransactionsReturn {
 
       setTransactions(docs);
     } catch (err) {
-      crashlytics().recordError(err as Error);
+      reportError(err as Error);
       setError('Error fetching transactions');
     } finally {
       setLoading(false);
