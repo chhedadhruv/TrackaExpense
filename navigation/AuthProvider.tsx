@@ -2,7 +2,11 @@ import {Alert} from 'react-native';
 import React, {createContext, useState} from 'react';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
-import crashlytics from '@react-native-firebase/crashlytics';
+import {
+  getCrashlytics,
+  setAttribute,
+  setUserId,
+} from '@react-native-firebase/crashlytics';
 import {reportError} from '../src/services/ErrorReporter';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import type {FirebaseAuthTypes} from '@react-native-firebase/auth';
@@ -119,8 +123,8 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
               password,
             );
             const currentUser = userCredential.user;
-            crashlytics().setUserId(currentUser.uid);
-            crashlytics().setAttribute('auth_method', 'email');
+            setUserId(getCrashlytics(), currentUser.uid);
+            setAttribute(getCrashlytics(), 'auth_method', 'email');
             AnalyticsService.logLogin('email');
             if (!currentUser.emailVerified) {
               await auth().signOut();
@@ -199,8 +203,8 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
                 userImg: null,
                 balance: 0,
               });
-            crashlytics().setUserId(newUser.uid);
-            crashlytics().setAttribute('auth_method', 'email');
+            setUserId(getCrashlytics(), newUser.uid);
+            setAttribute(getCrashlytics(), 'auth_method', 'email');
             AnalyticsService.logSignUp('email', currency);
             await auth().signOut();
             Alert.alert(
@@ -216,7 +220,7 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
         logout: async () => {
           try {
             await auth().signOut();
-            crashlytics().setUserId('');
+            setUserId(getCrashlytics(), '');
           } catch (_) {
             Alert.alert('Error', 'Failed to log out. Please try again.', [
               {text: 'OK'},

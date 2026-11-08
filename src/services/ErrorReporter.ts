@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/react-native';
-import crashlytics from '@react-native-firebase/crashlytics';
+import {getCrashlytics, recordError} from '@react-native-firebase/crashlytics';
 import {SENTRY_DSN} from '@env';
 
 /**
@@ -48,7 +48,8 @@ export const reportError = (
     // reporting must never break the app
   }
   try {
-    crashlytics().recordError(
+    recordError(
+      getCrashlytics(),
       error instanceof Error ? error : new Error(String(error)),
     );
   } catch (_) {

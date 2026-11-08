@@ -1,10 +1,14 @@
-import perf from '@react-native-firebase/perf';
+import {
+  getPerformance,
+  trace as createTrace,
+} from '@react-native-firebase/perf';
 
 type StopFn = () => Promise<void>;
 
 export const startTrace = async (traceName: string): Promise<StopFn | null> => {
   try {
-    const trace = await perf().startTrace(traceName);
+    const trace = createTrace(getPerformance(), traceName);
+    await trace.start();
     return async () => {
       try {
         await trace.stop();
