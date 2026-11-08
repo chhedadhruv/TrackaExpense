@@ -1,7 +1,7 @@
 import {Platform} from 'react-native';
 import {LogLevel, OneSignal} from 'react-native-onesignal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import DeviceInfo from 'react-native-device-info';
+import * as Application from 'expo-application';
 import {ONESIGNAL_APP_ID} from '@env';
 
 const PROMPTED_KEY = 'push_permission_prompted';
@@ -33,7 +33,7 @@ export const loginPush = (uid: string, currency?: string): void => {
     OneSignal.login(uid);
     OneSignal.User.addTags({
       platform: Platform.OS,
-      app_version: DeviceInfo.getVersion(),
+      app_version: Application.nativeApplicationVersion ?? 'unknown',
       ...(currency ? {currency} : {}),
     });
   } catch (_) {}

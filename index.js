@@ -1,16 +1,10 @@
-/**
- * @format
- */
-
 import './gesture-handler';
-import {AppRegistry} from 'react-native';
+import {registerRootComponent} from 'expo';
 import App from './App';
-import {name as appName} from './app.json';
 import {
   getMessaging,
   setBackgroundMessageHandler,
 } from '@react-native-firebase/messaging';
-import notifee, {AndroidImportance} from '@notifee/react-native';
 
 // Background handler must be registered at the root (separate JS context)
 setBackgroundMessageHandler(getMessaging(), async remoteMessage => {
@@ -18,4 +12,4 @@ setBackgroundMessageHandler(getMessaging(), async remoteMessage => {
   // This prevents duplicates when server sends notification payload
 });
 
-AppRegistry.registerComponent(appName, () => App);
+registerRootComponent(App);

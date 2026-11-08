@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import {Card, Searchbar, ActivityIndicator} from 'react-native-paper';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {
   collection,
   getDocs,
@@ -22,8 +22,7 @@ import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {getAuth} from '@react-native-firebase/auth';
 import Share from 'react-native-share';
-import RNFS from 'react-native-fs';
-import {requestStoragePermission} from '../utils/Permissions';
+import {File, Paths} from 'expo-file-system';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {getCategoryIcon} from '../utils/CategoryData';
 import {
@@ -35,6 +34,7 @@ import {
 import {getConfig} from '../src/services/RemoteConfigService';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import type {TransactionDocument} from '../src/types';
+import type {McIconName} from '../src/types/icons';
 
 type FilterType = 'all' | '7days' | '30days' | 'custom';
 
@@ -174,65 +174,27 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
         'YYYY-MM-DD_HH-mm-ss',
       )}.csv`;
 
-      if (Platform.OS === 'android') {
-        const hasPermission = await requestStoragePermission();
-        if (!hasPermission) {
-          Alert.alert(
-            'Permission Denied',
-            'Storage permission is required to save CSV files',
-          );
-          return;
-        }
-        let filePath: string;
-        try {
-          filePath = `${RNFS.DownloadDirectoryPath}/${fileName}`;
-          await RNFS.writeFile(filePath, csvContent, 'utf8');
-        } catch (_) {
-          filePath = `${RNFS.DocumentDirectoryPath}/${fileName}`;
-          await RNFS.writeFile(filePath, csvContent, 'utf8');
-        }
-        const fileExists = await RNFS.exists(filePath);
-        if (fileExists) {
-          Alert.alert('Success!', `CSV file saved as ${fileName}`, [
-            {
-              text: 'Share File',
-              onPress: async () => {
-                try {
-                  await Share.open({
-                    title: 'Export Transactions',
-                    message: 'Your transaction data',
-                    url: `file://${filePath}`,
-                    type: 'text/csv',
-                  });
-                } catch (shareError: any) {
-                  if (
-                    shareError.message !== 'User did not share' &&
-                    shareError.message !== 'User cancelled'
-                  ) {
-                    Alert.alert('Error', 'Failed to share file');
-                  }
-                }
-              },
-            },
-            {text: 'OK', style: 'cancel'},
-          ]);
-        } else {
-          Alert.alert('Error', 'Failed to save CSV file');
-        }
-      } else {
-        const filePath = `${RNFS.DocumentDirectoryPath}/${fileName}`;
-        await RNFS.writeFile(filePath, csvContent, 'utf8');
-        const fileExists = await RNFS.exists(filePath);
-        if (!fileExists) {
-          Alert.alert('Error', 'Failed to create CSV file');
-          return;
-        }
+      const file = new File(Paths.document, fileName);
+      file.create({overwrite: true});
+      file.write(csvContent);
+      if (!file.exists) {
+        Alert.alert('Error', 'Failed to create CSV file');
+        return;
+      }
+      try {
         await Share.open({
           title: 'Export Transactions',
           message: 'Your transaction data',
-          url: `file://${filePath}`,
+          url: file.uri,
           type: 'text/csv',
         });
+      } catch (shareError: any) {
+        if (
+          shareError.message !== 'User did not share' &&
+          shareError.message !== 'User cancelled'
+        ) {
+          Alert.alert('Error', 'Failed to share file');
+        }
       }
     } catch (_) {
       Alert.alert('Error', 'Failed to export transactions. Please try again.');
@@ -302,7 +264,7 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
             showsHorizontalScrollIndicator={false}
             style={styles.filterScrollView}>
             {(['all', '7days', '30days', 'custom'] as FilterType[]).map(f => {
-              const icons: Record<FilterType, string> = {
+              const icons: Record<FilterType, McIconName> = {
                 all: 'format-list-bulleted',
                 '7days': 'calendar-week',
                 '30days': 'calendar-month',
