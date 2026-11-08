@@ -1,4 +1,10 @@
-import firestore from '@react-native-firebase/firestore';
+import {
+  doc,
+  getDoc,
+  getFirestore,
+  serverTimestamp,
+  setDoc,
+} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import NotificationService from './NotificationService';
 import type {GroupDocument, SplitDocument} from '../src/types';
@@ -361,12 +367,14 @@ class SplitNotificationService {
     amount: number,
   ): Promise<PaymentReminderResult> {
     try {
-      const cooldownRef = firestore()
-        .collection('groups')
-        .doc(group.id)
-        .collection('reminders')
-        .doc(borrower.email.replace(/[.@]/g, '_'));
-      const cooldownDoc = await cooldownRef.get();
+      const cooldownRef = doc(
+        getFirestore(),
+        'groups',
+        group.id,
+        'reminders',
+        borrower.email.replace(/[.@]/g, '_'),
+      );
+      const cooldownDoc = await getDoc(cooldownRef);
       if (cooldownDoc.exists) {
         const lastSent = cooldownDoc.data()?.lastSentAt?.toMillis?.() || 0;
         const hoursSince = (Date.now() - lastSent) / (1000 * 60 * 60);
@@ -374,8 +382,8 @@ class SplitNotificationService {
           return {success: false, reason: 'cooldown'};
         }
       }
-      await cooldownRef.set({
-        lastSentAt: firestore.FieldValue.serverTimestamp(),
+      await setDoc(cooldownRef, {
+        lastSentAt: serverTimestamp(),
       });
       await this.notificationService.sendNotificationToUsers([borrower.email], {
         type: 'payment_reminder',

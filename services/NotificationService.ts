@@ -5,7 +5,19 @@ import {
   onMessage,
   requestPermission,
 } from '@react-native-firebase/messaging';
-import firestore from '@react-native-firebase/firestore';
+import {
+  collection,
+  doc as fsDoc,
+  getDocs,
+  getFirestore,
+  limit,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+  writeBatch,
+} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../src/services/ErrorReporter';
 import notifee, {AndroidImportance, EventType} from '@notifee/react-native';
@@ -188,13 +200,13 @@ class NotificationService {
       return;
     }
     try {
-      await firestore()
-        .collection('users')
-        .doc(getAuth().currentUser!.uid)
-        .update({
+      await updateDoc(
+        fsDoc(getFirestore(), 'users', getAuth().currentUser!.uid),
+        {
           fcmToken: this.fcmToken,
-          lastTokenUpdate: firestore.FieldValue.serverTimestamp(),
-        });
+          lastTokenUpdate: serverTimestamp(),
+        },
+      );
     } catch (error) {
       reportError(error as Error);
       console.error('Failed to save FCM token:', error);
@@ -280,10 +292,12 @@ class NotificationService {
         this.sendingInProgress.delete(notificationKey);
       }, 5 * 60 * 1000);
 
-      const usersSnapshot = await firestore()
-        .collection('users')
-        .where('email', 'in', userEmails)
-        .get();
+      const usersSnapshot = await getDocs(
+        query(
+          collection(getFirestore(), 'users'),
+          where('email', 'in', userEmails),
+        ),
+      );
 
       const tokens: string[] = [];
       const seenTokens = new Set<string>();
@@ -366,16 +380,19 @@ class NotificationService {
     notificationData: NotificationPayload,
   ): Promise<void> {
     try {
-      const batch = firestore().batch();
+      const batch = writeBatch(getFirestore());
       userEmails.forEach(email => {
-        const ref = firestore()
-          .collection('users')
-          .doc(email.replace('@', '_at_'))
-          .collection('notifications')
-          .doc();
+        const ref = fsDoc(
+          collection(
+            getFirestore(),
+            'users',
+            email.replace('@', '_at_'),
+            'notifications',
+          ),
+        );
         batch.set(ref, {
           ...notificationData,
-          createdAt: firestore.FieldValue.serverTimestamp(),
+          createdAt: serverTimestamp(),
           read: false,
         });
       });
@@ -387,13 +404,18 @@ class NotificationService {
 
   async getUserNotifications(userEmail: string): Promise<any[]> {
     try {
-      const snapshot = await firestore()
-        .collection('users')
-        .doc(userEmail.replace('@', '_at_'))
-        .collection('notifications')
-        .orderBy('createdAt', 'desc')
-        .limit(50)
-        .get();
+      const snapshot = await getDocs(
+        query(
+          collection(
+            getFirestore(),
+            'users',
+            userEmail.replace('@', '_at_'),
+            'notifications',
+          ),
+          orderBy('createdAt', 'desc'),
+          limit(50),
+        ),
+      );
       return snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
     } catch (error) {
       console.error('Failed to get user notifications:', error);
@@ -406,12 +428,16 @@ class NotificationService {
     userEmail: string,
   ): Promise<void> {
     try {
-      await firestore()
-        .collection('users')
-        .doc(userEmail.replace('@', '_at_'))
-        .collection('notifications')
-        .doc(notificationId)
-        .update({read: true, readAt: firestore.FieldValue.serverTimestamp()});
+      await updateDoc(
+        fsDoc(
+          getFirestore(),
+          'users',
+          userEmail.replace('@', '_at_'),
+          'notifications',
+          notificationId,
+        ),
+        {read: true, readAt: serverTimestamp()},
+      );
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
     }
@@ -419,12 +445,15 @@ class NotificationService {
 
   async clearAllNotifications(userEmail: string): Promise<void> {
     try {
-      const snapshot = await firestore()
-        .collection('users')
-        .doc(userEmail.replace('@', '_at_'))
-        .collection('notifications')
-        .get();
-      const batch = firestore().batch();
+      const snapshot = await getDocs(
+        collection(
+          getFirestore(),
+          'users',
+          userEmail.replace('@', '_at_'),
+          'notifications',
+        ),
+      );
+      const batch = writeBatch(getFirestore());
       snapshot.docs.forEach(doc => batch.delete(doc.ref));
       await batch.commit();
     } catch (error) {

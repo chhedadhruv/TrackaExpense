@@ -1,4 +1,10 @@
-import firestore from '@react-native-firebase/firestore';
+import {
+  doc,
+  getDoc,
+  getFirestore,
+  serverTimestamp,
+  setDoc,
+} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import NotificationService from './NotificationService';
 import {getConfig} from '../src/services/RemoteConfigService';
@@ -134,12 +140,15 @@ class FunNotificationService {
         return;
       }
       const today = moment().format('YYYY-MM-DD');
-      const funCheck = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('reminderLogs')
-        .doc(`fun_${today}`)
-        .get();
+      const funCheck = await getDoc(
+        doc(
+          getFirestore(),
+          'users',
+          currentUser.uid,
+          'reminderLogs',
+          `fun_${today}`,
+        ),
+      );
       if (funCheck.exists) {
         return;
       }
@@ -341,17 +350,15 @@ class FunNotificationService {
     context: string,
   ): Promise<void> {
     try {
-      await firestore()
-        .collection('users')
-        .doc(userId)
-        .collection('reminderLogs')
-        .doc(`fun_${date}`)
-        .set({
+      await setDoc(
+        doc(getFirestore(), 'users', userId, 'reminderLogs', `fun_${date}`),
+        {
           type: 'fun_notification',
           context,
           date,
-          sentAt: firestore.FieldValue.serverTimestamp(),
-        });
+          sentAt: serverTimestamp(),
+        },
+      );
     } catch (error) {
       console.error('Failed to log fun notification:', error);
     }
