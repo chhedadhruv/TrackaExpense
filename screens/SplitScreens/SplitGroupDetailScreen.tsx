@@ -10,7 +10,7 @@ import {
 import {ActivityIndicator, Card, Button, Snackbar} from 'react-native-paper';
 import {useFocusEffect} from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import UserAvatar from 'react-native-user-avatar';
+import UserAvatar from '../../src/components/Avatar';
 import {
   Timestamp,
   addDoc,

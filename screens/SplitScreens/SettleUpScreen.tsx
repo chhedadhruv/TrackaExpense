@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import {Card, Switch} from 'react-native-paper';
-import UserAvatar from 'react-native-user-avatar';
+import UserAvatar from '../../src/components/Avatar';
 import {
   Timestamp,
   addDoc,

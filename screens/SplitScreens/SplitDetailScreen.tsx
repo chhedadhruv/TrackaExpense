@@ -9,7 +9,7 @@ import {
   Linking,
 } from 'react-native';
 import {Text, Card} from 'react-native-paper';
-import UserAvatar from 'react-native-user-avatar';
+import UserAvatar from '../../src/components/Avatar';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {getAuth} from '@react-native-firebase/auth';
 import {

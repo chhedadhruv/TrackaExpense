@@ -69,7 +69,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       # Installed globally on purpose: as an app dependency it changes which node-fetch version
-      # is hoisted and breaks the React Native bundle (react-native-user-avatar needs node-fetch 2).
+      # is hoisted and breaks the React Native bundle (other dependencies need node-fetch 2).
       - name: Install Firebase CLI
         run: |
           yarn global add firebase-tools@15
