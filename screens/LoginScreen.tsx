@@ -17,7 +17,12 @@ import {
   GoogleSignin,
   statusCodes,
 } from '@react-native-google-signin/google-signin';
-import auth from '@react-native-firebase/auth';
+import {
+  AppleAuthProvider,
+  GoogleAuthProvider,
+  getAuth,
+  signInWithCredential,
+} from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {configureGoogleSignIn} from '../utils/GoogleSignInConfig';
@@ -123,8 +128,9 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
       const idToken =
         (signInResult as any)?.idToken || (signInResult as any)?.data?.idToken;
       if (idToken) {
-        const googleCredential = auth.GoogleAuthProvider.credential(idToken);
-        const userCredential = await auth().signInWithCredential(
+        const googleCredential = GoogleAuthProvider.credential(idToken);
+        const userCredential = await signInWithCredential(
+          getAuth(),
           googleCredential,
         );
         const user = userCredential.user;
@@ -189,11 +195,12 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
       setErrorMessage(null);
       const result = await performAppleSignIn();
       if (result.success) {
-        const appleCredential = auth.AppleAuthProvider.credential(
+        const appleCredential = AppleAuthProvider.credential(
           result.identityToken,
           result.nonce,
         );
-        const userCredential = await auth().signInWithCredential(
+        const userCredential = await signInWithCredential(
+          getAuth(),
           appleCredential,
         );
         const user = userCredential.user;

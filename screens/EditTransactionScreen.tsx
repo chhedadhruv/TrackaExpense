@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import {Card, ActivityIndicator} from 'react-native-paper';
-import auth from '@react-native-firebase/auth';
+import {getAuth} from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {
   getDownloadURL,
@@ -90,7 +90,7 @@ const EditTransactionScreen = ({
     [],
   );
 
-  const getUid = (): string => auth().currentUser!.uid;
+  const getUid = (): string => getAuth().currentUser!.uid;
 
   const uploadImageAsync = async (): Promise<string | null> => {
     if (!image) {

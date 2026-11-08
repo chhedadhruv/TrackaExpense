@@ -1,7 +1,7 @@
 import {View, StyleSheet, TextInput, Text, Platform} from 'react-native';
 import React, {useState, useEffect, useRef} from 'react';
 import {Card, ActivityIndicator} from 'react-native-paper';
-import auth from '@react-native-firebase/auth';
+import {getAuth} from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {reportError} from '../src/services/ErrorReporter';
 import * as AnalyticsService from '../src/services/AnalyticsService';
@@ -67,7 +67,7 @@ const AddIncome = ({navigation}: {navigation: any}) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title]);
 
-  const getUid = (): string => auth().currentUser!.uid;
+  const getUid = (): string => getAuth().currentUser!.uid;
 
   const handleSubmit = async () => {
     if (!validateForm('income')) {
