@@ -69,7 +69,7 @@ Planned commands: EAS build and update scripts (Phase 1b).
 ## 6. Quality gates
 
 - Pre-commit: ESLint, TypeScript, Prettier, related Jest tests. Pre-push: full tests. GitHub Actions runs the same on `ubuntu-latest`. (Being added in Phase 1a; check `package.json` and `.husky/` for what exists.)
-- Ratchet baseline from the audit: ESLint 37 errors and 389 warnings; `tsc --noEmit` 162 errors; Jest 1 suite failing to load, 0 tests.
+- Ratchet baseline: `docs/quality-baseline.json` (started at ESLint 37 errors and 389 warnings, `tsc` 162 errors, Jest not running; `tsc` is now 0).
 - Rule: no new violations; touched files must be clean; counts only go down.
 - Never commit while a gate is failing. Never use `--no-verify`.
 
@@ -125,7 +125,7 @@ Phase 1a in progress (tooling, quality gates, CI; no native changes). Phase 1b (
 - Do not add `firebase-tools` (or anything that pulls in `node-fetch` 3) to this package's dependencies: it changes which `node-fetch` is hoisted and breaks the React Native bundle. Install the Firebase CLI globally instead.
 - Remote Config `min_supported_version` (default `0.0.0`, check disabled) blocks older app versions with an update screen: `App.tsx`, `components/ForceUpdateScreen.tsx`. Setting it in the console is a live change that needs owner approval.
 - Jest runs only pure utility tests (`__tests__/`); rendering `App` in Jest needs Firebase and native module mocks that do not exist yet.
-- ESLint still reports 27 errors and 329 warnings, and 52 files do not match Prettier; the baseline is in `docs/quality-baseline.json`.
+- ESLint warnings and errors and unformatted files still exist in legacy code; the current counts are in `docs/quality-baseline.json` and may only go down.
 - `users/{uid}.balance` is incremental only; never recalculate it in a batch (`src/types/index.ts`).
 - Transaction `date` is a "YYYY-MM-DD" string; split `date` is a Timestamp with a `createdAt` fallback (`src/types/index.ts`).
 - Group membership and invitations are keyed by email, and clients query `users` by email and phone: `screens/SplitScreens/SplitScreen.tsx`.
