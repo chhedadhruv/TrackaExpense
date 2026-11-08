@@ -8,6 +8,9 @@ export interface RemoteConfigDefaults {
   image_upload_max_size_mb: number;
   enable_iou_feature: boolean;
   onboarding_version: number;
+  /** Installed versions below this are blocked until the user updates. '0.0.0' disables the check. */
+  min_supported_version: string;
+  update_message: string;
 }
 
 const DEFAULTS: RemoteConfigDefaults = {
@@ -18,11 +21,16 @@ const DEFAULTS: RemoteConfigDefaults = {
   image_upload_max_size_mb: 5,
   enable_iou_feature: true,
   onboarding_version: 1,
+  min_supported_version: '0.0.0',
+  update_message:
+    'A newer version of TrackaExpense is required. Please update to continue.',
 };
 
 export async function initRemoteConfig(): Promise<void> {
   try {
-    await remoteConfig().setDefaults(DEFAULTS as unknown as Record<string, string | number | boolean>);
+    await remoteConfig().setDefaults(
+      DEFAULTS as unknown as Record<string, string | number | boolean>,
+    );
     await remoteConfig().setConfigSettings({
       minimumFetchIntervalMillis: __DEV__ ? 0 : 3600000,
     });
@@ -36,13 +44,30 @@ export function getConfig(): RemoteConfigDefaults {
   const cfg = remoteConfig();
   try {
     return {
-      max_transactions_displayed: cfg.getValue('max_transactions_displayed').asNumber() || DEFAULTS.max_transactions_displayed,
-      enable_fun_notifications: cfg.getValue('enable_fun_notifications').asBoolean(),
-      enable_reminder_notifications: cfg.getValue('enable_reminder_notifications').asBoolean(),
-      stats_default_time_range: cfg.getValue('stats_default_time_range').asString() || DEFAULTS.stats_default_time_range,
-      image_upload_max_size_mb: cfg.getValue('image_upload_max_size_mb').asNumber() || DEFAULTS.image_upload_max_size_mb,
+      max_transactions_displayed:
+        cfg.getValue('max_transactions_displayed').asNumber() ||
+        DEFAULTS.max_transactions_displayed,
+      enable_fun_notifications: cfg
+        .getValue('enable_fun_notifications')
+        .asBoolean(),
+      enable_reminder_notifications: cfg
+        .getValue('enable_reminder_notifications')
+        .asBoolean(),
+      stats_default_time_range:
+        cfg.getValue('stats_default_time_range').asString() ||
+        DEFAULTS.stats_default_time_range,
+      image_upload_max_size_mb:
+        cfg.getValue('image_upload_max_size_mb').asNumber() ||
+        DEFAULTS.image_upload_max_size_mb,
       enable_iou_feature: cfg.getValue('enable_iou_feature').asBoolean(),
-      onboarding_version: cfg.getValue('onboarding_version').asNumber() || DEFAULTS.onboarding_version,
+      onboarding_version:
+        cfg.getValue('onboarding_version').asNumber() ||
+        DEFAULTS.onboarding_version,
+      min_supported_version:
+        cfg.getValue('min_supported_version').asString() ||
+        DEFAULTS.min_supported_version,
+      update_message:
+        cfg.getValue('update_message').asString() || DEFAULTS.update_message,
     };
   } catch (_) {
     return DEFAULTS;
