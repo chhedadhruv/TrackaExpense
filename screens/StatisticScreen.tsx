@@ -20,13 +20,25 @@ import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {getCategoryIcon} from '../utils/CategoryData';
-import {PRIMARY_COLOR, BACKGROUND_COLOR, INCOME_COLOR, EXPENSE_COLOR} from '../src/constants/theme';
+import {
+  PRIMARY_COLOR,
+  BACKGROUND_COLOR,
+  INCOME_COLOR,
+  EXPENSE_COLOR,
+} from '../src/constants/theme';
 import {formatDisplayDate} from '../src/utils/formatters';
 import {getConfig} from '../src/services/RemoteConfigService';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import type {TransactionDocument} from '../src/types';
 
-type TimeRange = 'all' | '7days' | '30days' | '3months' | '6months' | 'year' | 'custom';
+type TimeRange =
+  | 'all'
+  | '7days'
+  | '30days'
+  | '3months'
+  | '6months'
+  | 'year'
+  | 'custom';
 type ChartBtn = 'Income' | 'Expense';
 
 interface PieEntry {
@@ -46,7 +58,16 @@ interface BarEntry {
   showLabel?: boolean;
 }
 
-const PIE_PALETTE = ['#677CD2', '#E98852', '#25B07F', '#F6C84E', '#9B59B6', '#2E86C1', '#16A085', '#D35400'];
+const PIE_PALETTE = [
+  '#677CD2',
+  '#E98852',
+  '#25B07F',
+  '#F6C84E',
+  '#9B59B6',
+  '#2E86C1',
+  '#16A085',
+  '#D35400',
+];
 
 const TIME_RANGES: {key: TimeRange; label: string; icon: string}[] = [
   {key: 'all', label: 'All Time', icon: 'format-list-bulleted'},
@@ -62,13 +83,19 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
   const {currency, formatAmount} = useCurrency();
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedBar, setSelectedBar] = useState<BarEntry | null>(null);
-  const [allTransactions, setAllTransactions] = useState<TransactionDocument[]>([]);
+  const [allTransactions, setAllTransactions] = useState<TransactionDocument[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
-  const [timeRange, setTimeRange] = useState<TimeRange>((getConfig().stats_default_time_range as TimeRange) || 'all');
-  const [filteredTransactions, setFilteredTransactions] = useState<TransactionDocument[]>([]);
+  const [timeRange, setTimeRange] = useState<TimeRange>(
+    (getConfig().stats_default_time_range as TimeRange) || 'all',
+  );
+  const [filteredTransactions, setFilteredTransactions] = useState<
+    TransactionDocument[]
+  >([]);
   const [selectedBtn, setSelectedBtn] = useState<ChartBtn>('Income');
   const [categoryPieData, setCategoryPieData] = useState<PieEntry[]>([]);
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
@@ -89,9 +116,15 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
         .doc(auth().currentUser!.uid)
         .collection('transactions')
         .get();
-      const txns = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})) as unknown as TransactionDocument[];
+      const txns = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as unknown as TransactionDocument[];
       setAllTransactions(txns.slice(0, getConfig().max_transactions_displayed));
-      AnalyticsService.logViewStatistics({chart_type: selectedBtn.toLowerCase(), time_range: timeRange});
+      AnalyticsService.logViewStatistics({
+        chart_type: selectedBtn.toLowerCase(),
+        time_range: timeRange,
+      });
       await stopTrace?.();
     } catch (e) {
       crashlytics().recordError(e as Error);
@@ -101,16 +134,32 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
     }
   };
 
-  useFocusEffect(useCallback(() => { fetchTransactions(); }, []));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useFocusEffect(
+    useCallback(() => {
+      fetchTransactions();
+    }, []),
+  );
 
   const filterTransactionsByTimeRange = useCallback(
     (txns: TransactionDocument[], range: TimeRange): TransactionDocument[] => {
-      if (range === 'all') return txns;
+      if (range === 'all') {
+        return txns;
+      }
       if (range === 'custom') {
-        if (!customStartDate || !customEndDate) return [];
-        if (customStartDate > customEndDate) return [];
+        if (!customStartDate || !customEndDate) {
+          return [];
+        }
+        if (customStartDate > customEndDate) {
+          return [];
+        }
         return txns.filter(t =>
-          moment(t.date).isBetween(customStartDate, customEndDate, undefined, '[]'),
+          moment(t.date).isBetween(
+            customStartDate,
+            customEndDate,
+            undefined,
+            '[]',
+          ),
         );
       }
       const cutoff = new Date();
@@ -133,50 +182,80 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
     let income = 0;
     let expense = 0;
     filtered.forEach(t => {
-      if (t.type === 'income') income += parseFloat(t.amount as any) || 0;
-      else expense += parseFloat(t.amount as any) || 0;
+      if (t.type === 'income') {
+        income += parseFloat(t.amount as any) || 0;
+      } else {
+        expense += parseFloat(t.amount as any) || 0;
+      }
     });
     setTotalIncome(income);
     setTotalExpense(expense);
   }, [allTransactions, timeRange, filterTransactionsByTimeRange]);
 
   useEffect(() => {
-    if (timeRange === 'custom' && customStartDate && customEndDate && customStartDate > customEndDate) {
+    if (
+      timeRange === 'custom' &&
+      customStartDate &&
+      customEndDate &&
+      customStartDate > customEndDate
+    ) {
       setDateRangeError('Start date must be before end date.');
     } else {
       setDateRangeError(null);
     }
   }, [customStartDate, customEndDate, timeRange]);
 
-  useEffect(() => { setVisibleCount(10); }, [selectedBtn, timeRange]);
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [selectedBtn, timeRange]);
 
   const handleBarTap = useCallback((data: any) => {
-    if (tooltipTimer.current) clearTimeout(tooltipTimer.current);
+    if (tooltipTimer.current) {
+      clearTimeout(tooltipTimer.current);
+    }
     setSelectedBar(data);
     tooltipTimer.current = setTimeout(() => setSelectedBar(null), 3000);
   }, []);
 
-  const getGroupingInterval = (range: TimeRange): 'daily' | 'weekly' | 'monthly' => {
-    if (range === '7days' || range === '30days') return 'daily';
-    if (range === '3months') return 'weekly';
+  const getGroupingInterval = (
+    range: TimeRange,
+  ): 'daily' | 'weekly' | 'monthly' => {
+    if (range === '7days' || range === '30days') {
+      return 'daily';
+    }
+    if (range === '3months') {
+      return 'weekly';
+    }
     return 'monthly';
   };
 
-  const getGroupingKeyAndLabel = (date: string, interval: 'daily' | 'weekly' | 'monthly') => {
+  const getGroupingKeyAndLabel = (
+    date: string,
+    interval: 'daily' | 'weekly' | 'monthly',
+  ) => {
     const d = new Date(date);
     const year = d.getFullYear();
     const month = d.getMonth();
     const day = d.getDate();
     if (interval === 'daily') {
       return {
-        key: `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-        label: d.toLocaleDateString(undefined, {month: 'short', day: 'numeric'}),
+        key: `${year}-${String(month + 1).padStart(2, '0')}-${String(
+          day,
+        ).padStart(2, '0')}`,
+        label: d.toLocaleDateString(undefined, {
+          month: 'short',
+          day: 'numeric',
+        }),
         ts: new Date(year, month, day).getTime(),
       };
     }
     if (interval === 'weekly') {
       const week = Math.ceil(day / 7);
-      return {key: `${year}-${month}-W${week}`, label: `W${week}`, ts: new Date(year, month, (week - 1) * 7 + 1).getTime()};
+      return {
+        key: `${year}-${month}-W${week}`,
+        label: `W${week}`,
+        ts: new Date(year, month, (week - 1) * 7 + 1).getTime(),
+      };
     }
     return {
       key: `${year}-${String(month + 1).padStart(2, '0')}`,
@@ -186,43 +265,107 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
   };
 
   const handleBarData = useCallback(() => {
-    if (!filteredTransactions.length) { setBarData([]); return; }
+    if (!filteredTransactions.length) {
+      setBarData([]);
+      return;
+    }
     const interval = getGroupingInterval(timeRange);
-    const aggregatedMap = new Map<string, {label: string; ts: number; income: number; expense: number}>();
+    const aggregatedMap = new Map<
+      string,
+      {label: string; ts: number; income: number; expense: number}
+    >();
     filteredTransactions.forEach(t => {
       const {key, label, ts} = getGroupingKeyAndLabel(t.date, interval);
       const value = parseFloat(t.amount as any) || 0;
-      if (!aggregatedMap.has(key)) aggregatedMap.set(key, {label, ts, income: 0, expense: 0});
+      if (!aggregatedMap.has(key)) {
+        aggregatedMap.set(key, {label, ts, income: 0, expense: 0});
+      }
       const entry = aggregatedMap.get(key)!;
-      if (t.type === 'income') entry.income += value;
-      else entry.expense += value;
+      if (t.type === 'income') {
+        entry.income += value;
+      } else {
+        entry.expense += value;
+      }
     });
-    const sorted = Array.from(aggregatedMap.values()).sort((a, b) => a.ts - b.ts).slice(-8);
+    const sorted = Array.from(aggregatedMap.values())
+      .sort((a, b) => a.ts - b.ts)
+      .slice(-8);
     const built: BarEntry[] = [];
     sorted.forEach((item, index) => {
-      built.push({value: 0, label: item.label, frontColor: 'transparent', spacing: 2, showLabel: index % 2 === 0});
-      if (item.income > 0) built.push({value: item.income, label: '', frontColor: PRIMARY_COLOR, spacing: 2});
-      if (item.expense > 0) built.push({value: item.expense, label: '', frontColor: EXPENSE_COLOR, spacing: 2});
-      built.push({value: 0, label: '', frontColor: 'transparent', spacing: 10, showLabel: false});
+      built.push({
+        value: 0,
+        label: item.label,
+        frontColor: 'transparent',
+        spacing: 2,
+        showLabel: index % 2 === 0,
+      });
+      if (item.income > 0) {
+        built.push({
+          value: item.income,
+          label: '',
+          frontColor: PRIMARY_COLOR,
+          spacing: 2,
+        });
+      }
+      if (item.expense > 0) {
+        built.push({
+          value: item.expense,
+          label: '',
+          frontColor: EXPENSE_COLOR,
+          spacing: 2,
+        });
+      }
+      built.push({
+        value: 0,
+        label: '',
+        frontColor: 'transparent',
+        spacing: 10,
+        showLabel: false,
+      });
     });
     setBarData(built);
   }, [filteredTransactions, timeRange]);
 
-  useEffect(() => { handleBarData(); }, [handleBarData]);
+  useEffect(() => {
+    handleBarData();
+  }, [handleBarData]);
 
   useEffect(() => {
-    if (!filteredTransactions.length) { setCategoryPieData([]); return; }
+    if (!filteredTransactions.length) {
+      setCategoryPieData([]);
+      return;
+    }
     const typeKey = selectedBtn === 'Income' ? 'income' : 'expense';
     const tx = filteredTransactions.filter(t => t.type === typeKey);
-    const total = tx.reduce((sum, t) => sum + (parseFloat(t.amount as any) || 0), 0);
-    if (total <= 0) { setCategoryPieData([]); return; }
+    const total = tx.reduce(
+      (sum, t) => sum + (parseFloat(t.amount as any) || 0),
+      0,
+    );
+    if (total <= 0) {
+      setCategoryPieData([]);
+      return;
+    }
     const byCategory: Record<string, number> = {};
-    tx.forEach(t => { const k = t.category || 'Others'; byCategory[k] = (byCategory[k] || 0) + (parseFloat(t.amount as any) || 0); });
-    const entries = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).slice(0, 6);
-    setCategoryPieData(entries.map(([label, amountValue], idx) => {
-      const percentage = Math.round((amountValue / total) * 100);
-      return {value: percentage, color: PIE_PALETTE[idx % PIE_PALETTE.length], text: percentage >= 10 ? label : '', label, percent: percentage, amount: amountValue};
-    }));
+    tx.forEach(t => {
+      const k = t.category || 'Others';
+      byCategory[k] = (byCategory[k] || 0) + (parseFloat(t.amount as any) || 0);
+    });
+    const entries = Object.entries(byCategory)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6);
+    setCategoryPieData(
+      entries.map(([label, amountValue], idx) => {
+        const percentage = Math.round((amountValue / total) * 100);
+        return {
+          value: percentage,
+          color: PIE_PALETTE[idx % PIE_PALETTE.length],
+          text: percentage >= 10 ? label : '',
+          label,
+          percent: percentage,
+          amount: amountValue,
+        };
+      }),
+    );
   }, [filteredTransactions, selectedBtn]);
 
   const chartWidth = useMemo(() => {
@@ -231,7 +374,8 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
     return Math.max(base, groups * 70);
   }, [barData]);
 
-  const getTimeRangeLabel = () => TIME_RANGES.find(r => r.key === timeRange)?.label ?? 'Selected Period';
+  const getTimeRangeLabel = () =>
+    TIME_RANGES.find(r => r.key === timeRange)?.label ?? 'Selected Period';
 
   if (loading) {
     return (
@@ -245,9 +389,15 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
   if (error) {
     return (
       <View style={[styles.container, styles.centeredState]}>
-        <MaterialCommunityIcons name="cloud-off-outline" size={56} color="#CBD3EE" />
+        <MaterialCommunityIcons
+          name="cloud-off-outline"
+          size={56}
+          color="#CBD3EE"
+        />
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={fetchTransactions}>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={fetchTransactions}>
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -256,24 +406,48 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        style={styles.scrollContainer}>
         <View style={styles.headerSection}>
           <Text style={styles.headerText}>Statistics</Text>
-          <Text style={styles.subHeaderText}>Track your financial insights</Text>
+          <Text style={styles.subHeaderText}>
+            Track your financial insights
+          </Text>
         </View>
 
         {/* Time Range Filter */}
         <View style={styles.filterSection}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScrollView}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterScrollView}>
             {TIME_RANGES.map(({key, label, icon}) => {
               const active = timeRange === key;
               return (
                 <TouchableOpacity
                   key={key}
-                  onPress={() => { setTimeRange(key); AnalyticsService.logStatisticsTimeRangeChanged(key); }}
-                  style={[styles.filterButton, active && styles.filterButtonActive]}>
-                  <MaterialCommunityIcons name={icon} size={16} color={active ? '#FFFFFF' : PRIMARY_COLOR} />
-                  <Text style={active ? styles.filterButtonTextActive : styles.filterButtonText}>{label}</Text>
+                  onPress={() => {
+                    setTimeRange(key);
+                    AnalyticsService.logStatisticsTimeRangeChanged(key);
+                  }}
+                  style={[
+                    styles.filterButton,
+                    active && styles.filterButtonActive,
+                  ]}>
+                  <MaterialCommunityIcons
+                    name={icon}
+                    size={16}
+                    color={active ? '#FFFFFF' : PRIMARY_COLOR}
+                  />
+                  <Text
+                    style={
+                      active
+                        ? styles.filterButtonTextActive
+                        : styles.filterButtonText
+                    }>
+                    {label}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
@@ -284,11 +458,23 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
           <View style={styles.customDateSection}>
             <Text style={styles.customDateTitle}>Select Date Range</Text>
             <View style={styles.customDateContainer}>
-              <TouchableOpacity style={styles.dateInput} onPress={() => setStartDatePickerVisible(true)}>
+              <TouchableOpacity
+                style={styles.dateInput}
+                onPress={() => setStartDatePickerVisible(true)}>
                 <View style={styles.dateInputContent}>
-                  <MaterialCommunityIcons name="calendar-start" size={20} color={PRIMARY_COLOR} />
-                  <Text style={[styles.dateInputText, !customStartDate && styles.dateInputPlaceholder]}>
-                    {customStartDate ? moment(customStartDate).format('MMM DD, YYYY') : 'Start Date'}
+                  <MaterialCommunityIcons
+                    name="calendar-start"
+                    size={20}
+                    color={PRIMARY_COLOR}
+                  />
+                  <Text
+                    style={[
+                      styles.dateInputText,
+                      !customStartDate && styles.dateInputPlaceholder,
+                    ]}>
+                    {customStartDate
+                      ? moment(customStartDate).format('MMM DD, YYYY')
+                      : 'Start Date'}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -296,12 +482,27 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
                 <Text style={styles.dateSeparatorText}>to</Text>
               </View>
               <TouchableOpacity
-                style={[styles.dateInput, !customStartDate && styles.dateInputDisabled]}
-                onPress={() => customStartDate && setEndDatePickerVisible(true)}>
+                style={[
+                  styles.dateInput,
+                  !customStartDate && styles.dateInputDisabled,
+                ]}
+                onPress={() =>
+                  customStartDate && setEndDatePickerVisible(true)
+                }>
                 <View style={styles.dateInputContent}>
-                  <MaterialCommunityIcons name="calendar-end" size={20} color={customStartDate ? PRIMARY_COLOR : '#CCC'} />
-                  <Text style={[styles.dateInputText, !customEndDate && styles.dateInputPlaceholder]}>
-                    {customEndDate ? moment(customEndDate).format('MMM DD, YYYY') : 'End Date'}
+                  <MaterialCommunityIcons
+                    name="calendar-end"
+                    size={20}
+                    color={customStartDate ? PRIMARY_COLOR : '#CCC'}
+                  />
+                  <Text
+                    style={[
+                      styles.dateInputText,
+                      !customEndDate && styles.dateInputPlaceholder,
+                    ]}>
+                    {customEndDate
+                      ? moment(customEndDate).format('MMM DD, YYYY')
+                      : 'End Date'}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -309,71 +510,128 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
             {dateRangeError && (
               <Text style={styles.dateRangeErrorText}>{dateRangeError}</Text>
             )}
-            {timeRange === 'custom' && (!customStartDate || !customEndDate) && !dateRangeError && (
-              <Text style={styles.dateRangeHintText}>Select both dates to filter transactions.</Text>
-            )}
+            {timeRange === 'custom' &&
+              (!customStartDate || !customEndDate) &&
+              !dateRangeError && (
+                <Text style={styles.dateRangeHintText}>
+                  Select both dates to filter transactions.
+                </Text>
+              )}
           </View>
         )}
 
         <DatePickerModal
-          locale="en" mode="single" visible={startDatePickerVisible}
+          locale="en"
+          mode="single"
+          visible={startDatePickerVisible}
           onDismiss={() => setStartDatePickerVisible(false)}
           date={customStartDate ?? new Date()}
-          onConfirm={(params: any) => { setStartDatePickerVisible(false); setCustomStartDate(params.date); }}
-          saveLabel="Confirm" label="Select start date" uppercase={false}
+          onConfirm={(params: any) => {
+            setStartDatePickerVisible(false);
+            setCustomStartDate(params.date);
+          }}
+          saveLabel="Confirm"
+          label="Select start date"
+          uppercase={false}
           {...(Platform.OS === 'ios' && {presentationStyle: 'pageSheet'})}
         />
         <DatePickerModal
-          locale="en" mode="single" visible={endDatePickerVisible}
+          locale="en"
+          mode="single"
+          visible={endDatePickerVisible}
           onDismiss={() => setEndDatePickerVisible(false)}
           date={customEndDate ?? new Date()}
-          onConfirm={(params: any) => { setEndDatePickerVisible(false); setCustomEndDate(params.date); }}
-          saveLabel="Confirm" label="Select end date" uppercase={false}
+          onConfirm={(params: any) => {
+            setEndDatePickerVisible(false);
+            setCustomEndDate(params.date);
+          }}
+          saveLabel="Confirm"
+          label="Select end date"
+          uppercase={false}
           {...(Platform.OS === 'ios' && {presentationStyle: 'pageSheet'})}
         />
 
         {/* Summary Cards */}
         <View style={styles.cardSection}>
-          <Card style={[styles.summaryCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
+          <Card
+            style={[
+              styles.summaryCard,
+              Platform.OS === 'android' && styles.cardAndroid,
+            ]}
+            elevation={Platform.OS === 'android' ? 0 : 2}>
             <View style={styles.cardContent}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardIcon}>
-                  <MaterialCommunityIcons name="arrow-down" size={20} color={INCOME_COLOR} />
+                  <MaterialCommunityIcons
+                    name="arrow-down"
+                    size={20}
+                    color={INCOME_COLOR}
+                  />
                 </View>
                 <Text style={styles.cardTitle}>Total Income</Text>
               </View>
-              <Text style={[styles.cardAmount, {color: INCOME_COLOR}]}>{formatAmount(totalIncome)}</Text>
+              <Text style={[styles.cardAmount, {color: INCOME_COLOR}]}>
+                {formatAmount(totalIncome)}
+              </Text>
             </View>
           </Card>
-          <Card style={[styles.summaryCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
+          <Card
+            style={[
+              styles.summaryCard,
+              Platform.OS === 'android' && styles.cardAndroid,
+            ]}
+            elevation={Platform.OS === 'android' ? 0 : 2}>
             <View style={styles.cardContent}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardIcon}>
-                  <MaterialCommunityIcons name="arrow-up" size={20} color={EXPENSE_COLOR} />
+                  <MaterialCommunityIcons
+                    name="arrow-up"
+                    size={20}
+                    color={EXPENSE_COLOR}
+                  />
                 </View>
                 <Text style={styles.cardTitle}>Total Expense</Text>
               </View>
-              <Text style={[styles.cardAmount, {color: EXPENSE_COLOR}]}>{formatAmount(totalExpense)}</Text>
+              <Text style={[styles.cardAmount, {color: EXPENSE_COLOR}]}>
+                {formatAmount(totalExpense)}
+              </Text>
             </View>
           </Card>
         </View>
 
         {/* Bar Chart */}
-        <Card style={[styles.statisticCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 3}>
+        <Card
+          style={[
+            styles.statisticCard,
+            Platform.OS === 'android' && styles.cardAndroid,
+          ]}
+          elevation={Platform.OS === 'android' ? 0 : 3}>
           <View style={styles.statisticHeader}>
             <Text style={styles.statisticHeaderText}>Financial Overview</Text>
-            <Text style={styles.statisticHeaderSubText}>{getTimeRangeLabel()}</Text>
+            <Text style={styles.statisticHeaderSubText}>
+              {getTimeRangeLabel()}
+            </Text>
           </View>
           <View style={styles.chartContainer}>
             {barData.filter(item => item.value > 0).length > 0 ? (
               <>
                 <View style={styles.barLegend}>
                   <View style={styles.barLegendItem}>
-                    <View style={[styles.barLegendDot, {backgroundColor: PRIMARY_COLOR}]} />
+                    <View
+                      style={[
+                        styles.barLegendDot,
+                        {backgroundColor: PRIMARY_COLOR},
+                      ]}
+                    />
                     <Text style={styles.barLegendLabel}>Income</Text>
                   </View>
                   <View style={styles.barLegendItem}>
-                    <View style={[styles.barLegendDot, {backgroundColor: EXPENSE_COLOR}]} />
+                    <View
+                      style={[
+                        styles.barLegendDot,
+                        {backgroundColor: EXPENSE_COLOR},
+                      ]}
+                    />
                     <Text style={styles.barLegendLabel}>Expense</Text>
                   </View>
                 </View>
@@ -387,61 +645,96 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
                     xAxisThickness={0}
                     yAxisThickness={0}
                     yAxisTextStyle={{color: '#888', fontFamily: 'Lato-Regular'}}
-                    xAxisLabelTextStyle={{color: '#888', fontSize: 10, textAlign: 'center', width: 46, marginTop: 10, marginHorizontal: 2, fontFamily: 'Lato-Regular'}}
+                    xAxisLabelTextStyle={{
+                      color: '#888',
+                      fontSize: 10,
+                      textAlign: 'center',
+                      width: 46,
+                      marginTop: 10,
+                      marginHorizontal: 2,
+                      fontFamily: 'Lato-Regular',
+                    }}
                     noOfSections={3}
                     isAnimated
                     onPress={handleBarTap}
-                    yAxisLabelFormatter={(value: number) => formatAmount(value)}
                     yAxisLabelWidth={50}
                     yAxisLabelPrefix={currency.symbol}
                     width={chartWidth}
                     xAxisLabelsHeight={32}
                     rulesColor="#ECECEC"
-                    maxValue={Math.max(...barData.filter(i => i.value > 0).map(i => i.value)) * 1.1}
+                    maxValue={
+                      Math.max(
+                        ...barData.filter(i => i.value > 0).map(i => i.value),
+                      ) * 1.1
+                    }
                     initialSpacing={20}
                     endSpacing={20}
                     hideRules
                     barBorderRadius={4}
-                    showFractionalValue={false}
-                    hideDataPoints
                   />
                 </ScrollView>
                 {selectedBar && (
                   <View style={styles.selectedBarContainer}>
                     <Text style={styles.selectedBarText}>
-                      {selectedBar.frontColor === PRIMARY_COLOR ? 'Income' : 'Expense'}: {formatAmount(selectedBar.value)}
+                      {selectedBar.frontColor === PRIMARY_COLOR
+                        ? 'Income'
+                        : 'Expense'}
+                      : {formatAmount(selectedBar.value)}
                     </Text>
                   </View>
                 )}
               </>
             ) : (
               <View style={styles.emptyState}>
-                <MaterialCommunityIcons name="chart-bar" size={48} color="#CBD3EE" />
+                <MaterialCommunityIcons
+                  name="chart-bar"
+                  size={48}
+                  color="#CBD3EE"
+                />
                 <Text style={styles.emptyStateText}>No data available</Text>
-                <Text style={styles.emptyStateSubText}>No transactions found in this time period.{'\n'}Try changing the date range above.</Text>
+                <Text style={styles.emptyStateSubText}>
+                  No transactions found in this time period.{'\n'}Try changing
+                  the date range above.
+                </Text>
               </View>
             )}
           </View>
         </Card>
 
         {/* Category Pie with Income/Expense toggle in header */}
-        <Card style={[styles.statisticCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 3}>
+        <Card
+          style={[
+            styles.statisticCard,
+            Platform.OS === 'android' && styles.cardAndroid,
+          ]}
+          elevation={Platform.OS === 'android' ? 0 : 3}>
           <View style={styles.pieCardHeader}>
             <View>
               <Text style={styles.statisticHeaderText}>
-                {selectedBtn === 'Income' ? 'Income by Category' : 'Spending by Category'}
+                {selectedBtn === 'Income'
+                  ? 'Income by Category'
+                  : 'Spending by Category'}
               </Text>
               <Text style={styles.statisticHeaderSubText}>
-                {selectedBtn === 'Income' ? 'Income distribution' : 'Expenses distribution'}
+                {selectedBtn === 'Income'
+                  ? 'Income distribution'
+                  : 'Expenses distribution'}
               </Text>
             </View>
             <View style={styles.pieToggleRow}>
               {(['Income', 'Expense'] as ChartBtn[]).map(btn => (
                 <TouchableOpacity
                   key={btn}
-                  style={[styles.pieToggleBtn, selectedBtn === btn && styles.pieToggleBtnActive]}
+                  style={[
+                    styles.pieToggleBtn,
+                    selectedBtn === btn && styles.pieToggleBtnActive,
+                  ]}
                   onPress={() => setSelectedBtn(btn)}>
-                  <Text style={[styles.pieToggleBtnText, selectedBtn === btn && styles.pieToggleBtnTextActive]}>
+                  <Text
+                    style={[
+                      styles.pieToggleBtnText,
+                      selectedBtn === btn && styles.pieToggleBtnTextActive,
+                    ]}>
                     {btn}
                   </Text>
                 </TouchableOpacity>
@@ -459,21 +752,42 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
                 data={categoryPieData}
                 centerLabelComponent={() => (
                   <View style={{alignItems: 'center'}}>
-                    <Text style={{fontFamily: 'Lato-Bold', fontSize: 16, color: '#2C2C2C'}}>
-                      {formatAmount(selectedBtn === 'Income' ? totalIncome : totalExpense)}
+                    <Text
+                      style={{
+                        fontFamily: 'Lato-Bold',
+                        fontSize: 16,
+                        color: '#2C2C2C',
+                      }}>
+                      {formatAmount(
+                        selectedBtn === 'Income' ? totalIncome : totalExpense,
+                      )}
                     </Text>
-                    <Text style={{fontFamily: 'Lato-Regular', fontSize: 12, color: '#666'}}>
-                      {selectedBtn === 'Income' ? 'Total Income' : 'Total Expense'}
+                    <Text
+                      style={{
+                        fontFamily: 'Lato-Regular',
+                        fontSize: 12,
+                        color: '#666',
+                      }}>
+                      {selectedBtn === 'Income'
+                        ? 'Total Income'
+                        : 'Total Expense'}
                     </Text>
                   </View>
                 )}
               />
             ) : (
               <View style={styles.emptyState}>
-                <MaterialCommunityIcons name="chart-pie" size={48} color="#CBD3EE" />
-                <Text style={styles.emptyStateText}>No {selectedBtn.toLowerCase()} data available</Text>
+                <MaterialCommunityIcons
+                  name="chart-pie"
+                  size={48}
+                  color="#CBD3EE"
+                />
+                <Text style={styles.emptyStateText}>
+                  No {selectedBtn.toLowerCase()} data available
+                </Text>
                 <Text style={styles.emptyStateSubText}>
-                  No {selectedBtn.toLowerCase()}s found in this time period.{'\n'}Try changing the date range above.
+                  No {selectedBtn.toLowerCase()}s found in this time period.
+                  {'\n'}Try changing the date range above.
                 </Text>
               </View>
             )}
@@ -481,9 +795,15 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
               <View style={styles.legendContainer}>
                 {categoryPieData.map(item => (
                   <View key={item.label} style={styles.legendRow}>
-                    <View style={[styles.legendDot, {backgroundColor: item.color}]} />
-                    <Text style={styles.legendLabel} numberOfLines={1}>{item.label}</Text>
-                    <Text style={styles.legendValue}>{item.percent}% · {formatAmount(Math.round(item.amount))}</Text>
+                    <View
+                      style={[styles.legendDot, {backgroundColor: item.color}]}
+                    />
+                    <Text style={styles.legendLabel} numberOfLines={1}>
+                      {item.label}
+                    </Text>
+                    <Text style={styles.legendValue}>
+                      {item.percent}% · {formatAmount(Math.round(item.amount))}
+                    </Text>
                   </View>
                 ))}
               </View>
@@ -497,47 +817,85 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
             const typeKey = selectedBtn === 'Income' ? 'income' : 'expense';
             const visible = filteredTransactions
               .filter(t => t.type === typeKey)
-              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+              .sort(
+                (a, b) =>
+                  new Date(b.date).getTime() - new Date(a.date).getTime(),
+              );
             const shown = visible.slice(0, visibleCount);
             return (
               <>
-                <Text style={styles.transactionsHeaderText}>{selectedBtn} Transactions</Text>
+                <Text style={styles.transactionsHeaderText}>
+                  {selectedBtn} Transactions
+                </Text>
                 <Text style={styles.transactionsSubHeaderText}>
                   {visible.length} transaction{visible.length !== 1 ? 's' : ''}
                 </Text>
                 <View style={styles.transactionsList}>
-                  {shown.length > 0 ? shown.map(transaction => (
-                    <Card
-                      key={transaction.id}
-                      style={[styles.transactionsCard, Platform.OS === 'android' && styles.cardAndroid]}
-                      elevation={Platform.OS === 'android' ? 0 : 2}
-                      onPress={() => navigation.navigate('TransactionDetail', {transaction})}>
-                      <View style={styles.transactionsCardContent}>
-                        <View style={styles.transactionsCardDetails}>
-                          <View style={styles.transactionsCardIcon}>
-                            <MaterialCommunityIcons name={getCategoryIcon(transaction.category)} size={24} color={PRIMARY_COLOR} />
+                  {shown.length > 0 ? (
+                    shown.map(transaction => (
+                      <Card
+                        key={transaction.id}
+                        style={[
+                          styles.transactionsCard,
+                          Platform.OS === 'android' && styles.cardAndroid,
+                        ]}
+                        elevation={Platform.OS === 'android' ? 0 : 2}
+                        onPress={() =>
+                          navigation.navigate('TransactionDetail', {
+                            transaction,
+                          })
+                        }>
+                        <View style={styles.transactionsCardContent}>
+                          <View style={styles.transactionsCardDetails}>
+                            <View style={styles.transactionsCardIcon}>
+                              <MaterialCommunityIcons
+                                name={getCategoryIcon(transaction.category)}
+                                size={24}
+                                color={PRIMARY_COLOR}
+                              />
+                            </View>
+                            <View style={styles.transactionsCardInfo}>
+                              <Text
+                                style={styles.transactionsCardTitle}
+                                numberOfLines={1}
+                                ellipsizeMode="tail">
+                                {transaction.title}
+                              </Text>
+                              <Text style={styles.transactionsCardCategory}>
+                                {transaction.category}
+                              </Text>
+                              <Text style={styles.transactionsCardDate}>
+                                {formatDisplayDate(transaction.date)}
+                              </Text>
+                            </View>
                           </View>
-                          <View style={styles.transactionsCardInfo}>
-                            <Text style={styles.transactionsCardTitle} numberOfLines={1} ellipsizeMode="tail">
-                              {transaction.title}
+                          <View style={styles.transactionsCardAmount}>
+                            <Text
+                              style={
+                                transaction.type === 'income'
+                                  ? styles.amountIncome
+                                  : styles.amountExpense
+                              }>
+                              {transaction.type === 'income' ? '+ ' : '- '}
+                              {formatAmount(transaction.amount)}
                             </Text>
-                            <Text style={styles.transactionsCardCategory}>{transaction.category}</Text>
-                            <Text style={styles.transactionsCardDate}>{formatDisplayDate(transaction.date)}</Text>
                           </View>
                         </View>
-                        <View style={styles.transactionsCardAmount}>
-                          <Text style={transaction.type === 'income' ? styles.amountIncome : styles.amountExpense}>
-                            {transaction.type === 'income' ? '+ ' : '- '}{formatAmount(transaction.amount)}
-                          </Text>
-                        </View>
-                      </View>
-                    </Card>
-                  )) : (
+                      </Card>
+                    ))
+                  ) : (
                     <View style={styles.emptyState}>
-                      <MaterialCommunityIcons name="chart-line" size={48} color="#CBD3EE" />
-                      <Text style={styles.emptyStateText}>No {selectedBtn.toLowerCase()} transactions</Text>
+                      <MaterialCommunityIcons
+                        name="chart-line"
+                        size={48}
+                        color="#CBD3EE"
+                      />
+                      <Text style={styles.emptyStateText}>
+                        No {selectedBtn.toLowerCase()} transactions
+                      </Text>
                       <Text style={styles.emptyStateSubText}>
-                        No {selectedBtn.toLowerCase()} data available for the selected period.{'\n'}Try changing the date range above.
+                        No {selectedBtn.toLowerCase()} data available for the
+                        selected period.{'\n'}Try changing the date range above.
                       </Text>
                     </View>
                   )}
@@ -565,89 +923,331 @@ export default StatisticScreen;
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
   scrollContainer: {flex: 1},
-  centeredState: {justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32},
-  loadingText: {marginTop: 16, fontSize: 15, color: '#888', fontFamily: 'Lato-Regular'},
-  errorText: {marginTop: 16, fontSize: 15, color: '#666', fontFamily: 'Lato-Regular', textAlign: 'center'},
-  retryButton: {marginTop: 20, backgroundColor: PRIMARY_COLOR, borderRadius: 12, paddingHorizontal: 28, paddingVertical: 12},
+  centeredState: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 15,
+    color: '#888',
+    fontFamily: 'Lato-Regular',
+  },
+  errorText: {
+    marginTop: 16,
+    fontSize: 15,
+    color: '#666',
+    fontFamily: 'Lato-Regular',
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 20,
+    backgroundColor: PRIMARY_COLOR,
+    borderRadius: 12,
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+  },
   retryButtonText: {color: '#FFFFFF', fontFamily: 'Lato-Bold', fontSize: 15},
   headerSection: {paddingHorizontal: 20, paddingTop: 20, paddingBottom: 15},
-  headerText: {fontSize: 24, fontWeight: 'bold', color: '#2C2C2C', fontFamily: 'Kufam-SemiBoldItalic'},
-  subHeaderText: {fontSize: 16, color: '#666', marginTop: 4, fontFamily: 'Lato-Regular'},
+  headerText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    fontFamily: 'Kufam-SemiBoldItalic',
+  },
+  subHeaderText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 4,
+    fontFamily: 'Lato-Regular',
+  },
   filterSection: {marginHorizontal: 20, marginBottom: 20},
   filterScrollView: {flexGrow: 0},
   filterButton: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10,
-    borderRadius: 20, backgroundColor: '#FFFFFF', marginRight: 10, borderWidth: 1, borderColor: '#E8EBF7',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
-  filterButtonActive: {backgroundColor: PRIMARY_COLOR, borderColor: PRIMARY_COLOR},
-  filterButtonText: {fontSize: 14, fontWeight: '600', color: PRIMARY_COLOR, marginLeft: 6, fontFamily: 'Lato-Bold'},
-  filterButtonTextActive: {color: '#FFFFFF', marginLeft: 6, fontSize: 14, fontWeight: '600', fontFamily: 'Lato-Bold'},
+  filterButtonActive: {
+    backgroundColor: PRIMARY_COLOR,
+    borderColor: PRIMARY_COLOR,
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: PRIMARY_COLOR,
+    marginLeft: 6,
+    fontFamily: 'Lato-Bold',
+  },
+  filterButtonTextActive: {
+    color: '#FFFFFF',
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Lato-Bold',
+  },
   customDateSection: {
-    marginHorizontal: 20, marginBottom: 20, padding: 16,
-    backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E8EBF7',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
   },
-  customDateTitle: {fontSize: 14, fontWeight: '600', color: '#2C2C2C', marginBottom: 12, fontFamily: 'Lato-Bold'},
-  customDateContainer: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
-  dateInput: {flex: 1, backgroundColor: '#F4F6FA', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#E8EBF7'},
+  customDateTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    marginBottom: 12,
+    fontFamily: 'Lato-Bold',
+  },
+  customDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateInput: {
+    flex: 1,
+    backgroundColor: '#F4F6FA',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+  },
   dateInputDisabled: {opacity: 0.5},
   dateInputContent: {flexDirection: 'row', alignItems: 'center'},
-  dateInputText: {fontSize: 14, color: '#2C2C2C', marginLeft: 8, fontFamily: 'Lato-Regular', fontWeight: '500'},
+  dateInputText: {
+    fontSize: 14,
+    color: '#2C2C2C',
+    marginLeft: 8,
+    fontFamily: 'Lato-Regular',
+    fontWeight: '500',
+  },
   dateInputPlaceholder: {color: '#999'},
   dateSeparator: {marginHorizontal: 10},
   dateSeparatorText: {fontSize: 12, color: '#999', fontFamily: 'Lato-Regular'},
-  dateRangeErrorText: {marginTop: 10, fontSize: 13, color: EXPENSE_COLOR, fontFamily: 'Lato-Regular'},
-  dateRangeHintText: {marginTop: 10, fontSize: 13, color: '#999', fontFamily: 'Lato-Regular'},
-  cardSection: {flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: 20, marginBottom: 20},
+  dateRangeErrorText: {
+    marginTop: 10,
+    fontSize: 13,
+    color: EXPENSE_COLOR,
+    fontFamily: 'Lato-Regular',
+  },
+  dateRangeHintText: {
+    marginTop: 10,
+    fontSize: 13,
+    color: '#999',
+    fontFamily: 'Lato-Regular',
+  },
+  cardSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
   summaryCard: {width: '48%', borderRadius: 16, backgroundColor: '#FFFFFF'},
   cardContent: {padding: 16},
   cardHeader: {flexDirection: 'row', alignItems: 'center', marginBottom: 12},
-  cardIcon: {width: 32, height: 32, borderRadius: 8, backgroundColor: '#F4F6FA', alignItems: 'center', justifyContent: 'center', marginRight: 8},
-  cardTitle: {fontSize: 14, fontWeight: '500', color: '#666', fontFamily: 'Lato-Regular'},
+  cardIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#F4F6FA',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+    fontFamily: 'Lato-Regular',
+  },
   cardAmount: {fontSize: 20, fontWeight: 'bold', fontFamily: 'Lato-Bold'},
-  statisticCard: {marginHorizontal: 20, marginBottom: 20, borderRadius: 16, backgroundColor: '#FFFFFF'},
+  statisticCard: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+  },
   statisticHeader: {padding: 20, paddingBottom: 10},
-  statisticHeaderText: {fontSize: 18, fontWeight: 'bold', color: '#2C2C2C', fontFamily: 'Kufam-SemiBoldItalic'},
-  statisticHeaderSubText: {fontSize: 14, color: '#666', marginTop: 4, fontFamily: 'Lato-Regular'},
+  statisticHeaderText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    fontFamily: 'Kufam-SemiBoldItalic',
+  },
+  statisticHeaderSubText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+    fontFamily: 'Lato-Regular',
+  },
   chartContainer: {paddingHorizontal: 20, paddingBottom: 20},
   barLegend: {flexDirection: 'row', marginBottom: 12, gap: 16},
   barLegendItem: {flexDirection: 'row', alignItems: 'center'},
   barLegendDot: {width: 10, height: 10, borderRadius: 5, marginRight: 6},
   barLegendLabel: {fontSize: 13, color: '#666', fontFamily: 'Lato-Regular'},
   selectedBarContainer: {marginTop: 10, alignItems: 'center'},
-  selectedBarText: {fontSize: 14, color: '#2C2C2C', fontWeight: '600', fontFamily: 'Lato-Bold'},
-  pieCardHeader: {flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', padding: 20, paddingBottom: 10},
-  pieToggleRow: {flexDirection: 'row', borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#E8EBF7'},
-  pieToggleBtn: {paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#FFFFFF'},
+  selectedBarText: {
+    fontSize: 14,
+    color: '#2C2C2C',
+    fontWeight: '600',
+    fontFamily: 'Lato-Bold',
+  },
+  pieCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    padding: 20,
+    paddingBottom: 10,
+  },
+  pieToggleRow: {
+    flexDirection: 'row',
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+  },
+  pieToggleBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#FFFFFF',
+  },
   pieToggleBtnActive: {backgroundColor: PRIMARY_COLOR},
   pieToggleBtnText: {fontSize: 13, fontFamily: 'Lato-Bold', color: '#666'},
   pieToggleBtnTextActive: {color: '#FFFFFF'},
   transactionsSection: {marginHorizontal: 20, marginBottom: 30},
-  transactionsHeaderText: {fontSize: 20, fontWeight: 'bold', color: '#2C2C2C', fontFamily: 'Kufam-SemiBoldItalic'},
-  transactionsSubHeaderText: {fontSize: 14, color: '#666', marginTop: 2, marginBottom: 15, fontFamily: 'Lato-Regular'},
-  transactionsList: {},
-  transactionsCard: {marginVertical: 6, borderRadius: 16, backgroundColor: '#FFFFFF'},
-  transactionsCardContent: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 18},
-  transactionsCardDetails: {flexDirection: 'row', alignItems: 'center', flex: 1},
-  transactionsCardIcon: {width: 50, height: 50, borderRadius: 14, backgroundColor: '#E8EBF7', alignItems: 'center', justifyContent: 'center', marginRight: 15},
-  transactionsCardInfo: {flex: 1},
-  transactionsCardTitle: {fontSize: 16, fontWeight: '600', color: '#2C2C2C', marginBottom: 2, fontFamily: 'Lato-Bold'},
-  transactionsCardCategory: {fontSize: 12, color: PRIMARY_COLOR, fontFamily: 'Lato-Regular', marginBottom: 2},
-  transactionsCardDate: {fontSize: 13, color: '#888', fontFamily: 'Lato-Regular'},
-  transactionsCardAmount: {alignItems: 'flex-end'},
-  amountIncome: {fontSize: 16, fontWeight: 'bold', color: INCOME_COLOR, fontFamily: 'Lato-Bold'},
-  amountExpense: {fontSize: 16, fontWeight: 'bold', color: EXPENSE_COLOR, fontFamily: 'Lato-Bold'},
-  emptyState: {alignItems: 'center', paddingVertical: 40, paddingHorizontal: 20},
-  emptyStateText: {fontSize: 18, fontWeight: '600', color: '#666', marginTop: 15, fontFamily: 'Lato-Bold'},
-  emptyStateSubText: {fontSize: 14, color: '#888', textAlign: 'center', marginTop: 8, fontFamily: 'Lato-Regular'},
-  legendContainer: {width: '100%', marginTop: 16},
-  legendRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6},
-  legendDot: {width: 10, height: 10, borderRadius: 5, marginRight: 10},
-  legendLabel: {flex: 1, fontSize: 14, color: '#2C2C2C', fontFamily: 'Lato-Regular'},
-  legendValue: {fontSize: 13, color: '#666', marginLeft: 10, fontFamily: 'Lato-Regular'},
-  showMoreButton: {
-    marginTop: 12, paddingVertical: 14, borderRadius: 16, backgroundColor: '#FFFFFF',
-    borderWidth: 1, borderColor: '#E8EBF7', alignItems: 'center',
+  transactionsHeaderText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    fontFamily: 'Kufam-SemiBoldItalic',
   },
-  showMoreButtonText: {fontSize: 14, color: PRIMARY_COLOR, fontFamily: 'Lato-Bold'},
+  transactionsSubHeaderText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+    marginBottom: 15,
+    fontFamily: 'Lato-Regular',
+  },
+  transactionsList: {},
+  transactionsCard: {
+    marginVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  transactionsCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 18,
+  },
+  transactionsCardDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  transactionsCardIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: '#E8EBF7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 15,
+  },
+  transactionsCardInfo: {flex: 1},
+  transactionsCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    marginBottom: 2,
+    fontFamily: 'Lato-Bold',
+  },
+  transactionsCardCategory: {
+    fontSize: 12,
+    color: PRIMARY_COLOR,
+    fontFamily: 'Lato-Regular',
+    marginBottom: 2,
+  },
+  transactionsCardDate: {
+    fontSize: 13,
+    color: '#888',
+    fontFamily: 'Lato-Regular',
+  },
+  transactionsCardAmount: {alignItems: 'flex-end'},
+  amountIncome: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: INCOME_COLOR,
+    fontFamily: 'Lato-Bold',
+  },
+  amountExpense: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: EXPENSE_COLOR,
+    fontFamily: 'Lato-Bold',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#666',
+    marginTop: 15,
+    fontFamily: 'Lato-Bold',
+  },
+  emptyStateSubText: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+    marginTop: 8,
+    fontFamily: 'Lato-Regular',
+  },
+  legendContainer: {width: '100%', marginTop: 16},
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  legendDot: {width: 10, height: 10, borderRadius: 5, marginRight: 10},
+  legendLabel: {
+    flex: 1,
+    fontSize: 14,
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Regular',
+  },
+  legendValue: {
+    fontSize: 13,
+    color: '#666',
+    marginLeft: 10,
+    fontFamily: 'Lato-Regular',
+  },
+  showMoreButton: {
+    marginTop: 12,
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E8EBF7',
+    alignItems: 'center',
+  },
+  showMoreButtonText: {
+    fontSize: 14,
+    color: PRIMARY_COLOR,
+    fontFamily: 'Lato-Bold',
+  },
   cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
 });
