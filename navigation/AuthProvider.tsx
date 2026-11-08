@@ -1,6 +1,13 @@
 import {Alert} from 'react-native';
 import React, {createContext, useState} from 'react';
-import auth from '@react-native-firebase/auth';
+import {
+  createUserWithEmailAndPassword,
+  getAuth,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signOut as signOutOfFirebase,
+} from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {
   getCrashlytics,
@@ -118,7 +125,8 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
             return;
           }
           try {
-            const userCredential = await auth().signInWithEmailAndPassword(
+            const userCredential = await signInWithEmailAndPassword(
+              getAuth(),
               email,
               password,
             );
@@ -127,7 +135,7 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
             setAttribute(getCrashlytics(), 'auth_method', 'email');
             AnalyticsService.logLogin('email');
             if (!currentUser.emailVerified) {
-              await auth().signOut();
+              await signOutOfFirebase(getAuth());
               Alert.alert(
                 'Email Verification Required',
                 "Please verify your email address before logging in. Check your inbox (and spam folder) for the verification email we sent when you signed up.\n\nDidn't receive the email? You can request a new one from the signup screen.",
@@ -137,13 +145,13 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
                     text: 'Resend Email',
                     onPress: async () => {
                       try {
-                        const tempUser =
-                          await auth().signInWithEmailAndPassword(
-                            email,
-                            password,
-                          );
-                        await tempUser.user.sendEmailVerification();
-                        await auth().signOut();
+                        const tempUser = await signInWithEmailAndPassword(
+                          getAuth(),
+                          email,
+                          password,
+                        );
+                        await sendEmailVerification(tempUser.user);
+                        await signOutOfFirebase(getAuth());
                         Alert.alert(
                           'Verification Email Sent',
                           'A new verification email has been sent to your inbox.',
@@ -183,12 +191,13 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
             return;
           }
           try {
-            const userCredential = await auth().createUserWithEmailAndPassword(
+            const userCredential = await createUserWithEmailAndPassword(
+              getAuth(),
               email,
               password,
             );
             const newUser = userCredential.user;
-            await newUser.sendEmailVerification();
+            await sendEmailVerification(newUser);
             await firestore()
               .collection('users')
               .doc(newUser.uid)
@@ -206,7 +215,7 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
             setUserId(getCrashlytics(), newUser.uid);
             setAttribute(getCrashlytics(), 'auth_method', 'email');
             AnalyticsService.logSignUp('email', currency);
-            await auth().signOut();
+            await signOutOfFirebase(getAuth());
             Alert.alert(
               'Account Created Successfully!',
               `Welcome to TrackaExpense, ${name}!\n\nWe've sent a verification email to ${email}. Please check your inbox (and spam folder) and click the verification link before logging in.\n\nOnce verified, you can start tracking your expenses right away!`,
@@ -219,7 +228,7 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
         },
         logout: async () => {
           try {
-            await auth().signOut();
+            await signOutOfFirebase(getAuth());
             setUserId(getCrashlytics(), '');
           } catch (_) {
             Alert.alert('Error', 'Failed to log out. Please try again.', [
@@ -237,7 +246,7 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
             return;
           }
           try {
-            await auth().sendPasswordResetEmail(email);
+            await sendPasswordResetEmail(getAuth(), email);
             AnalyticsService.logPasswordResetRequested();
             Alert.alert(
               'Password Reset Email Sent',

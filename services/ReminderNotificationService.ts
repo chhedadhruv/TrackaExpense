@@ -1,5 +1,5 @@
 import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+import {getAuth} from '@react-native-firebase/auth';
 import NotificationService from './NotificationService';
 import {getConfig} from '../src/services/RemoteConfigService';
 import moment from 'moment';
@@ -72,7 +72,7 @@ class ReminderNotificationService {
       return;
     }
     try {
-      const currentUser = auth().currentUser;
+      const currentUser = getAuth().currentUser;
       if (!currentUser) {
         return;
       }
@@ -262,7 +262,7 @@ class ReminderNotificationService {
 
   async sendWeeklySummaryReminder(userEmail: string): Promise<void> {
     try {
-      const currentUser = auth().currentUser;
+      const currentUser = getAuth().currentUser;
       if (!currentUser) {
         return;
       }
@@ -357,7 +357,7 @@ class ReminderNotificationService {
 
   async sendMonthlyGoalReminder(userEmail: string): Promise<void> {
     try {
-      const currentUser = auth().currentUser;
+      const currentUser = getAuth().currentUser;
       if (!currentUser) {
         return;
       }
@@ -407,7 +407,7 @@ class ReminderNotificationService {
     userId: string,
   ): Promise<void> {
     try {
-      const currentUser = auth().currentUser;
+      const currentUser = getAuth().currentUser;
       if (!currentUser) {
         return;
       }
@@ -461,7 +461,7 @@ class ReminderNotificationService {
 
   async processRecurringSplits(): Promise<void> {
     try {
-      const currentUser = auth().currentUser;
+      const currentUser = getAuth().currentUser;
       if (!currentUser) {
         return;
       }
