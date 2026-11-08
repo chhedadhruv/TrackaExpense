@@ -13,12 +13,23 @@ import {Text, Card} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
-import crashlytics from '@react-native-firebase/crashlytics';
+import {reportError} from '../src/services/ErrorReporter';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import {useCurrency} from '../utils/CurrencyUtil';
-import {PRIMARY_COLOR, BACKGROUND_COLOR, EXPENSE_COLOR, INCOME_COLOR} from '../src/constants/theme';
+import {
+  PRIMARY_COLOR,
+  BACKGROUND_COLOR,
+  EXPENSE_COLOR,
+  INCOME_COLOR,
+} from '../src/constants/theme';
 
-const TransactionDetailScreen = ({route, navigation}: {route: any; navigation: any}) => {
+const TransactionDetailScreen = ({
+  route,
+  navigation,
+}: {
+  route: any;
+  navigation: any;
+}) => {
   const {formatAmount} = useCurrency();
   const {transaction} = route.params;
   const [loading, setLoading] = useState(false);
@@ -54,11 +65,14 @@ const TransactionDetailScreen = ({route, navigation}: {route: any; navigation: a
         const imageRef = storage().refFromURL(imageUrl);
         await imageRef.delete();
       }
-      AnalyticsService.logDeleteTransaction({type: transaction.type, category: transaction.category});
+      AnalyticsService.logDeleteTransaction({
+        type: transaction.type,
+        category: transaction.category,
+      });
       Alert.alert('Transaction deleted successfully!');
       navigation.goBack();
     } catch (e) {
-      crashlytics().recordError(e as Error);
+      reportError(e as Error);
       setError('An error occurred while deleting the transaction.');
       Alert.alert('Error', 'An error occurred while deleting the transaction.');
     } finally {
@@ -78,7 +92,8 @@ const TransactionDetailScreen = ({route, navigation}: {route: any; navigation: a
     );
   };
 
-  const accentColor = transaction.type === 'income' ? INCOME_COLOR : EXPENSE_COLOR;
+  const accentColor =
+    transaction.type === 'income' ? INCOME_COLOR : EXPENSE_COLOR;
 
   if (loading) {
     return (
@@ -95,7 +110,9 @@ const TransactionDetailScreen = ({route, navigation}: {route: any; navigation: a
         <View style={styles.headerContent}>
           <View style={styles.transactionTypeIcon}>
             <MaterialCommunityIcons
-              name={transaction.type === 'income' ? 'trending-up' : 'trending-down'}
+              name={
+                transaction.type === 'income' ? 'trending-up' : 'trending-down'
+              }
               size={24}
               color={accentColor}
             />
@@ -103,22 +120,32 @@ const TransactionDetailScreen = ({route, navigation}: {route: any; navigation: a
           <View style={styles.headerInfo}>
             <Text style={styles.headerTitle}>{transaction.title}</Text>
             <Text style={[styles.headerAmount, {color: accentColor}]}>
-              {transaction.type === 'income' ? '+ ' : '- '}{formatAmount(transaction.amount)}
+              {transaction.type === 'income' ? '+ ' : '- '}
+              {formatAmount(transaction.amount)}
             </Text>
           </View>
         </View>
       </View>
 
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}>
         <Card
-          style={[styles.detailsCard, Platform.OS === 'android' && styles.cardAndroid]}
+          style={[
+            styles.detailsCard,
+            Platform.OS === 'android' && styles.cardAndroid,
+          ]}
           elevation={Platform.OS === 'android' ? 0 : 2}>
           <View style={styles.detailsCardContent}>
             <Text style={styles.sectionTitle}>Transaction Details</Text>
 
             <View style={styles.detailRow}>
               <View style={styles.detailIconContainer}>
-                <MaterialCommunityIcons name="calendar" size={20} color={PRIMARY_COLOR} />
+                <MaterialCommunityIcons
+                  name="calendar"
+                  size={20}
+                  color={PRIMARY_COLOR}
+                />
               </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Date</Text>
@@ -128,7 +155,11 @@ const TransactionDetailScreen = ({route, navigation}: {route: any; navigation: a
 
             <View style={styles.detailRow}>
               <View style={styles.detailIconContainer}>
-                <MaterialCommunityIcons name="tag" size={20} color={PRIMARY_COLOR} />
+                <MaterialCommunityIcons
+                  name="tag"
+                  size={20}
+                  color={PRIMARY_COLOR}
+                />
               </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Category</Text>
@@ -139,16 +170,28 @@ const TransactionDetailScreen = ({route, navigation}: {route: any; navigation: a
             <View style={styles.detailRow}>
               <View style={styles.detailIconContainer}>
                 <MaterialCommunityIcons
-                  name={transaction.type === 'income' ? 'plus-circle' : 'minus-circle'}
+                  name={
+                    transaction.type === 'income'
+                      ? 'plus-circle'
+                      : 'minus-circle'
+                  }
                   size={20}
                   color={PRIMARY_COLOR}
                 />
               </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Type</Text>
-                <View style={[styles.typeTag, {backgroundColor: transaction.type === 'income' ? '#E8F5E8' : '#FFEBEE'}]}>
+                <View
+                  style={[
+                    styles.typeTag,
+                    {
+                      backgroundColor:
+                        transaction.type === 'income' ? '#E8F5E8' : '#FFEBEE',
+                    },
+                  ]}>
                   <Text style={[styles.typeText, {color: accentColor}]}>
-                    {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
+                    {transaction.type.charAt(0).toUpperCase() +
+                      transaction.type.slice(1)}
                   </Text>
                 </View>
               </View>
@@ -157,11 +200,17 @@ const TransactionDetailScreen = ({route, navigation}: {route: any; navigation: a
             {transaction.description ? (
               <View style={styles.detailRow}>
                 <View style={styles.detailIconContainer}>
-                  <MaterialCommunityIcons name="text" size={20} color={PRIMARY_COLOR} />
+                  <MaterialCommunityIcons
+                    name="text"
+                    size={20}
+                    color={PRIMARY_COLOR}
+                  />
                 </View>
                 <View style={styles.detailContent}>
                   <Text style={styles.detailLabel}>Description</Text>
-                  <Text style={styles.detailValue}>{transaction.description}</Text>
+                  <Text style={styles.detailValue}>
+                    {transaction.description}
+                  </Text>
                 </View>
               </View>
             ) : null}
@@ -170,17 +219,29 @@ const TransactionDetailScreen = ({route, navigation}: {route: any; navigation: a
 
         {transaction.imageUrl ? (
           <Card
-            style={[styles.imageCard, Platform.OS === 'android' && styles.cardAndroid]}
+            style={[
+              styles.imageCard,
+              Platform.OS === 'android' && styles.cardAndroid,
+            ]}
             elevation={Platform.OS === 'android' ? 0 : 2}>
-            <TouchableOpacity onPress={onImagePress} style={styles.imageCardContent}>
+            <TouchableOpacity
+              onPress={onImagePress}
+              style={styles.imageCardContent}>
               <View style={styles.imageContainer}>
-                <Image source={{uri: transaction.imageUrl}} style={styles.receiptImage} />
+                <Image
+                  source={{uri: transaction.imageUrl}}
+                  style={styles.receiptImage}
+                />
               </View>
               <View style={styles.imageInfo}>
                 <Text style={styles.imageTitle}>Receipt Image</Text>
                 <Text style={styles.imageSubtitle}>Tap to view full size</Text>
               </View>
-              <MaterialCommunityIcons name="chevron-right" size={24} color={PRIMARY_COLOR} />
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={24}
+                color={PRIMARY_COLOR}
+              />
             </TouchableOpacity>
           </Card>
         ) : null}
@@ -198,7 +259,11 @@ const TransactionDetailScreen = ({route, navigation}: {route: any; navigation: a
 
         {error ? (
           <View style={styles.errorContainer}>
-            <MaterialCommunityIcons name="alert-circle" size={20} color={EXPENSE_COLOR} />
+            <MaterialCommunityIcons
+              name="alert-circle"
+              size={20}
+              color={EXPENSE_COLOR}
+            />
             <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : null}
@@ -210,59 +275,157 @@ const TransactionDetailScreen = ({route, navigation}: {route: any; navigation: a
 export default TransactionDetailScreen;
 
 const styles = StyleSheet.create({
-  loadingContainer: {flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BACKGROUND_COLOR},
-  loadingText: {fontSize: 16, color: PRIMARY_COLOR, marginTop: 15, fontFamily: 'Lato-Regular'},
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: BACKGROUND_COLOR,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: PRIMARY_COLOR,
+    marginTop: 15,
+    fontFamily: 'Lato-Regular',
+  },
   container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  headerSection: {backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingVertical: 25, borderBottomWidth: 1, borderBottomColor: '#F0F0F0'},
+  headerSection: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 25,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
   headerContent: {flexDirection: 'row', alignItems: 'center'},
   transactionTypeIcon: {
-    width: 60, height: 60, borderRadius: 20, backgroundColor: '#F8F9FA',
-    alignItems: 'center', justifyContent: 'center', marginRight: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 20,
+    backgroundColor: '#F8F9FA',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 20,
   },
   headerInfo: {flex: 1},
-  headerTitle: {fontSize: 20, fontWeight: 'bold', color: '#2C2C2C', marginBottom: 6, fontFamily: 'Kufam-SemiBoldItalic'},
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    marginBottom: 6,
+    fontFamily: 'Kufam-SemiBoldItalic',
+  },
   headerAmount: {fontSize: 28, fontWeight: 'bold', fontFamily: 'Lato-Bold'},
   scrollContainer: {flex: 1},
   detailsCard: {backgroundColor: '#FFFFFF', margin: 20, borderRadius: 16},
   detailsCardContent: {padding: 25},
-  sectionTitle: {fontSize: 18, fontWeight: 'bold', color: '#2C2C2C', marginBottom: 20, fontFamily: 'Lato-Bold'},
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    marginBottom: 20,
+    fontFamily: 'Lato-Bold',
+  },
   detailRow: {flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20},
   detailIconContainer: {
-    width: 40, height: 40, borderRadius: 12, backgroundColor: '#E8EBF7',
-    alignItems: 'center', justifyContent: 'center', marginRight: 15,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#E8EBF7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 15,
   },
   detailContent: {flex: 1},
-  detailLabel: {fontSize: 14, fontWeight: '500', color: '#666', marginBottom: 6, fontFamily: 'Lato-Regular'},
-  detailValue: {fontSize: 16, fontWeight: '600', color: '#2C2C2C', fontFamily: 'Lato-Bold'},
-  typeTag: {paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, alignSelf: 'flex-start'},
+  detailLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+    marginBottom: 6,
+    fontFamily: 'Lato-Regular',
+  },
+  detailValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    fontFamily: 'Lato-Bold',
+  },
+  typeTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
   typeText: {fontSize: 14, fontWeight: '600', fontFamily: 'Lato-Bold'},
   imageCard: {margin: 20, borderRadius: 16},
   imageCardContent: {flexDirection: 'row', alignItems: 'center', padding: 20},
   imageContainer: {marginRight: 15},
   receiptImage: {width: 60, height: 60, borderRadius: 12},
   imageInfo: {flex: 1},
-  imageTitle: {fontSize: 16, fontWeight: '600', color: '#2C2C2C', marginBottom: 4, fontFamily: 'Lato-Bold'},
+  imageTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    marginBottom: 4,
+    fontFamily: 'Lato-Bold',
+  },
   imageSubtitle: {fontSize: 14, color: '#666', fontFamily: 'Lato-Regular'},
   actionSection: {paddingHorizontal: 20, paddingBottom: 30, gap: 15},
   editButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: PRIMARY_COLOR, paddingVertical: 16, borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: PRIMARY_COLOR,
+    paddingVertical: 16,
+    borderRadius: 12,
     elevation: Platform.OS === 'android' ? 0 : 4,
-    shadowColor: PRIMARY_COLOR, shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.2, shadowRadius: 4,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
-  editButtonText: {fontSize: 16, fontWeight: '600', color: '#FFFFFF', marginLeft: 8, fontFamily: 'Lato-Bold'},
+  editButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginLeft: 8,
+    fontFamily: 'Lato-Bold',
+  },
   deleteButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: EXPENSE_COLOR, paddingVertical: 16, borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: EXPENSE_COLOR,
+    paddingVertical: 16,
+    borderRadius: 12,
     elevation: Platform.OS === 'android' ? 0 : 4,
-    shadowColor: EXPENSE_COLOR, shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.2, shadowRadius: 4,
+    shadowColor: EXPENSE_COLOR,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
-  deleteButtonText: {fontSize: 16, fontWeight: '600', color: '#FFFFFF', marginLeft: 8, fontFamily: 'Lato-Bold'},
+  deleteButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginLeft: 8,
+    fontFamily: 'Lato-Bold',
+  },
   errorContainer: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFEBEE',
-    padding: 15, marginHorizontal: 20, marginBottom: 20, borderRadius: 12,
-    borderLeftWidth: 4, borderLeftColor: EXPENSE_COLOR,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFEBEE',
+    padding: 15,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: EXPENSE_COLOR,
   },
-  errorText: {fontSize: 14, color: EXPENSE_COLOR, marginLeft: 10, flex: 1, fontFamily: 'Lato-Regular'},
+  errorText: {
+    fontSize: 14,
+    color: EXPENSE_COLOR,
+    marginLeft: 10,
+    flex: 1,
+    fontFamily: 'Lato-Regular',
+  },
   cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
 });

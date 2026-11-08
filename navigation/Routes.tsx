@@ -11,6 +11,9 @@ import auth from '@react-native-firebase/auth';
 import messaging from '@react-native-firebase/messaging';
 import analytics from '@react-native-firebase/analytics';
 import type {FirebaseAuthTypes} from '@react-native-firebase/auth';
+import {setErrorReportingUser} from '../src/services/ErrorReporter';
+import {identifyUser, resetMixpanel} from '../src/services/MixpanelService';
+import {loginPush, logoutPush} from '../src/services/PushService';
 
 export const navigationRef = React.createRef<NavigationContainerRef<any>>();
 
@@ -79,6 +82,17 @@ const Routes = () => {
   const [initializing, setInitializing] = useState(true);
 
   const onAuthStateChanged = (firebaseUser: FirebaseAuthTypes.User | null) => {
+    // Identity for error reporting, analytics and push: uid only, never email or name.
+    // Unverified email accounts are signed out again by the login flow, so skip them.
+    if (firebaseUser && firebaseUser.emailVerified) {
+      setErrorReportingUser(firebaseUser.uid);
+      identifyUser(firebaseUser.uid);
+      loginPush(firebaseUser.uid);
+    } else if (!firebaseUser) {
+      setErrorReportingUser(null);
+      resetMixpanel();
+      logoutPush();
+    }
     setUser(firebaseUser);
     if (initializing) {
       setInitializing(false);
