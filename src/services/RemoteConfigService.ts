@@ -1,4 +1,10 @@
-import remoteConfig from '@react-native-firebase/remote-config';
+import {
+  fetchAndActivate,
+  getRemoteConfig,
+  getValue,
+  setConfigSettings,
+  setDefaults,
+} from '@react-native-firebase/remote-config';
 
 export interface RemoteConfigDefaults {
   max_transactions_displayed: number;
@@ -28,46 +34,50 @@ const DEFAULTS: RemoteConfigDefaults = {
 
 export async function initRemoteConfig(): Promise<void> {
   try {
-    await remoteConfig().setDefaults(
+    const remoteConfig = getRemoteConfig();
+    await setDefaults(
+      remoteConfig,
       DEFAULTS as unknown as Record<string, string | number | boolean>,
     );
-    await remoteConfig().setConfigSettings({
+    await setConfigSettings(remoteConfig, {
       minimumFetchIntervalMillis: __DEV__ ? 0 : 3600000,
     });
-    await remoteConfig().fetchAndActivate();
+    await fetchAndActivate(remoteConfig);
   } catch (_) {
     // Remote Config failure must never crash the app — defaults are always available
   }
 }
 
 export function getConfig(): RemoteConfigDefaults {
-  const cfg = remoteConfig();
+  const cfg = getRemoteConfig();
   try {
     return {
       max_transactions_displayed:
-        cfg.getValue('max_transactions_displayed').asNumber() ||
+        getValue(cfg, 'max_transactions_displayed').asNumber() ||
         DEFAULTS.max_transactions_displayed,
-      enable_fun_notifications: cfg
-        .getValue('enable_fun_notifications')
-        .asBoolean(),
-      enable_reminder_notifications: cfg
-        .getValue('enable_reminder_notifications')
-        .asBoolean(),
+      enable_fun_notifications: getValue(
+        cfg,
+        'enable_fun_notifications',
+      ).asBoolean(),
+      enable_reminder_notifications: getValue(
+        cfg,
+        'enable_reminder_notifications',
+      ).asBoolean(),
       stats_default_time_range:
-        cfg.getValue('stats_default_time_range').asString() ||
+        getValue(cfg, 'stats_default_time_range').asString() ||
         DEFAULTS.stats_default_time_range,
       image_upload_max_size_mb:
-        cfg.getValue('image_upload_max_size_mb').asNumber() ||
+        getValue(cfg, 'image_upload_max_size_mb').asNumber() ||
         DEFAULTS.image_upload_max_size_mb,
-      enable_iou_feature: cfg.getValue('enable_iou_feature').asBoolean(),
+      enable_iou_feature: getValue(cfg, 'enable_iou_feature').asBoolean(),
       onboarding_version:
-        cfg.getValue('onboarding_version').asNumber() ||
+        getValue(cfg, 'onboarding_version').asNumber() ||
         DEFAULTS.onboarding_version,
       min_supported_version:
-        cfg.getValue('min_supported_version').asString() ||
+        getValue(cfg, 'min_supported_version').asString() ||
         DEFAULTS.min_supported_version,
       update_message:
-        cfg.getValue('update_message').asString() || DEFAULTS.update_message,
+        getValue(cfg, 'update_message').asString() || DEFAULTS.update_message,
     };
   } catch (_) {
     return DEFAULTS;

@@ -1,7 +1,7 @@
 import {useState, useEffect, useRef, useCallback} from 'react';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
-import crashlytics from '@react-native-firebase/crashlytics';
+import {getCrashlytics, setAttribute} from '@react-native-firebase/crashlytics';
 import {reportError} from '../services/ErrorReporter';
 import * as AnalyticsService from '../services/AnalyticsService';
 import {setPushCurrency} from '../services/PushService';
@@ -53,7 +53,7 @@ export function useUserData(): UseUserDataReturn {
       if (doc.exists) {
         const data = doc.data() as UserDocument;
         setUserData(data);
-        crashlytics().setAttribute('currency', data.currency ?? 'INR');
+        setAttribute(getCrashlytics(), 'currency', data.currency ?? 'INR');
         AnalyticsService.setUserProperties({currency: data.currency ?? 'INR'});
         setPushCurrency(data.currency ?? 'INR');
         setError(null);
