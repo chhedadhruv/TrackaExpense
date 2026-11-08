@@ -23,6 +23,9 @@ import {
   increment,
   arrayUnion,
   arrayRemove,
+  deleteField,
+  runTransaction,
+  writeBatch,
 } from 'firebase/firestore';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
@@ -242,6 +245,90 @@ describe('firestore: other collections', () => {
     await assertFails(getDoc(doc(dbOf(ALICE), 'mail/m1')));
     await assertFails(addDoc(collection(dbOf(ALICE), 'mail'), {to: 'x@example.com'}));
     await assertFails(setDoc(doc(dbOf(ALICE), 'anything/else'), {a: 1}));
+  });
+});
+
+// Replays of the multi-step flows in the screens, in the same order as the app code.
+describe('flows replayed from the app', () => {
+  it('accept invitation: transaction on the group, then update the invitation', async () => {
+    const db = dbOf(BOB);
+    const groupRef = doc(db, 'groups/g1');
+    await assertSucceeds(
+      runTransaction(db, async tx => {
+        const snap = await tx.get(groupRef);
+        const g = snap.data();
+        const members = [...g.members, BOB.email];
+        const pendingInvites = g.pendingInvites.filter(e => e !== BOB.email);
+        tx.update(groupRef, {
+          members,
+          memberNames: {...g.memberNames, [BOB.email]: 'Bob'},
+          pendingInvites,
+          updatedAt: new Date(),
+        });
+      }),
+    );
+    await assertSucceeds(updateDoc(doc(db, 'invitations/i1'), {status: 'accepted', respondedAt: new Date()}));
+    // now a member: can read splits
+    await assertSucceeds(getDocs(collection(db, 'groups/g1/splits')));
+  });
+
+  it('create split as payer: split doc, history, own transaction and own balance', async () => {
+    const db = dbOf(ALICE);
+    await assertSucceeds(addDoc(collection(db, 'groups/g1/splits'), {title: 'Taxi', amount: 30, createdAt: new Date()}));
+    await assertSucceeds(addDoc(collection(db, 'groups/g1/splits/s1/history'), {action: 'edit'}));
+    await assertSucceeds(addDoc(collection(db, 'users/alice/transactions'), {title: 'Taxi', source: 'split'}));
+    await assertSucceeds(updateDoc(doc(db, 'users/alice'), {balance: increment(-30)}));
+    await assertSucceeds(addDoc(collection(db, 'users/alice/splitHistory'), {type: 'create'}));
+  });
+
+  it('settle up: settlement, split, history and both balances', async () => {
+    const db = dbOf(ALICE);
+    await assertSucceeds(addDoc(collection(db, 'groups/g1/settlements'), {amount: 10}));
+    await assertSucceeds(addDoc(collection(db, 'groups/g1/splits'), {isSettlement: true, amount: 10}));
+    await assertSucceeds(addDoc(collection(db, 'groups/g1/splitHistory'), {action: 'settle'}));
+    await assertSucceeds(updateDoc(doc(db, 'users/alice'), {balance: increment(-10)}));
+    await assertSucceeds(updateDoc(doc(db, 'users/bob'), {balance: increment(10)}));
+  });
+
+  it('delete group: splits first, then the group', async () => {
+    const db = dbOf(ALICE);
+    const snap = await getDocs(collection(db, 'groups/g1/splits'));
+    const batch = writeBatch(db);
+    snap.forEach(d => batch.delete(d.ref));
+    await assertSucceeds(batch.commit());
+    await assertSucceeds(deleteDoc(doc(db, 'groups/g1')));
+  });
+
+  it('leave group: member removes own email and name', async () => {
+    await assertSucceeds(
+      updateDoc(doc(dbOf(ALICE), 'groups/g1'), {
+        members: arrayRemove(ALICE.email),
+        [`memberNames.${ALICE.email}`]: deleteField(),
+      }),
+    );
+  });
+
+  it('signup: user document is created by the new user', async () => {
+    const db = dbOf(CAROL);
+    await assertSucceeds(
+      setDoc(doc(db, 'users/carol'), {
+        name: 'Carol',
+        email: CAROL.email,
+        phone: '3',
+        currency: 'INR',
+        balance: 0,
+        userImg: null,
+        createdAt: new Date(),
+        verified: false,
+      }),
+    );
+  });
+
+  it('send a contact message and re-invite a declined member', async () => {
+    await assertSucceeds(
+      addDoc(collection(dbOf(ALICE), 'contact_messages'), {userId: 'alice', category: 'bug', messageText: 'x'}),
+    );
+    await assertSucceeds(updateDoc(doc(dbOf(ALICE), 'invitations/i1'), {status: 'pending', createdAt: new Date()}));
   });
 });
 
