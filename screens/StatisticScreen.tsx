@@ -134,10 +134,10 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
     }
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useFocusEffect(
     useCallback(() => {
       fetchTransactions();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
 
