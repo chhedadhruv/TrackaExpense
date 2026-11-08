@@ -30,8 +30,8 @@ import type {FirebaseFirestoreTypes} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {useFocusEffect} from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import UserAvatar from 'react-native-user-avatar';
-import DropDownPicker from 'react-native-dropdown-picker';
+import UserAvatar from '../../src/components/Avatar';
+import SelectModal from '../../src/components/SelectModal';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import SplitNotificationService from '../../services/SplitNotificationService';
@@ -176,7 +176,6 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [category, setCategory] = useState<string | null>(null);
-  const [openCategoryDropdown, setOpenCategoryDropdown] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -834,20 +833,12 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                   </View>
                   <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Category</Text>
-                    <DropDownPicker
-                      open={openCategoryDropdown}
+                    <SelectModal
                       value={category}
-                      items={GROUP_CATEGORIES}
-                      setOpen={setOpenCategoryDropdown}
-                      setValue={setCategory}
+                      options={GROUP_CATEGORIES}
+                      onChange={setCategory}
                       placeholder="Select Group Category"
-                      style={styles.dropdown}
-                      dropDownContainerStyle={styles.dropdownContainer}
-                      searchable={true}
                       searchPlaceholder="Search categories..."
-                      listMode="MODAL"
-                      modalTitle="Select Group Category"
-                      modalAnimationType="slide"
                     />
                   </View>
                   <View style={styles.inputContainer}>
@@ -1101,19 +1092,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#2C2C2C',
     fontFamily: 'Lato-Regular',
-  },
-  dropdown: {
-    borderColor: PRIMARY_COLOR,
-    borderWidth: 1,
-    marginVertical: 10,
-    borderRadius: 10,
-    zIndex: 1000,
-  },
-  dropdownContainer: {
-    borderColor: PRIMARY_COLOR,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    zIndex: 1000,
   },
   userCard: {
     flexDirection: 'row',
