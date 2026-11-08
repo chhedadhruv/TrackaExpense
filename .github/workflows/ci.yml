@@ -68,5 +68,12 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      # Installed globally on purpose: as an app dependency it changes which node-fetch version
+      # is hoisted and breaks the React Native bundle (react-native-user-avatar needs node-fetch 2).
+      - name: Install Firebase CLI
+        run: |
+          yarn global add firebase-tools@15
+          echo "$(yarn global bin)" >> "$GITHUB_PATH"
+
       - name: Rules tests (emulator, no live project)
         run: yarn test:rules
