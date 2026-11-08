@@ -30,4 +30,7 @@ declare module '@env' {
   export const IOS_APP_STORE_ID: string;
   export const REVOPUSH_IOS_DEPLOYMENT_KEY: string;
   export const REVOPUSH_ANDROID_DEPLOYMENT_KEY: string;
+  export const SENTRY_DSN: string;
+  export const MIXPANEL_TOKEN: string;
+  export const ONESIGNAL_APP_ID: string;
 }

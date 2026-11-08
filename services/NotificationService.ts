@@ -1,11 +1,14 @@
 import messaging from '@react-native-firebase/messaging';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
-import crashlytics from '@react-native-firebase/crashlytics';
+import {reportError} from '../src/services/ErrorReporter';
 import notifee, {AndroidImportance, EventType} from '@notifee/react-native';
 import {Platform, PermissionsAndroid} from 'react-native';
 import * as RootNavigation from '../navigation/Routes';
-import {NOTIFICATION_SERVER_URL, EXPO_PUBLIC_NOTIFICATION_SERVER_URL} from '@env';
+import {
+  NOTIFICATION_SERVER_URL,
+  EXPO_PUBLIC_NOTIFICATION_SERVER_URL,
+} from '@env';
 
 interface NotificationData {
   type?: string;
@@ -28,13 +31,19 @@ interface NotificationPayload {
 notifee.onBackgroundEvent(async ({type, detail}) => {
   if (type === EventType.PRESS && detail.notification?.data) {
     setTimeout(() => {
-      handleNotificationNavigation(detail.notification?.data as NotificationData);
+      handleNotificationNavigation(
+        detail.notification?.data as NotificationData,
+      );
     }, 1000);
   }
 });
 
-function handleNotificationNavigation(data: NotificationData | undefined): void {
-  if (!data) return;
+function handleNotificationNavigation(
+  data: NotificationData | undefined,
+): void {
+  if (!data) {
+    return;
+  }
   try {
     switch (data.type) {
       case 'split_invite':
@@ -48,7 +57,9 @@ function handleNotificationNavigation(data: NotificationData | undefined): void 
         if (data.groupId) {
           RootNavigation.navigate('Split', {
             screen: 'SplitGroupDetail',
-            params: {group: {id: data.groupId, name: data.groupName || 'Split Group'}},
+            params: {
+              group: {id: data.groupId, name: data.groupName || 'Split Group'},
+            },
           });
         }
         break;
@@ -58,7 +69,9 @@ function handleNotificationNavigation(data: NotificationData | undefined): void 
         if (data.groupId) {
           RootNavigation.navigate('Split', {
             screen: 'SplitGroupDetail',
-            params: {group: {id: data.groupId, name: data.groupName || 'Split Group'}},
+            params: {
+              group: {id: data.groupId, name: data.groupName || 'Split Group'},
+            },
           });
         }
         break;
@@ -91,7 +104,7 @@ function handleNotificationNavigation(data: NotificationData | undefined): void 
         break;
     }
   } catch (error) {
-    crashlytics().recordError(error as Error);
+    reportError(error as Error);
     console.error('Failed to handle notification navigation:', error);
   }
 }
@@ -118,7 +131,7 @@ class NotificationService {
       await this.saveTokenToFirestore();
       this.isInitialized = true;
     } catch (error) {
-      crashlytics().recordError(error as Error);
+      reportError(error as Error);
       console.error('Failed to initialize NotificationService:', error);
     }
   }
@@ -148,7 +161,9 @@ class NotificationService {
     const enabled =
       authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
       authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-    if (!enabled) throw new Error('Notification permission not granted');
+    if (!enabled) {
+      throw new Error('Notification permission not granted');
+    }
   }
 
   async getFCMToken(): Promise<string | null> {
@@ -156,14 +171,16 @@ class NotificationService {
       this.fcmToken = await messaging().getToken();
       return this.fcmToken;
     } catch (error) {
-      crashlytics().recordError(error as Error);
+      reportError(error as Error);
       console.error('Failed to get FCM token:', error);
       throw error;
     }
   }
 
   async saveTokenToFirestore(): Promise<void> {
-    if (!this.fcmToken || !auth().currentUser) return;
+    if (!this.fcmToken || !auth().currentUser) {
+      return;
+    }
     try {
       await firestore()
         .collection('users')
@@ -173,7 +190,7 @@ class NotificationService {
           lastTokenUpdate: firestore.FieldValue.serverTimestamp(),
         });
     } catch (error) {
-      crashlytics().recordError(error as Error);
+      reportError(error as Error);
       console.error('Failed to save FCM token:', error);
     }
   }
@@ -187,7 +204,9 @@ class NotificationService {
   setupNotifeeEventHandlers(): void {
     notifee.onForegroundEvent(({type, detail}) => {
       if (type === EventType.PRESS) {
-        this.handleNotificationTap(detail.notification?.data as NotificationData);
+        this.handleNotificationTap(
+          detail.notification?.data as NotificationData,
+        );
       }
     });
   }
@@ -238,9 +257,15 @@ class NotificationService {
     notificationData: NotificationPayload,
   ): Promise<void> {
     try {
-      const notificationKey = `${notificationData.type}_${notificationData.data?.splitId || notificationData.data?.groupId}_${userEmails.sort().join(',')}`;
-      if (this.sentNotifications.has(notificationKey)) return;
-      if (this.sendingInProgress.has(notificationKey)) return;
+      const notificationKey = `${notificationData.type}_${
+        notificationData.data?.splitId || notificationData.data?.groupId
+      }_${userEmails.sort().join(',')}`;
+      if (this.sentNotifications.has(notificationKey)) {
+        return;
+      }
+      if (this.sendingInProgress.has(notificationKey)) {
+        return;
+      }
 
       this.sendingInProgress.add(notificationKey);
       this.sentNotifications.add(notificationKey);
@@ -256,7 +281,10 @@ class NotificationService {
 
       const tokens: string[] = [];
       const seenTokens = new Set<string>();
-      const userTokens = new Map<string, {token: string; lastTokenUpdate: number}>();
+      const userTokens = new Map<
+        string,
+        {token: string; lastTokenUpdate: number}
+      >();
 
       usersSnapshot.forEach(doc => {
         const userData = doc.data();
@@ -264,7 +292,8 @@ class NotificationService {
           const userEmail = userData.email as string;
           if (
             !userTokens.has(userEmail) ||
-            userData.lastTokenUpdate > userTokens.get(userEmail)!.lastTokenUpdate
+            userData.lastTokenUpdate >
+              userTokens.get(userEmail)!.lastTokenUpdate
           ) {
             userTokens.set(userEmail, {
               token: userData.fcmToken,
@@ -276,7 +305,9 @@ class NotificationService {
       });
       userTokens.forEach(({token}) => tokens.push(token));
 
-      if (tokens.length === 0) return;
+      if (tokens.length === 0) {
+        return;
+      }
 
       const sent = await this.trySendPushViaBackend(tokens, notificationData);
       if (!sent) {
@@ -293,19 +324,30 @@ class NotificationService {
     notificationData: NotificationPayload,
   ): Promise<boolean> {
     try {
-      const endpoint = NOTIFICATION_SERVER_URL || EXPO_PUBLIC_NOTIFICATION_SERVER_URL || '';
-      if (!endpoint) return false;
+      const endpoint =
+        NOTIFICATION_SERVER_URL || EXPO_PUBLIC_NOTIFICATION_SERVER_URL || '';
+      if (!endpoint) {
+        return false;
+      }
       const payload = {
         tokens,
-        notification: {title: notificationData.title || 'Notification', body: notificationData.body || ''},
+        notification: {
+          title: notificationData.title || 'Notification',
+          body: notificationData.body || '',
+        },
         data: notificationData.data || {},
       };
-      const res = await fetch(`${endpoint.replace(/\/$/, '')}/send-notification`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) return false;
+      const res = await fetch(
+        `${endpoint.replace(/\/$/, '')}/send-notification`,
+        {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload),
+        },
+      );
+      if (!res.ok) {
+        return false;
+      }
       await res.json();
       return true;
     } catch (_) {
@@ -353,7 +395,10 @@ class NotificationService {
     }
   }
 
-  async markNotificationAsRead(notificationId: string, userEmail: string): Promise<void> {
+  async markNotificationAsRead(
+    notificationId: string,
+    userEmail: string,
+  ): Promise<void> {
     try {
       await firestore()
         .collection('users')
