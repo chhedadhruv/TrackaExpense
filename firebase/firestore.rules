@@ -1,0 +1,109 @@
+rules_version = '2';
+
+// Stage 1 rules: require sign-in everywhere and restrict each collection to the
+// access patterns the current app uses. Known interim compromises are marked INTERIM.
+// The notification server uses the Admin SDK and is not affected by these rules.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function myEmail() {
+      return request.auth.token.email;
+    }
+
+    // Written as a plain "in" so list queries with array-contains can be proven safe.
+    function inList(values) {
+      return myEmail() in values;
+    }
+
+    // Settle-up lets one user change only the balance of another user.
+    function balanceOnlyChange() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['balance'])
+        && request.resource.data.balance is number;
+    }
+
+    function groupMembers(groupId) {
+      return get(/databases/$(database)/documents/groups/$(groupId)).data.members;
+    }
+
+    function isGroupMember(groupId) {
+      return signedIn() && inList(groupMembers(groupId));
+    }
+
+    // INTERIM: any signed-in user can read user profiles, because the app looks users up
+    // by email and phone and reads other users' push tokens. Tighten in a later stage.
+    match /users/{userId} {
+      allow read: if signedIn();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || (signedIn() && balanceOnlyChange());
+      allow delete: if isOwner(userId);
+
+      match /{subcollection}/{docId=**} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    match /groups/{groupId} {
+      allow read: if signedIn() && (
+        inList(resource.data.members)
+        || inList(resource.data.get('pendingInvites', []))
+        || resource.data.get('createdBy', '') == request.auth.uid
+      );
+      allow create: if signedIn() && request.resource.data.createdBy == request.auth.uid;
+      // Members update the group; invitees update it to accept or decline.
+      allow update: if signedIn() && (
+        inList(resource.data.members)
+        || inList(resource.data.get('pendingInvites', []))
+        || resource.data.get('createdBy', '') == request.auth.uid
+      );
+      allow delete: if signedIn() && (
+        inList(resource.data.members)
+        || resource.data.get('createdBy', '') == request.auth.uid
+      );
+
+      // splits, splitHistory, settlements and their nested history
+      match /{subcollection}/{docId=**} {
+        allow read, write: if isGroupMember(groupId);
+      }
+    }
+
+    // INTERIM: reads are open to signed-in users because the app checks existing
+    // invitations by group and email.
+    match /invitations/{invitationId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.inviterUid == request.auth.uid;
+      allow update: if signedIn() && (
+        resource.data.email == myEmail()
+        || resource.data.inviterUid == request.auth.uid
+        || isGroupMember(resource.data.groupId)
+      );
+      allow delete: if signedIn() && resource.data.inviterUid == request.auth.uid;
+    }
+
+    match /ious/{iouId} {
+      allow read, update, delete: if signedIn() && (
+        resource.data.fromEmail == myEmail() || resource.data.toEmail == myEmail()
+      );
+      allow create: if signedIn() && (
+        request.resource.data.fromEmail == myEmail() || request.resource.data.toEmail == myEmail()
+      );
+    }
+
+    match /contact_messages/{messageId} {
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // mail, notifications, reminderLogs, settlements and every other path:
+    // no client access (the server uses the Admin SDK).
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

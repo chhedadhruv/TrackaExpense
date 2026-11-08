@@ -90,3 +90,6 @@ DEPLOYMENT_GUIDE.md
 
 # Notification environment variables
 NOTIFICATION_ENV.md
+
+# Firebase emulator logs
+*-debug.log
