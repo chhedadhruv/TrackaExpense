@@ -12,6 +12,7 @@ import {initMixpanel} from './src/services/MixpanelService';
 import {initPush} from './src/services/PushService';
 import Providers from './navigation';
 import NotificationService from './services/NotificationService';
+import {handleNotificationNavigation} from './services/NotificationNavigation';
 import UpdateService from './services/UpdateService';
 import ErrorBoundary from './components/ErrorBoundary';
 import * as Application from 'expo-application';
@@ -30,7 +31,7 @@ const App: React.FC = () => {
   useEffect(() => {
     // Analytics and push start here. Neither asks for any permission on start.
     initMixpanel();
-    initPush();
+    initPush(handleNotificationNavigation);
 
     // Initialize notification service
     (async () => {

@@ -57,7 +57,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
     try {
       setLoading(true);
       const snap = await getDoc(fsDoc(getFirestore(), 'users', user.uid));
-      if (snap.exists) {
+      if (snap.exists()) {
         setUserData(snap.data() as UserDocument);
         setLoading(false);
       } else {

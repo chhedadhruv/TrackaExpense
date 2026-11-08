@@ -21,7 +21,7 @@ import {
 import {
   deleteObject,
   getStorage,
-  refFromURL,
+  ref as createStorageRef,
 } from '@react-native-firebase/storage';
 import {reportError} from '../src/services/ErrorReporter';
 import * as AnalyticsService from '../src/services/AnalyticsService';
@@ -66,7 +66,7 @@ const TransactionDetailScreen = ({
         balance: increment(balanceIncrement),
       });
       if (imageUrl) {
-        const imageRef = refFromURL(getStorage(), imageUrl);
+        const imageRef = createStorageRef(getStorage(), imageUrl);
         await deleteObject(imageRef);
       }
       AnalyticsService.logDeleteTransaction({

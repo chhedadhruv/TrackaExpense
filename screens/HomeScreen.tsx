@@ -111,7 +111,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
     const unsub = onSnapshot(
       fsDoc(getFirestore(), 'users', uid),
       doc => {
-        if (doc.exists) {
+        if (doc.exists()) {
           const data = doc.data() as UserDocument;
           setUserData(data);
           setError(null);

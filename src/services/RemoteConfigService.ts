@@ -2,8 +2,6 @@ import {
   fetchAndActivate,
   getRemoteConfig,
   getValue,
-  setConfigSettings,
-  setDefaults,
 } from '@react-native-firebase/remote-config';
 
 export interface RemoteConfigDefaults {
@@ -35,13 +33,14 @@ const DEFAULTS: RemoteConfigDefaults = {
 export async function initRemoteConfig(): Promise<void> {
   try {
     const remoteConfig = getRemoteConfig();
-    await setDefaults(
-      remoteConfig,
-      DEFAULTS as unknown as Record<string, string | number | boolean>,
-    );
-    await setConfigSettings(remoteConfig, {
+    remoteConfig.defaultConfig = DEFAULTS as unknown as Record<
+      string,
+      string | number | boolean
+    >;
+    remoteConfig.settings = {
       minimumFetchIntervalMillis: __DEV__ ? 0 : 3600000,
-    });
+      fetchTimeoutMillis: 60000,
+    };
     await fetchAndActivate(remoteConfig);
   } catch (_) {
     // Remote Config failure must never crash the app — defaults are always available

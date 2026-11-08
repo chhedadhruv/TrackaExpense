@@ -2,7 +2,6 @@ import {
   AuthorizationStatus,
   getMessaging,
   getToken,
-  onMessage,
   requestPermission,
 } from '@react-native-firebase/messaging';
 import {
@@ -20,22 +19,12 @@ import {
 } from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../src/services/ErrorReporter';
-import notifee, {AndroidImportance, EventType} from '@notifee/react-native';
 import {Platform, PermissionsAndroid} from 'react-native';
-import * as RootNavigation from '../navigation/Routes';
 import {
   NOTIFICATION_SERVER_URL,
   EXPO_PUBLIC_NOTIFICATION_SERVER_URL,
 } from '@env';
-
-interface NotificationData {
-  type?: string;
-  action?: string;
-  groupId?: string;
-  groupName?: string;
-  splitId?: string;
-  [key: string]: unknown;
-}
+import type {NotificationData} from './NotificationNavigation';
 
 interface NotificationPayload {
   type: string;
@@ -44,87 +33,6 @@ interface NotificationPayload {
   data: NotificationData;
   icon?: string;
   priority?: string;
-}
-
-notifee.onBackgroundEvent(async ({type, detail}) => {
-  if (type === EventType.PRESS && detail.notification?.data) {
-    setTimeout(() => {
-      handleNotificationNavigation(
-        detail.notification?.data as NotificationData,
-      );
-    }, 1000);
-  }
-});
-
-function handleNotificationNavigation(
-  data: NotificationData | undefined,
-): void {
-  if (!data) {
-    return;
-  }
-  try {
-    switch (data.type) {
-      case 'split_invite':
-      case 'group_created':
-        RootNavigation.navigate('Split', {screen: 'Invitations'});
-        break;
-      case 'split_created':
-      case 'split_updated':
-      case 'split_deleted':
-      case 'settlement_made':
-        if (data.groupId) {
-          RootNavigation.navigate('Split', {
-            screen: 'SplitGroupDetail',
-            params: {
-              group: {id: data.groupId, name: data.groupName || 'Split Group'},
-            },
-          });
-        }
-        break;
-      case 'user_joined_group':
-      case 'user_left_group':
-      case 'group_updated':
-        if (data.groupId) {
-          RootNavigation.navigate('Split', {
-            screen: 'SplitGroupDetail',
-            params: {
-              group: {id: data.groupId, name: data.groupName || 'Split Group'},
-            },
-          });
-        }
-        break;
-      case 'group_deleted':
-        RootNavigation.navigate('Split', {screen: 'Split'});
-        break;
-      case 'settlement_reminder':
-        RootNavigation.navigate('Split', {screen: 'FriendsBalance'});
-        break;
-      case 'reminder':
-        if (data.action === 'add_income') {
-          RootNavigation.navigate('Home', {screen: 'AddIncome'});
-        } else if (data.action === 'add_expense') {
-          RootNavigation.navigate('Home', {screen: 'AddExpense'});
-        } else if (data.action === 'add_savings') {
-          RootNavigation.navigate('Savings', {screen: 'Savings'});
-        } else {
-          RootNavigation.navigate('Home', {screen: 'Home'});
-        }
-        break;
-      case 'achievement':
-        RootNavigation.navigate('Statistic', {screen: 'Statistic'});
-        break;
-      case 'weekly_summary':
-      case 'monthly_goal':
-        RootNavigation.navigate('Statistic', {screen: 'Statistic'});
-        break;
-      default:
-        RootNavigation.navigate('Home', {screen: 'Home'});
-        break;
-    }
-  } catch (error) {
-    reportError(error as Error);
-    console.error('Failed to handle notification navigation:', error);
-  }
 }
 
 class NotificationService {
@@ -144,8 +52,6 @@ class NotificationService {
     try {
       await this.requestPermission();
       await this.getFCMToken();
-      await this.setupMessageHandlers();
-      await this.setupNotifeeEventHandlers();
       await this.saveTokenToFirestore();
       this.isInitialized = true;
     } catch (error) {
@@ -211,63 +117,6 @@ class NotificationService {
       reportError(error as Error);
       console.error('Failed to save FCM token:', error);
     }
-  }
-
-  setupMessageHandlers(): void {
-    onMessage(getMessaging(), async remoteMessage => {
-      await this.showLocalNotification(remoteMessage);
-    });
-  }
-
-  setupNotifeeEventHandlers(): void {
-    notifee.onForegroundEvent(({type, detail}) => {
-      if (type === EventType.PRESS) {
-        this.handleNotificationTap(
-          detail.notification?.data as NotificationData,
-        );
-      }
-    });
-  }
-
-  async showLocalNotification(remoteMessage: any): Promise<void> {
-    const title = remoteMessage?.notification?.title || 'Notification';
-    const body = remoteMessage?.notification?.body || 'You have a new message';
-    const data = remoteMessage?.data || {};
-
-    let channelId = 'trackaexpense_default_alerts';
-    if (Platform.OS === 'android') {
-      channelId = await notifee.createChannel({
-        id: 'trackaexpense_default_alerts',
-        name: 'TrackaExpense Alerts',
-        importance: AndroidImportance.HIGH,
-        sound: 'default',
-        vibration: true,
-        lights: true,
-      });
-    }
-
-    await notifee.displayNotification({
-      title,
-      body,
-      data,
-      android:
-        Platform.OS === 'android'
-          ? {
-              channelId,
-              smallIcon: 'ic_notification',
-              largeIcon: 'ic_launcher',
-              pressAction: {id: 'default'},
-              importance: AndroidImportance.HIGH,
-            }
-          : undefined,
-      ios: {
-        foregroundPresentationOptions: {banner: true, list: true, sound: true},
-      },
-    });
-  }
-
-  handleNotificationTap(data: NotificationData | undefined): void {
-    handleNotificationNavigation(data);
   }
 
   async sendNotificationToUsers(
