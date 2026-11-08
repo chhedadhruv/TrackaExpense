@@ -1,5 +1,9 @@
 import React, {useContext, useEffect, useState} from 'react';
-import {NavigationContainer, NavigationContainerRef} from '@react-navigation/native';
+import {
+  CommonActions,
+  NavigationContainer,
+  NavigationContainerRef,
+} from '@react-navigation/native';
 import AuthStack from './AuthStack';
 import AppStack from './AppStack';
 import {AuthContext} from './AuthProvider';
@@ -12,7 +16,7 @@ export const navigationRef = React.createRef<NavigationContainerRef<any>>();
 
 export function navigate(name: string, params?: object): void {
   if (navigationRef.current) {
-    navigationRef.current.navigate(name as never, params as never);
+    navigationRef.current.dispatch(CommonActions.navigate({name, params}));
   }
 }
 
@@ -55,12 +59,16 @@ const linking = {
   },
   getInitialURL: async (): Promise<string | null> => {
     const message = await messaging().getInitialNotification();
-    if (message?.data?.url) return message.data.url as string;
+    if (message?.data?.url) {
+      return message.data.url as string;
+    }
     return null;
   },
   subscribe: (listener: (url: string) => void) => {
     const unsub = messaging().onNotificationOpenedApp(message => {
-      if (message?.data?.url) listener(message.data.url as string);
+      if (message?.data?.url) {
+        listener(message.data.url as string);
+      }
     });
     return unsub;
   },
@@ -72,15 +80,20 @@ const Routes = () => {
 
   const onAuthStateChanged = (firebaseUser: FirebaseAuthTypes.User | null) => {
     setUser(firebaseUser);
-    if (initializing) setInitializing(false);
+    if (initializing) {
+      setInitializing(false);
+    }
   };
 
   useEffect(() => {
     const subscriber = auth().onAuthStateChanged(onAuthStateChanged);
     return () => subscriber();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (initializing) return null;
+  if (initializing) {
+    return null;
+  }
 
   return (
     <NavigationContainer
