@@ -25,7 +25,13 @@ import {
   getAuth,
   signInWithCredential,
 } from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
+import {
+  Timestamp,
+  doc,
+  getDoc,
+  getFirestore,
+  setDoc,
+} from '@react-native-firebase/firestore';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {configureGoogleSignIn} from '../utils/GoogleSignInConfig';
 import {
@@ -173,23 +179,17 @@ const SignupScreen = ({navigation}: {navigation: any}) => {
           googleCredential,
         );
         const user = userCredential.user;
-        const userDoc = await firestore()
-          .collection('users')
-          .doc(user.uid)
-          .get();
+        const userDoc = await getDoc(doc(getFirestore(), 'users', user.uid));
         if (!userDoc.exists) {
-          await firestore()
-            .collection('users')
-            .doc(user.uid)
-            .set({
-              name: user.displayName || 'Google User',
-              email: user.email,
-              phone: user.phoneNumber || '',
-              transactions: [],
-              verified: true,
-              createdAt: firestore.Timestamp.fromDate(new Date()),
-              userImg: user.photoURL || null,
-            });
+          await setDoc(doc(getFirestore(), 'users', user.uid), {
+            name: user.displayName || 'Google User',
+            email: user.email,
+            phone: user.phoneNumber || '',
+            transactions: [],
+            verified: true,
+            createdAt: Timestamp.fromDate(new Date()),
+            userImg: user.photoURL || null,
+          });
         }
         await new Promise(resolve => setTimeout(resolve, 500));
       } else {
@@ -225,28 +225,22 @@ const SignupScreen = ({navigation}: {navigation: any}) => {
           appleCredential,
         );
         const user = userCredential.user;
-        const userDoc = await firestore()
-          .collection('users')
-          .doc(user.uid)
-          .get();
+        const userDoc = await getDoc(doc(getFirestore(), 'users', user.uid));
         if (!userDoc.exists) {
           const displayName = result.fullName
             ? `${result.fullName.givenName || ''} ${
                 result.fullName.familyName || ''
               }`.trim()
             : 'Apple User';
-          await firestore()
-            .collection('users')
-            .doc(user.uid)
-            .set({
-              name: displayName || 'Apple User',
-              email: result.email || user.email || '',
-              phone: '',
-              transactions: [],
-              verified: true,
-              createdAt: firestore.Timestamp.fromDate(new Date()),
-              userImg: null,
-            });
+          await setDoc(doc(getFirestore(), 'users', user.uid), {
+            name: displayName || 'Apple User',
+            email: result.email || user.email || '',
+            phone: '',
+            transactions: [],
+            verified: true,
+            createdAt: Timestamp.fromDate(new Date()),
+            userImg: null,
+          });
         }
         await new Promise(resolve => setTimeout(resolve, 500));
       } else {

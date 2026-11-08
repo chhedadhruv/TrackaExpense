@@ -2,7 +2,15 @@ import {View, StyleSheet, TextInput, Text, Platform} from 'react-native';
 import React, {useState, useEffect, useRef} from 'react';
 import {Card, ActivityIndicator} from 'react-native-paper';
 import {getAuth} from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
+import {
+  Timestamp,
+  addDoc,
+  collection,
+  doc,
+  getFirestore,
+  increment,
+  runTransaction,
+} from '@react-native-firebase/firestore';
 import {reportError} from '../src/services/ErrorReporter';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
@@ -76,9 +84,9 @@ const AddIncome = ({navigation}: {navigation: any}) => {
     setIsSubmitting(true);
     try {
       const uid = getUid();
-      const userDocRef = firestore().collection('users').doc(uid);
-      await firestore().runTransaction(async transaction => {
-        const transactionRef = userDocRef.collection('transactions');
+      const userDocRef = doc(getFirestore(), 'users', uid);
+      await runTransaction(getFirestore(), async transaction => {
+        const transactionRef = collection(userDocRef, 'transactions');
         const incomeData = {
           userId: uid,
           title: title.trim(),
@@ -86,14 +94,14 @@ const AddIncome = ({navigation}: {navigation: any}) => {
           amount,
           category,
           date,
-          createdAt: firestore.Timestamp.fromDate(new Date()),
+          createdAt: Timestamp.fromDate(new Date()),
           type: 'income',
         };
-        const incomeDocRef = await transactionRef.add(incomeData);
+        const incomeDocRef = await addDoc(transactionRef, incomeData);
         transaction.update(incomeDocRef, {documentId: incomeDocRef.id});
         const balanceDelta = parseFloat(amount);
         transaction.update(userDocRef, {
-          balance: firestore.FieldValue.increment(balanceDelta),
+          balance: increment(balanceDelta),
         });
       });
       AnalyticsService.logAddIncome({

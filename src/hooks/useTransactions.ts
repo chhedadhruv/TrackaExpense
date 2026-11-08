@@ -1,5 +1,9 @@
 import {useState, useCallback} from 'react';
-import firestore from '@react-native-firebase/firestore';
+import {
+  collection,
+  getDocs,
+  getFirestore,
+} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../services/ErrorReporter';
 import * as PerformanceService from '../services/PerformanceService';
@@ -32,11 +36,9 @@ export function useTransactions(): UseTransactionsReturn {
 
     try {
       const stopTrace = await PerformanceService.traceFetchTransactions();
-      const snapshot = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('transactions')
-        .get();
+      const snapshot = await getDocs(
+        collection(getFirestore(), 'users', currentUser.uid, 'transactions'),
+      );
       await stopTrace?.();
 
       const docs = snapshot.docs.map(doc => ({

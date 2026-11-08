@@ -12,7 +12,15 @@ import {
 } from 'react-native';
 import {Card, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import firestore from '@react-native-firebase/firestore';
+import {
+  Timestamp,
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getFirestore,
+  updateDoc,
+} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../src/services/ErrorReporter';
 import * as AnalyticsService from '../src/services/AnalyticsService';
@@ -120,10 +128,9 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         return;
       }
 
-      const userDoc = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .get();
+      const userDoc = await getDoc(
+        doc(getFirestore(), 'users', currentUser.uid),
+      );
 
       if (!userDoc.exists) {
         Alert.alert('Error', 'User document not found. Please try again.');
@@ -147,13 +154,12 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
           targetDate: '',
           reminderEnabled: false,
           reminderFrequency: null,
-          createdAt: firestore.Timestamp.fromDate(new Date()),
-          updatedAt: firestore.Timestamp.fromDate(new Date()),
+          createdAt: Timestamp.fromDate(new Date()),
+          updatedAt: Timestamp.fromDate(new Date()),
         };
-        await firestore()
-          .collection('users')
-          .doc(currentUser.uid)
-          .update({savingsGoals: [defaultGoal]});
+        await updateDoc(doc(getFirestore(), 'users', currentUser.uid), {
+          savingsGoals: [defaultGoal],
+        });
         setSavingsGoals([defaultGoal]);
       }
 
@@ -258,7 +264,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         return;
       }
 
-      const userDocRef = firestore().collection('users').doc(currentUser.uid);
+      const userDocRef = doc(getFirestore(), 'users', currentUser.uid);
       const updatedGoals = savingsGoals.map(goal => {
         if (goal.id === editingGoalId) {
           const oldGoal = {...goal};
@@ -271,7 +277,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
             monthly,
             category: editValues.category || 'other',
             targetDate: editValues.targetDate || '',
-            updatedAt: firestore.Timestamp.fromDate(new Date()),
+            updatedAt: Timestamp.fromDate(new Date()),
           };
 
           const changed =
@@ -284,13 +290,13 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
             editValues.targetDate !== oldGoal.targetDate;
 
           if (changed) {
-            userDocRef.collection('savingsHistory').add({
+            addDoc(collection(userDocRef, 'savingsHistory'), {
               goalId: editingGoalId,
               goalName: editValues.name || oldGoal.name,
               type: 'update',
               previousGoal: oldGoal,
               newGoal,
-              createdAt: firestore.Timestamp.fromDate(new Date()),
+              createdAt: Timestamp.fromDate(new Date()),
             });
           }
 
@@ -299,7 +305,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         return goal;
       });
 
-      await userDocRef.update({savingsGoals: updatedGoals});
+      await updateDoc(userDocRef, {savingsGoals: updatedGoals});
       setSavingsGoals(updatedGoals);
       setIsEditing(false);
       setEditingGoalId(null);
@@ -338,24 +344,24 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         return;
       }
 
-      const userDocRef = firestore().collection('users').doc(currentUser.uid);
+      const userDocRef = doc(getFirestore(), 'users', currentUser.uid);
       const updatedGoals = savingsGoals.map(goal => {
         if (goal.id === selectedGoalId) {
           const newCurrent = goal.current + parsed;
           const updatedGoal = {
             ...goal,
             current: newCurrent,
-            updatedAt: firestore.Timestamp.fromDate(new Date()),
+            updatedAt: Timestamp.fromDate(new Date()),
           };
 
-          userDocRef.collection('savingsHistory').add({
+          addDoc(collection(userDocRef, 'savingsHistory'), {
             goalId: selectedGoalId,
             goalName: goal.name,
             type: 'deposit',
             amount: parsed,
             previousAmount: goal.current,
             newAmount: newCurrent,
-            createdAt: firestore.Timestamp.fromDate(new Date()),
+            createdAt: Timestamp.fromDate(new Date()),
           });
 
           return updatedGoal;
@@ -363,7 +369,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         return goal;
       });
 
-      await userDocRef.update({savingsGoals: updatedGoals});
+      await updateDoc(userDocRef, {savingsGoals: updatedGoals});
       setSavingsGoals(updatedGoals);
       AnalyticsService.logAddFundsToGoal({
         amount_range: AnalyticsService.getAmountRange(parsed),
@@ -417,24 +423,24 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         return;
       }
 
-      const userDocRef = firestore().collection('users').doc(currentUser.uid);
+      const userDocRef = doc(getFirestore(), 'users', currentUser.uid);
       const updatedGoals = savingsGoals.map(goal => {
         if (goal.id === selectedGoalId) {
           const newCurrent = goal.current - parsed;
           const updatedGoal = {
             ...goal,
             current: newCurrent,
-            updatedAt: firestore.Timestamp.fromDate(new Date()),
+            updatedAt: Timestamp.fromDate(new Date()),
           };
 
-          userDocRef.collection('savingsHistory').add({
+          addDoc(collection(userDocRef, 'savingsHistory'), {
             goalId: selectedGoalId,
             goalName: goal.name,
             type: 'withdrawal',
             amount: parsed,
             previousAmount: goal.current,
             newAmount: newCurrent,
-            createdAt: firestore.Timestamp.fromDate(new Date()),
+            createdAt: Timestamp.fromDate(new Date()),
           });
 
           return updatedGoal;
@@ -442,7 +448,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         return goal;
       });
 
-      await userDocRef.update({savingsGoals: updatedGoals});
+      await updateDoc(userDocRef, {savingsGoals: updatedGoals});
       setSavingsGoals(updatedGoals);
       AnalyticsService.logWithdrawFromGoal({
         amount_range: AnalyticsService.getAmountRange(parsed),
@@ -620,7 +626,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         return;
       }
 
-      const userDocRef = firestore().collection('users').doc(currentUser.uid);
+      const userDocRef = doc(getFirestore(), 'users', currentUser.uid);
       const newGoal: SavingsGoal = {
         id: Date.now().toString(),
         name: editValues.name,
@@ -632,19 +638,19 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         targetDate: editValues.targetDate || '',
         reminderEnabled: false,
         reminderFrequency: null,
-        createdAt: firestore.Timestamp.fromDate(new Date()),
-        updatedAt: firestore.Timestamp.fromDate(new Date()),
+        createdAt: Timestamp.fromDate(new Date()),
+        updatedAt: Timestamp.fromDate(new Date()),
       };
 
       const updatedGoals = [...savingsGoals, newGoal];
-      await userDocRef.update({savingsGoals: updatedGoals});
+      await updateDoc(userDocRef, {savingsGoals: updatedGoals});
 
-      await userDocRef.collection('savingsHistory').add({
+      await addDoc(collection(userDocRef, 'savingsHistory'), {
         goalId: newGoal.id,
         goalName: newGoal.name,
         type: 'create',
         newGoal,
-        createdAt: firestore.Timestamp.fromDate(new Date()),
+        createdAt: Timestamp.fromDate(new Date()),
       });
 
       setSavingsGoals(updatedGoals);
@@ -677,18 +683,18 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         return;
       }
 
-      const userDocRef = firestore().collection('users').doc(currentUser.uid);
+      const userDocRef = doc(getFirestore(), 'users', currentUser.uid);
       const deletedGoal = savingsGoals.find(g => g.id === goalId);
       const updatedGoals = savingsGoals.filter(g => g.id !== goalId);
 
-      await userDocRef.update({savingsGoals: updatedGoals});
+      await updateDoc(userDocRef, {savingsGoals: updatedGoals});
 
-      await userDocRef.collection('savingsHistory').add({
+      await addDoc(collection(userDocRef, 'savingsHistory'), {
         goalId,
         goalName: deletedGoal?.name,
         type: 'delete',
         deletedGoal,
-        createdAt: firestore.Timestamp.fromDate(new Date()),
+        createdAt: Timestamp.fromDate(new Date()),
       });
 
       setSavingsGoals(updatedGoals);
@@ -730,13 +736,13 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
       if (!currentUser) {
         return;
       }
-      const userDocRef = firestore().collection('users').doc(currentUser.uid);
+      const userDocRef = doc(getFirestore(), 'users', currentUser.uid);
       const updatedGoals = savingsGoals.map(goal =>
         goal.id === goalId
           ? {...goal, reminderEnabled: enabled, reminderFrequency: frequency}
           : goal,
       );
-      await userDocRef.update({savingsGoals: updatedGoals});
+      await updateDoc(userDocRef, {savingsGoals: updatedGoals});
       setSavingsGoals(updatedGoals);
 
       if (enabled) {
