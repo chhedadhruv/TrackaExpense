@@ -126,6 +126,7 @@ Phase 1a is complete (tooling, local quality gates, minimum-version gate, server
 - `app.json` version (1.3.3) lags `package.json` (1.3.5): `app.json`.
 - `metro.config.js` blocks only this project's `server/` folder (anchored path). A looser pattern broke Sentry's `mcp-server` folder; do not loosen it.
 - After adding or changing native dependencies, restart Metro with `yarn start --reset-cache` and reinstall the app (`yarn android` / rebuild iOS); an emulator can revert to an older installed build after a restart.
+- Release plan: the next store build happens after all phases are complete (owner decision). Until then, do NOT run `yarn release:ios`, `yarn release:android` or `yarn release:all` (Revopush) from `develop`: that JavaScript imports Sentry, Mixpanel and OneSignal native modules that the live store binaries do not contain, and it would crash installed apps on startup.
 - OneSignal 5.4.3 is the newest release that supports React Native 0.77 (5.4.4 and later need 0.79).
 - Do not add `firebase-tools` (or anything that pulls in `node-fetch` 3) to this package's dependencies: it changes which `node-fetch` is hoisted and breaks the React Native bundle. Install the Firebase CLI globally instead.
 - Remote Config `min_supported_version` (default `0.0.0`, check disabled) blocks older app versions with an update screen: `App.tsx`, `components/ForceUpdateScreen.tsx`. Setting it in the console is a live change that needs owner approval.
