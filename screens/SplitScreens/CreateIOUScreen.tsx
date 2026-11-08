@@ -9,7 +9,15 @@ import {
 } from 'react-native';
 import {Text, Card, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import firestore from '@react-native-firebase/firestore';
+import {
+  addDoc,
+  collection,
+  getDocs,
+  getFirestore,
+  query,
+  serverTimestamp,
+  where,
+} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
@@ -53,10 +61,12 @@ const CreateIOUScreen = ({navigation}: {navigation: any}) => {
       let resolvedName = toName.trim();
       if (!resolvedName) {
         try {
-          const snap = await firestore()
-            .collection('users')
-            .where('email', '==', emailTrimmed)
-            .get();
+          const snap = await getDocs(
+            query(
+              collection(getFirestore(), 'users'),
+              where('email', '==', emailTrimmed),
+            ),
+          );
           if (!snap.empty) {
             resolvedName =
               snap.docs[0].data()?.name || emailTrimmed.split('@')[0];
@@ -80,7 +90,7 @@ const CreateIOUScreen = ({navigation}: {navigation: any}) => {
               amount: parseFloat(amount),
               notes: notes.trim(),
               status: 'pending',
-              createdAt: firestore.FieldValue.serverTimestamp(),
+              createdAt: serverTimestamp(),
             }
           : {
               fromEmail: emailTrimmed,
@@ -91,9 +101,9 @@ const CreateIOUScreen = ({navigation}: {navigation: any}) => {
               amount: parseFloat(amount),
               notes: notes.trim(),
               status: 'pending',
-              createdAt: firestore.FieldValue.serverTimestamp(),
+              createdAt: serverTimestamp(),
             };
-      await firestore().collection('ious').add(iouData);
+      await addDoc(collection(getFirestore(), 'ious'), iouData);
       navigation.goBack();
     } catch (_) {
       Alert.alert('Error', 'Failed to create IOU');

@@ -12,7 +12,18 @@ import {Text, Card} from 'react-native-paper';
 import UserAvatar from 'react-native-user-avatar';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {getAuth} from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  getFirestore,
+  query,
+  serverTimestamp,
+  where,
+} from '@react-native-firebase/firestore';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {useFocusEffect} from '@react-navigation/native';
@@ -78,12 +89,9 @@ const SplitDetailScreen = ({
   const fetchSplitData = React.useCallback(async () => {
     try {
       setLoading(true);
-      const splitDoc = await firestore()
-        .collection('groups')
-        .doc(group.id)
-        .collection('splits')
-        .doc(initialSplit.id)
-        .get();
+      const splitDoc = await getDoc(
+        doc(getFirestore(), 'groups', group.id, 'splits', initialSplit.id),
+      );
       if (splitDoc.exists) {
         setSplit({id: splitDoc.id, ...splitDoc.data()} as SplitData);
       }
@@ -113,19 +121,15 @@ const SplitDetailScreen = ({
 
   const handleDeleteSplit = async () => {
     try {
-      await firestore()
-        .collection('groups')
-        .doc(group.id)
-        .collection('splits')
-        .doc(split.id)
-        .delete();
+      await deleteDoc(
+        doc(getFirestore(), 'groups', group.id, 'splits', split.id),
+      );
 
       let actorName = currentUser?.email?.split('@')[0] || 'Someone';
       try {
-        const userDoc = await firestore()
-          .collection('users')
-          .doc(currentUser!.uid)
-          .get();
+        const userDoc = await getDoc(
+          doc(getFirestore(), 'users', currentUser!.uid),
+        );
         const profileName = userDoc.data()?.name;
         if (profileName && profileName.toLowerCase() !== 'me') {
           actorName = profileName;
@@ -160,27 +164,22 @@ const SplitDetailScreen = ({
         actorUid: currentUser?.uid || null,
         actorEmail: currentUser?.email || null,
         actorName,
-        createdAt: firestore.FieldValue.serverTimestamp(),
+        createdAt: serverTimestamp(),
       };
 
       try {
-        await firestore()
-          .collection('users')
-          .doc(currentUser!.uid)
-          .collection('splitHistory')
-          .add(historyPayload);
-        await firestore()
-          .collection('groups')
-          .doc(group.id)
-          .collection('splitHistory')
-          .add(historyPayload);
+        await addDoc(
+          collection(getFirestore(), 'users', currentUser!.uid, 'splitHistory'),
+          historyPayload,
+        );
+        await addDoc(
+          collection(getFirestore(), 'groups', group.id, 'splitHistory'),
+          historyPayload,
+        );
       } catch (_) {}
 
       try {
-        const groupDoc = await firestore()
-          .collection('groups')
-          .doc(group.id)
-          .get();
+        const groupDoc = await getDoc(doc(getFirestore(), 'groups', group.id));
         const groupData = groupDoc.data();
         if (groupData?.members) {
           await SplitNotificationService.notifySplitDeleted(
@@ -196,14 +195,19 @@ const SplitDetailScreen = ({
       } catch (_) {}
 
       try {
-        const txSnap = await firestore()
-          .collection('users')
-          .doc(currentUser!.uid)
-          .collection('transactions')
-          .where('splitId', '==', split.id)
-          .get();
+        const txSnap = await getDocs(
+          query(
+            collection(
+              getFirestore(),
+              'users',
+              currentUser!.uid,
+              'transactions',
+            ),
+            where('splitId', '==', split.id),
+          ),
+        );
         if (!txSnap.empty) {
-          await txSnap.docs[0].ref.delete();
+          await deleteDoc(txSnap.docs[0].ref);
         }
       } catch (_) {}
 

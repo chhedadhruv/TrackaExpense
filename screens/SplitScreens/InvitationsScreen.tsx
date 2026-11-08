@@ -9,7 +9,20 @@ import {
 import {Text, Card, ActivityIndicator} from 'react-native-paper';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
-import firestore from '@react-native-firebase/firestore';
+import {
+  Timestamp,
+  arrayRemove,
+  collection,
+  doc,
+  getDocs,
+  getFirestore,
+  onSnapshot,
+  query,
+  runTransaction,
+  serverTimestamp,
+  updateDoc,
+  where,
+} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../../src/services/ErrorReporter';
 import * as AnalyticsService from '../../src/services/AnalyticsService';
@@ -35,28 +48,29 @@ const InvitationsScreen = () => {
     if (!currentUser?.email) {
       return;
     }
-    const unsub = firestore()
-      .collection('invitations')
-      .where('email', '==', currentUser.email)
-      .where('status', '==', 'pending')
-      .onSnapshot(
-        snapshot => {
-          const data = snapshot.docs.map(
-            d => ({id: d.id, ...d.data()} as Invitation),
-          );
-          setInvitations(data);
-          setLoading(false);
-        },
-        () => setLoading(false),
-      );
+    const unsub = onSnapshot(
+      query(
+        collection(getFirestore(), 'invitations'),
+        where('email', '==', currentUser.email),
+        where('status', '==', 'pending'),
+      ),
+      snapshot => {
+        const data = snapshot.docs.map(
+          d => ({id: d.id, ...d.data()} as Invitation),
+        );
+        setInvitations(data);
+        setLoading(false);
+      },
+      () => setLoading(false),
+    );
     return () => unsub && unsub();
   }, [currentUser?.email]);
 
   const acceptInvitation = useCallback(
     async (invite: Invitation) => {
       try {
-        const groupRef = firestore().collection('groups').doc(invite.groupId);
-        await firestore().runTransaction(async tx => {
+        const groupRef = doc(getFirestore(), 'groups', invite.groupId);
+        await runTransaction(getFirestore(), async tx => {
           const groupSnap = await tx.get(groupRef);
           if (!groupSnap.exists) {
             throw new Error('Group not found');
@@ -74,10 +88,12 @@ const InvitationsScreen = () => {
           );
           let displayName = currentUser!.displayName || currentUser!.email!;
           try {
-            const userSnap = await firestore()
-              .collection('users')
-              .where('email', '==', currentUser!.email)
-              .get();
+            const userSnap = await getDocs(
+              query(
+                collection(getFirestore(), 'users'),
+                where('email', '==', currentUser!.email),
+              ),
+            );
             if (!userSnap.empty) {
               const ud = userSnap.docs[0].data();
               displayName = ud.name || ud.displayName || displayName;
@@ -88,16 +104,13 @@ const InvitationsScreen = () => {
             members,
             memberNames,
             pendingInvites,
-            updatedAt: firestore.FieldValue.serverTimestamp(),
+            updatedAt: serverTimestamp(),
           });
         });
-        await firestore()
-          .collection('invitations')
-          .doc(invite.id)
-          .update({
-            status: 'accepted',
-            respondedAt: firestore.Timestamp.fromDate(new Date()),
-          });
+        await updateDoc(doc(getFirestore(), 'invitations', invite.id), {
+          status: 'accepted',
+          respondedAt: Timestamp.fromDate(new Date()),
+        });
         AnalyticsService.logAcceptInvitation();
         Alert.alert('Joined', `You have joined ${invite.groupName}`);
       } catch (e) {
@@ -112,18 +125,15 @@ const InvitationsScreen = () => {
   const declineInvitation = useCallback(
     async (invite: Invitation) => {
       try {
-        const groupRef = firestore().collection('groups').doc(invite.groupId);
-        await groupRef.update({
-          pendingInvites: firestore.FieldValue.arrayRemove(currentUser!.email),
-          updatedAt: firestore.FieldValue.serverTimestamp(),
+        const groupRef = doc(getFirestore(), 'groups', invite.groupId);
+        await updateDoc(groupRef, {
+          pendingInvites: arrayRemove(currentUser!.email),
+          updatedAt: serverTimestamp(),
         });
-        await firestore()
-          .collection('invitations')
-          .doc(invite.id)
-          .update({
-            status: 'declined',
-            respondedAt: firestore.Timestamp.fromDate(new Date()),
-          });
+        await updateDoc(doc(getFirestore(), 'invitations', invite.id), {
+          status: 'declined',
+          respondedAt: Timestamp.fromDate(new Date()),
+        });
         AnalyticsService.logDeclineInvitation();
       } catch (e) {
         reportError(e as Error);

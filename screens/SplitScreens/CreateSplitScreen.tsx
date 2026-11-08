@@ -23,7 +23,21 @@ import {
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {requestCameraPermission} from '../../utils/Permissions';
 import {Card, Checkbox, ActivityIndicator, Switch} from 'react-native-paper';
-import firestore from '@react-native-firebase/firestore';
+import {
+  Timestamp,
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  getFirestore,
+  increment,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../../src/services/ErrorReporter';
 import * as PerformanceService from '../../src/services/PerformanceService';
@@ -63,7 +77,7 @@ interface SplitUser {
 interface RecurringConfig {
   enabled: boolean;
   frequency: RecurringFrequency;
-  nextDate: ReturnType<typeof firestore.Timestamp.fromDate>;
+  nextDate: ReturnType<typeof Timestamp.fromDate>;
 }
 
 interface SplitData {
@@ -77,8 +91,8 @@ interface SplitData {
   imageUrl: string | null;
   recurring: RecurringConfig | null;
   currency: string;
-  date: ReturnType<typeof firestore.Timestamp.fromDate>;
-  createdAt: ReturnType<typeof firestore.Timestamp.fromDate>;
+  date: ReturnType<typeof Timestamp.fromDate>;
+  createdAt: ReturnType<typeof Timestamp.fromDate>;
 }
 
 interface ExistingSplit {
@@ -185,16 +199,15 @@ const CreateSplitScreen = ({route, navigation}: any) => {
 
   const fetchGroupMembers = async () => {
     try {
-      const groupDoc = await firestore()
-        .collection('groups')
-        .doc(group.id)
-        .get();
+      const groupDoc = await getDoc(doc(getFirestore(), 'groups', group.id));
       const membersData: string[] = groupDoc.data()?.members || [];
       const memberPromises = membersData.map(async email => {
-        const userSnapshot = await firestore()
-          .collection('users')
-          .where('email', '==', email)
-          .get();
+        const userSnapshot = await getDocs(
+          query(
+            collection(getFirestore(), 'users'),
+            where('email', '==', email),
+          ),
+        );
         if (!userSnapshot.empty) {
           const userData = userSnapshot.docs[0].data();
           return {
@@ -388,10 +401,9 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       const currentUserEmail = currentUser.email;
       let actorNameResolved = currentUserEmail?.split('@')[0] || 'Someone';
       try {
-        const userDoc = await firestore()
-          .collection('users')
-          .doc(currentUser.uid)
-          .get();
+        const userDoc = await getDoc(
+          doc(getFirestore(), 'users', currentUser.uid),
+        );
         const profileName = userDoc.data()?.name;
         if (profileName && profileName.toLowerCase() !== 'me') {
           actorNameResolved = profileName;
@@ -408,7 +420,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       }
 
       const splitAmount = parseFloat(amount);
-      const splitDate = firestore.Timestamp.fromDate(date);
+      const splitDate = Timestamp.fromDate(date);
       const splitData: SplitData = {
         title,
         amount: splitAmount,
@@ -431,7 +443,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
           ? {
               enabled: true,
               frequency: recurringFrequency,
-              nextDate: firestore.Timestamp.fromDate(
+              nextDate: Timestamp.fromDate(
                 recurringFrequency === 'weekly'
                   ? new Date(date.getTime() + 7 * 24 * 60 * 60 * 1000)
                   : new Date(
@@ -446,17 +458,19 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         date: splitDate,
         createdAt: isEditMode
           ? (split!.createdAt as any)
-          : firestore.Timestamp.fromDate(new Date()),
+          : Timestamp.fromDate(new Date()),
       };
 
-      const splitsCollection = firestore()
-        .collection('groups')
-        .doc(group.id)
-        .collection('splits');
+      const splitsCollection = collection(
+        getFirestore(),
+        'groups',
+        group.id,
+        'splits',
+      );
 
       if (isEditMode && split) {
-        const splitRef = splitsCollection.doc(split.id);
-        await splitRef.update(splitData);
+        const splitRef = doc(splitsCollection, split.id);
+        await updateDoc(splitRef, {...splitData});
 
         try {
           const groupDataForNotify = {
@@ -608,20 +622,23 @@ const CreateSplitScreen = ({route, navigation}: any) => {
             actorUid: currentUser.uid,
             actorEmail: currentUserEmail,
             actorName: actorNameResolved,
-            createdAt: firestore.FieldValue.serverTimestamp(),
+            createdAt: serverTimestamp(),
           };
 
-          await firestore()
-            .collection('users')
-            .doc(currentUser.uid)
-            .collection('splitHistory')
-            .add(historyEntry);
+          await addDoc(
+            collection(
+              getFirestore(),
+              'users',
+              currentUser.uid,
+              'splitHistory',
+            ),
+            historyEntry,
+          );
 
-          await firestore()
-            .collection('groups')
-            .doc(group.id)
-            .collection('splitHistory')
-            .add(historyEntry);
+          await addDoc(
+            collection(getFirestore(), 'groups', group.id, 'splitHistory'),
+            historyEntry,
+          );
         } catch (histErr) {
           reportError(histErr as Error);
         }
@@ -634,7 +651,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
           includeInTransactions,
         );
       } else {
-        const splitRef = await splitsCollection.add(splitData);
+        const splitRef = await addDoc(splitsCollection, splitData);
         newSplitId = splitRef.id;
 
         SplitNotificationService.notifySplitCreated(
@@ -662,20 +679,23 @@ const CreateSplitScreen = ({route, navigation}: any) => {
             actorUid: currentUser.uid,
             actorEmail: currentUserEmail,
             actorName: actorNameResolved,
-            createdAt: firestore.FieldValue.serverTimestamp(),
+            createdAt: serverTimestamp(),
           };
 
-          await firestore()
-            .collection('users')
-            .doc(currentUser.uid)
-            .collection('splitHistory')
-            .add(historyEntry);
+          await addDoc(
+            collection(
+              getFirestore(),
+              'users',
+              currentUser.uid,
+              'splitHistory',
+            ),
+            historyEntry,
+          );
 
-          await firestore()
-            .collection('groups')
-            .doc(group.id)
-            .collection('splitHistory')
-            .add(historyEntry);
+          await addDoc(
+            collection(getFirestore(), 'groups', group.id, 'splitHistory'),
+            historyEntry,
+          );
         } catch (histErr) {
           reportError(histErr as Error);
         }
@@ -780,21 +800,20 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         return;
       }
 
-      const txCol = firestore()
-        .collection('users')
-        .doc(u.uid)
-        .collection('transactions');
-      const userRef = firestore().collection('users').doc(u.uid);
+      const txCol = collection(getFirestore(), 'users', u.uid, 'transactions');
+      const userRef = doc(getFirestore(), 'users', u.uid);
 
       if (!include) {
         if (isEdit) {
-          const snap = await txCol.where('splitId', '==', splitId).get();
+          const snap = await getDocs(
+            query(txCol, where('splitId', '==', splitId)),
+          );
           if (!snap.empty) {
             const oldAmount = parseFloat(snap.docs[0].data().amount || '0');
-            await snap.docs[0].ref.delete();
+            await deleteDoc(snap.docs[0].ref);
             if (oldAmount > 0) {
-              await userRef.update({
-                balance: firestore.FieldValue.increment(oldAmount),
+              await updateDoc(userRef, {
+                balance: increment(oldAmount),
               });
             }
           } else {
@@ -815,31 +834,33 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         groupId: group.id,
         groupName: group.name,
         splitRole: 'payer',
-        createdAt: firestore.FieldValue.serverTimestamp(),
+        createdAt: serverTimestamp(),
       };
 
       if (isEdit) {
-        const snap = await txCol.where('splitId', '==', splitId).get();
+        const snap = await getDocs(
+          query(txCol, where('splitId', '==', splitId)),
+        );
         if (!snap.empty) {
           const oldAmount = parseFloat(snap.docs[0].data().amount || '0');
           const delta = oldAmount - amount;
-          await snap.docs[0].ref.update(txData);
+          await updateDoc(snap.docs[0].ref, txData);
           if (Math.abs(delta) > 0.001) {
-            await userRef.update({
-              balance: firestore.FieldValue.increment(delta),
+            await updateDoc(userRef, {
+              balance: increment(delta),
             });
           } else {
           }
         } else {
-          await txCol.add(txData);
-          await userRef.update({
-            balance: firestore.FieldValue.increment(-amount),
+          await addDoc(txCol, txData);
+          await updateDoc(userRef, {
+            balance: increment(-amount),
           });
         }
       } else {
-        await txCol.add(txData);
-        await userRef.update({
-          balance: firestore.FieldValue.increment(-amount),
+        await addDoc(txCol, txData);
+        await updateDoc(userRef, {
+          balance: increment(-amount),
         });
       }
     } catch (e) {

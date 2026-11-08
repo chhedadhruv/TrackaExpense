@@ -9,7 +9,15 @@ import {
 } from 'react-native';
 import {Card, ActivityIndicator, Text} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import firestore from '@react-native-firebase/firestore';
+import {
+  collection,
+  getDocs,
+  getFirestore,
+  limit,
+  orderBy,
+  query,
+  where,
+} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
@@ -68,10 +76,12 @@ const SplitHistoryScreen = () => {
         return;
       }
       const userEmail = currentUser.email;
-      const groupsSnapshot = await firestore()
-        .collection('groups')
-        .where('members', 'array-contains', userEmail)
-        .get();
+      const groupsSnapshot = await getDocs(
+        query(
+          collection(getFirestore(), 'groups'),
+          where('members', 'array-contains', userEmail),
+        ),
+      );
       const groupIds: Group[] = groupsSnapshot.docs.map(d => ({
         id: d.id,
         name: d.data()?.name,
@@ -79,24 +89,23 @@ const SplitHistoryScreen = () => {
       setGroups(groupIds);
       const historySnapshots = await Promise.all(
         groupIds.map(g =>
-          firestore()
-            .collection('groups')
-            .doc(g.id)
-            .collection('splitHistory')
-            .orderBy('createdAt', 'desc')
-            .limit(50)
-            .get()
-            .then(s =>
-              s.docs.map(
-                d =>
-                  ({
-                    id: `${g.id}:${d.id}`,
-                    groupId: g.id,
-                    groupName: g.name,
-                    ...d.data(),
-                  } as HistoryItem),
-              ),
+          getDocs(
+            query(
+              collection(getFirestore(), 'groups', g.id, 'splitHistory'),
+              orderBy('createdAt', 'desc'),
+              limit(50),
             ),
+          ).then(s =>
+            s.docs.map(
+              d =>
+                ({
+                  id: `${g.id}:${d.id}`,
+                  groupId: g.id,
+                  groupName: g.name,
+                  ...d.data(),
+                } as HistoryItem),
+            ),
+          ),
         ),
       );
       const merged = historySnapshots.flat();

@@ -1,17 +1,44 @@
 import React, {useState, useEffect, useContext, useRef} from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Alert, Platform} from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  Platform,
+} from 'react-native';
 import {ActivityIndicator, Card, Button, Snackbar} from 'react-native-paper';
 import {useFocusEffect} from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import UserAvatar from 'react-native-user-avatar';
-import firestore from '@react-native-firebase/firestore';
+import {
+  Timestamp,
+  addDoc,
+  arrayRemove,
+  collection,
+  deleteDoc,
+  deleteField,
+  doc as fsDoc,
+  getDoc,
+  getDocs,
+  getFirestore,
+  query as fsQuery,
+  updateDoc,
+  where,
+  writeBatch,
+} from '@react-native-firebase/firestore';
 import moment from 'moment';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {AuthContext} from '../../navigation/AuthProvider';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import {useCurrency} from '../../utils/CurrencyUtil';
-import {PRIMARY_COLOR, BACKGROUND_COLOR, INCOME_COLOR as SUCCESS_COLOR, EXPENSE_COLOR} from '../../src/constants/theme';
+import {
+  PRIMARY_COLOR,
+  BACKGROUND_COLOR,
+  INCOME_COLOR as SUCCESS_COLOR,
+  EXPENSE_COLOR,
+} from '../../src/constants/theme';
 
 interface GroupMember {
   email: string;
@@ -55,34 +82,67 @@ interface Group {
 
 const RECENT_SPLITS_LIMIT = 3;
 
-const getSplitCardColor = (split: SplitItem, currentEmail: string | undefined): string => {
-  if (!currentEmail) return PRIMARY_COLOR;
+const getSplitCardColor = (
+  split: SplitItem,
+  currentEmail: string | undefined,
+): string => {
+  if (!currentEmail) {
+    return PRIMARY_COLOR;
+  }
   if (split.type === 'settlement' || split.isSettlement) {
     const payerEmail = split.paidBy?.email?.toLowerCase();
-    const isReceiver = split.splitUsers?.some(u => u.email?.toLowerCase() === currentEmail) && payerEmail !== currentEmail;
-    if (isReceiver) return SUCCESS_COLOR;
-    if (payerEmail === currentEmail) return EXPENSE_COLOR;
+    const isReceiver =
+      split.splitUsers?.some(u => u.email?.toLowerCase() === currentEmail) &&
+      payerEmail !== currentEmail;
+    if (isReceiver) {
+      return SUCCESS_COLOR;
+    }
+    if (payerEmail === currentEmail) {
+      return EXPENSE_COLOR;
+    }
     return PRIMARY_COLOR;
   }
   const isPayer = split.paidBy?.email?.toLowerCase() === currentEmail;
-  const isInSplitUsers = split.splitUsers?.some(u => u.email?.toLowerCase() === currentEmail);
-  const payerOwedByOthers = isPayer && (split.splitUsers?.some(u => u.email?.toLowerCase() !== currentEmail) ?? false);
-  if (payerOwedByOthers) return SUCCESS_COLOR;
-  if (!isPayer && isInSplitUsers) return EXPENSE_COLOR;
+  const isInSplitUsers = split.splitUsers?.some(
+    u => u.email?.toLowerCase() === currentEmail,
+  );
+  const payerOwedByOthers =
+    isPayer &&
+    (split.splitUsers?.some(u => u.email?.toLowerCase() !== currentEmail) ??
+      false);
+  if (payerOwedByOthers) {
+    return SUCCESS_COLOR;
+  }
+  if (!isPayer && isInSplitUsers) {
+    return EXPENSE_COLOR;
+  }
   return PRIMARY_COLOR;
 };
 
-const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: any}) => {
+const SplitGroupDetailScreen = ({
+  route,
+  navigation,
+}: {
+  route: any;
+  navigation: any;
+}) => {
   const {formatAmount} = useCurrency();
   const rawGroup = route.params?.group;
-  const group: Group | null = rawGroup || (route.params?.groupId
-    ? {id: route.params.groupId, name: decodeURIComponent(route.params.groupName || 'Split Group')}
-    : null);
+  const group: Group | null =
+    rawGroup ||
+    (route.params?.groupId
+      ? {
+          id: route.params.groupId,
+          name: decodeURIComponent(route.params.groupName || 'Split Group'),
+        }
+      : null);
   const {user} = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
   const [splits, setSplits] = useState<SplitItem[]>([]);
   const [totalSplitAmount, setTotalSplitAmount] = useState(0);
-  const [detailedLendingInfo, setDetailedLendingInfo] = useState<LendingDetail[]>([]);
+  const [detailedLendingInfo, setDetailedLendingInfo] = useState<
+    LendingDetail[]
+  >([]);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [filteredSplits, setFilteredSplits] = useState<SplitItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -92,11 +152,15 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
   const groupId = group?.id ?? '';
 
   useEffect(() => {
-    if (!groupId) return;
+    if (!groupId) {
+      return;
+    }
     const newSplit = route.params?.newSplit;
     if (newSplit?.id) {
       setSplits(prev => {
-        if (prev.some(s => s.id === newSplit.id)) return prev;
+        if (prev.some(s => s.id === newSplit.id)) {
+          return prev;
+        }
         return [newSplit as SplitItem, ...prev].sort((a, b) => {
           const aTs = (a.date || a.createdAt)?.toMillis?.() ?? 0;
           const bTs = (b.date || b.createdAt)?.toMillis?.() ?? 0;
@@ -112,21 +176,29 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
 
   useEffect(() => {
     const gp = route.params?.group;
-    if (gp?.pendingInvites) setPendingInvites(gp.pendingInvites);
+    if (gp?.pendingInvites) {
+      setPendingInvites(gp.pendingInvites);
+    }
   }, [route.params?.group]);
 
   useEffect(() => {
-    if (splits.length > 0) setDetailedLendingInfo(calculateNetLendingBalances(splits));
+    if (splits.length > 0) {
+      setDetailedLendingInfo(calculateNetLendingBalances(splits));
+    }
   }, [splits]);
 
-  useEffect(() => { setFilteredSplits(splits); }, [splits]);
+  useEffect(() => {
+    setFilteredSplits(splits);
+  }, [splits]);
 
   useFocusEffect(
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     React.useCallback(() => {
-      if (!groupId) return;
+      if (!groupId) {
+        return;
+      }
       fetchGroupSplits(!hasLoadedOnce.current);
       fetchGroupMembers();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [groupId]),
   );
 
@@ -134,7 +206,9 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
     return (
       <View style={styles.loadingContainer}>
         <Text>Group not found</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}>
           <Text>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -143,15 +217,25 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
 
   const fetchGroupMembers = async () => {
     try {
-      const groupDoc = await firestore().collection('groups').doc(group!.id).get();
+      const groupDoc = await getDoc(fsDoc(getFirestore(), 'groups', group!.id));
       const membersData: string[] = groupDoc.data()?.members || [];
       const pending: string[] = groupDoc.data()?.pendingInvites || [];
       setPendingInvites(pending);
       const memberPromises = membersData.map(async (email: string) => {
-        const snap = await firestore().collection('users').where('email', '==', email).get();
+        const snap = await getDocs(
+          fsQuery(
+            collection(getFirestore(), 'users'),
+            where('email', '==', email),
+          ),
+        );
         if (!snap.empty) {
           const ud = snap.docs[0].data();
-          return {email, name: ud.name || ud.displayName || email.split('@')[0], avatar: ud.avatar || null, userId: snap.docs[0].id};
+          return {
+            email,
+            name: ud.name || ud.displayName || email.split('@')[0],
+            avatar: ud.avatar || null,
+            userId: snap.docs[0].id,
+          };
         }
         return {email, name: email.split('@')[0], avatar: null, userId: null};
       });
@@ -165,7 +249,9 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
       if (showSpinner) {
         setLoading(true);
       }
-      const snap = await firestore().collection('groups').doc(group!.id).collection('splits').get();
+      const snap = await getDocs(
+        collection(getFirestore(), 'groups', group!.id, 'splits'),
+      );
       const fetched = snap.docs
         .map(doc => ({id: doc.id, ...doc.data()} as SplitItem))
         .sort((a, b) => {
@@ -173,7 +259,9 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
           const bTs = (b.date || b.createdAt)?.toMillis?.() ?? 0;
           return bTs - aTs;
         });
-      setTotalSplitAmount(fetched.reduce((sum, s) => sum + parseFloat(String(s.amount)), 0));
+      setTotalSplitAmount(
+        fetched.reduce((sum, s) => sum + parseFloat(String(s.amount)), 0),
+      );
       setSplits(fetched);
       hasLoadedOnce.current = true;
     } catch (err) {
@@ -183,13 +271,20 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _handleDeleteSplit = async (split: SplitItem) => {
     try {
-      await firestore().collection('groups').doc(group!.id).collection('splits').doc(split.id).delete();
+      await deleteDoc(
+        fsDoc(getFirestore(), 'groups', group!.id, 'splits', split.id),
+      );
       try {
         await SplitNotificationService.notifySplitDeleted(
           split as any,
-          {id: group!.id, name: group!.name, members: groupMembers.map(m => m.email)} as any,
+          {
+            id: group!.id,
+            name: group!.name,
+            members: groupMembers.map(m => m.email),
+          } as any,
           user?.displayName || user?.email?.split('@')[0] || 'Someone',
         );
       } catch (notifErr) {}
@@ -200,7 +295,9 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
     }
   };
 
-  const calculateNetLendingBalances = (splitsArr: SplitItem[]): LendingDetail[] => {
+  const calculateNetLendingBalances = (
+    splitsArr: SplitItem[],
+  ): LendingDetail[] => {
     const balances: Record<string, Record<string, number>> = {};
     splitsArr.forEach(split => {
       // Skip settlements — they are already recorded in the splits list and handled separately
@@ -208,71 +305,122 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
         const fromEmail = split.paidBy?.email?.toLowerCase();
         const toEmail = split.splitUsers?.[0]?.email?.toLowerCase();
         const amt = parseFloat(String(split.amount));
-        if (!fromEmail || !toEmail || fromEmail === toEmail || isNaN(amt)) return;
+        if (!fromEmail || !toEmail || fromEmail === toEmail || isNaN(amt)) {
+          return;
+        }
         // Borrower paid lender: reduce what borrower owes lender
-        if (!balances[toEmail]) balances[toEmail] = {};
-        balances[toEmail][fromEmail] = (balances[toEmail][fromEmail] || 0) - amt;
+        if (!balances[toEmail]) {
+          balances[toEmail] = {};
+        }
+        balances[toEmail][fromEmail] =
+          (balances[toEmail][fromEmail] || 0) - amt;
         return;
       }
       const paidByEmail = split.paidBy?.email?.toLowerCase();
       const splitUsers = split.splitUsers || [];
       const amount = parseFloat(String(split.amount));
-      if (!paidByEmail || isNaN(amount)) return;
-      if (!balances[paidByEmail]) balances[paidByEmail] = {};
+      if (!paidByEmail || isNaN(amount)) {
+        return;
+      }
+      if (!balances[paidByEmail]) {
+        balances[paidByEmail] = {};
+      }
       splitUsers.forEach(u => {
         const uEmail = u.email?.toLowerCase();
-        if (!uEmail || uEmail === paidByEmail) return;
+        if (!uEmail || uEmail === paidByEmail) {
+          return;
+        }
         // Improvement 3: use actual percentage share instead of always dividing equally
-        const share = split.splitType === 'percentage'
-          ? amount * ((u.percentage ?? 0) / 100)
-          : amount / splitUsers.length;
-        balances[paidByEmail][uEmail] = (balances[paidByEmail][uEmail] || 0) + share;
+        const share =
+          split.splitType === 'percentage'
+            ? amount * ((u.percentage ?? 0) / 100)
+            : amount / splitUsers.length;
+        balances[paidByEmail][uEmail] =
+          (balances[paidByEmail][uEmail] || 0) + share;
       });
     });
     const net: LendingDetail[] = [];
     Object.keys(balances).forEach(lenderEmail => {
       Object.keys(balances[lenderEmail]).forEach(borrowerEmail => {
-        if (lenderEmail >= borrowerEmail) return;
+        if (lenderEmail >= borrowerEmail) {
+          return;
+        }
         const lTob = balances[lenderEmail][borrowerEmail] || 0;
-        const bToL = (balances[borrowerEmail]?.[lenderEmail]) || 0;
+        const bToL = balances[borrowerEmail]?.[lenderEmail] || 0;
         const netAmt = lTob - bToL;
         if (netAmt !== 0) {
-          const lenderName = splitsArr.find(s => s.paidBy?.email === lenderEmail)?.paidBy?.name || lenderEmail.split('@')[0];
-          const borrowerName = splitsArr.find(s => s.splitUsers?.some(u => u.email === borrowerEmail))?.splitUsers?.find(u => u.email === borrowerEmail)?.name || borrowerEmail.split('@')[0];
+          const lenderName =
+            splitsArr.find(s => s.paidBy?.email === lenderEmail)?.paidBy
+              ?.name || lenderEmail.split('@')[0];
+          const borrowerName =
+            splitsArr
+              .find(s => s.splitUsers?.some(u => u.email === borrowerEmail))
+              ?.splitUsers?.find(u => u.email === borrowerEmail)?.name ||
+            borrowerEmail.split('@')[0];
           net.push({
-            lender: {email: netAmt > 0 ? lenderEmail : borrowerEmail, name: netAmt > 0 ? lenderName : borrowerName},
-            borrower: {email: netAmt > 0 ? borrowerEmail : lenderEmail, name: netAmt > 0 ? borrowerName : lenderName},
+            lender: {
+              email: netAmt > 0 ? lenderEmail : borrowerEmail,
+              name: netAmt > 0 ? lenderName : borrowerName,
+            },
+            borrower: {
+              email: netAmt > 0 ? borrowerEmail : lenderEmail,
+              name: netAmt > 0 ? borrowerName : lenderName,
+            },
             amount: Math.abs(netAmt),
           });
         }
       });
     });
     const result = net.reduce<LendingDetail[]>((acc, cur) => {
-      const exists = acc.find(e =>
-        (e.lender.email === cur.lender.email && e.borrower.email === cur.borrower.email) ||
-        (e.lender.email === cur.borrower.email && e.borrower.email === cur.lender.email),
+      const exists = acc.find(
+        e =>
+          (e.lender.email === cur.lender.email &&
+            e.borrower.email === cur.borrower.email) ||
+          (e.lender.email === cur.borrower.email &&
+            e.borrower.email === cur.lender.email),
       );
-      if (!exists) acc.push(cur);
+      if (!exists) {
+        acc.push(cur);
+      }
       return acc;
     }, []);
     return result;
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _handleSearch = (query: string) => {
     setSearchQuery(query);
-    if (!query.trim()) { setFilteredSplits(splits); return; }
+    if (!query.trim()) {
+      setFilteredSplits(splits);
+      return;
+    }
     const filtered = splits.filter(split => {
-      const matchTitle = (split.title ?? '').toLowerCase().includes(query.toLowerCase());
-      const matchDate = moment((split.date || split.createdAt)!.toDate()).format('MMM D, YYYY').toLowerCase().includes(query.toLowerCase());
-      const matchCategory = split.category?.toLowerCase().includes(query.toLowerCase());
+      const matchTitle = (split.title ?? '')
+        .toLowerCase()
+        .includes(query.toLowerCase());
+      const matchDate = moment((split.date || split.createdAt)!.toDate())
+        .format('MMM D, YYYY')
+        .toLowerCase()
+        .includes(query.toLowerCase());
+      const matchCategory = split.category
+        ?.toLowerCase()
+        .includes(query.toLowerCase());
       const matchAmount = String(split.amount).includes(query);
-      const matchPaidBy = (split.paidBy?.name ?? '').toLowerCase().includes(query.toLowerCase());
-      return matchTitle || matchDate || matchCategory || matchAmount || matchPaidBy;
+      const matchPaidBy = (split.paidBy?.name ?? '')
+        .toLowerCase()
+        .includes(query.toLowerCase());
+      return (
+        matchTitle || matchDate || matchCategory || matchAmount || matchPaidBy
+      );
     });
     setFilteredSplits(filtered);
   };
 
-  const handleSettleUp = (lender?: LendingDetail['lender'], borrower?: LendingDetail['borrower'], amount?: number) => {
+  const handleSettleUp = (
+    lender?: LendingDetail['lender'],
+    borrower?: LendingDetail['borrower'],
+    amount?: number,
+  ) => {
     navigation.navigate('SettleUp', {
       group: {...group, members: groupMembers},
       lendingDetails: detailedLendingInfo,
@@ -282,23 +430,39 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
 
   const handleResendInvite = async (email: string) => {
     try {
-      const actorName = user?.displayName || user?.email?.split('@')[0] || 'Someone';
+      const actorName =
+        user?.displayName || user?.email?.split('@')[0] || 'Someone';
       // Update existing declined invitation back to pending, or create a new one
-      const existing = await firestore().collection('invitations')
-        .where('groupId', '==', group!.id)
-        .where('email', '==', email)
-        .get();
+      const existing = await getDocs(
+        fsQuery(
+          collection(getFirestore(), 'invitations'),
+          where('groupId', '==', group!.id),
+          where('email', '==', email),
+        ),
+      );
       if (!existing.empty) {
-        await existing.docs[0].ref.update({status: 'pending', createdAt: firestore.Timestamp.fromDate(new Date())});
+        await updateDoc(existing.docs[0].ref, {
+          status: 'pending',
+          createdAt: Timestamp.fromDate(new Date()),
+        });
       } else {
-        await firestore().collection('invitations').add({
-          email, groupId: group!.id, groupName: group!.name,
-          inviterUid: user?.uid, inviterEmail: user?.email, inviterName: actorName,
-          status: 'pending', createdAt: firestore.Timestamp.fromDate(new Date()),
+        await addDoc(collection(getFirestore(), 'invitations'), {
+          email,
+          groupId: group!.id,
+          groupName: group!.name,
+          inviterUid: user?.uid,
+          inviterEmail: user?.email,
+          inviterName: actorName,
+          status: 'pending',
+          createdAt: Timestamp.fromDate(new Date()),
         });
       }
       await SplitNotificationService.notifySplitInvite(
-        {id: group!.id, name: group!.name, members: groupMembers.map(m => m.email)} as any,
+        {
+          id: group!.id,
+          name: group!.name,
+          members: groupMembers.map(m => m.email),
+        } as any,
         actorName,
         email,
       );
@@ -309,19 +473,36 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
   };
 
   const renderGroupSummaryCard = () => (
-    <Card style={[styles.groupSummaryCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 2}>
+    <Card
+      style={[
+        styles.groupSummaryCard,
+        Platform.OS === 'android' && styles.cardAndroid,
+      ]}
+      elevation={Platform.OS === 'android' ? 0 : 2}>
       <View style={styles.cardContent}>
         <Text style={styles.titleText}>{group!.name}</Text>
         <View style={styles.groupMemberAvatars}>
           {groupMembers.slice(0, 4).map(member => (
             <View key={member.email} style={styles.memberWrapper}>
-              <UserAvatar size={40} name={member.name} src={member.avatar ?? undefined} style={styles.groupMemberAvatar} />
-              <Text style={styles.memberName} numberOfLines={1} ellipsizeMode="tail">{member.name}</Text>
+              <UserAvatar
+                size={40}
+                name={member.name}
+                src={member.avatar ?? undefined}
+                style={styles.groupMemberAvatar}
+              />
+              <Text
+                style={styles.memberName}
+                numberOfLines={1}
+                ellipsizeMode="tail">
+                {member.name}
+              </Text>
             </View>
           ))}
           {groupMembers.length > 4 && (
             <View style={[styles.memberWrapper, styles.extraMembersAvatar]}>
-              <Text style={styles.extraMembersText}>+{groupMembers.length - 4}</Text>
+              <Text style={styles.extraMembersText}>
+                +{groupMembers.length - 4}
+              </Text>
             </View>
           )}
         </View>
@@ -330,10 +511,22 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
             <Text style={styles.pendingInvitesLabel}>Pending Invites</Text>
             {pendingInvites.map(email => (
               <View key={email} style={styles.pendingInviteRow}>
-                <MaterialCommunityIcons name="clock-outline" size={14} color="rgba(255,255,255,0.7)" />
-                <Text style={styles.pendingInviteEmail} numberOfLines={1}>{email}</Text>
-                <TouchableOpacity onPress={() => handleResendInvite(email)} style={styles.resendButton}>
-                  <MaterialCommunityIcons name="email-send-outline" size={16} color="#fff" />
+                <MaterialCommunityIcons
+                  name="clock-outline"
+                  size={14}
+                  color="rgba(255,255,255,0.7)"
+                />
+                <Text style={styles.pendingInviteEmail} numberOfLines={1}>
+                  {email}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => handleResendInvite(email)}
+                  style={styles.resendButton}>
+                  <MaterialCommunityIcons
+                    name="email-send-outline"
+                    size={16}
+                    color="#fff"
+                  />
                   <Text style={styles.resendText}>Resend</Text>
                 </TouchableOpacity>
               </View>
@@ -341,52 +534,103 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
           </View>
         )}
         <View style={styles.actionButtonsRow}>
-          <TouchableOpacity style={[styles.iconButton, styles.editButton]} onPress={() => navigation.navigate('Split', {editGroup: group})} accessibilityLabel="Edit group" accessibilityRole="button">
-            <MaterialCommunityIcons name="pencil" size={24} color={PRIMARY_COLOR} />
+          <TouchableOpacity
+            style={[styles.iconButton, styles.editButton]}
+            onPress={() => navigation.navigate('Split', {editGroup: group})}
+            accessibilityLabel="Edit group"
+            accessibilityRole="button">
+            <MaterialCommunityIcons
+              name="pencil"
+              size={24}
+              color={PRIMARY_COLOR}
+            />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.iconButton, styles.leaveButton]}
             onPress={() => {
-              Alert.alert('Leave Group', 'Are you sure you want to leave this group? You will be removed from future splits.', [
-                {text: 'Cancel', style: 'cancel'},
-                {text: 'Leave', style: 'destructive', onPress: async () => {
-                  try {
-                    const userEmail = (user?.email || '').toLowerCase();
-                    if (!userEmail) { Alert.alert('Error', 'User not found'); return; }
-                    await firestore().collection('groups').doc(group!.id).update({
-                      members: firestore.FieldValue.arrayRemove(userEmail),
-                      [`memberNames.${userEmail}`]: firestore.FieldValue.delete(),
-                    });
-                    Alert.alert('Left Group', 'You have left the group.');
-                    navigation.goBack();
-                  } catch (_) { Alert.alert('Error', 'Failed to leave group'); }
-                }},
-              ]);
+              Alert.alert(
+                'Leave Group',
+                'Are you sure you want to leave this group? You will be removed from future splits.',
+                [
+                  {text: 'Cancel', style: 'cancel'},
+                  {
+                    text: 'Leave',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        const userEmail = (user?.email || '').toLowerCase();
+                        if (!userEmail) {
+                          Alert.alert('Error', 'User not found');
+                          return;
+                        }
+                        await updateDoc(
+                          fsDoc(getFirestore(), 'groups', group!.id),
+                          {
+                            members: arrayRemove(userEmail),
+                            [`memberNames.${userEmail}`]: deleteField(),
+                          },
+                        );
+                        Alert.alert('Left Group', 'You have left the group.');
+                        navigation.goBack();
+                      } catch (_) {
+                        Alert.alert('Error', 'Failed to leave group');
+                      }
+                    },
+                  },
+                ],
+              );
             }}
-            accessibilityLabel="Leave group" accessibilityRole="button">
-            <MaterialCommunityIcons name="exit-to-app" size={24} color={EXPENSE_COLOR} />
+            accessibilityLabel="Leave group"
+            accessibilityRole="button">
+            <MaterialCommunityIcons
+              name="exit-to-app"
+              size={24}
+              color={EXPENSE_COLOR}
+            />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.iconButton, styles.deleteButton]}
             onPress={() => {
-              Alert.alert('Delete Group', 'Are you sure you want to delete this group and its splits? This cannot be undone.', [
-                {text: 'Cancel', style: 'cancel'},
-                {text: 'Delete', style: 'destructive', onPress: async () => {
-                  try {
-                    const splitsRef = firestore().collection('groups').doc(group!.id).collection('splits');
-                    const snapshot = await splitsRef.get();
-                    const batch = firestore().batch();
-                    snapshot.forEach(doc => batch.delete(doc.ref));
-                    await batch.commit();
-                    await firestore().collection('groups').doc(group!.id).delete();
-                    Alert.alert('Deleted', 'Group deleted successfully');
-                    navigation.goBack();
-                  } catch (_) { Alert.alert('Error', 'Failed to delete group'); }
-                }},
-              ]);
+              Alert.alert(
+                'Delete Group',
+                'Are you sure you want to delete this group and its splits? This cannot be undone.',
+                [
+                  {text: 'Cancel', style: 'cancel'},
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        const splitsRef = collection(
+                          getFirestore(),
+                          'groups',
+                          group!.id,
+                          'splits',
+                        );
+                        const snapshot = await getDocs(splitsRef);
+                        const batch = writeBatch(getFirestore());
+                        snapshot.forEach(doc => batch.delete(doc.ref));
+                        await batch.commit();
+                        await deleteDoc(
+                          fsDoc(getFirestore(), 'groups', group!.id),
+                        );
+                        Alert.alert('Deleted', 'Group deleted successfully');
+                        navigation.goBack();
+                      } catch (_) {
+                        Alert.alert('Error', 'Failed to delete group');
+                      }
+                    },
+                  },
+                ],
+              );
             }}
-            accessibilityLabel="Delete group" accessibilityRole="button">
-            <MaterialCommunityIcons name="delete-outline" size={24} color="#fff" />
+            accessibilityLabel="Delete group"
+            accessibilityRole="button">
+            <MaterialCommunityIcons
+              name="delete-outline"
+              size={24}
+              color="#fff"
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -396,34 +640,75 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
   const renderStatsSummary = () => {
     const currentEmail = user?.email?.toLowerCase();
     const myShare = splits.reduce((total, split) => {
-      if (split.type === 'settlement' || split.isSettlement) return total;
+      if (split.type === 'settlement' || split.isSettlement) {
+        return total;
+      }
       const splitUsers = split.splitUsers || [];
-      const isParticipant = splitUsers.some(u => u.email?.toLowerCase() === currentEmail);
-      if (!isParticipant) return total;
+      const isParticipant = splitUsers.some(
+        u => u.email?.toLowerCase() === currentEmail,
+      );
+      if (!isParticipant) {
+        return total;
+      }
       if (split.splitType === 'percentage') {
-        const entry = splitUsers.find(u => u.email?.toLowerCase() === currentEmail);
-        return total + parseFloat(String(split.amount)) * ((entry?.percentage || 0) / 100);
+        const entry = splitUsers.find(
+          u => u.email?.toLowerCase() === currentEmail,
+        );
+        return (
+          total +
+          parseFloat(String(split.amount)) * ((entry?.percentage || 0) / 100)
+        );
       }
       return total + parseFloat(String(split.amount)) / splitUsers.length;
     }, 0);
     return (
       <View style={styles.statsRow}>
-        <Card style={[styles.statCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
+        <Card
+          style={[
+            styles.statCard,
+            Platform.OS === 'android' && styles.cardAndroid,
+          ]}
+          elevation={Platform.OS === 'android' ? 0 : 1}>
           <View style={styles.statCardContent}>
-            <View style={[styles.statIconCircle, {backgroundColor: PRIMARY_COLOR + '18'}]}>
-              <MaterialCommunityIcons name="receipt" size={18} color={PRIMARY_COLOR} />
+            <View
+              style={[
+                styles.statIconCircle,
+                {backgroundColor: PRIMARY_COLOR + '18'},
+              ]}>
+              <MaterialCommunityIcons
+                name="receipt"
+                size={18}
+                color={PRIMARY_COLOR}
+              />
             </View>
             <Text style={styles.statCardLabel}>Total Spent</Text>
-            <Text style={[styles.statCardValue, {color: PRIMARY_COLOR}]}>{formatAmount(totalSplitAmount)}</Text>
+            <Text style={[styles.statCardValue, {color: PRIMARY_COLOR}]}>
+              {formatAmount(totalSplitAmount)}
+            </Text>
           </View>
         </Card>
-        <Card style={[styles.statCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
+        <Card
+          style={[
+            styles.statCard,
+            Platform.OS === 'android' && styles.cardAndroid,
+          ]}
+          elevation={Platform.OS === 'android' ? 0 : 1}>
           <View style={styles.statCardContent}>
-            <View style={[styles.statIconCircle, {backgroundColor: EXPENSE_COLOR + '18'}]}>
-              <MaterialCommunityIcons name="account-cash" size={18} color={EXPENSE_COLOR} />
+            <View
+              style={[
+                styles.statIconCircle,
+                {backgroundColor: EXPENSE_COLOR + '18'},
+              ]}>
+              <MaterialCommunityIcons
+                name="account-cash"
+                size={18}
+                color={EXPENSE_COLOR}
+              />
             </View>
             <Text style={styles.statCardLabel}>Your Share</Text>
-            <Text style={[styles.statCardValue, {color: EXPENSE_COLOR}]}>{formatAmount(myShare)}</Text>
+            <Text style={[styles.statCardValue, {color: EXPENSE_COLOR}]}>
+              {formatAmount(myShare)}
+            </Text>
           </View>
         </Card>
       </View>
@@ -432,9 +717,16 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
 
   const renderDetailedLendingSummary = () => {
     const visibleDetails = detailedLendingInfo.filter(d => d.amount > 0.009);
-    if (visibleDetails.length === 0) return null;
+    if (visibleDetails.length === 0) {
+      return null;
+    }
     const currentEmail = user?.email?.toLowerCase();
-    const hasActionable = visibleDetails.some(d => currentEmail && (currentEmail === d.borrower.email?.toLowerCase() || currentEmail === d.lender.email?.toLowerCase()));
+    const hasActionable = visibleDetails.some(
+      d =>
+        currentEmail &&
+        (currentEmail === d.borrower.email?.toLowerCase() ||
+          currentEmail === d.lender.email?.toLowerCase()),
+    );
     return (
       <View style={styles.lendingSummaryContainer}>
         <Text style={styles.sectionHeaderText}>Settlement Suggestions</Text>
@@ -445,44 +737,92 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
           const viewerReceives = currentEmail && currentEmail === receiverEmail;
           const amountStr = formatAmount(detail.amount);
           return (
-            <Card key={index} style={[styles.lendingSummaryCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
+            <Card
+              key={index}
+              style={[
+                styles.lendingSummaryCard,
+                Platform.OS === 'android' && styles.cardAndroid,
+              ]}
+              elevation={Platform.OS === 'android' ? 0 : 1}>
               <View style={styles.lendingSummaryContent}>
                 <View style={styles.lendingUserContainer}>
                   <UserAvatar size={40} name={detail.borrower.name} />
-                  <MaterialCommunityIcons name="arrow-right" size={20} color="#959698" style={styles.arrowIcon} />
+                  <MaterialCommunityIcons
+                    name="arrow-right"
+                    size={20}
+                    color="#959698"
+                    style={styles.arrowIcon}
+                  />
                   <UserAvatar size={40} name={detail.lender.name} />
                 </View>
                 {viewerPays ? (
                   <Text style={styles.lendingDetailText}>
-                    You pay {detail.lender.name} <Text style={[styles.amountStrongText, {color: EXPENSE_COLOR}]}>{amountStr}</Text>
+                    You pay {detail.lender.name}{' '}
+                    <Text
+                      style={[styles.amountStrongText, {color: EXPENSE_COLOR}]}>
+                      {amountStr}
+                    </Text>
                   </Text>
                 ) : viewerReceives ? (
                   <>
                     <Text style={styles.lendingDetailText}>
-                      You receive <Text style={[styles.amountStrongText, {color: SUCCESS_COLOR}]}>{amountStr}</Text> from {detail.borrower.name}
+                      You receive{' '}
+                      <Text
+                        style={[
+                          styles.amountStrongText,
+                          {color: SUCCESS_COLOR},
+                        ]}>
+                        {amountStr}
+                      </Text>{' '}
+                      from {detail.borrower.name}
                     </Text>
                     <TouchableOpacity
                       style={styles.remindIconButton}
                       onPress={async () => {
                         try {
-                          const lenderDoc = await firestore().collection('users').where('email', '==', user?.email).get();
-                          const lenderName = lenderDoc.docs[0]?.data()?.name || user?.email?.split('@')[0] || 'Someone';
-                          const result = await SplitNotificationService.notifyPaymentReminder(
-                            group as any, detail.borrower as any, {name: lenderName, email: user?.email} as any, detail.amount,
+                          const lenderDoc = await getDocs(
+                            fsQuery(
+                              collection(getFirestore(), 'users'),
+                              where('email', '==', user?.email),
+                            ),
                           );
+                          const lenderName =
+                            lenderDoc.docs[0]?.data()?.name ||
+                            user?.email?.split('@')[0] ||
+                            'Someone';
+                          const result =
+                            await SplitNotificationService.notifyPaymentReminder(
+                              group as any,
+                              detail.borrower as any,
+                              {name: lenderName, email: user?.email} as any,
+                              detail.amount,
+                            );
                           if (result?.reason === 'cooldown') {
-                            Alert.alert('Already Reminded', 'You already sent a reminder in the last 24 hours.');
+                            Alert.alert(
+                              'Already Reminded',
+                              'You already sent a reminder in the last 24 hours.',
+                            );
                           } else if (result?.success) {
-                            Alert.alert('Reminder Sent', `${detail.borrower.name} has been reminded to pay you.`);
+                            Alert.alert(
+                              'Reminder Sent',
+                              `${detail.borrower.name} has been reminded to pay you.`,
+                            );
                           }
-                        } catch (_) { Alert.alert('Error', 'Failed to send reminder'); }
+                        } catch (_) {
+                          Alert.alert('Error', 'Failed to send reminder');
+                        }
                       }}>
-                      <MaterialCommunityIcons name="bell-outline" size={18} color={PRIMARY_COLOR} />
+                      <MaterialCommunityIcons
+                        name="bell-outline"
+                        size={18}
+                        color={PRIMARY_COLOR}
+                      />
                     </TouchableOpacity>
                   </>
                 ) : (
                   <Text style={styles.lendingDetailText}>
-                    {detail.borrower.name} pays {detail.lender.name} <Text style={styles.amountStrongText}>{amountStr}</Text>
+                    {detail.borrower.name} pays {detail.lender.name}{' '}
+                    <Text style={styles.amountStrongText}>{amountStr}</Text>
                   </Text>
                 )}
               </View>
@@ -490,7 +830,11 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
           );
         })}
         {hasActionable && (
-          <Button mode="contained" onPress={() => handleSettleUp()} style={styles.settleAllButton} textColor="#fff">
+          <Button
+            mode="contained"
+            onPress={() => handleSettleUp()}
+            style={styles.settleAllButton}
+            textColor="#fff">
             Settle Up
           </Button>
         )}
@@ -508,41 +852,84 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
             {splitsToShow.map(split => {
               const splitColor = getSplitCardColor(split, currentEmail);
               return (
-                <Card key={split.id} style={[styles.splitCard, Platform.OS === 'android' && styles.cardAndroid]} elevation={Platform.OS === 'android' ? 0 : 1}>
-                  <TouchableOpacity style={styles.splitCardContent} onPress={() => navigation.navigate('SplitDetail', {group, split})}>
-                    <View style={[styles.splitColorBar, {backgroundColor: splitColor}]} />
+                <Card
+                  key={split.id}
+                  style={[
+                    styles.splitCard,
+                    Platform.OS === 'android' && styles.cardAndroid,
+                  ]}
+                  elevation={Platform.OS === 'android' ? 0 : 1}>
+                  <TouchableOpacity
+                    style={styles.splitCardContent}
+                    onPress={() =>
+                      navigation.navigate('SplitDetail', {group, split})
+                    }>
+                    <View
+                      style={[
+                        styles.splitColorBar,
+                        {backgroundColor: splitColor},
+                      ]}
+                    />
                     <View style={styles.splitCardDetails}>
                       <Text style={styles.splitTitle}>{split.title}</Text>
-                      <Text style={styles.splitSubtitle}>Paid by {split.paidBy?.name || split.paidBy?.email}</Text>
-                      <Text style={styles.splitDate}>{moment((split.date || split.createdAt)!.toDate()).format('MMM D, YYYY')}</Text>
+                      <Text style={styles.splitSubtitle}>
+                        Paid by {split.paidBy?.name || split.paidBy?.email}
+                      </Text>
+                      <Text style={styles.splitDate}>
+                        {moment(
+                          (split.date || split.createdAt)!.toDate(),
+                        ).format('MMM D, YYYY')}
+                      </Text>
                       {split.category && (
                         <View style={styles.categoryTag}>
-                          <Text style={styles.categoryText}>{split.category}</Text>
+                          <Text style={styles.categoryText}>
+                            {split.category}
+                          </Text>
                         </View>
                       )}
                       {split.recurring?.enabled && (
                         <View style={styles.recurringTag}>
-                          <MaterialCommunityIcons name="repeat" size={11} color="#677CD2" />
-                          <Text style={styles.recurringTagText}>{split.recurring.frequency === 'weekly' ? 'Weekly' : 'Monthly'}</Text>
+                          <MaterialCommunityIcons
+                            name="repeat"
+                            size={11}
+                            color="#677CD2"
+                          />
+                          <Text style={styles.recurringTagText}>
+                            {split.recurring.frequency === 'weekly'
+                              ? 'Weekly'
+                              : 'Monthly'}
+                          </Text>
                         </View>
                       )}
                     </View>
                     <View style={styles.splitCardRight}>
-                      <Text style={[styles.splitAmount, {color: splitColor}]}>{formatAmount(Number(split.amount))}</Text>
+                      <Text style={[styles.splitAmount, {color: splitColor}]}>
+                        {formatAmount(Number(split.amount))}
+                      </Text>
                     </View>
                   </TouchableOpacity>
                 </Card>
               );
             })}
             {filteredSplits.length > RECENT_SPLITS_LIMIT && (
-              <TouchableOpacity onPress={() => navigation.navigate('SplitTransaction', {group})} style={styles.showAllButton}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('SplitTransaction', {group})}
+                style={styles.showAllButton}>
                 <Text style={styles.showAllText}>Show all transactions</Text>
-                <MaterialCommunityIcons name="chevron-right" size={20} color={PRIMARY_COLOR} />
+                <MaterialCommunityIcons
+                  name="chevron-right"
+                  size={20}
+                  color={PRIMARY_COLOR}
+                />
               </TouchableOpacity>
             )}
           </>
         ) : (
-          <Text style={styles.noSplitsText}>{searchQuery ? 'No splits found matching your search' : 'No splits yet'}</Text>
+          <Text style={styles.noSplitsText}>
+            {searchQuery
+              ? 'No splits found matching your search'
+              : 'No splits yet'}
+          </Text>
         )}
       </View>
     );
@@ -560,7 +947,10 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
-        <KeyboardAwareScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <KeyboardAwareScrollView
+          style={styles.scrollView}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
           {renderGroupSummaryCard()}
           {renderStatsSummary()}
           {renderDetailedLendingSummary()}
@@ -571,7 +961,11 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
             {renderSplitsList()}
           </View>
         </KeyboardAwareScrollView>
-        <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('CreateSplit', {group})} accessibilityLabel="Add split" accessibilityRole="button">
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => navigation.navigate('CreateSplit', {group})}
+          accessibilityLabel="Add split"
+          accessibilityRole="button">
           <MaterialCommunityIcons name="plus" size={28} color="#fff" />
         </TouchableOpacity>
         {/* Improvement 4: success snackbar after creating a split */}
@@ -590,67 +984,258 @@ const SplitGroupDetailScreen = ({route, navigation}: {route: any; navigation: an
 export default SplitGroupDetailScreen;
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR, paddingHorizontal: 20},
+  container: {
+    flex: 1,
+    backgroundColor: BACKGROUND_COLOR,
+    paddingHorizontal: 20,
+  },
   scrollView: {flex: 1},
-  loadingContainer: {flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BACKGROUND_COLOR},
-  loadingText: {fontSize: 16, color: PRIMARY_COLOR, marginTop: 15, fontFamily: 'Lato-Regular'},
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: BACKGROUND_COLOR,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: PRIMARY_COLOR,
+    marginTop: 15,
+    fontFamily: 'Lato-Regular',
+  },
   splitsSection: {paddingBottom: 30},
-  groupSummaryCard: {backgroundColor: PRIMARY_COLOR, padding: 20, marginTop: 20, marginBottom: 15},
+  groupSummaryCard: {
+    backgroundColor: PRIMARY_COLOR,
+    padding: 20,
+    marginTop: 20,
+    marginBottom: 15,
+  },
   cardContent: {alignItems: 'center'},
   titleText: {fontSize: 24, color: '#fff', marginBottom: 10, fontWeight: '600'},
   balanceText: {fontSize: 22, fontWeight: '500', color: '#fff'},
-  sectionHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 15},
-  sectionHeaderText: {fontSize: 20, fontWeight: 'bold', color: '#2C2C2C', fontFamily: 'Kufam-SemiBoldItalic'},
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 15,
+  },
+  sectionHeaderText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2C2C2C',
+    fontFamily: 'Kufam-SemiBoldItalic',
+  },
   splitsList: {marginBottom: 30},
   splitCard: {marginBottom: 10, backgroundColor: '#fff', overflow: 'hidden'},
-  splitCardContent: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'stretch'},
+  splitCardContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'stretch',
+  },
   splitColorBar: {width: 4, alignSelf: 'stretch'},
   splitCardDetails: {flex: 1, paddingVertical: 12, paddingHorizontal: 12},
   splitTitle: {fontSize: 16, fontWeight: '500', color: '#3A3B3E'},
   splitSubtitle: {fontSize: 12, color: '#959698', marginTop: 4},
-  showAllButton: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, marginTop: 5},
-  showAllText: {color: PRIMARY_COLOR, fontSize: 14, fontWeight: '500', marginRight: 5},
+  showAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    marginTop: 5,
+  },
+  showAllText: {
+    color: PRIMARY_COLOR,
+    fontSize: 14,
+    fontWeight: '500',
+    marginRight: 5,
+  },
   splitAmount: {fontSize: 16, fontWeight: '500', color: PRIMARY_COLOR},
   noSplitsText: {textAlign: 'center', color: '#959698', marginTop: 20},
-  backButton: {marginTop: 20, padding: 10, backgroundColor: PRIMARY_COLOR, borderRadius: 5},
+  backButton: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: PRIMARY_COLOR,
+    borderRadius: 5,
+  },
   lendingSummaryContainer: {marginTop: 15},
-  lendingSummaryCard: {marginVertical: 10, padding: 15, backgroundColor: '#fff'},
+  lendingSummaryCard: {
+    marginVertical: 10,
+    padding: 15,
+    backgroundColor: '#fff',
+  },
   lendingDetailText: {fontSize: 14, color: '#3A3B3E', marginBottom: 5},
-  amountStrongText: {fontSize: 14, fontWeight: '700', marginLeft: 6, color: '#2C2C2C'},
-  groupMemberAvatars: {flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 10},
+  amountStrongText: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+    color: '#2C2C2C',
+  },
+  groupMemberAvatars: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
   groupMemberAvatar: {borderWidth: 2, borderColor: '#fff'},
   memberWrapper: {alignItems: 'center', width: 64, marginHorizontal: 4},
-  memberName: {color: '#fff', fontSize: 10, marginTop: 4, maxWidth: 56, textAlign: 'center'},
-  extraMembersAvatar: {backgroundColor: 'rgba(255,255,255,0.3)', justifyContent: 'center', alignItems: 'center'},
+  memberName: {
+    color: '#fff',
+    fontSize: 10,
+    marginTop: 4,
+    maxWidth: 56,
+    textAlign: 'center',
+  },
+  extraMembersAvatar: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   extraMembersText: {color: '#fff', fontSize: 12},
-  splitCardRight: {flexDirection: 'row', alignItems: 'center', paddingRight: 12},
-  lendingSummaryContent: {alignItems: 'center', padding: 15, position: 'relative'},
-  actionButtonsRow: {flexDirection: 'row', width: '100%', justifyContent: 'center', marginTop: 10, gap: 20},
-  iconButton: {width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center'},
+  splitCardRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 12,
+  },
+  lendingSummaryContent: {
+    alignItems: 'center',
+    padding: 15,
+    position: 'relative',
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'center',
+    marginTop: 10,
+    gap: 20,
+  },
+  iconButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   editButton: {backgroundColor: '#fff'},
   leaveButton: {backgroundColor: '#fff'},
   deleteButton: {backgroundColor: '#2E3E8B'},
-  lendingUserContainer: {flexDirection: 'row', alignItems: 'center', marginBottom: 10},
+  lendingUserContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   arrowIcon: {marginHorizontal: 10},
   splitDate: {fontSize: 12, color: '#959698', marginTop: 2},
-  categoryTag: {backgroundColor: PRIMARY_COLOR + '20', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, marginTop: 5, alignSelf: 'flex-start'},
+  categoryTag: {
+    backgroundColor: PRIMARY_COLOR + '20',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginTop: 5,
+    alignSelf: 'flex-start',
+  },
   categoryText: {fontSize: 12, color: PRIMARY_COLOR},
   settleAllButton: {marginTop: 10, backgroundColor: PRIMARY_COLOR},
-  fab: {position: 'absolute', right: 24, bottom: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: PRIMARY_COLOR, alignItems: 'center', justifyContent: 'center', elevation: Platform.OS === 'android' ? 0 : 3, shadowColor: PRIMARY_COLOR, shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.15, shadowRadius: 3},
-  remindIconButton: {position: 'absolute', top: 8, right: 8, padding: 6, borderRadius: 20, backgroundColor: '#EEF0FB'},
-  recurringTag: {flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#EEF0FB', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8, marginTop: 4, alignSelf: 'flex-start'},
-  recurringTagText: {fontSize: 11, color: '#677CD2', fontFamily: 'Lato-Regular'},
+  fab: {
+    position: 'absolute',
+    right: 24,
+    bottom: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: PRIMARY_COLOR,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: Platform.OS === 'android' ? 0 : 3,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+  },
+  remindIconButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 6,
+    borderRadius: 20,
+    backgroundColor: '#EEF0FB',
+  },
+  recurringTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#EEF0FB',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  recurringTagText: {
+    fontSize: 11,
+    color: '#677CD2',
+    fontFamily: 'Lato-Regular',
+  },
   cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
   statsRow: {flexDirection: 'row', marginBottom: 15, gap: 12},
-  statCard: {flex: 1, borderRadius: 12, backgroundColor: '#fff', overflow: 'hidden'},
-  statCardContent: {alignItems: 'center', paddingVertical: 14, paddingHorizontal: 10},
-  statIconCircle: {width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 6},
-  statCardLabel: {fontSize: 11, color: '#888', marginBottom: 3, fontFamily: 'Lato-Regular', textAlign: 'center'},
-  statCardValue: {fontSize: 15, fontWeight: '700', fontFamily: 'Lato-Bold', textAlign: 'center'},
-  pendingInvitesContainer: {width: '100%', marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)'},
-  pendingInvitesLabel: {color: 'rgba(255,255,255,0.8)', fontSize: 12, marginBottom: 6, fontWeight: '600'},
-  pendingInviteRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 6},
+  statCard: {
+    flex: 1,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    overflow: 'hidden',
+  },
+  statCardContent: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+  },
+  statIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  statCardLabel: {
+    fontSize: 11,
+    color: '#888',
+    marginBottom: 3,
+    fontFamily: 'Lato-Regular',
+    textAlign: 'center',
+  },
+  statCardValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: 'Lato-Bold',
+    textAlign: 'center',
+  },
+  pendingInvitesContainer: {
+    width: '100%',
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+  },
+  pendingInvitesLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    marginBottom: 6,
+    fontWeight: '600',
+  },
+  pendingInviteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    gap: 6,
+  },
   pendingInviteEmail: {flex: 1, color: 'rgba(255,255,255,0.9)', fontSize: 12},
-  resendButton: {flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12},
+  resendButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
   resendText: {color: '#fff', fontSize: 12},
 });
