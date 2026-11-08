@@ -144,7 +144,7 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
         setAttribute(getCrashlytics(), 'auth_method', 'google');
         AnalyticsService.logLogin('google');
         const userDoc = await getDoc(doc(getFirestore(), 'users', user.uid));
-        if (!userDoc.exists) {
+        if (!userDoc.exists()) {
           await setDoc(doc(getFirestore(), 'users', user.uid), {
             name: user.displayName || 'Google User',
             email: user.email,
@@ -208,7 +208,7 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
         setAttribute(getCrashlytics(), 'auth_method', 'apple');
         AnalyticsService.logLogin('apple');
         const userDoc = await getDoc(doc(getFirestore(), 'users', user.uid));
-        if (!userDoc.exists) {
+        if (!userDoc.exists()) {
           const displayName = result.fullName
             ? `${result.fullName.givenName || ''} ${
                 result.fullName.familyName || ''

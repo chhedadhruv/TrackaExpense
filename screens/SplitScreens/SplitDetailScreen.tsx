@@ -92,7 +92,7 @@ const SplitDetailScreen = ({
       const splitDoc = await getDoc(
         doc(getFirestore(), 'groups', group.id, 'splits', initialSplit.id),
       );
-      if (splitDoc.exists) {
+      if (splitDoc.exists()) {
         setSplit({id: splitDoc.id, ...splitDoc.data()} as SplitData);
       }
     } catch (_) {

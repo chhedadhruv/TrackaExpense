@@ -72,7 +72,7 @@ const InvitationsScreen = () => {
         const groupRef = doc(getFirestore(), 'groups', invite.groupId);
         await runTransaction(getFirestore(), async tx => {
           const groupSnap = await tx.get(groupRef);
-          if (!groupSnap.exists) {
+          if (!groupSnap.exists()) {
             throw new Error('Group not found');
           }
           const group = groupSnap.data()!;

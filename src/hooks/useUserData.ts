@@ -51,7 +51,7 @@ export function useUserData(): UseUserDataReturn {
 
     try {
       const doc = await getDoc(fsDoc(getFirestore(), 'users', currentUser.uid));
-      if (doc.exists) {
+      if (doc.exists()) {
         const data = doc.data() as UserDocument;
         setUserData(data);
         setAttribute(getCrashlytics(), 'currency', data.currency ?? 'INR');

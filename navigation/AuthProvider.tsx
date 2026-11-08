@@ -22,12 +22,12 @@ import {
 } from '@react-native-firebase/crashlytics';
 import {reportError} from '../src/services/ErrorReporter';
 import * as AnalyticsService from '../src/services/AnalyticsService';
-import type {FirebaseAuthTypes} from '@react-native-firebase/auth';
+import type {User as FirebaseUser} from '@react-native-firebase/auth';
 
 interface AuthContextValue {
-  user: FirebaseAuthTypes.User | null;
-  setUser: React.Dispatch<React.SetStateAction<FirebaseAuthTypes.User | null>>;
-  validateUserData: (user: FirebaseAuthTypes.User) => Promise<boolean>;
+  user: FirebaseUser | null;
+  setUser: React.Dispatch<React.SetStateAction<FirebaseUser | null>>;
+  validateUserData: (user: FirebaseUser) => Promise<boolean>;
   login: (email: string, password: string) => Promise<void>;
   register: (
     email: string,
@@ -45,11 +45,11 @@ export const AuthContext = createContext<AuthContextValue>(
 );
 
 const AuthProvider = ({children}: {children: React.ReactNode}) => {
-  const [user, setUser] = useState<FirebaseAuthTypes.User | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [, setErrorMessage] = useState<string | null>(null);
 
   const validateUserData = async (
-    firebaseUser: FirebaseAuthTypes.User,
+    firebaseUser: FirebaseUser,
   ): Promise<boolean> => {
     if (!firebaseUser?.uid) {
       return false;
@@ -58,7 +58,7 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
       const userDoc = await getDoc(
         doc(getFirestore(), 'users', firebaseUser.uid),
       );
-      return userDoc.exists;
+      return userDoc.exists();
     } catch (error) {
       reportError(error as Error);
       return false;

@@ -95,7 +95,7 @@ class ReminderNotificationService {
       const reminderCheck = await getDoc(
         doc(getFirestore(), 'users', currentUser.uid, 'reminderLogs', today),
       );
-      if (reminderCheck.exists) {
+      if (reminderCheck.exists()) {
         return;
       }
 
@@ -282,7 +282,7 @@ class ReminderNotificationService {
           `weekly_${weekStart}`,
         ),
       );
-      if (summaryCheck.exists) {
+      if (summaryCheck.exists()) {
         return;
       }
       const weeklyActivity = await this.getWeeklyActivity(
@@ -384,7 +384,7 @@ class ReminderNotificationService {
           `monthly_goal_${monthStart}`,
         ),
       );
-      if (goalCheck.exists) {
+      if (goalCheck.exists()) {
         return;
       }
       await this.notificationService.sendNotificationToUsers([userEmail], {
@@ -439,7 +439,7 @@ class ReminderNotificationService {
       const alreadySent = await getDoc(
         doc(getFirestore(), 'users', userId, 'reminderLogs', logDocId),
       );
-      if (alreadySent.exists) {
+      if (alreadySent.exists()) {
         return;
       }
       const progress =

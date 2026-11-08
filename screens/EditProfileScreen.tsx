@@ -43,7 +43,7 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
         const snap = await getDoc(
           doc(getFirestore(), 'users', currentUser.uid),
         );
-        if (snap.exists) {
+        if (snap.exists()) {
           const data = snap.data()!;
           setUserData({
             name: data.name ?? '',

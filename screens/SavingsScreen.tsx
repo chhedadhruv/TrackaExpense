@@ -133,7 +133,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         doc(getFirestore(), 'users', currentUser.uid),
       );
 
-      if (!userDoc.exists) {
+      if (!userDoc.exists()) {
         Alert.alert('Error', 'User document not found. Please try again.');
         setLoading(false);
         return;
