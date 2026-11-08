@@ -8,7 +8,11 @@ import AuthStack from './AuthStack';
 import AppStack from './AppStack';
 import {AuthContext} from './AuthProvider';
 import auth from '@react-native-firebase/auth';
-import messaging from '@react-native-firebase/messaging';
+import {
+  getInitialNotification,
+  getMessaging,
+  onNotificationOpenedApp,
+} from '@react-native-firebase/messaging';
 import {getAnalytics, logScreenView} from '@react-native-firebase/analytics';
 import type {FirebaseAuthTypes} from '@react-native-firebase/auth';
 import {setErrorReportingUser} from '../src/services/ErrorReporter';
@@ -61,14 +65,14 @@ const linking = {
     },
   },
   getInitialURL: async (): Promise<string | null> => {
-    const message = await messaging().getInitialNotification();
+    const message = await getInitialNotification(getMessaging());
     if (message?.data?.url) {
       return message.data.url as string;
     }
     return null;
   },
   subscribe: (listener: (url: string) => void) => {
-    const unsub = messaging().onNotificationOpenedApp(message => {
+    const unsub = onNotificationOpenedApp(getMessaging(), message => {
       if (message?.data?.url) {
         listener(message.data.url as string);
       }

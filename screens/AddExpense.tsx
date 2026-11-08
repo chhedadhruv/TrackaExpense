@@ -11,7 +11,12 @@ import React, {useState, useEffect, useRef} from 'react';
 import {Card, ActivityIndicator} from 'react-native-paper';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
-import storage from '@react-native-firebase/storage';
+import {
+  getDownloadURL,
+  getStorage,
+  putFile,
+  ref as createStorageRef,
+} from '@react-native-firebase/storage';
 import {reportError} from '../src/services/ErrorReporter';
 import {requestPushPermissionAfterFirstExpense} from '../src/services/PushService';
 import * as PerformanceService from '../src/services/PerformanceService';
@@ -97,8 +102,11 @@ const AddExpense = ({navigation}: {navigation: any}) => {
     const name = filename.split('.').slice(0, -1).join('.');
     filename = name + Date.now() + '.' + extension;
     setTransferred(0);
-    const storageRef = storage().ref(`bills/${getUid()}/${filename}`);
-    const task = storageRef.putFile(uploadUri);
+    const storageRef = createStorageRef(
+      getStorage(),
+      `bills/${getUid()}/${filename}`,
+    );
+    const task = putFile(storageRef, uploadUri);
     task.on('state_changed', snapshot => {
       setTransferred(
         Math.round(snapshot.bytesTransferred / snapshot.totalBytes) * 100,
@@ -108,7 +116,7 @@ const AddExpense = ({navigation}: {navigation: any}) => {
       const stopTrace = await PerformanceService.traceUploadReceipt();
       await task;
       await stopTrace?.();
-      return await storageRef.getDownloadURL();
+      return await getDownloadURL(storageRef);
     } catch (e) {
       reportError(e as Error);
       return null;
