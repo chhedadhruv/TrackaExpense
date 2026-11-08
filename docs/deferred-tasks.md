@@ -7,9 +7,7 @@ Update it as items are done.
 
 | Item | Why it matters | Notes |
 |---|---|---|
-| Set `SENTRY_AUTH_TOKEN` in the build environment | Release builds upload JavaScript source maps to Sentry; without it, production stack traces are unreadable | Organization token named `trackaexpense-sourcemaps`. Keep it in the shell or CI secrets, never in a file |
-| OneSignal Android push credentials | The OneSignal subscription has no push token until the Firebase service account is added in the OneSignal dashboard | Settings > Push & In-App > Google Android (FCM). Check afterwards that the device subscription shows a token |
-| Verify the new Mixpanel project | The app now sends to the dedicated `TrackaExpense` Mixpanel project | Confirm events arrive; the data region chosen for the project is not recorded here |
+| Export `SENTRY_AUTH_TOKEN` in the shell or CI secrets used for release builds | Gradle reads the token from the environment, not from `.env`. The upload was verified on 2026-11-08 by loading the token from `.env` for a single build | Organization token `trackaexpense-sourcemaps`. A throwaway release `com.trackaexpense@0.0.0-sourcemap-check` was created in Sentry by that test and can be deleted |
 | Check the minimum iOS version in App Store Connect | The iOS app target says iOS 26.0 (`ios/TrackaExpense.xcodeproj/project.pbxproj`); if the live build shipped that way, older iOS versions cannot install it | Expo SDK 58 needs iOS 16.4 or newer |
 | Set branch protection on `staging` and `production` | Stops direct pushes | GitHub repository settings |
 | Back up the Android release keystore | A single copy exists on the owner's machine | Needed to ever update the Play Store listing |

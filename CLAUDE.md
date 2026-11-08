@@ -107,11 +107,12 @@ Planned commands: EAS build and update scripts (Phase 1b).
 
 ## 11. Current phase
 
-Phase 1a is complete (tooling, local quality gates, minimum-version gate, server on yarn; CI skipped because of a billing issue). Phase 1b (Expo conversion, Sentry, Mixpanel, OneSignal) starts only after owner sign-off.
+Phase 1a is complete (tooling, local quality gates, minimum-version gate, server on yarn; CI skipped because of a billing issue). Phase 1b-i is complete on Android: Sentry (with source map upload), Mixpanel (dedicated project) and OneSignal (Android push credentials added) are verified; the iOS parts are deferred (see `docs/deferred-tasks.md`). Phase 1b-ii (Expo conversion) starts with a library compatibility audit and needs owner sign-off on the SDK choice.
 
 - [x] Phase 0: audit, plus stage 1 Firestore and Storage rules and indexes deployed
 - [x] Phase 1a: tooling and safety net
-- [ ] Phase 1b: Expo conversion and observability SDKs
+- [x] Phase 1b-i: Sentry, Mixpanel, OneSignal (Android verified, iOS deferred)
+- [ ] Phase 1b-ii: Expo conversion (audit first)
 - [ ] Phase 2: data and security (money to integers, uid-based membership, tighter rules)
 - [ ] Phase 3: core features
 - [ ] Phase 4: growth features
