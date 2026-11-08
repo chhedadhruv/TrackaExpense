@@ -1,4 +1,17 @@
-import firestore from '@react-native-firebase/firestore';
+import {
+  Timestamp,
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  getFirestore,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import NotificationService from './NotificationService';
 import {getConfig} from '../src/services/RemoteConfigService';
@@ -79,12 +92,9 @@ class ReminderNotificationService {
       const userEmail = currentUser.email!;
       const today = moment().format('YYYY-MM-DD');
 
-      const reminderCheck = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('reminderLogs')
-        .doc(today)
-        .get();
+      const reminderCheck = await getDoc(
+        doc(getFirestore(), 'users', currentUser.uid, 'reminderLogs', today),
+      );
       if (reminderCheck.exists) {
         return;
       }
@@ -117,27 +127,27 @@ class ReminderNotificationService {
       const endOfDay = moment(date).endOf('day').toDate();
       const [incomeSnapshot, expenseSnapshot, savingsSnapshot] =
         await Promise.all([
-          firestore()
-            .collection('users')
-            .doc(userId)
-            .collection('income')
-            .where('date', '>=', startOfDay)
-            .where('date', '<=', endOfDay)
-            .get(),
-          firestore()
-            .collection('users')
-            .doc(userId)
-            .collection('expenses')
-            .where('date', '>=', startOfDay)
-            .where('date', '<=', endOfDay)
-            .get(),
-          firestore()
-            .collection('users')
-            .doc(userId)
-            .collection('savings')
-            .where('date', '>=', startOfDay)
-            .where('date', '<=', endOfDay)
-            .get(),
+          getDocs(
+            query(
+              collection(getFirestore(), 'users', userId, 'income'),
+              where('date', '>=', startOfDay),
+              where('date', '<=', endOfDay),
+            ),
+          ),
+          getDocs(
+            query(
+              collection(getFirestore(), 'users', userId, 'expenses'),
+              where('date', '>=', startOfDay),
+              where('date', '<=', endOfDay),
+            ),
+          ),
+          getDocs(
+            query(
+              collection(getFirestore(), 'users', userId, 'savings'),
+              where('date', '>=', startOfDay),
+              where('date', '<=', endOfDay),
+            ),
+          ),
         ]);
       return {
         hasIncome: !incomeSnapshot.empty,
@@ -245,16 +255,11 @@ class ReminderNotificationService {
     reminderTypes: ReminderType[],
   ): Promise<void> {
     try {
-      await firestore()
-        .collection('users')
-        .doc(userId)
-        .collection('reminderLogs')
-        .doc(date)
-        .set({
-          date,
-          reminderTypes,
-          sentAt: firestore.FieldValue.serverTimestamp(),
-        });
+      await setDoc(doc(getFirestore(), 'users', userId, 'reminderLogs', date), {
+        date,
+        reminderTypes,
+        sentAt: serverTimestamp(),
+      });
     } catch (error) {
       console.error('Failed to log reminder:', error);
     }
@@ -268,12 +273,15 @@ class ReminderNotificationService {
       }
       const weekStart = moment().startOf('week').format('YYYY-MM-DD');
       const weekEnd = moment().endOf('week').format('YYYY-MM-DD');
-      const summaryCheck = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('reminderLogs')
-        .doc(`weekly_${weekStart}`)
-        .get();
+      const summaryCheck = await getDoc(
+        doc(
+          getFirestore(),
+          'users',
+          currentUser.uid,
+          'reminderLogs',
+          `weekly_${weekStart}`,
+        ),
+      );
       if (summaryCheck.exists) {
         return;
       }
@@ -296,17 +304,21 @@ class ReminderNotificationService {
         icon: '📊',
         priority: 'normal',
       });
-      await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('reminderLogs')
-        .doc(`weekly_${weekStart}`)
-        .set({
+      await setDoc(
+        doc(
+          getFirestore(),
+          'users',
+          currentUser.uid,
+          'reminderLogs',
+          `weekly_${weekStart}`,
+        ),
+        {
           type: 'weekly_summary',
           weekStart,
           weekEnd,
-          sentAt: firestore.FieldValue.serverTimestamp(),
-        });
+          sentAt: serverTimestamp(),
+        },
+      );
     } catch (error) {
       console.error('Failed to send weekly summary:', error);
     }
@@ -322,27 +334,27 @@ class ReminderNotificationService {
       const endDate = moment(weekEnd).endOf('day').toDate();
       const [incomeSnapshot, expenseSnapshot, savingsSnapshot] =
         await Promise.all([
-          firestore()
-            .collection('users')
-            .doc(userId)
-            .collection('income')
-            .where('date', '>=', startDate)
-            .where('date', '<=', endDate)
-            .get(),
-          firestore()
-            .collection('users')
-            .doc(userId)
-            .collection('expenses')
-            .where('date', '>=', startDate)
-            .where('date', '<=', endDate)
-            .get(),
-          firestore()
-            .collection('users')
-            .doc(userId)
-            .collection('savings')
-            .where('date', '>=', startDate)
-            .where('date', '<=', endDate)
-            .get(),
+          getDocs(
+            query(
+              collection(getFirestore(), 'users', userId, 'income'),
+              where('date', '>=', startDate),
+              where('date', '<=', endDate),
+            ),
+          ),
+          getDocs(
+            query(
+              collection(getFirestore(), 'users', userId, 'expenses'),
+              where('date', '>=', startDate),
+              where('date', '<=', endDate),
+            ),
+          ),
+          getDocs(
+            query(
+              collection(getFirestore(), 'users', userId, 'savings'),
+              where('date', '>=', startDate),
+              where('date', '<=', endDate),
+            ),
+          ),
         ]);
       return {
         incomeCount: incomeSnapshot.size,
@@ -363,12 +375,15 @@ class ReminderNotificationService {
       }
       const monthStart = moment().startOf('month').format('YYYY-MM-DD');
       const monthEnd = moment().endOf('month').format('YYYY-MM-DD');
-      const goalCheck = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('reminderLogs')
-        .doc(`monthly_goal_${monthStart}`)
-        .get();
+      const goalCheck = await getDoc(
+        doc(
+          getFirestore(),
+          'users',
+          currentUser.uid,
+          'reminderLogs',
+          `monthly_goal_${monthStart}`,
+        ),
+      );
       if (goalCheck.exists) {
         return;
       }
@@ -386,17 +401,21 @@ class ReminderNotificationService {
         icon: '🎯',
         priority: 'normal',
       });
-      await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('reminderLogs')
-        .doc(`monthly_goal_${monthStart}`)
-        .set({
+      await setDoc(
+        doc(
+          getFirestore(),
+          'users',
+          currentUser.uid,
+          'reminderLogs',
+          `monthly_goal_${monthStart}`,
+        ),
+        {
           type: 'monthly_goal',
           monthStart,
           monthEnd,
-          sentAt: firestore.FieldValue.serverTimestamp(),
-        });
+          sentAt: serverTimestamp(),
+        },
+      );
     } catch (error) {
       console.error('Failed to send monthly goal reminder:', error);
     }
@@ -417,12 +436,9 @@ class ReminderNotificationService {
           ? moment().startOf('week').format('YYYY-MM-DD')
           : moment().startOf('month').format('YYYY-MM-DD');
       const logDocId = `savings_${goal.id}_${periodKey}`;
-      const alreadySent = await firestore()
-        .collection('users')
-        .doc(userId)
-        .collection('reminderLogs')
-        .doc(logDocId)
-        .get();
+      const alreadySent = await getDoc(
+        doc(getFirestore(), 'users', userId, 'reminderLogs', logDocId),
+      );
       if (alreadySent.exists) {
         return;
       }
@@ -442,18 +458,16 @@ class ReminderNotificationService {
         icon: '💰',
         priority: 'normal',
       });
-      await firestore()
-        .collection('users')
-        .doc(userId)
-        .collection('reminderLogs')
-        .doc(logDocId)
-        .set({
+      await setDoc(
+        doc(getFirestore(), 'users', userId, 'reminderLogs', logDocId),
+        {
           type: 'savings_reminder',
           goalId: goal.id,
           goalName: goal.name,
           frequency,
-          sentAt: firestore.FieldValue.serverTimestamp(),
-        });
+          sentAt: serverTimestamp(),
+        },
+      );
     } catch (error) {
       console.error('Failed to send savings goal reminder:', error);
     }
@@ -465,19 +479,21 @@ class ReminderNotificationService {
       if (!currentUser) {
         return;
       }
-      const now = firestore.Timestamp.now();
-      const groupsSnap = await firestore()
-        .collection('groups')
-        .where('members', 'array-contains', currentUser.email)
-        .get();
+      const now = Timestamp.now();
+      const groupsSnap = await getDocs(
+        query(
+          collection(getFirestore(), 'groups'),
+          where('members', 'array-contains', currentUser.email),
+        ),
+      );
       for (const groupDoc of groupsSnap.docs) {
         try {
-          const splitsSnap = await firestore()
-            .collection('groups')
-            .doc(groupDoc.id)
-            .collection('splits')
-            .where('recurring.enabled', '==', true)
-            .get();
+          const splitsSnap = await getDocs(
+            query(
+              collection(getFirestore(), 'groups', groupDoc.id, 'splits'),
+              where('recurring.enabled', '==', true),
+            ),
+          );
           for (const splitDoc of splitsSnap.docs) {
             const split = splitDoc.data();
             const nextDate = split.recurring?.nextDate;
@@ -505,21 +521,20 @@ class ReminderNotificationService {
               splitUsers: split.splitUsers || [],
               category: split.category || null,
               notes: split.notes || null,
-              date: firestore.Timestamp.fromDate(nextDateJs),
+              date: Timestamp.fromDate(nextDateJs),
               createdAt: now,
               recurring: {
                 enabled: true,
                 frequency,
-                nextDate: firestore.Timestamp.fromDate(newNextDate),
+                nextDate: Timestamp.fromDate(newNextDate),
               },
             };
-            await firestore()
-              .collection('groups')
-              .doc(groupDoc.id)
-              .collection('splits')
-              .add(newSplitData);
-            await splitDoc.ref.update({
-              'recurring.nextDate': firestore.Timestamp.fromDate(newNextDate),
+            await addDoc(
+              collection(getFirestore(), 'groups', groupDoc.id, 'splits'),
+              newSplitData,
+            );
+            await updateDoc(splitDoc.ref, {
+              'recurring.nextDate': Timestamp.fromDate(newNextDate),
             });
           }
         } catch (_) {}
