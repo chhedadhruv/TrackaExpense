@@ -1,5 +1,5 @@
 import {Platform} from 'react-native';
-import {OneSignal} from 'react-native-onesignal';
+import {LogLevel, OneSignal} from 'react-native-onesignal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
 import {ONESIGNAL_APP_ID} from '@env';
@@ -16,6 +16,10 @@ export const initPush = (): void => {
     return;
   }
   try {
+    if (__DEV__) {
+      // Verbose SDK logging in debug builds only; must be set before initialize.
+      OneSignal.Debug.setLogLevel(LogLevel.Verbose);
+    }
     OneSignal.initialize(ONESIGNAL_APP_ID);
   } catch (_) {}
 };
