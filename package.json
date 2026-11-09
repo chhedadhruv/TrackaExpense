@@ -40,7 +40,8 @@
     "functions:build": "yarn --cwd functions build",
     "test:functions": "yarn --cwd functions test",
     "test:backfill": "yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only firestore --project demo-trackaexpense-backfill \"$(command -v node) functions/test/backfill.emulator.test.mjs\"",
-    "test:invitation": "yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only functions,firestore,auth --project demo-trackaexpense-invitation \"$(command -v node) functions/test/invitation.emulator.test.mjs\"",
+    "test:push": "yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only functions,firestore,auth --project demo-trackaexpense-push \"$(command -v node) functions/test/push.emulator.test.mjs\"",
+    "test:invitation":"yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only functions,firestore,auth --project demo-trackaexpense-invitation \"$(command -v node) functions/test/invitation.emulator.test.mjs\"",
     "test:settlement":"yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only functions,firestore,auth --project demo-trackaexpense-settlement \"$(command -v node) functions/test/settlement.emulator.test.mjs\"",
     "test:triggers":"yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only functions,firestore,auth --project demo-trackaexpense-functions \"$(command -v node) functions/test/triggers.emulator.test.mjs\""
   },
