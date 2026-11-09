@@ -33,6 +33,9 @@ import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
 import {AuthContext} from '../../navigation/AuthProvider';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import {useCurrency} from '../../utils/CurrencyUtil';
+import {majorOf, minorOf, totalMajor} from '../../src/utils/amounts';
+import {toMajorNumber} from '../../src/utils/money';
+import {shareOfMinor, sharesMinor} from '../../src/utils/splitMath';
 import {
   PRIMARY_COLOR,
   BACKGROUND_COLOR,
@@ -126,7 +129,7 @@ const SplitGroupDetailScreen = ({
   route: any;
   navigation: any;
 }) => {
-  const {formatAmount} = useCurrency();
+  const {currency, formatAmount} = useCurrency();
   const rawGroup = route.params?.group;
   const group: Group | null =
     rawGroup ||
@@ -183,9 +186,11 @@ const SplitGroupDetailScreen = ({
 
   useEffect(() => {
     if (splits.length > 0) {
-      setDetailedLendingInfo(calculateNetLendingBalances(splits));
+      setDetailedLendingInfo(
+        calculateNetLendingBalances(splits, currency.code),
+      );
     }
-  }, [splits]);
+  }, [splits, currency.code]);
 
   useEffect(() => {
     setFilteredSplits(splits);
@@ -259,9 +264,7 @@ const SplitGroupDetailScreen = ({
           const bTs = (b.date || b.createdAt)?.toMillis?.() ?? 0;
           return bTs - aTs;
         });
-      setTotalSplitAmount(
-        fetched.reduce((sum, s) => sum + parseFloat(String(s.amount)), 0),
-      );
+      setTotalSplitAmount(totalMajor(fetched, currency.code));
       setSplits(fetched);
       hasLoadedOnce.current = true;
     } catch (err) {
@@ -297,6 +300,7 @@ const SplitGroupDetailScreen = ({
 
   const calculateNetLendingBalances = (
     splitsArr: SplitItem[],
+    currencyCode: string,
   ): LendingDetail[] => {
     const balances: Record<string, Record<string, number>> = {};
     splitsArr.forEach(split => {
@@ -304,8 +308,8 @@ const SplitGroupDetailScreen = ({
       if (split.type === 'settlement' || split.isSettlement) {
         const fromEmail = split.paidBy?.email?.toLowerCase();
         const toEmail = split.splitUsers?.[0]?.email?.toLowerCase();
-        const amt = parseFloat(String(split.amount));
-        if (!fromEmail || !toEmail || fromEmail === toEmail || isNaN(amt)) {
+        const amt = minorOf(split, currencyCode);
+        if (!fromEmail || !toEmail || fromEmail === toEmail || amt === null) {
           return;
         }
         // Borrower paid lender: reduce what borrower owes lender
@@ -318,25 +322,21 @@ const SplitGroupDetailScreen = ({
       }
       const paidByEmail = split.paidBy?.email?.toLowerCase();
       const splitUsers = split.splitUsers || [];
-      const amount = parseFloat(String(split.amount));
-      if (!paidByEmail || isNaN(amount)) {
+      // Integer minor units: the shares of a split always add up to its total.
+      const shares = sharesMinor(split, currencyCode);
+      if (!paidByEmail || shares === null) {
         return;
       }
       if (!balances[paidByEmail]) {
         balances[paidByEmail] = {};
       }
-      splitUsers.forEach(u => {
+      splitUsers.forEach((u, index) => {
         const uEmail = u.email?.toLowerCase();
         if (!uEmail || uEmail === paidByEmail) {
           return;
         }
-        // Improvement 3: use actual percentage share instead of always dividing equally
-        const share =
-          split.splitType === 'percentage'
-            ? amount * ((u.percentage ?? 0) / 100)
-            : amount / splitUsers.length;
         balances[paidByEmail][uEmail] =
-          (balances[paidByEmail][uEmail] || 0) + share;
+          (balances[paidByEmail][uEmail] || 0) + shares[index];
       });
     });
     const net: LendingDetail[] = [];
@@ -366,7 +366,7 @@ const SplitGroupDetailScreen = ({
               email: netAmt > 0 ? borrowerEmail : lenderEmail,
               name: netAmt > 0 ? borrowerName : lenderName,
             },
-            amount: Math.abs(netAmt),
+            amount: toMajorNumber(Math.abs(netAmt), currencyCode),
           });
         }
       });
@@ -639,28 +639,15 @@ const SplitGroupDetailScreen = ({
 
   const renderStatsSummary = () => {
     const currentEmail = user?.email?.toLowerCase();
-    const myShare = splits.reduce((total, split) => {
+    // Summed as integer minor units; a split that is not shared with you, or whose amount cannot
+    // be converted, adds nothing.
+    const myShareMinor = splits.reduce((total, split) => {
       if (split.type === 'settlement' || split.isSettlement) {
         return total;
       }
-      const splitUsers = split.splitUsers || [];
-      const isParticipant = splitUsers.some(
-        u => u.email?.toLowerCase() === currentEmail,
-      );
-      if (!isParticipant) {
-        return total;
-      }
-      if (split.splitType === 'percentage') {
-        const entry = splitUsers.find(
-          u => u.email?.toLowerCase() === currentEmail,
-        );
-        return (
-          total +
-          parseFloat(String(split.amount)) * ((entry?.percentage || 0) / 100)
-        );
-      }
-      return total + parseFloat(String(split.amount)) / splitUsers.length;
+      return total + (shareOfMinor(split, currentEmail, currency.code) ?? 0);
     }, 0);
+    const myShare = toMajorNumber(myShareMinor, currency.code);
     return (
       <View style={styles.statsRow}>
         <Card
@@ -904,7 +891,7 @@ const SplitGroupDetailScreen = ({
                     </View>
                     <View style={styles.splitCardRight}>
                       <Text style={[styles.splitAmount, {color: splitColor}]}>
-                        {formatAmount(Number(split.amount))}
+                        {formatAmount(majorOf(split, currency.code))}
                       </Text>
                     </View>
                   </TouchableOpacity>
