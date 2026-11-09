@@ -5,10 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
-  Modal,
   TextInput,
   Image,
-  KeyboardAvoidingView,
   RefreshControl,
 } from 'react-native';
 import React, {useState, useEffect, useCallback, useRef} from 'react';
@@ -26,6 +24,7 @@ import {
 } from '@react-native-firebase/firestore';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
+import {KeyboardAvoidingModal} from '../src/components/KeyboardAvoidingModal';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {getCategoryIcon} from '../utils/CategoryData';
 import {
@@ -45,6 +44,7 @@ import {
 } from '../src/constants/theme';
 import {formatInputAmount} from '../src/utils/formatters';
 import {majorOf, totalMajor} from '../src/utils/amounts';
+import {fromMinor, tryToMinor} from '../src/utils/money';
 import type {TransactionDocument, UserDocument} from '../src/types';
 import type {McIconName} from '../src/types/icons';
 
@@ -318,7 +318,14 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
               <TouchableOpacity
                 onPress={() => {
                   setBalanceSaved(false);
-                  setNewBalanceInput(String(balance));
+                  // Round to the currency's decimals so stored float noise such as
+                  // -9.994999999999997 is not shown in the field.
+                  const balanceMinor = tryToMinor(balance, currency.code);
+                  setNewBalanceInput(
+                    balanceMinor === null
+                      ? String(balance)
+                      : fromMinor(balanceMinor, currency.code),
+                  );
                   setEditBalanceVisible(true);
                 }}
                 style={styles.balanceEditBtn}
@@ -655,56 +662,46 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
       </ScrollView>
 
       {/* Edit Balance Modal */}
-      <Modal
+      <KeyboardAvoidingModal
         visible={editBalanceVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setEditBalanceVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>Edit Balance</Text>
-              <Text style={styles.modalSubtitle}>
-                Set your current account balance
+        onRequestClose={() => setEditBalanceVisible(false)}
+        overlayStyle={styles.modalOverlay}>
+        <View style={styles.modalCard}>
+          <Text style={styles.modalTitle}>Edit Balance</Text>
+          <Text style={styles.modalSubtitle}>
+            Set your current account balance
+          </Text>
+          <TextInput
+            style={styles.modalInput}
+            value={formatInputAmount(newBalanceInput)}
+            onChangeText={text => setNewBalanceInput(text.replace(/,/g, ''))}
+            keyboardType="numeric"
+            placeholder="Enter balance"
+            placeholderTextColor={TEXT_PLACEHOLDER}
+            autoFocus
+          />
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={styles.modalCancelBtn}
+              onPress={() => setEditBalanceVisible(false)}>
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.modalSaveBtn,
+                balanceSaved && styles.modalSaveBtnSuccess,
+              ]}
+              onPress={handleSaveBalance}
+              disabled={balanceSaving || balanceSaved}>
+              <Text style={styles.modalSaveText}>
+                {balanceSaved ? 'Saved!' : balanceSaving ? 'Saving...' : 'Save'}
               </Text>
-              <TextInput
-                style={styles.modalInput}
-                value={formatInputAmount(newBalanceInput)}
-                onChangeText={text =>
-                  setNewBalanceInput(text.replace(/,/g, ''))
-                }
-                keyboardType="numeric"
-                placeholder="Enter balance"
-                placeholderTextColor={TEXT_PLACEHOLDER}
-                autoFocus
-              />
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={styles.modalCancelBtn}
-                  onPress={() => setEditBalanceVisible(false)}>
-                  <Text style={styles.modalCancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.modalSaveBtn,
-                    balanceSaved && styles.modalSaveBtnSuccess,
-                  ]}
-                  onPress={handleSaveBalance}
-                  disabled={balanceSaving || balanceSaved}>
-                  <Text style={styles.modalSaveText}>
-                    {balanceSaved
-                      ? 'Saved!'
-                      : balanceSaving
-                      ? 'Saving...'
-                      : 'Save'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </KeyboardAvoidingView>
+            </TouchableOpacity>
+          </View>
         </View>
-      </Modal>
+      </KeyboardAvoidingModal>
     </View>
   );
 };

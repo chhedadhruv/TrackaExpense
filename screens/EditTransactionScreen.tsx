@@ -28,7 +28,7 @@ import {reportError} from '../src/services/ErrorReporter';
 import * as PerformanceService from '../src/services/PerformanceService';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
+import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import FormButton from '../components/FormButton';
 import {useCurrency} from '../utils/CurrencyUtil';

@@ -18,7 +18,7 @@ import {
 import {lookupUserByEmail} from '../../src/services/UserLookup';
 import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
+import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../../src/constants/theme';
 import {formatInputAmount} from '../../src/utils/formatters';
