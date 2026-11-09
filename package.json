@@ -36,7 +36,10 @@
     "emulators": "firebase emulators:start --only firestore,storage --project demo-trackaexpense-rules",
     "test:rules": "firebase emulators:exec --only firestore,storage --project demo-trackaexpense-rules \"yarn node --test firebase/tests/rules.test.mjs\"",
     "postinstall": "patch-package",
-    "version:bump": "node scripts/bump-version.js"
+    "version:bump": "node scripts/bump-version.js",
+    "functions:build": "yarn --cwd functions build",
+    "test:functions": "yarn --cwd functions test",
+    "test:triggers": "yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only functions,firestore --project demo-trackaexpense-functions \"$(command -v node) functions/test/triggers.emulator.test.mjs\""
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
