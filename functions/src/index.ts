@@ -3,6 +3,8 @@ import {DocumentReference, getFirestore} from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import {setGlobalOptions} from 'firebase-functions/v2';
 import {onDocumentWritten} from 'firebase-functions/v2/firestore';
+import {HttpsError, onCall} from 'firebase-functions/v2/https';
+import {LookupInputError, lookupUsers} from './lookup';
 import {changedFields, type Derived, type Fields} from './derive';
 import {deriveForKind, makeLookups, type Kind} from './sources';
 
@@ -78,3 +80,22 @@ export const minorFromSavingsHistory = onWritten(
 export const minorFromUser = onWritten('users/{uid}', 'user');
 // memberIds (uids) follows the email list `members`, which old apps keep writing.
 export const memberIdsFromGroup = onWritten('groups/{groupId}', 'group');
+
+/**
+ * Finds other users by email or phone and returns only uid, email, name and avatar. Signed-in
+ * callers only. This replaces the clients reading other users' profile documents.
+ */
+export const lookupUsersByContact = onCall(async request => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Sign in to look up users.');
+  }
+  try {
+    return await lookupUsers(db, request.data);
+  } catch (error) {
+    if (error instanceof LookupInputError) {
+      throw new HttpsError('invalid-argument', error.message);
+    }
+    logger.error('lookupUsersByContact failed', {error: String(error)});
+    throw new HttpsError('internal', 'Lookup failed.');
+  }
+});

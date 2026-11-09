@@ -23,6 +23,7 @@ import {
   updateDoc,
   where,
 } from '@react-native-firebase/firestore';
+import {lookupUserByEmail} from '../../src/services/UserLookup';
 import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
@@ -171,15 +172,8 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
         let counterpartyUserId: string | null = null;
         if (counterpartyEmail) {
           try {
-            const snap = await getDocs(
-              query(
-                collection(getFirestore(), 'users'),
-                where('email', '==', counterpartyEmail),
-              ),
-            );
-            if (!snap.empty) {
-              counterpartyUserId = snap.docs[0].id;
-            }
+            const found = await lookupUserByEmail(counterpartyEmail);
+            counterpartyUserId = found?.uid ?? null;
           } catch (_) {}
         }
         if (counterpartyUserId) {

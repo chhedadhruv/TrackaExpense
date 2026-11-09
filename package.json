@@ -40,7 +40,7 @@
     "functions:build": "yarn --cwd functions build",
     "test:functions": "yarn --cwd functions test",
     "test:backfill": "yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only firestore --project demo-trackaexpense-backfill \"$(command -v node) functions/test/backfill.emulator.test.mjs\"",
-    "test:triggers":"yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only functions,firestore --project demo-trackaexpense-functions \"$(command -v node) functions/test/triggers.emulator.test.mjs\""
+    "test:triggers": "yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only functions,firestore,auth --project demo-trackaexpense-functions \"$(command -v node) functions/test/triggers.emulator.test.mjs\""
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -51,6 +51,7 @@
     "@react-native-firebase/auth": "27.1.0",
     "@react-native-firebase/crashlytics": "27.1.0",
     "@react-native-firebase/firestore": "27.1.0",
+    "@react-native-firebase/functions": "27.1.0",
     "@react-native-firebase/messaging": "27.1.0",
     "@react-native-firebase/perf": "27.1.0",
     "@react-native-firebase/remote-config": "27.1.0",
