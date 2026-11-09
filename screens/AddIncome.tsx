@@ -25,6 +25,7 @@ import {
   INCOME_COLOR,
 } from '../src/constants/theme';
 import {useTransactionForm} from '../src/hooks/useTransactionForm';
+import {balanceEffect, transactionMoneyFields} from '../src/utils/amounts';
 import CategorySelector from '../src/components/CategorySelector';
 import AmountInput from '../src/components/AmountInput';
 import DateInput from '../src/components/DateInput';
@@ -92,6 +93,7 @@ const AddIncome = ({navigation}: {navigation: any}) => {
           title: title.trim(),
           description: description.trim(),
           amount,
+          ...transactionMoneyFields(amount, currency.code),
           category,
           date,
           createdAt: Timestamp.fromDate(new Date()),
@@ -99,7 +101,7 @@ const AddIncome = ({navigation}: {navigation: any}) => {
         };
         const incomeDocRef = await addDoc(transactionRef, incomeData);
         transaction.update(incomeDocRef, {documentId: incomeDocRef.id});
-        const balanceDelta = parseFloat(amount);
+        const balanceDelta = balanceEffect('income', {amount}, currency.code);
         transaction.update(userDocRef, {
           balance: increment(balanceDelta),
         });

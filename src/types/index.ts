@@ -31,10 +31,20 @@ export interface TransactionDocument {
   title: string;
   description: string;
   amount: string | number;
+  /**
+   * Integer minor units (paise, cents), the exact value. Written by this app and filled in by the
+   * server for documents written by old apps; missing on documents not yet backfilled, so always
+   * read it through `minorOf` in `src/utils/amounts.ts`, which falls back to `amount`.
+   */
+  amountMinor?: number;
+  /** ISO currency code the amount is in; missing on older documents. */
+  currency?: string;
   type: 'income' | 'expense';
   category: string;
   /** Plain string "YYYY-MM-DD" — not a Timestamp */
   date: string;
+  /** Zero-padded copy of `date`, filled in by the server (older dates can be like "2025-5-4"). */
+  dateISO?: string;
   imageUrl?: string | null;
   /** Alias used by some legacy writes */
   image?: string | null;
