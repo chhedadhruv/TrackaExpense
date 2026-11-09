@@ -19,7 +19,7 @@ import {
 } from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
+import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
 import {useFocusEffect} from '@react-navigation/native';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {minorOf} from '../../src/utils/amounts';

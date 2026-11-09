@@ -18,7 +18,7 @@ import {
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
+import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {majorOf} from '../../src/utils/amounts';
 import {fromMinor} from '../../src/utils/money';
