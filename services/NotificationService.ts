@@ -14,16 +14,12 @@ import {
   query,
   serverTimestamp,
   updateDoc,
-  where,
   writeBatch,
 } from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../src/services/ErrorReporter';
+import {sendPush} from '../src/services/PushSender';
 import {Platform, PermissionsAndroid} from 'react-native';
-import {
-  NOTIFICATION_SERVER_URL,
-  EXPO_PUBLIC_NOTIFICATION_SERVER_URL,
-} from '@env';
 import type {NotificationData} from './NotificationNavigation';
 
 interface NotificationPayload {
@@ -141,113 +137,27 @@ class NotificationService {
         this.sendingInProgress.delete(notificationKey);
       }, 5 * 60 * 1000);
 
-      const usersSnapshot = await getDocs(
-        query(
-          collection(getFirestore(), 'users'),
-          where('email', 'in', userEmails),
-        ),
-      );
-
-      const tokens: string[] = [];
-      const seenTokens = new Set<string>();
-      const userTokens = new Map<
-        string,
-        {token: string; lastTokenUpdate: number}
-      >();
-
-      usersSnapshot.forEach(doc => {
-        const userData = doc.data();
-        if (userData.fcmToken && !seenTokens.has(userData.fcmToken)) {
-          const userEmail = userData.email as string;
-          if (
-            !userTokens.has(userEmail) ||
-            userData.lastTokenUpdate >
-              userTokens.get(userEmail)!.lastTokenUpdate
-          ) {
-            userTokens.set(userEmail, {
-              token: userData.fcmToken,
-              lastTokenUpdate: userData.lastTokenUpdate || 0,
-            });
-          }
-          seenTokens.add(userData.fcmToken);
-        }
+      // The server checks who may be notified, sends through OneSignal by uid, and keeps an
+      // in-app copy if the push cannot be delivered. No token is read or sent from the device.
+      const groupId =
+        typeof notificationData.data?.groupId === 'string'
+          ? notificationData.data.groupId
+          : undefined;
+      await sendPush({
+        emails: userEmails,
+        type: notificationData.type,
+        title: notificationData.title,
+        body: notificationData.body,
+        data: notificationData.data ?? {},
+        ...(groupId ? {groupId} : {}),
+        ...(notificationData.icon ? {icon: notificationData.icon} : {}),
+        ...(notificationData.priority
+          ? {priority: notificationData.priority}
+          : {}),
       });
-      userTokens.forEach(({token}) => tokens.push(token));
-
-      if (tokens.length === 0) {
-        return;
-      }
-
-      const sent = await this.trySendPushViaBackend(tokens, notificationData);
-      if (!sent) {
-        await this.storeNotificationInFirestore(userEmails, notificationData);
-      }
       this.sendingInProgress.delete(notificationKey);
     } catch (error) {
       console.error('Failed to send notification:', error);
-    }
-  }
-
-  private async trySendPushViaBackend(
-    tokens: string[],
-    notificationData: NotificationPayload,
-  ): Promise<boolean> {
-    try {
-      const endpoint =
-        NOTIFICATION_SERVER_URL || EXPO_PUBLIC_NOTIFICATION_SERVER_URL || '';
-      if (!endpoint) {
-        return false;
-      }
-      const payload = {
-        tokens,
-        notification: {
-          title: notificationData.title || 'Notification',
-          body: notificationData.body || '',
-        },
-        data: notificationData.data || {},
-      };
-      const res = await fetch(
-        `${endpoint.replace(/\/$/, '')}/send-notification`,
-        {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(payload),
-        },
-      );
-      if (!res.ok) {
-        return false;
-      }
-      await res.json();
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  private async storeNotificationInFirestore(
-    userEmails: string[],
-    notificationData: NotificationPayload,
-  ): Promise<void> {
-    try {
-      const batch = writeBatch(getFirestore());
-      userEmails.forEach(email => {
-        const ref = fsDoc(
-          collection(
-            getFirestore(),
-            'users',
-            email.replace('@', '_at_'),
-            'notifications',
-          ),
-        );
-        batch.set(ref, {
-          ...notificationData,
-          createdAt: serverTimestamp(),
-          read: false,
-        });
-      });
-      await batch.commit();
-    } catch (error) {
-      console.error('Failed to store notification:', error);
     }
   }
 
