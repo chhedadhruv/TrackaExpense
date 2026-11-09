@@ -28,6 +28,7 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
 import {useFocusEffect} from '@react-navigation/native';
 import {useCurrency} from '../../utils/CurrencyUtil';
+import {majorOf, transactionMoneyFields} from '../../src/utils/amounts';
 import {
   PRIMARY_COLOR,
   BACKGROUND_COLOR,
@@ -54,7 +55,7 @@ interface IOU {
 type Tab = 'iowe' | 'owedtome';
 
 const IOUScreen = ({navigation}: {navigation: any}) => {
-  const {formatAmount} = useCurrency();
+  const {currency, formatAmount} = useCurrency();
   const [tab, setTab] = useState<Tab>('iowe');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -120,7 +121,8 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
         return;
       }
       const currentEmail = currentUser.email?.toLowerCase();
-      const amount = Number(iou.amount) || 0;
+      // Rounded to the minor unit once; the transaction and the balance change agree exactly.
+      const amount = majorOf(iou, currency.code);
       const todayStr = new Date().toISOString().split('T')[0];
       const isDebtor = iou.fromEmail?.toLowerCase() === currentEmail;
       const counterpartyEmail = (
@@ -152,6 +154,7 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
               type: isDebtor ? 'expense' : 'income',
               category: 'IOU',
               amount: String(amount),
+              ...transactionMoneyFields(String(amount), currency.code),
               date: todayStr,
               source: 'iou',
               iouId: iou.id,
@@ -198,6 +201,7 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
                       type: isDebtor ? 'income' : 'expense',
                       category: 'IOU',
                       amount: String(amount),
+                      ...transactionMoneyFields(String(amount), currency.code),
                       date: todayStr,
                       source: 'iou',
                       iouId: iou.id,
@@ -261,7 +265,7 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
           </View>
           <View style={styles.iouRight}>
             <Text style={[styles.iouAmount, {color}]}>
-              {formatAmount(iou.amount)}
+              {formatAmount(majorOf(iou, currency.code))}
             </Text>
             <TouchableOpacity
               onPress={() => markSettled(iou)}

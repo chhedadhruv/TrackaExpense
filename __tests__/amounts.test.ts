@@ -1,7 +1,11 @@
 import {describe, expect, it} from '@jest/globals';
 import {
+  addMajor,
   balanceEffect,
   editBalanceDelta,
+  savingsHistoryMoneyFields,
+  subtractMajor,
+  sumValuesMajor,
   majorOf,
   minorOf,
   totalMajor,
@@ -180,6 +184,77 @@ describe('balanceEffect', () => {
         }
       }
     }
+  });
+});
+
+describe('addMajor and subtractMajor', () => {
+  it('are exact where float arithmetic drifts', () => {
+    expect(0.1 + 0.2).not.toBe(0.3);
+    expect(addMajor(0.1, 0.2, 'INR')).toBe(0.3);
+    expect(subtractMajor(0.3, 0.1, 'INR')).toBe(0.2);
+    expect(0.3 - 0.1).not.toBe(0.2);
+    expect(addMajor(1234.56, 0.01, 'INR')).toBe(1234.57);
+    expect(subtractMajor(10, 0.01, 'INR')).toBe(9.99);
+  });
+
+  it('works for currencies without a minor unit and for whole numbers', () => {
+    expect(addMajor(100, 50, 'INR')).toBe(150);
+    expect(addMajor(1000, 235, 'JPY')).toBe(1235);
+    expect(subtractMajor(0, 0, 'INR')).toBe(0);
+  });
+
+  it('adding then subtracting the same amount returns the starting value exactly', () => {
+    for (const start of [0, 0.1, 12.34, 999.99, 123456.78]) {
+      for (const delta of [0.01, 0.07, 0.1, 33.33, 1000.5]) {
+        expect(subtractMajor(addMajor(start, delta, 'INR'), delta, 'INR')).toBe(
+          start,
+        );
+      }
+    }
+  });
+
+  it('falls back to the plain float result for values it cannot convert', () => {
+    expect(addMajor(1e28, 1, 'INR')).toBe(1e28 + 1);
+    expect(addMajor(NaN, 1, 'INR')).toBeNaN();
+  });
+});
+
+describe('sumValuesMajor', () => {
+  it('sums plain numbers and numeric strings exactly', () => {
+    expect(sumValuesMajor([0.1, 0.2], 'INR')).toBe(0.3);
+    expect(sumValuesMajor([100, '250.5', 0.25], 'INR')).toBe(350.75);
+    expect(sumValuesMajor([], 'INR')).toBe(0);
+  });
+
+  it('leaves out values that are not usable amounts', () => {
+    expect(
+      sumValuesMajor([5, undefined, null, 'abc', {}, 1e28, 5], 'INR'),
+    ).toBe(10);
+  });
+});
+
+describe('savingsHistoryMoneyFields', () => {
+  it('returns the minor amounts and the currency', () => {
+    expect(
+      savingsHistoryMoneyFields(
+        {amount: 0.2, previousAmount: 0.1, newAmount: 0.3},
+        'INR',
+      ),
+    ).toEqual({
+      currency: 'INR',
+      amountMinor: 20,
+      previousAmountMinor: 10,
+      newAmountMinor: 30,
+    });
+  });
+
+  it('leaves out an amount that cannot be converted', () => {
+    expect(
+      savingsHistoryMoneyFields(
+        {amount: 5, previousAmount: 1e28, newAmount: 6},
+        'INR',
+      ),
+    ).toEqual({currency: 'INR', amountMinor: 500, newAmountMinor: 600});
   });
 });
 
