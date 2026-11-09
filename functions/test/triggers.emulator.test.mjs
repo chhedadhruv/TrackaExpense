@@ -300,5 +300,116 @@ await step(
   },
 );
 
+// ---- lookupUsersByContact (callable) through the Functions and Auth emulators
+const project = process.env.GCLOUD_PROJECT || 'demo-trackaexpense-functions';
+const callLookup = async (data, idToken) => {
+  const response = await fetch(
+    `http://127.0.0.1:5001/${project}/asia-south1/lookupUsersByContact`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(idToken ? {Authorization: `Bearer ${idToken}`} : {}),
+      },
+      body: JSON.stringify({data}),
+    },
+  );
+  return {status: response.status, body: await response.json()};
+};
+
+await step('lookup: signed-out callers are refused', async () => {
+  const {status, body} = await callLookup({emails: ['test@example.com']});
+  assert.equal(status, 401);
+  assert.equal(body.error.status, 'UNAUTHENTICATED');
+});
+
+await step(
+  'lookup: returns only uid, email, name and avatar, in request order',
+  async () => {
+    const signUp = await fetch(
+      `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake`,
+      {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          email: 'caller@example.com',
+          password: 'not-a-real-password',
+          returnSecureToken: true,
+        }),
+      },
+    );
+    const {idToken} = await signUp.json();
+    assert.ok(idToken);
+
+    await db.collection('users').doc('u3').set({
+      email: 'third@example.com',
+      displayName: 'Third',
+      avatar: 'https://example.com/a.png',
+      phone: '5551234',
+      balance: 50,
+      fcmToken: 'secret-token',
+    });
+
+    const {status, body} = await callLookup(
+      {
+        emails: ['test@example.com', 'Third@Example.com', 'nobody@example.com'],
+        phones: ['5551234', '000'],
+      },
+      idToken,
+    );
+    assert.equal(status, 200);
+    const result = body.result;
+    assert.deepEqual(result.emails[0], {
+      uid: 'u1',
+      email: 'test@example.com',
+      name: 'Test',
+      avatar: null,
+    });
+    assert.equal(
+      result.emails[1].uid,
+      'u3',
+      'falls back to the lower-case form',
+    );
+    assert.equal(result.emails[2], null);
+    assert.deepEqual(result.phones[0], {
+      uid: 'u3',
+      email: 'third@example.com',
+      name: 'Third',
+      avatar: 'https://example.com/a.png',
+    });
+    assert.equal(result.phones[1], null);
+    const text = JSON.stringify(body);
+    assert.equal(text.includes('secret-token'), false);
+    assert.equal(text.includes('balance'), false);
+  },
+);
+
+await step(
+  'lookup: bad input and oversized requests are rejected',
+  async () => {
+    const signIn = await fetch(
+      `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake`,
+      {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          email: 'caller@example.com',
+          password: 'not-a-real-password',
+          returnSecureToken: true,
+        }),
+      },
+    );
+    const {idToken} = await signIn.json();
+    const bad = await callLookup({emails: 'x'}, idToken);
+    assert.equal(bad.status, 400);
+    assert.equal(bad.body.error.status, 'INVALID_ARGUMENT');
+    const tooMany = await callLookup(
+      {emails: Array.from({length: 31}, (_, i) => `${i}@example.com`)},
+      idToken,
+    );
+    assert.equal(tooMany.status, 400);
+  },
+);
+
 console.log(`\n${passed} integration checks passed`);
 process.exit(0);

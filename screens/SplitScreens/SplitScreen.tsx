@@ -27,6 +27,11 @@ import {
   writeBatch,
 } from '@react-native-firebase/firestore';
 import type {DocumentData} from '@react-native-firebase/firestore';
+import {
+  lookupUserByEmail,
+  lookupUserByPhone,
+  lookupUsersByEmail,
+} from '../../src/services/UserLookup';
 import {getAuth} from '@react-native-firebase/auth';
 import {useFocusEffect} from '@react-navigation/native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -197,37 +202,33 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
           where('members', 'array-contains', currentUser.email),
         ),
       );
-      const fetchedGroups = await Promise.all(
-        groupSnapshot.docs.map(async doc => {
-          const groupData = doc.data();
-          const memberPromises = groupData.members.map(
-            async (email: string) => {
-              const snap = await getDocs(
-                fsQuery(
-                  collection(getFirestore(), 'users'),
-                  where('email', '==', email),
-                ),
-              );
-              if (!snap.empty) {
-                const ud = snap.docs[0].data();
-                return {
-                  email,
-                  name:
-                    ud.name ||
-                    ud.displayName ||
-                    groupData.memberNames?.[email] ||
-                    null,
-                  userId: snap.docs[0].id,
-                  ...ud,
-                };
-              }
-              return {email, name: groupData.memberNames?.[email] || null};
-            },
-          );
-          const memberDetails = await Promise.all(memberPromises);
-          return {id: doc.id, ...groupData, memberDetails} as Group;
-        }),
+      // One lookup for every member of every group, instead of one profile read per member.
+      const allEmails: string[] = [
+        ...new Set<string>(
+          groupSnapshot.docs.flatMap(d => (d.data().members as string[]) || []),
+        ),
+      ];
+      const foundList = await lookupUsersByEmail(allEmails);
+      const foundByEmail = new Map(
+        allEmails.map((email, i) => [email, foundList[i]] as const),
       );
+      const fetchedGroups = groupSnapshot.docs.map(doc => {
+        const groupData = doc.data();
+        const memberDetails: UserDetail[] = (groupData.members || []).map(
+          (email: string) => {
+            const match = foundByEmail.get(email);
+            return match
+              ? {
+                  email,
+                  name: match.name || groupData.memberNames?.[email] || null,
+                  avatar: match.avatar,
+                  userId: match.uid,
+                }
+              : {email, name: groupData.memberNames?.[email] || null};
+          },
+        );
+        return {id: doc.id, ...groupData, memberDetails} as Group;
+      });
       setGroups(fetchedGroups);
     } catch (err) {
       Alert.alert('Error', 'Failed to fetch groups');
@@ -317,26 +318,21 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
     try {
       const trimmed = (query || '').trim();
       const isPhone = /^\d+$/.test(trimmed);
-      let snap;
+      let found;
       if (isPhone) {
-        snap = await getDocs(
-          fsQuery(
-            collection(getFirestore(), 'users'),
-            where('phone', '==', trimmed),
-          ),
-        );
+        found = await lookupUserByPhone(trimmed);
       } else if (trimmed.includes('@')) {
-        snap = await getDocs(
-          fsQuery(
-            collection(getFirestore(), 'users'),
-            where('email', '==', trimmed.toLowerCase()),
-          ),
-        );
+        found = await lookupUserByEmail(trimmed.toLowerCase());
       } else {
         return;
       }
-      if (snap && !snap.empty) {
-        setUserDetails(snap.docs[0].data() as UserDetail);
+      if (found) {
+        setUserDetails({
+          email: found.email,
+          name: found.name,
+          avatar: found.avatar,
+          userId: found.uid,
+        });
       } else {
         const fallbackEmail = trimmed.includes('@')
           ? trimmed.toLowerCase()
