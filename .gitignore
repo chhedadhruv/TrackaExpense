@@ -106,3 +106,4 @@ NOTIFICATION_ENV.md
 
 # Signing material copied into android/ during prebuild (never commit)
 /credentials
+/credentials.json
