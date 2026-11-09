@@ -66,6 +66,7 @@ const AuthStack = () => {
         name="Signup"
         component={SignupScreen}
         options={({navigation}) => ({
+          headerStatusBarHeight: 0,
           title: '',
           headerStyle: {
             backgroundColor: '#f9fafd',
@@ -79,6 +80,7 @@ const AuthStack = () => {
         name="ForgotPassword"
         component={ForgotPasswordScreen}
         options={({navigation}) => ({
+          headerStatusBarHeight: 0,
           title: '',
           headerStyle: {
             backgroundColor: '#f9fafd',
