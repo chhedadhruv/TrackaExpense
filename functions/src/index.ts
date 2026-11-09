@@ -2,7 +2,7 @@ import {initializeApp} from 'firebase-admin/app';
 import {DocumentReference, getFirestore} from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import {setGlobalOptions} from 'firebase-functions/v2';
-import {defineSecret, defineString} from 'firebase-functions/params';
+import {defineSecret} from 'firebase-functions/params';
 import {onDocumentWritten} from 'firebase-functions/v2/firestore';
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
 import {
@@ -124,9 +124,8 @@ export const deleteSettlement = settlementCallable(
 
 // The OneSignal REST API key lives only in Secret Manager (firebase functions:secrets:set).
 const oneSignalApiKey = defineSecret('ONESIGNAL_API_KEY');
-const oneSignalAppId = defineString('ONESIGNAL_APP_ID', {
-  default: '5dc1c59a-d523-4725-8434-d7ea90803d29',
-});
+// The app id is public (it is also in the app); only the REST API key is secret.
+const ONESIGNAL_APP_ID = '5dc1c59a-d523-4725-8434-d7ea90803d29';
 
 /**
  * Sends a push notification through OneSignal to the caller or to people in one of the caller's
@@ -144,7 +143,7 @@ export const sendPush = onCall({secrets: [oneSignalApiKey]}, async request => {
         fetchFn: fetch,
         // Not set (for example in the emulator): the function stores the in-app copy only.
         apiKey: process.env.ONESIGNAL_API_KEY || undefined,
-        appId: oneSignalAppId.value(),
+        appId: ONESIGNAL_APP_ID,
       },
       {
         uid: request.auth.uid,
