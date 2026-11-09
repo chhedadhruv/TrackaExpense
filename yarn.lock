@@ -3625,6 +3625,11 @@
   dependencies:
     react-native-url-polyfill "4.0.0"
 
+"@react-native-firebase/functions@27.1.0":
+  version "27.1.0"
+  resolved "https://registry.yarnpkg.com/@react-native-firebase/functions/-/functions-27.1.0.tgz#d1345a99b309018110501417009fb39df13addd5"
+  integrity sha512-KIX6zzGOnZH6oUPAQ1o5/hC+Y4Iiyyc26HTWQuMWqhzZ5s6fry1npfv5daLvNXyRXmMnJLZ3lWnYjXTo/t0xdA==
+
 "@react-native-firebase/messaging@27.1.0":
   version "27.1.0"
   resolved "https://registry.yarnpkg.com/@react-native-firebase/messaging/-/messaging-27.1.0.tgz#8813f42ca21437530e16f1f0c1470fd2544648d4"

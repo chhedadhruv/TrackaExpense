@@ -27,6 +27,7 @@ import {
   where,
   writeBatch,
 } from '@react-native-firebase/firestore';
+import {lookupUsersByEmail} from '../../src/services/UserLookup';
 import moment from 'moment';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
@@ -226,25 +227,18 @@ const SplitGroupDetailScreen = ({
       const membersData: string[] = groupDoc.data()?.members || [];
       const pending: string[] = groupDoc.data()?.pendingInvites || [];
       setPendingInvites(pending);
-      const memberPromises = membersData.map(async (email: string) => {
-        const snap = await getDocs(
-          fsQuery(
-            collection(getFirestore(), 'users'),
-            where('email', '==', email),
-          ),
-        );
-        if (!snap.empty) {
-          const ud = snap.docs[0].data();
-          return {
-            email,
-            name: ud.name || ud.displayName || email.split('@')[0],
-            avatar: ud.avatar || null,
-            userId: snap.docs[0].id,
-          };
-        }
-        return {email, name: email.split('@')[0], avatar: null, userId: null};
+      const found = await lookupUsersByEmail(membersData);
+      const resolved = membersData.map((email: string, i: number) => {
+        const match = found[i];
+        return match
+          ? {
+              email,
+              name: match.name || email.split('@')[0],
+              avatar: match.avatar,
+              userId: match.uid,
+            }
+          : {email, name: email.split('@')[0], avatar: null, userId: null};
       });
-      const resolved = await Promise.all(memberPromises);
       setGroupMembers(resolved);
     } catch (err) {}
   };
@@ -767,14 +761,12 @@ const SplitGroupDetailScreen = ({
                       style={styles.remindIconButton}
                       onPress={async () => {
                         try {
-                          const lenderDoc = await getDocs(
-                            fsQuery(
-                              collection(getFirestore(), 'users'),
-                              where('email', '==', user?.email),
-                            ),
+                          // Own profile: still a direct read of the signed-in user's own document.
+                          const lenderDoc = await getDoc(
+                            fsDoc(getFirestore(), 'users', user!.uid),
                           );
                           const lenderName =
-                            lenderDoc.docs[0]?.data()?.name ||
+                            lenderDoc.data()?.name ||
                             user?.email?.split('@')[0] ||
                             'Someone';
                           const result =

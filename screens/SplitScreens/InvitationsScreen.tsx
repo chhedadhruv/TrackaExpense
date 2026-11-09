@@ -14,7 +14,7 @@ import {
   arrayRemove,
   collection,
   doc,
-  getDocs,
+  getDoc,
   getFirestore,
   onSnapshot,
   query,
@@ -88,14 +88,12 @@ const InvitationsScreen = () => {
           );
           let displayName = currentUser!.displayName || currentUser!.email!;
           try {
-            const userSnap = await getDocs(
-              query(
-                collection(getFirestore(), 'users'),
-                where('email', '==', currentUser!.email),
-              ),
+            // Own profile: a direct read of the signed-in user's own document.
+            const userSnap = await getDoc(
+              doc(getFirestore(), 'users', currentUser!.uid),
             );
-            if (!userSnap.empty) {
-              const ud = userSnap.docs[0].data();
+            const ud = userSnap.data();
+            if (ud) {
               displayName = ud.name || ud.displayName || displayName;
             }
           } catch (_) {}

@@ -64,6 +64,7 @@ import {
   transactionMoneyFields,
 } from '../../src/utils/amounts';
 import {tryToMinor} from '../../src/utils/money';
+import {lookupUsersByEmail} from '../../src/services/UserLookup';
 
 type SplitType = 'equal' | 'percentage';
 type RecurringFrequency = 'weekly' | 'monthly';
@@ -211,25 +212,18 @@ const CreateSplitScreen = ({route, navigation}: any) => {
     try {
       const groupDoc = await getDoc(doc(getFirestore(), 'groups', group.id));
       const membersData: string[] = groupDoc.data()?.members || [];
-      const memberPromises = membersData.map(async email => {
-        const userSnapshot = await getDocs(
-          query(
-            collection(getFirestore(), 'users'),
-            where('email', '==', email),
-          ),
-        );
-        if (!userSnapshot.empty) {
-          const userData = userSnapshot.docs[0].data();
-          return {
-            email,
-            name: userData.name || userData.displayName || email.split('@')[0],
-            userId: userSnapshot.docs[0].id,
-            ...userData,
-          };
-        }
-        return {email, name: email.split('@')[0], userId: null};
+      const found = await lookupUsersByEmail(membersData);
+      const formattedMembers: GroupMember[] = membersData.map((email, i) => {
+        const match = found[i];
+        return match
+          ? {
+              email,
+              name: match.name || email.split('@')[0],
+              userId: match.uid,
+              avatar: match.avatar,
+            }
+          : {email, name: email.split('@')[0], userId: null};
       });
-      const formattedMembers: GroupMember[] = await Promise.all(memberPromises);
 
       const defaultPercentage = (100 / formattedMembers.length).toFixed(2);
       const initialSelectedUsers: Record<string, boolean> = {};

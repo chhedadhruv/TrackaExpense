@@ -12,12 +12,10 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {
   addDoc,
   collection,
-  getDocs,
   getFirestore,
-  query,
   serverTimestamp,
-  where,
 } from '@react-native-firebase/firestore';
+import {lookupUserByEmail} from '../../src/services/UserLookup';
 import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
@@ -62,18 +60,8 @@ const CreateIOUScreen = ({navigation}: {navigation: any}) => {
       let resolvedName = toName.trim();
       if (!resolvedName) {
         try {
-          const snap = await getDocs(
-            query(
-              collection(getFirestore(), 'users'),
-              where('email', '==', emailTrimmed),
-            ),
-          );
-          if (!snap.empty) {
-            resolvedName =
-              snap.docs[0].data()?.name || emailTrimmed.split('@')[0];
-          } else {
-            resolvedName = emailTrimmed.split('@')[0];
-          }
+          const found = await lookupUserByEmail(emailTrimmed);
+          resolvedName = found?.name || emailTrimmed.split('@')[0];
         } catch (_) {
           resolvedName = emailTrimmed.split('@')[0];
         }
