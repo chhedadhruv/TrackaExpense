@@ -1,6 +1,7 @@
 import type {Firestore} from 'firebase-admin/firestore';
 import {
   deriveAmountDocument,
+  deriveGroup,
   deriveSavingsHistory,
   deriveTransaction,
   deriveUser,
@@ -19,9 +20,12 @@ export type Kind =
   | 'split'
   | 'settlement'
   | 'iou'
-  | 'savingsHistory';
+  | 'savingsHistory'
+  | 'group';
 
 export interface Lookups {
+  /** uid of the user with this email (exact match first, then lower case), or undefined. */
+  uidOfEmail(email: unknown): Promise<string | undefined>;
   /** Currency on a user's profile, or undefined. */
   currencyOfUser(uid: unknown): Promise<unknown>;
   /** Currency of the user with this exact email, or undefined. */
@@ -43,8 +47,35 @@ const userIdOf = (value: unknown): unknown =>
 export const makeLookups = (db: Firestore, memoize: boolean): Lookups => {
   const byUid = new Map<string, unknown>();
   const byEmail = new Map<string, unknown>();
+  const uidByEmail = new Map<string, string | undefined>();
+
+  const findUid = async (email: string): Promise<string | undefined> => {
+    const result = await db
+      .collection('users')
+      .where('email', '==', email)
+      .limit(1)
+      .get();
+    return result.empty ? undefined : result.docs[0].id;
+  };
 
   return {
+    async uidOfEmail(email) {
+      if (typeof email !== 'string' || email.trim() === '') {
+        return undefined;
+      }
+      const key = email.trim();
+      if (memoize && uidByEmail.has(key)) {
+        return uidByEmail.get(key);
+      }
+      let uid = await findUid(key);
+      if (uid === undefined && key !== key.toLowerCase()) {
+        uid = await findUid(key.toLowerCase());
+      }
+      if (memoize) {
+        uidByEmail.set(key, uid);
+      }
+      return uid;
+    },
     async currencyOfUser(uid) {
       if (!isId(uid)) {
         return undefined;
@@ -91,6 +122,14 @@ export const deriveForKind = async (
   lookups: Lookups,
 ): Promise<Derived> => {
   switch (kind) {
+    case 'group': {
+      const members = Array.isArray(data.members) ? data.members : [];
+      const uids: Array<string | undefined> = [];
+      for (const email of members) {
+        uids.push(await lookups.uidOfEmail(email));
+      }
+      return deriveGroup(data, uids);
+    }
     case 'user':
       return deriveUser(data);
     case 'transaction':
