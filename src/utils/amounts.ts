@@ -143,3 +143,81 @@ export const editBalanceDelta = (
     type === 'expense' ? oldMinor - newMinor : newMinor - oldMinor;
   return toMajorNumber(deltaMinor, currencyCode);
 };
+
+/**
+ * Exact a + b or a - b of two amounts in major units (0.1 + 0.2 is 0.3). Falls back to the plain
+ * float result only when a value cannot be converted or the result would leave the safe integer
+ * range, so a screen never breaks on odd stored data.
+ */
+const combineMajor = (
+  a: number,
+  b: number,
+  sign: 1 | -1,
+  currencyCode: string,
+): number => {
+  const x = tryToMinor(a, currencyCode);
+  const y = tryToMinor(b, currencyCode);
+  if (x !== null && y !== null && Number.isSafeInteger(x + sign * y)) {
+    return toMajorNumber(x + sign * y, currencyCode);
+  }
+  return a + sign * b;
+};
+
+export const addMajor = (a: number, b: number, currencyCode: string): number =>
+  combineMajor(a, b, 1, currencyCode);
+
+export const subtractMajor = (
+  a: number,
+  b: number,
+  currencyCode: string,
+): number => combineMajor(a, b, -1, currencyCode);
+
+/**
+ * Exact total of plain amount values (for example the current or target of every savings goal)
+ * in major units. Values that are not numbers or cannot be converted are left out.
+ */
+export const sumValuesMajor = (
+  values: readonly unknown[],
+  currencyCode: string,
+): number => {
+  const minors: number[] = [];
+  for (const value of values) {
+    if (typeof value === 'number' || typeof value === 'string') {
+      const minor = tryToMinor(value, currencyCode);
+      if (minor !== null) {
+        minors.push(minor);
+      }
+    }
+  }
+  try {
+    return toMajorNumber(sumMinor(minors), currencyCode);
+  } catch {
+    return (
+      minors.reduce((sum, m) => sum + m, 0) /
+      10 ** getCurrencyExponent(currencyCode)
+    );
+  }
+};
+
+/**
+ * The new fields to store next to the legacy amounts in a savings history entry for a deposit or
+ * withdrawal. A minor value is left out when its amount cannot be converted.
+ */
+export const savingsHistoryMoneyFields = (
+  entry: {amount: number; previousAmount: number; newAmount: number},
+  currencyCode: string,
+): Record<string, number | string> => {
+  const fields: Record<string, number | string> = {currency: currencyCode};
+  const pairs: Array<[string, number]> = [
+    ['amountMinor', entry.amount],
+    ['previousAmountMinor', entry.previousAmount],
+    ['newAmountMinor', entry.newAmount],
+  ];
+  for (const [key, value] of pairs) {
+    const minor = tryToMinor(value, currencyCode);
+    if (minor !== null) {
+      fields[key] = minor;
+    }
+  }
+  return fields;
+};
