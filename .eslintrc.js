@@ -1,6 +1,8 @@
 module.exports = {
   root: true,
   extends: '@react-native',
+  // Compiled output of the Cloud Functions package.
+  ignorePatterns: ['functions/lib/'],
   rules: {
     // Keeps the severity and behavior used before the ESLint config upgrade
     // (warning, and unused catch variables are allowed).

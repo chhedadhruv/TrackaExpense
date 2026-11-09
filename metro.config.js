@@ -10,16 +10,17 @@ const path = require('path');
 const config = {
   watchFolders: [path.resolve(__dirname)],
   resolver: {
-    blockList: [
-      // Exclude only this project's server directory from the Metro bundler. The pattern is
-      // anchored to the project root so packages with a "server" folder (for example
-      // node_modules/@sentry/core/.../mcp-server) are still bundled.
-      new RegExp(
-        `^${path
-          .resolve(__dirname, 'server')
-          .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/.*`,
-      ),
-    ],
+    // Exclude only this project's server and Cloud Functions directories from the Metro bundler.
+    // The patterns are anchored to the project root so packages with a "server" folder (for
+    // example node_modules/@sentry/core/.../mcp-server) are still bundled.
+    blockList: ['server', 'functions'].map(
+      dir =>
+        new RegExp(
+          `^${path
+            .resolve(__dirname, dir)
+            .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/.*`,
+        ),
+    ),
     extraNodeModules: {
       'node-fetch': path.resolve(__dirname, 'shims/node-fetch.js'),
     },

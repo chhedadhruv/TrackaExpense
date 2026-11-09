@@ -6,9 +6,19 @@
   "storage": {
     "rules": "firebase/storage.rules"
   },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "runtime": "nodejs22",
+      "ignore": ["node_modules", ".git", "*.log", "**/*.test.js", "test"],
+      "predeploy": ["yarn --cwd \"$RESOURCE_DIR\" build"]
+    }
+  ],
   "emulators": {
     "firestore": {"port": 8080},
     "storage": {"port": 9199},
+    "functions": {"port": 5001},
     "ui": {"enabled": false},
     "singleProjectMode": true
   }
