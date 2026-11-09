@@ -24,6 +24,7 @@ import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../../src/constants/theme';
 import {formatInputAmount} from '../../src/utils/formatters';
+import {transactionMoneyFields} from '../../src/utils/amounts';
 
 type Direction = 'iowe' | 'owesme';
 
@@ -88,6 +89,7 @@ const CreateIOUScreen = ({navigation}: {navigation: any}) => {
               toEmail: emailTrimmed,
               toName: resolvedName,
               amount: parseFloat(amount),
+              ...transactionMoneyFields(amount, currency.code),
               notes: notes.trim(),
               status: 'pending',
               createdAt: serverTimestamp(),
@@ -99,6 +101,7 @@ const CreateIOUScreen = ({navigation}: {navigation: any}) => {
               toEmail: currentEmail,
               toName: currentUserName,
               amount: parseFloat(amount),
+              ...transactionMoneyFields(amount, currency.code),
               notes: notes.trim(),
               status: 'pending',
               createdAt: serverTimestamp(),
