@@ -39,7 +39,8 @@
     "version:bump": "node scripts/bump-version.js",
     "functions:build": "yarn --cwd functions build",
     "test:functions": "yarn --cwd functions test",
-    "test:triggers": "yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only functions,firestore --project demo-trackaexpense-functions \"$(command -v node) functions/test/triggers.emulator.test.mjs\""
+    "test:backfill": "yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only firestore --project demo-trackaexpense-backfill \"$(command -v node) functions/test/backfill.emulator.test.mjs\"",
+    "test:triggers":"yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only functions,firestore --project demo-trackaexpense-functions \"$(command -v node) functions/test/triggers.emulator.test.mjs\""
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",

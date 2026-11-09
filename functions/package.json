@@ -10,6 +10,7 @@
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
+    "backfill": "yarn build && node lib/backfill.js",
     "test": "yarn build && node --test \"lib/**/*.test.js\""
   },
   "dependencies": {
