@@ -212,15 +212,18 @@ const SplitDetailScreen = ({
           ),
         );
         if (!txSnap.empty) {
-          // Removing the payer's transaction must also reverse what it did to the balance (it
-          // used to leave the balance permanently lower by the split amount).
+          // Removing the transaction must also reverse what it did to the balance (it used to
+          // leave the balance permanently off by the amount). The direction follows the
+          // transaction's own type: an expense is given back, an income (a settlement the user
+          // received) is taken away.
+          const txData = txSnap.docs[0].data();
           const reversal = -balanceEffect(
-            'expense',
-            txSnap.docs[0].data(),
+            txData.type === 'income' ? 'income' : 'expense',
+            txData,
             currency.code,
           );
           await deleteDoc(txSnap.docs[0].ref);
-          if (reversal > 0) {
+          if (reversal !== 0) {
             await updateDoc(doc(getFirestore(), 'users', currentUser!.uid), {
               balance: increment(reversal),
             });

@@ -37,6 +37,8 @@ import {
   EXPENSE_COLOR,
 } from '../../src/constants/theme';
 import {formatInputAmount} from '../../src/utils/formatters';
+import {transactionMoneyFields} from '../../src/utils/amounts';
+import {toMajorNumber, tryToMinor} from '../../src/utils/money';
 import {
   NOTIFICATION_SERVER_URL,
   EXPO_PUBLIC_NOTIFICATION_SERVER_URL,
@@ -123,15 +125,23 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
       Alert.alert('Error', 'Note must be 200 characters or less');
       return;
     }
-    const settlementAmount = parseFloat(amount);
-    if (isNaN(settlementAmount) || settlementAmount <= 0) {
+    const typedAmount = parseFloat(amount);
+    if (isNaN(typedAmount) || typedAmount <= 0) {
       Alert.alert('Error', 'Please enter a valid amount');
       return;
     }
-    if (settlementAmount > 999999999) {
+    if (typedAmount > 999999999) {
       Alert.alert('Error', 'Amount must be less than 999,999,999');
       return;
     }
+    // Everything below uses the amount rounded to the currency's minor unit, so the documents,
+    // the transactions and both balance changes agree to the paisa.
+    const settlementMinor = tryToMinor(amount, currency.code);
+    if (settlementMinor === null || settlementMinor <= 0) {
+      Alert.alert('Error', 'Please enter a valid amount');
+      return;
+    }
+    const settlementAmount = toMajorNumber(settlementMinor, currency.code);
     try {
       setLoading(true);
       const currentUser = getAuth().currentUser!;
@@ -151,6 +161,8 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
         from: selectedBorrower,
         to: selectedLender,
         amount: settlementAmount,
+        amountMinor: settlementMinor,
+        currency: currency.code,
         note: note.trim(),
         status: 'completed',
         createdAt: serverTimestamp(),
@@ -164,6 +176,8 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
       const settlementSplit = {
         title: note.trim() || 'Settlement Payment',
         amount: settlementAmount,
+        amountMinor: settlementMinor,
+        currency: currency.code,
         category: 'Settlement',
         paidBy: selectedBorrower,
         splitUsers: [selectedLender],
@@ -247,6 +261,10 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
               type: 'expense',
               category: 'Settlement',
               amount: String(settlementAmount),
+              ...transactionMoneyFields(
+                String(settlementAmount),
+                currency.code,
+              ),
               date: todayStr,
               source: 'split',
               splitId: splitRef.id,
@@ -261,6 +279,10 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
               type: 'income',
               category: 'Settlement',
               amount: String(settlementAmount),
+              ...transactionMoneyFields(
+                String(settlementAmount),
+                currency.code,
+              ),
               date: todayStr,
               source: 'split',
               splitId: splitRef.id,
@@ -294,6 +316,10 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
                     type: counterpartyIsPayer ? 'expense' : 'income',
                     category: 'Settlement',
                     amount: String(settlementAmount),
+                    ...transactionMoneyFields(
+                      String(settlementAmount),
+                      currency.code,
+                    ),
                     date: todayStr,
                     source: 'split',
                     splitId: splitRef.id,
