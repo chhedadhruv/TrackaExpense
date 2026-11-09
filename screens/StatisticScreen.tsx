@@ -31,6 +31,8 @@ import {
   EXPENSE_COLOR,
 } from '../src/constants/theme';
 import {formatDisplayDate} from '../src/utils/formatters';
+import {majorOf, minorOf, totalMajor} from '../src/utils/amounts';
+import {toMajorNumber} from '../src/utils/money';
 import {getConfig} from '../src/services/RemoteConfigService';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import type {TransactionDocument} from '../src/types';
@@ -187,18 +189,25 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
   useEffect(() => {
     const filtered = filterTransactionsByTimeRange(allTransactions, timeRange);
     setFilteredTransactions(filtered);
-    let income = 0;
-    let expense = 0;
-    filtered.forEach(t => {
-      if (t.type === 'income') {
-        income += parseFloat(t.amount as any) || 0;
-      } else {
-        expense += parseFloat(t.amount as any) || 0;
-      }
-    });
-    setTotalIncome(income);
-    setTotalExpense(expense);
-  }, [allTransactions, timeRange, filterTransactionsByTimeRange]);
+    // Summed as integer minor units so the totals are exact.
+    setTotalIncome(
+      totalMajor(
+        filtered.filter(t => t.type === 'income'),
+        currency.code,
+      ),
+    );
+    setTotalExpense(
+      totalMajor(
+        filtered.filter(t => t.type !== 'income'),
+        currency.code,
+      ),
+    );
+  }, [
+    allTransactions,
+    timeRange,
+    filterTransactionsByTimeRange,
+    currency.code,
+  ]);
 
   useEffect(() => {
     if (
@@ -284,7 +293,8 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
     >();
     filteredTransactions.forEach(t => {
       const {key, label, ts} = getGroupingKeyAndLabel(t.date, interval);
-      const value = parseFloat(t.amount as any) || 0;
+      // Accumulated as integer minor units; converted to major units when the bars are built.
+      const value = minorOf(t, currency.code) ?? 0;
       if (!aggregatedMap.has(key)) {
         aggregatedMap.set(key, {label, ts, income: 0, expense: 0});
       }
@@ -309,7 +319,7 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
       });
       if (item.income > 0) {
         built.push({
-          value: item.income,
+          value: toMajorNumber(item.income, currency.code),
           label: '',
           frontColor: PRIMARY_COLOR,
           spacing: 2,
@@ -317,7 +327,7 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
       }
       if (item.expense > 0) {
         built.push({
-          value: item.expense,
+          value: toMajorNumber(item.expense, currency.code),
           label: '',
           frontColor: EXPENSE_COLOR,
           spacing: 2,
@@ -332,7 +342,7 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
       });
     });
     setBarData(built);
-  }, [filteredTransactions, timeRange]);
+  }, [filteredTransactions, timeRange, currency.code]);
 
   useEffect(() => {
     handleBarData();
@@ -345,8 +355,9 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
     }
     const typeKey = selectedBtn === 'Income' ? 'income' : 'expense';
     const tx = filteredTransactions.filter(t => t.type === typeKey);
+    // Integer minor units, converted to major units for display below.
     const total = tx.reduce(
-      (sum, t) => sum + (parseFloat(t.amount as any) || 0),
+      (sum, t) => sum + (minorOf(t, currency.code) ?? 0),
       0,
     );
     if (total <= 0) {
@@ -356,14 +367,15 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
     const byCategory: Record<string, number> = {};
     tx.forEach(t => {
       const k = t.category || 'Others';
-      byCategory[k] = (byCategory[k] || 0) + (parseFloat(t.amount as any) || 0);
+      byCategory[k] = (byCategory[k] || 0) + (minorOf(t, currency.code) ?? 0);
     });
     const entries = Object.entries(byCategory)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 6);
     setCategoryPieData(
-      entries.map(([label, amountValue], idx) => {
-        const percentage = Math.round((amountValue / total) * 100);
+      entries.map(([label, amountMinor], idx) => {
+        const amountValue = toMajorNumber(amountMinor, currency.code);
+        const percentage = Math.round((amountMinor / total) * 100);
         return {
           value: percentage,
           color: PIE_PALETTE[idx % PIE_PALETTE.length],
@@ -374,7 +386,7 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
         };
       }),
     );
-  }, [filteredTransactions, selectedBtn]);
+  }, [filteredTransactions, selectedBtn, currency.code]);
 
   const chartWidth = useMemo(() => {
     const base = Dimensions.get('window').width - 80;
@@ -885,7 +897,9 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
                                   : styles.amountExpense
                               }>
                               {transaction.type === 'income' ? '+ ' : '- '}
-                              {formatAmount(transaction.amount)}
+                              {formatAmount(
+                                majorOf(transaction, currency.code),
+                              )}
                             </Text>
                           </View>
                         </View>

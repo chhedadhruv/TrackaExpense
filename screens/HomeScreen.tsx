@@ -44,6 +44,7 @@ import {
   SURFACE_COLOR,
 } from '../src/constants/theme';
 import {formatInputAmount} from '../src/utils/formatters';
+import {majorOf, totalMajor} from '../src/utils/amounts';
 import type {TransactionDocument, UserDocument} from '../src/types';
 import type {McIconName} from '../src/types/icons';
 
@@ -69,7 +70,7 @@ const TIME_RANGES: {key: TimeRange; label: string; icon: McIconName}[] = [
 const RECENT_LIMIT = 5;
 
 const HomeScreen = ({navigation}: {navigation: any}) => {
-  const {formatAmount} = useCurrency();
+  const {currency, formatAmount} = useCurrency();
   const [userData, setUserData] = useState<UserDocument | null>(null);
   const [totalExpense, setTotalExpense] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
@@ -190,19 +191,20 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
   }, [transactions, timeRange, filterByRange]);
 
   useEffect(() => {
-    const income = filteredTransactions.reduce(
-      (sum, t) =>
-        t.type === 'income' ? sum + (parseFloat(t.amount as any) || 0) : sum,
-      0,
+    // Summed as integer minor units so the totals are exact.
+    setTotalIncome(
+      totalMajor(
+        filteredTransactions.filter(t => t.type === 'income'),
+        currency.code,
+      ),
     );
-    const expense = filteredTransactions.reduce(
-      (sum, t) =>
-        t.type === 'expense' ? sum + (parseFloat(t.amount as any) || 0) : sum,
-      0,
+    setTotalExpense(
+      totalMajor(
+        filteredTransactions.filter(t => t.type === 'expense'),
+        currency.code,
+      ),
     );
-    setTotalIncome(income);
-    setTotalExpense(expense);
-  }, [filteredTransactions]);
+  }, [filteredTransactions, currency.code]);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
@@ -613,7 +615,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
                             : styles.amountExpense
                         }>
                         {transaction.type === 'income' ? '+ ' : '- '}
-                        {formatAmount(transaction.amount)}
+                        {formatAmount(majorOf(transaction, currency.code))}
                       </Text>
                     </View>
                   </View>
