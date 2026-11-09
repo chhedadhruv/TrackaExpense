@@ -55,6 +55,7 @@
     },
     "plugins": [
       "./plugins/with-gradle-memory",
+      "./plugins/with-notification-icon",
       "./plugins/with-firebase-gradle-versions",
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
