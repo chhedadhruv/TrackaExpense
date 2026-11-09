@@ -258,5 +258,47 @@ await step('iou: currency from the lender account found by email', async () => {
   assert.equal(snap.get('currency'), 'USD');
 });
 
+await step(
+  'group: memberIds follows members as they change, legacy fields untouched',
+  async () => {
+    await db.collection('users').doc('u2').set({email: 'Second@Example.com'});
+    const group = db.collection('groups').doc('gr1');
+    await group.set({
+      name: 'Trip',
+      members: ['test@example.com'],
+      pendingInvites: ['nobody@example.com'],
+    });
+    let snap = await waitFor(
+      group,
+      d => Array.isArray(d.memberIds),
+      'group memberIds',
+    );
+    assert.deepEqual(snap.get('memberIds'), ['u1']);
+    assert.deepEqual(snap.get('members'), ['test@example.com']);
+    assert.deepEqual(snap.get('pendingInvites'), ['nobody@example.com']);
+
+    // An old app accepts an invitation: it adds the email only. A lower-case form of a stored
+    // mixed-case email is still found.
+    await group.update({
+      members: ['test@example.com', 'Second@Example.com', 'ghost@example.com'],
+    });
+    snap = await waitFor(
+      group,
+      d => d.memberIds.length === 2,
+      'group memberIds after join',
+    );
+    assert.deepEqual(snap.get('memberIds'), ['u1', 'u2']);
+
+    // A member leaves.
+    await group.update({members: ['Second@Example.com']});
+    snap = await waitFor(
+      group,
+      d => d.memberIds.length === 1 && d.memberIds[0] === 'u2',
+      'group memberIds after leave',
+    );
+    assert.deepEqual(snap.get('members'), ['Second@Example.com']);
+  },
+);
+
 console.log(`\n${passed} integration checks passed`);
 process.exit(0);

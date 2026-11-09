@@ -144,6 +144,34 @@ export const deriveSavingsHistory = (
  * The goals array itself is never rewritten (an old client could be writing it at the same
  * time); the minor-unit amounts live in a separate map instead.
  */
+/**
+ * `memberIds` of a group: the uid of every member email that belongs to an account, in the order
+ * of `members`, without repeats. `uidsByMember` holds one entry per `members` item (undefined for
+ * an email with no account). An email that cannot be resolved is reported as skipped under
+ * "members"; the other members still get their uid. Groups without a `members` array get nothing.
+ */
+export const deriveGroup = (
+  data: Fields,
+  uidsByMember: ReadonlyArray<string | undefined>,
+): Derived => {
+  const out: Derived = {fields: {}, skipped: []};
+  if (!Array.isArray(data.members)) {
+    return out;
+  }
+  const ids: string[] = [];
+  for (const uid of uidsByMember) {
+    if (uid === undefined) {
+      if (!out.skipped.includes('members')) {
+        out.skipped.push('members');
+      }
+    } else if (!ids.includes(uid)) {
+      ids.push(uid);
+    }
+  }
+  out.fields.memberIds = ids;
+  return out;
+};
+
 export const deriveUser = (data: Fields): Derived => {
   const out: Derived = {fields: {}, skipped: []};
   const currency = resolveCurrency(data.currency);
