@@ -10,19 +10,13 @@ import {Text, Card, ActivityIndicator} from 'react-native-paper';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
 import {
-  Timestamp,
-  arrayRemove,
   collection,
-  doc,
-  getDoc,
   getFirestore,
   onSnapshot,
   query,
-  runTransaction,
-  serverTimestamp,
-  updateDoc,
   where,
 } from '@react-native-firebase/firestore';
+import {respondToInvitation} from '../../src/services/InvitationService';
 import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../../src/services/ErrorReporter';
 import * as AnalyticsService from '../../src/services/AnalyticsService';
@@ -69,46 +63,8 @@ const InvitationsScreen = () => {
   const acceptInvitation = useCallback(
     async (invite: Invitation) => {
       try {
-        const groupRef = doc(getFirestore(), 'groups', invite.groupId);
-        await runTransaction(getFirestore(), async tx => {
-          const groupSnap = await tx.get(groupRef);
-          if (!groupSnap.exists()) {
-            throw new Error('Group not found');
-          }
-          const group = groupSnap.data()!;
-          const members: string[] = Array.isArray(group.members)
-            ? [...group.members]
-            : [];
-          const memberNames: Record<string, string> = group.memberNames || {};
-          if (!members.includes(currentUser!.email!)) {
-            members.push(currentUser!.email!);
-          }
-          const pendingInvites = (group.pendingInvites || []).filter(
-            (e: string) => e !== currentUser!.email,
-          );
-          let displayName = currentUser!.displayName || currentUser!.email!;
-          try {
-            // Own profile: a direct read of the signed-in user's own document.
-            const userSnap = await getDoc(
-              doc(getFirestore(), 'users', currentUser!.uid),
-            );
-            const ud = userSnap.data();
-            if (ud) {
-              displayName = ud.name || ud.displayName || displayName;
-            }
-          } catch (_) {}
-          memberNames[currentUser!.email!] = displayName;
-          tx.update(groupRef, {
-            members,
-            memberNames,
-            pendingInvites,
-            updatedAt: serverTimestamp(),
-          });
-        });
-        await updateDoc(doc(getFirestore(), 'invitations', invite.id), {
-          status: 'accepted',
-          respondedAt: Timestamp.fromDate(new Date()),
-        });
+        // The server adds the user to the group and closes the invitation together.
+        await respondToInvitation(invite.id, true);
         AnalyticsService.logAcceptInvitation();
         Alert.alert('Joined', `You have joined ${invite.groupName}`);
       } catch (e) {
@@ -123,15 +79,7 @@ const InvitationsScreen = () => {
   const declineInvitation = useCallback(
     async (invite: Invitation) => {
       try {
-        const groupRef = doc(getFirestore(), 'groups', invite.groupId);
-        await updateDoc(groupRef, {
-          pendingInvites: arrayRemove(currentUser!.email),
-          updatedAt: serverTimestamp(),
-        });
-        await updateDoc(doc(getFirestore(), 'invitations', invite.id), {
-          status: 'declined',
-          respondedAt: Timestamp.fromDate(new Date()),
-        });
+        await respondToInvitation(invite.id, false);
         AnalyticsService.logDeclineInvitation();
       } catch (e) {
         reportError(e as Error);

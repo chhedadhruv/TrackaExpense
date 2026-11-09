@@ -4,6 +4,10 @@ import * as logger from 'firebase-functions/logger';
 import {setGlobalOptions} from 'firebase-functions/v2';
 import {onDocumentWritten} from 'firebase-functions/v2/firestore';
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
+import {
+  InvitationError,
+  respondToInvitation as respondToInvitationCore,
+} from './invitation';
 import {LookupInputError, lookupUsers} from './lookup';
 import {
   SettlementError,
@@ -115,6 +119,32 @@ export const deleteSettlement = settlementCallable(
   'deleteSettlement',
   deleteSettlementCore,
 );
+
+/** Accepts or declines a group invitation addressed to the (verified) caller. */
+export const respondToInvitation = onCall(async request => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Sign in to answer an invitation.');
+  }
+  const token = request.auth.token;
+  try {
+    return await respondToInvitationCore(
+      db,
+      {
+        uid: request.auth.uid,
+        email: token.email,
+        emailVerified: token.email_verified === true,
+        name: typeof token.name === 'string' ? token.name : undefined,
+      },
+      request.data,
+    );
+  } catch (error) {
+    if (error instanceof InvitationError) {
+      throw new HttpsError(error.code, error.message);
+    }
+    logger.error('respondToInvitation failed', {error: String(error)});
+    throw new HttpsError('internal', 'The invitation could not be answered.');
+  }
+});
 
 /**
  * Finds other users by email or phone and returns only uid, email, name and avatar. Signed-in
