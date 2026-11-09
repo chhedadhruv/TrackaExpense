@@ -12,7 +12,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import FormInput from '../components/FormInput';
 import FormButton from '../components/FormButton';
 import {AuthContext} from '../navigation/AuthProvider';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
+import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../src/constants/theme';
 
 const ForgotPasswordScreen = ({navigation}: {navigation: any}) => {

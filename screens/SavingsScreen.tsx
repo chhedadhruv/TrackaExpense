@@ -25,7 +25,8 @@ import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../src/services/ErrorReporter';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
+import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
+import {KeyboardAvoidingModal} from '../src/components/KeyboardAvoidingModal';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {GOAL_KEYWORD_MAP} from '../utils/CategoryData';
@@ -1294,218 +1295,212 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         </KeyboardAwareScrollView>
 
         {/* Add / Withdraw Modal */}
-        <Modal
+        <KeyboardAvoidingModal
           visible={showInputModal}
           transparent
           animationType="slide"
-          onRequestClose={handleAmountCancel}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>
-                {inputType === 'add'
-                  ? 'Add to Savings'
-                  : 'Withdraw from Savings'}
-              </Text>
-              <Text style={styles.modalSubtitle}>
-                {inputType === 'add'
-                  ? 'Enter the amount you want to add to your savings'
-                  : 'Enter the amount you want to withdraw from your savings'}
-              </Text>
-              <TextInput
-                style={styles.modalInput}
-                value={inputAmount}
-                onChangeText={setInputAmount}
-                placeholder="Enter amount"
-                placeholderTextColor="#999"
-                keyboardType="numeric"
-                autoFocus
-              />
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.modalCancelButton]}
-                  onPress={handleAmountCancel}>
-                  <Text style={styles.modalCancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.modalSubmitButton]}
-                  onPress={handleAmountSubmit}
-                  disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.modalSubmitButtonText}>
-                      {inputType === 'add' ? 'Add' : 'Withdraw'}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              </View>
+          onRequestClose={handleAmountCancel}
+          overlayStyle={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {inputType === 'add' ? 'Add to Savings' : 'Withdraw from Savings'}
+            </Text>
+            <Text style={styles.modalSubtitle}>
+              {inputType === 'add'
+                ? 'Enter the amount you want to add to your savings'
+                : 'Enter the amount you want to withdraw from your savings'}
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              value={inputAmount}
+              onChangeText={setInputAmount}
+              placeholder="Enter amount"
+              placeholderTextColor="#999"
+              keyboardType="numeric"
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={handleAmountCancel}>
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalSubmitButton]}
+                onPress={handleAmountSubmit}
+                disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.modalSubmitButtonText}>
+                    {inputType === 'add' ? 'Add' : 'Withdraw'}
+                  </Text>
+                )}
+              </TouchableOpacity>
             </View>
           </View>
-        </Modal>
+        </KeyboardAvoidingModal>
 
         {/* Create Goal Modal */}
-        <Modal
+        <KeyboardAvoidingModal
           visible={showCreateModal}
           transparent
           animationType="slide"
           onRequestClose={() => {
             setShowCreateModal(false);
             resetEditValues();
-          }}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Create New Savings Goal</Text>
-              <Text style={styles.modalSubtitle}>
-                Set up a new savings goal to track your progress
-              </Text>
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled">
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Goal Name *</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={editValues.name}
-                    onChangeText={text =>
-                      setEditValues({...editValues, name: text})
-                    }
-                    placeholder="e.g., Emergency Fund, Vacation"
-                    placeholderTextColor="#999"
-                    maxLength={50}
-                  />
-                  <Text style={styles.characterCount}>
-                    {editValues.name.length}/50
-                  </Text>
-                </View>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Description (Optional)</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={editValues.description}
-                    onChangeText={text =>
-                      setEditValues({...editValues, description: text})
-                    }
-                    placeholder="Describe your savings goal"
-                    placeholderTextColor="#999"
-                    maxLength={200}
-                    multiline
-                    numberOfLines={2}
-                  />
-                  <Text style={styles.characterCount}>
-                    {editValues.description.length}/200
-                  </Text>
-                </View>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Category</Text>
-                  <TouchableOpacity
-                    style={styles.categorySelectorButton}
-                    onPress={() => setShowCategoryModal(true)}>
-                    {renderCategoryButton()}
-                    <MaterialCommunityIcons
-                      name="chevron-down"
-                      size={20}
-                      color="#999"
-                    />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>
-                    Current Amount ({currency.symbol}) *
-                  </Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={editValues.current}
-                    onChangeText={text =>
-                      setEditValues({...editValues, current: text})
-                    }
-                    keyboardType="numeric"
-                    placeholder="Enter current amount"
-                    placeholderTextColor="#999"
-                  />
-                </View>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>
-                    Target Amount ({currency.symbol}) *
-                  </Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={editValues.target}
-                    onChangeText={text =>
-                      setEditValues({...editValues, target: text})
-                    }
-                    keyboardType="numeric"
-                    placeholder="Enter target amount"
-                    placeholderTextColor="#999"
-                  />
-                </View>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Target Date (Optional)</Text>
-                  <TouchableOpacity
-                    style={styles.dateInputWrapper}
-                    onPress={() => setOpenDate(true)}>
-                    <MaterialCommunityIcons
-                      name="calendar"
-                      size={20}
-                      color={PRIMARY_COLOR}
-                      style={styles.inputIcon}
-                    />
-                    <Text
-                      style={[
-                        styles.dateText,
-                        !editValues.targetDate && styles.placeholderText,
-                      ]}>
-                      {editValues.targetDate
-                        ? formatDisplayDate(editValues.targetDate)
-                        : 'Select target date'}
-                    </Text>
-                    <MaterialCommunityIcons
-                      name="chevron-down"
-                      size={20}
-                      color="#999"
-                    />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>
-                    Monthly Goal ({currency.symbol}) *
-                  </Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={editValues.monthly}
-                    onChangeText={text =>
-                      setEditValues({...editValues, monthly: text})
-                    }
-                    keyboardType="numeric"
-                    placeholder="Enter monthly goal"
-                    placeholderTextColor="#999"
-                  />
-                </View>
-              </ScrollView>
-              <View style={[styles.modalButtons, {marginTop: 10}]}>
+          }}
+          overlayStyle={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Create New Savings Goal</Text>
+            <Text style={styles.modalSubtitle}>
+              Set up a new savings goal to track your progress
+            </Text>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled">
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Goal Name *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={editValues.name}
+                  onChangeText={text =>
+                    setEditValues({...editValues, name: text})
+                  }
+                  placeholder="e.g., Emergency Fund, Vacation"
+                  placeholderTextColor="#999"
+                  maxLength={50}
+                />
+                <Text style={styles.characterCount}>
+                  {editValues.name.length}/50
+                </Text>
+              </View>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Description (Optional)</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={editValues.description}
+                  onChangeText={text =>
+                    setEditValues({...editValues, description: text})
+                  }
+                  placeholder="Describe your savings goal"
+                  placeholderTextColor="#999"
+                  maxLength={200}
+                  multiline
+                  numberOfLines={2}
+                />
+                <Text style={styles.characterCount}>
+                  {editValues.description.length}/200
+                </Text>
+              </View>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Category</Text>
                 <TouchableOpacity
-                  style={[styles.modalButton, styles.modalCancelButton]}
-                  onPress={() => {
-                    setShowCreateModal(false);
-                    resetEditValues();
-                  }}>
-                  <Text style={styles.modalCancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.modalSubmitButton]}
-                  onPress={createNewGoal}
-                  disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.modalSubmitButtonText}>
-                      Create Goal
-                    </Text>
-                  )}
+                  style={styles.categorySelectorButton}
+                  onPress={() => setShowCategoryModal(true)}>
+                  {renderCategoryButton()}
+                  <MaterialCommunityIcons
+                    name="chevron-down"
+                    size={20}
+                    color="#999"
+                  />
                 </TouchableOpacity>
               </View>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>
+                  Current Amount ({currency.symbol}) *
+                </Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={editValues.current}
+                  onChangeText={text =>
+                    setEditValues({...editValues, current: text})
+                  }
+                  keyboardType="numeric"
+                  placeholder="Enter current amount"
+                  placeholderTextColor="#999"
+                />
+              </View>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>
+                  Target Amount ({currency.symbol}) *
+                </Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={editValues.target}
+                  onChangeText={text =>
+                    setEditValues({...editValues, target: text})
+                  }
+                  keyboardType="numeric"
+                  placeholder="Enter target amount"
+                  placeholderTextColor="#999"
+                />
+              </View>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Target Date (Optional)</Text>
+                <TouchableOpacity
+                  style={styles.dateInputWrapper}
+                  onPress={() => setOpenDate(true)}>
+                  <MaterialCommunityIcons
+                    name="calendar"
+                    size={20}
+                    color={PRIMARY_COLOR}
+                    style={styles.inputIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.dateText,
+                      !editValues.targetDate && styles.placeholderText,
+                    ]}>
+                    {editValues.targetDate
+                      ? formatDisplayDate(editValues.targetDate)
+                      : 'Select target date'}
+                  </Text>
+                  <MaterialCommunityIcons
+                    name="chevron-down"
+                    size={20}
+                    color="#999"
+                  />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>
+                  Monthly Goal ({currency.symbol}) *
+                </Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={editValues.monthly}
+                  onChangeText={text =>
+                    setEditValues({...editValues, monthly: text})
+                  }
+                  keyboardType="numeric"
+                  placeholder="Enter monthly goal"
+                  placeholderTextColor="#999"
+                />
+              </View>
+            </ScrollView>
+            <View style={[styles.modalButtons, {marginTop: 10}]}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => {
+                  setShowCreateModal(false);
+                  resetEditValues();
+                }}>
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalSubmitButton]}
+                onPress={createNewGoal}
+                disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.modalSubmitButtonText}>Create Goal</Text>
+                )}
+              </TouchableOpacity>
             </View>
           </View>
-        </Modal>
+        </KeyboardAvoidingModal>
 
         {/* Delete Confirmation Modal */}
         <Modal
