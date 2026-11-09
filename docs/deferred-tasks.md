@@ -27,6 +27,17 @@ Update it as items are done.
 - iOS linkage: React Native Firebase v27 does not support static frameworks (its `pod install` fails with "SPM + static linkage is not supported"), so `app.json` now sets `ios.useFrameworks` to `dynamic`. Other pods that the old Podfile assumed were static (`$RNFirebaseAsStaticFramework`) must be checked in the first iOS build.
 - iOS entitlements and capabilities after prebuild: confirm Sign in with Apple, `aps-environment` (currently `development`; store builds need `production`), background modes, the three URL schemes, and the OneSignal extension.
 
+## Phase 2 findings that need a decision or follow-up (production profile, 2026-11-09)
+
+Counts only; details in `../trackaexpense-audit/09-phase-2-data-profile.md`.
+
+- The `firestore-send-email` extension is in the ERRORED state and no `mail` document has ever reached a success state (59 of 73 never processed, 10 ERROR, 4 PROCESSING). Contact messages, summary emails and split emails sent through the `mail` collection are not being delivered. Needs investigation (SMTP settings in the extension configuration); it is outside the Phase 2 money work.
+- One account holds 5 transactions with absurd amounts (the largest about 1e28) and 5 users have a balance above 1,000,000. They cannot be converted to integer minor units: the backfill skips and reports them. The owner decides separately what to do with that data.
+- 18 transactions have a date that is not `YYYY-MM-DD` (for example `2025-5-14`), so text sorting and range filters treat them wrongly. A normalized date is added during the backfill (additive).
+- Split documents embed full copies of member user profiles (phone, FCM token, stale balance, savings goals, transactions). Anyone who can read a split can read those. The new app stops writing them; the existing copies are scrubbed only after old apps are gone (same threshold as strict rules).
+- 78 of 127 users have no stored `currency` (the app treats that as INR).
+- Groups: 6 of 41 member emails have no account (pending invitees) and no group has `memberIds` yet. The IOU collection is empty (the feature has no production data).
+
 ## Deferred until after Expo and the later phases
 
 - Expo conversion (Phase 1b-ii): audit done (`../trackaexpense-audit/07-expo-conversion-audit.md`), SDK 58 chosen, step 2 done on Android. Step 3 done: Firebase v27 (with the 19 `exists()` conversions, Remote Config and Storage API changes, Kotlin 2.4.0 for the Firebase Android SDK), Google sign-in 17, Notifee removed (owner chose OneSignal over `expo-notifications` because `expo-notifications` adds a competing Android messaging service). Remaining: EAS Update, EAS Build profiles, iOS bring-up.
