@@ -31,6 +31,7 @@ import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
 import {useFocusEffect} from '@react-navigation/native';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import {useCurrency} from '../../utils/CurrencyUtil';
+import {deleteSettlement} from '../../src/services/SettlementService';
 import {balanceEffect, majorOf} from '../../src/utils/amounts';
 import {toMajorNumber} from '../../src/utils/money';
 import {sharesMinor} from '../../src/utils/splitMath';
@@ -126,9 +127,15 @@ const SplitDetailScreen = ({
 
   const handleDeleteSplit = async () => {
     try {
-      await deleteDoc(
-        doc(getFirestore(), 'groups', group.id, 'splits', split.id),
-      );
+      if (isSettlement) {
+        // The server removes the settlement, its splits-list entry and both people's
+        // transactions, and gives both balances back, in one step.
+        await deleteSettlement(group.id, split.id);
+      } else {
+        await deleteDoc(
+          doc(getFirestore(), 'groups', group.id, 'splits', split.id),
+        );
+      }
 
       let actorName = currentUser?.email?.split('@')[0] || 'Someone';
       try {
@@ -211,7 +218,8 @@ const SplitDetailScreen = ({
             where('splitId', '==', split.id),
           ),
         );
-        if (!txSnap.empty) {
+        // A settlement's transactions were already removed, with both balances, by the server.
+        if (!isSettlement && !txSnap.empty) {
           // Removing the transaction must also reverse what it did to the balance (it used to
           // leave the balance permanently off by the amount). The direction follows the
           // transaction's own type: an expense is given back, an income (a settlement the user
