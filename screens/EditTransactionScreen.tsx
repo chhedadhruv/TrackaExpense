@@ -40,6 +40,7 @@ import {
   INCOME_COLOR,
 } from '../src/constants/theme';
 import {useTransactionForm} from '../src/hooks/useTransactionForm';
+import {editBalanceDelta, transactionMoneyFields} from '../src/utils/amounts';
 import CategorySelector from '../src/components/CategorySelector';
 import AmountInput from '../src/components/AmountInput';
 import DateInput from '../src/components/DateInput';
@@ -158,6 +159,7 @@ const EditTransactionScreen = ({
           title: title.trim(),
           description: description.trim(),
           amount: parseFloat(amount),
+          ...transactionMoneyFields(amount, currency.code),
           category,
           date,
           createdAt: Timestamp.fromDate(new Date()),
@@ -168,12 +170,19 @@ const EditTransactionScreen = ({
 
         txn.update(transactionRef, updatePayload);
 
-        const oldAmount = parseFloat(existing?.amount);
-        const newAmount = parseFloat(amount);
+        const isExpense = existing?.type === 'expense';
+        // Exact integer math first; the old float subtraction only if an amount cannot be
+        // converted to minor units.
         const delta =
-          existing?.type === 'expense'
-            ? oldAmount - newAmount
-            : newAmount - oldAmount;
+          editBalanceDelta(
+            existing ?? {},
+            isExpense ? 'expense' : 'income',
+            amount,
+            currency.code,
+          ) ??
+          (isExpense
+            ? parseFloat(existing?.amount) - parseFloat(amount)
+            : parseFloat(amount) - parseFloat(existing?.amount));
         if (delta !== 0) {
           txn.update(userDocRef, {
             balance: increment(delta),
