@@ -36,6 +36,12 @@ import {
   EXPENSE_COLOR,
 } from '../src/constants/theme';
 import {formatDisplayDate} from '../src/utils/formatters';
+import {
+  addMajor,
+  savingsHistoryMoneyFields,
+  subtractMajor,
+  sumValuesMajor,
+} from '../src/utils/amounts';
 import type {SavingsGoal} from '../src/types';
 import type {McIconName} from '../src/types/icons';
 
@@ -348,7 +354,9 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
       const userDocRef = doc(getFirestore(), 'users', currentUser.uid);
       const updatedGoals = savingsGoals.map(goal => {
         if (goal.id === selectedGoalId) {
-          const newCurrent = goal.current + parsed;
+          // Exact arithmetic (0.1 + 0.2 is 0.3); the deposit is rounded to the minor unit.
+          const deposit = addMajor(0, parsed, currency.code);
+          const newCurrent = addMajor(goal.current, deposit, currency.code);
           const updatedGoal = {
             ...goal,
             current: newCurrent,
@@ -359,9 +367,17 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
             goalId: selectedGoalId,
             goalName: goal.name,
             type: 'deposit',
-            amount: parsed,
+            amount: deposit,
             previousAmount: goal.current,
             newAmount: newCurrent,
+            ...savingsHistoryMoneyFields(
+              {
+                amount: deposit,
+                previousAmount: goal.current,
+                newAmount: newCurrent,
+              },
+              currency.code,
+            ),
             createdAt: Timestamp.fromDate(new Date()),
           });
 
@@ -427,7 +443,13 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
       const userDocRef = doc(getFirestore(), 'users', currentUser.uid);
       const updatedGoals = savingsGoals.map(goal => {
         if (goal.id === selectedGoalId) {
-          const newCurrent = goal.current - parsed;
+          // Exact arithmetic; the withdrawal is rounded to the minor unit.
+          const withdrawal = addMajor(0, parsed, currency.code);
+          const newCurrent = subtractMajor(
+            goal.current,
+            withdrawal,
+            currency.code,
+          );
           const updatedGoal = {
             ...goal,
             current: newCurrent,
@@ -438,9 +460,17 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
             goalId: selectedGoalId,
             goalName: goal.name,
             type: 'withdrawal',
-            amount: parsed,
+            amount: withdrawal,
             previousAmount: goal.current,
             newAmount: newCurrent,
+            ...savingsHistoryMoneyFields(
+              {
+                amount: withdrawal,
+                previousAmount: goal.current,
+                newAmount: newCurrent,
+              },
+              currency.code,
+            ),
             createdAt: Timestamp.fromDate(new Date()),
           });
 
@@ -769,8 +799,15 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
     setCategoryManuallySelected(false);
   };
 
-  const totalSaved = savingsGoals.reduce((sum, g) => sum + g.current, 0);
-  const totalTarget = savingsGoals.reduce((sum, g) => sum + g.target, 0);
+  // Summed as integer minor units so the totals are exact.
+  const totalSaved = sumValuesMajor(
+    savingsGoals.map(g => g.current),
+    currency.code,
+  );
+  const totalTarget = sumValuesMajor(
+    savingsGoals.map(g => g.target),
+    currency.code,
+  );
   const overallProgress =
     totalTarget > 0 ? Math.min((totalSaved / totalTarget) * 100, 100) : 0;
 
