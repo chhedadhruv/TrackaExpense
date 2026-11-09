@@ -37,6 +37,8 @@ Guidance for working in this repository. Detail lives in `../trackaexpense-audit
 - `yarn test` : Jest unit tests.
 - `yarn emulators` : starts the Firestore and Storage emulators (needs the Firebase CLI installed globally and JDK 21 or newer).
 - `yarn test:rules` : Firestore and Storage rules tests in the local emulator (needs JDK 21 or newer; no live project is touched).
+- `yarn functions:build`, `yarn test:functions` : build and unit-test the Cloud Functions in `functions/` (it has its own `package.json` and `yarn.lock`; run `yarn --cwd functions install` once).
+- `yarn test:triggers` : builds the functions and runs `functions/test/triggers.emulator.test.mjs` against the Firestore and Functions emulators (needs JDK 21 or newer; demo project, no live project is touched). Never deploy functions without owner approval.
 - `yarn build:android` : release APK. `yarn build:android:bundle` : release AAB. `yarn build:clean` : Gradle clean.
 - `yarn version:bump` : `scripts/bump-version.js` (stamps `app.json` `version`, `android.versionCode` and `ios.buildNumber` from `package.json` and the current time).
 - EAS (CLI installed globally, logged in as the owner; project ID in `app.json`, owner `chhedadhruv`): `eas build --profile preview|production --platform android|ios` and `eas update --channel <channel>`. Profiles and channels are in `eas.json` (development, preview, production). `runtimeVersion` uses the `fingerprint` policy, so an update only reaches binaries with identical native code. The first preview Android build (2026-11-09, build `9641385f-2089-4ef3-a0a8-abd8329f0e87`) succeeded and was checked on the emulator; nothing has been published with `eas update`. EAS builds need Node 24 (`.nvmrc`, `engines`, the `base` profile in `eas.json`), because `@firebase/ai` requires Node `>=24.12.0`. The Firebase config files must be identical locally and in the EAS file variables `GOOGLE_SERVICES_JSON` and `GOOGLE_SERVICE_INFO_PLIST` (see `docs/deferred-tasks.md`). EAS Doctor runs on every build (it cannot run through the local `yarn expo` CLI): keep `.expo/` ignored and keep one version of each native module. EAS decompression tip: build logs from `eas build:view --json` (`logFiles`) are brotli-compressed. Never run `eas update` or `eas build` without owner approval.
@@ -56,6 +58,7 @@ Planned commands: EAS build and update scripts (Phase 1b).
 - `components/`, `utils/` : older shared components and utilities (currency, sign-in config, category data, permissions).
 - `firebase/` : Firestore and Storage rules, indexes, rules tests (`firebase/tests`), and `baseline/` (old open rules, rollback only). `firebase.json` at the root.
 - `server/` : Express notification server (cron, push, emails; not deployed). Uses yarn (`server/yarn.lock`).
+- `functions/` : Cloud Functions (TypeScript, region `asia-south1`, runtime nodejs22), not deployed yet. `src/derive.ts` holds the pure derivations, `src/index.ts` the Firestore triggers, `src/money.ts` a verbatim copy of `src/utils/money.ts` (a test fails if they drift; copy with `cp src/utils/money.ts functions/src/money.ts`). Excluded from the app's tsconfig, Jest, ESLint output and Metro.
 - `android/`, `ios/` : generated native projects, gitignored; never edit them by hand. `plugins/` : local Expo config plugins (release signing, Firebase Gradle versions, Gradle memory). `config/` : files injected into the native build (R8 rules). `credentials/` : local signing files, gitignored. `patches/` : patch-package patches (none today). `scripts/` : version bump.
 - `examples/`, `store-screenshots/`, `vendor/` : non-app material.
 
@@ -122,6 +125,9 @@ Phase 1a is complete (tooling, local quality gates, minimum-version gate, server
 - [ ] Phase 6: polish
 
 ## 12. Known gotchas
+
+- Phase 2 money rules (plan in `../trackaexpense-audit/08-phase-2-plan.md`, data profile in `09-phase-2-data-profile.md`): new money fields are additive integers in minor units (`amountMinor`, `balanceMinor`, `savingsGoalsMinor` keyed by goal id) with a `currency`; the legacy `amount` and `balance` stay and are never removed in this phase. Old installed apps only write the legacy fields, so the triggers in `functions/` derive the new ones; new code reads the minor field with a fallback to the legacy one. Round half away from zero at the currency's minor unit; values that cannot be converted are skipped and reported, never fatal. Do not rewrite the `savingsGoals` array from a function (an old client may be writing it): the goal minor amounts live in a separate map.
+- The standalone Firebase CLI (`/usr/local/bin/firebase`) bundles Node 20, which cannot load the Functions code (`firebase-admin` 14 needs Node 22 or newer). The functions emulator therefore runs from `functions/node_modules/.bin/firebase` (a dev dependency of `functions/` only, never of the app), and the test script is started with the absolute path of `node`.
 
 - Stage 1 rules keep interim access: any signed-in user can read user profiles and invitations and can change another user's `balance` only: `firebase/firestore.rules`. Tighten in Phase 2.
 - Live data: 126 users; transaction `amount` is a string on 97 percent of documents (up to 4 decimals); savings goals are in the embedded `users.savingsGoals` array.
