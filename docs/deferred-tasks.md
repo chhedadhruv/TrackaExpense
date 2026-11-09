@@ -38,6 +38,12 @@ Counts only; details in `../trackaexpense-audit/09-phase-2-data-profile.md`.
 - 78 of 127 users have no stored `currency` (the app treats that as INR).
 - Groups: 6 of 41 member emails have no account (pending invitees) and no group has `memberIds` yet. The IOU collection is empty (the feature has no production data).
 
+## Found while moving splits to integer money (2026-11-09)
+
+- In-app notification records are not stored: `NotificationService.storeNotificationInFirestore` writes `users/{email_at_domain}/notifications/...` from the client, and the deployed stage 1 rules allow a user's subcollections only to the owner by uid (the email-keyed path never matches), so every write is denied ("Failed to store notification ... permission-denied", silent in release builds). No screen reads those records and nothing sends push from the client, so the practical impact today is nil, but the notification feature needs the Cloud Functions work (Phase 2c) and the stage 1 rules comment ("no client access, the server uses the Admin SDK") is wrong about who writes them.
+- Group and friend balances can differ from before by a few paise: where a total cannot be divided evenly (for example 100.01 between two people), the old screens showed each person half a paisa too much and the shares did not add up; the shares now add up exactly and the extra paisa goes to the first participant. On a comparison over all live groups (11 groups, 737 usable splits) no split's shares failed to sum to its total, 4 of 20 pair balances differed from the old float result by more than half a paisa, and the largest difference was 3.67 paise.
+- Fixed in the same change: deleting a split removed the payer's transaction without restoring their balance, so every deleted split left that balance too low by the split amount. Existing balances of users who already deleted splits are not repaired; the balance reconciliation report (Phase 2a) will show how many.
+
 ## Deferred until after Expo and the later phases
 
 - Expo conversion (Phase 1b-ii): audit done (`../trackaexpense-audit/07-expo-conversion-audit.md`), SDK 58 chosen, step 2 done on Android. Step 3 done: Firebase v27 (with the 19 `exists()` conversions, Remote Config and Storage API changes, Kotlin 2.4.0 for the Firebase Android SDK), Google sign-in 17, Notifee removed (owner chose OneSignal over `expo-notifications` because `expo-notifications` adds a competing Android messaging service). Remaining: EAS Update, EAS Build profiles, iOS bring-up.

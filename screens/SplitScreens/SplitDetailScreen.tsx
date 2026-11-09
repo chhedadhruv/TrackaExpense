@@ -20,8 +20,10 @@ import {
   getDoc,
   getDocs,
   getFirestore,
+  increment,
   query,
   serverTimestamp,
+  updateDoc,
   where,
 } from '@react-native-firebase/firestore';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
@@ -29,6 +31,9 @@ import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
 import {useFocusEffect} from '@react-navigation/native';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import {useCurrency} from '../../utils/CurrencyUtil';
+import {balanceEffect, majorOf} from '../../src/utils/amounts';
+import {toMajorNumber} from '../../src/utils/money';
+import {sharesMinor} from '../../src/utils/splitMath';
 import {
   PRIMARY_COLOR,
   BACKGROUND_COLOR,
@@ -74,7 +79,7 @@ const SplitDetailScreen = ({
   route: any;
   navigation: any;
 }) => {
-  const {formatAmount} = useCurrency();
+  const {currency, formatAmount} = useCurrency();
   const {split: initialSplit, group} = route.params as {
     split: SplitData;
     group: Group;
@@ -207,7 +212,19 @@ const SplitDetailScreen = ({
           ),
         );
         if (!txSnap.empty) {
+          // Removing the payer's transaction must also reverse what it did to the balance (it
+          // used to leave the balance permanently lower by the split amount).
+          const reversal = -balanceEffect(
+            'expense',
+            txSnap.docs[0].data(),
+            currency.code,
+          );
           await deleteDoc(txSnap.docs[0].ref);
+          if (reversal > 0) {
+            await updateDoc(doc(getFirestore(), 'users', currentUser!.uid), {
+              balance: increment(reversal),
+            });
+          }
         }
       } catch (_) {}
 
@@ -252,7 +269,7 @@ const SplitDetailScreen = ({
                 </Text>
                 <Text style={styles.roleText}>Paid</Text>
                 <Text style={[styles.splitAmount, styles.negativeAmount]}>
-                  -{formatAmount(split.amount)}
+                  -{formatAmount(majorOf(split, currency.code))}
                 </Text>
               </View>
             </View>
@@ -273,7 +290,7 @@ const SplitDetailScreen = ({
                 </Text>
                 <Text style={styles.roleText}>Received</Text>
                 <Text style={[styles.splitAmount, styles.positiveAmount]}>
-                  +{formatAmount(split.amount)}
+                  +{formatAmount(majorOf(split, currency.code))}
                 </Text>
               </View>
             </View>
@@ -281,12 +298,17 @@ const SplitDetailScreen = ({
         </>
       );
     }
-    return split.splitUsers.map(user => {
+    // Shares are divided in integer minor units, so they always add up to the total.
+    const shares = sharesMinor(split, currency.code);
+    return split.splitUsers.map((user, index) => {
       const isCurrentUser = user.email === currentUser?.email;
-      const splitAmount =
-        split.splitType === 'percentage'
-          ? formatAmount(split.amount * ((user.percentage ?? 0) / 100))
-          : formatAmount(split.amount / split.splitUsers.length);
+      const splitAmount = formatAmount(
+        shares
+          ? toMajorNumber(shares[index], currency.code)
+          : split.splitType === 'percentage'
+          ? split.amount * ((user.percentage ?? 0) / 100)
+          : split.amount / split.splitUsers.length,
+      );
       return (
         <View key={user.email} style={styles.transactionsCard}>
           <UserAvatar
@@ -357,7 +379,7 @@ const SplitDetailScreen = ({
                     {isSettlement ? 'Settlement' : split.title}
                   </Text>
                   <Text style={styles.summaryAmount}>
-                    {formatAmount(split.amount)}
+                    {formatAmount(majorOf(split, currency.code))}
                   </Text>
                   {split.recurring?.enabled ? (
                     <View style={styles.recurringBadge}>

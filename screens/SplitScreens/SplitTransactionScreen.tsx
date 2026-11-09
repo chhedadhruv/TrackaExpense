@@ -20,6 +20,9 @@ import {DatePickerModal} from 'react-native-paper-dates';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
 import {useCurrency} from '../../utils/CurrencyUtil';
+import {majorOf} from '../../src/utils/amounts';
+import {fromMinor} from '../../src/utils/money';
+import {shareOfMinor} from '../../src/utils/splitMath';
 import {AuthContext} from '../../navigation/AuthProvider';
 import {
   PRIMARY_COLOR,
@@ -95,7 +98,7 @@ const SplitTransactionScreen = ({
   route: any;
   navigation: any;
 }) => {
-  const {formatAmount} = useCurrency();
+  const {currency, formatAmount} = useCurrency();
   const {user} = useContext(AuthContext);
   const currentUserEmail = user?.email?.toLowerCase();
   const {group} = route.params as {group: Group};
@@ -228,25 +231,10 @@ const SplitTransactionScreen = ({
       const splitType = t.splitType || 'equal';
       let yourShare = '';
       if (t.type !== 'settlement' && !t.isSettlement) {
-        const isParticipant = t.splitUsers?.some(
-          u => u.email?.toLowerCase() === currentEmail,
-        );
-        if (isParticipant) {
-          if (splitType === 'percentage') {
-            const entry = t.splitUsers?.find(
-              u => u.email?.toLowerCase() === currentEmail,
-            );
-            yourShare = entry
-              ? (
-                  parseFloat(String(t.amount)) *
-                  ((entry.percentage ?? 0) / 100)
-                ).toFixed(2)
-              : '';
-          } else {
-            yourShare = (
-              parseFloat(String(t.amount)) / (t.splitUsers?.length || 1)
-            ).toFixed(2);
-          }
+        // Divided in integer minor units, so everyone's shares add up to the split total.
+        const myShare = shareOfMinor(t, currentEmail, currency.code);
+        if (myShare !== null) {
+          yourShare = fromMinor(myShare, currency.code);
         }
       }
       return [
@@ -526,7 +514,7 @@ const SplitTransactionScreen = ({
                           styles.transactionsCardAmount,
                           {color: txColor},
                         ]}>
-                        {formatAmount(Number(transaction.amount))}
+                        {formatAmount(majorOf(transaction, currency.code))}
                       </Text>
                     </View>
                   </Card>

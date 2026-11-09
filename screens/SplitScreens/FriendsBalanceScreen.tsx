@@ -22,6 +22,9 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
 import {useFocusEffect} from '@react-navigation/native';
 import {useCurrency} from '../../utils/CurrencyUtil';
+import {minorOf} from '../../src/utils/amounts';
+import {toMajorNumber} from '../../src/utils/money';
+import {sharesMinor} from '../../src/utils/splitMath';
 import {
   PRIMARY_COLOR,
   BACKGROUND_COLOR,
@@ -67,6 +70,7 @@ const FriendsBalanceScreen = () => {
   const calculateBalancesForSplits = (
     splits: SplitDoc[],
     currentEmail: string,
+    currencyCode: string,
   ): {email: string; name: string; net: number}[] => {
     const netMap: Record<string, {email: string; name: string; net: number}> =
       {};
@@ -74,7 +78,8 @@ const FriendsBalanceScreen = () => {
       if (split.type === 'settlement' || split.isSettlement) {
         const fromEmail = split.paidBy?.email?.toLowerCase();
         const toEmail = split.splitUsers?.[0]?.email?.toLowerCase();
-        const amount = parseFloat(String(split.amount)) || 0;
+        // Integer minor units; converted back to major units when the result is returned.
+        const amount = minorOf(split, currencyCode) ?? 0;
         if (!fromEmail || !toEmail || fromEmail === toEmail) {
           return;
         }
@@ -101,18 +106,13 @@ const FriendsBalanceScreen = () => {
       }
       const paidByEmail = split.paidBy?.email?.toLowerCase();
       const splitUsers = split.splitUsers || [];
-      const amount = parseFloat(String(split.amount)) || 0;
-      const splitPerUser =
-        split.splitType === 'percentage' ? null : amount / splitUsers.length;
-      splitUsers.forEach(u => {
+      const shares = sharesMinor(split, currencyCode) ?? [];
+      splitUsers.forEach((u, index) => {
         const uEmail = u.email?.toLowerCase();
         if (!uEmail || uEmail === paidByEmail) {
           return;
         }
-        const share =
-          split.splitType === 'percentage'
-            ? amount * ((u.percentage || 0) / 100)
-            : splitPerUser ?? 0;
+        const share = shares[index] ?? 0;
         if (paidByEmail === currentEmail) {
           if (!netMap[uEmail]) {
             netMap[uEmail] = {
@@ -134,32 +134,36 @@ const FriendsBalanceScreen = () => {
         }
       });
     });
-    return Object.values(netMap).filter(b => Math.abs(b.net) > 0.009);
+    // `net` is in minor units here (summed across groups by the caller); a balance under one
+    // minor unit (0.01) counts as settled.
+    return Object.values(netMap).filter(b => Math.abs(b.net) >= 1);
   };
 
-  const loadBalances = useCallback(async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-    try {
-      const currentUser = getAuth().currentUser;
-      if (!currentUser) {
-        return;
+  const loadBalances = useCallback(
+    async (isRefresh = false) => {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
       }
-      const currentEmail = currentUser.email?.toLowerCase() ?? '';
-      const groupsSnap = await getDocs(
-        query(
-          collection(getFirestore(), 'groups'),
-          where('members', 'array-contains', currentUser.email),
-        ),
-      );
-      const allSplits: SplitDoc[] = (
-        await Promise.all(
-          groupsSnap.docs.map(g =>
-            getDocs(collection(getFirestore(), 'groups', g.id, 'splits')).then(
-              s =>
+      try {
+        const currentUser = getAuth().currentUser;
+        if (!currentUser) {
+          return;
+        }
+        const currentEmail = currentUser.email?.toLowerCase() ?? '';
+        const groupsSnap = await getDocs(
+          query(
+            collection(getFirestore(), 'groups'),
+            where('members', 'array-contains', currentUser.email),
+          ),
+        );
+        const allSplits: SplitDoc[] = (
+          await Promise.all(
+            groupsSnap.docs.map(g =>
+              getDocs(
+                collection(getFirestore(), 'groups', g.id, 'splits'),
+              ).then(s =>
                 s.docs.map(
                   d =>
                     ({
@@ -169,57 +173,71 @@ const FriendsBalanceScreen = () => {
                       ...d.data(),
                     } as SplitDoc),
                 ),
+              ),
             ),
-          ),
-        )
-      ).flat();
-      const aggregated: Record<string, Balance> = {};
-      const perGroupBalances: Record<
-        string,
-        {name: string; splits: SplitDoc[]}
-      > = {};
-      allSplits.forEach(split => {
-        const groupKey = split.groupId;
-        if (!perGroupBalances[groupKey]) {
-          perGroupBalances[groupKey] = {
-            name: split.groupName || '',
-            splits: [],
-          };
-        }
-        perGroupBalances[groupKey].splits.push(split);
-      });
-      Object.entries(perGroupBalances).forEach(
-        ([groupId, {name: groupName, splits: groupSplits}]) => {
-          const bals = calculateBalancesForSplits(groupSplits, currentEmail);
-          bals.forEach(b => {
-            if (!aggregated[b.email]) {
-              aggregated[b.email] = {
-                email: b.email,
-                name: b.name,
-                net: 0,
-                groups: [],
-              };
-            }
-            aggregated[b.email].net += b.net;
-            aggregated[b.email].groups.push({
-              groupId,
-              name: groupName,
-              amount: b.net,
+          )
+        ).flat();
+        const aggregated: Record<string, Balance> = {};
+        const perGroupBalances: Record<
+          string,
+          {name: string; splits: SplitDoc[]}
+        > = {};
+        allSplits.forEach(split => {
+          const groupKey = split.groupId;
+          if (!perGroupBalances[groupKey]) {
+            perGroupBalances[groupKey] = {
+              name: split.groupName || '',
+              splits: [],
+            };
+          }
+          perGroupBalances[groupKey].splits.push(split);
+        });
+        // Summed across groups as integer minor units, converted to major units for display.
+        const aggregatedMinor: Record<string, number> = {};
+        Object.entries(perGroupBalances).forEach(
+          ([groupId, {name: groupName, splits: groupSplits}]) => {
+            const bals = calculateBalancesForSplits(
+              groupSplits,
+              currentEmail,
+              currency.code,
+            );
+            bals.forEach(b => {
+              if (!aggregated[b.email]) {
+                aggregated[b.email] = {
+                  email: b.email,
+                  name: b.name,
+                  net: 0,
+                  groups: [],
+                };
+              }
+              aggregatedMinor[b.email] =
+                (aggregatedMinor[b.email] ?? 0) + b.net;
+              aggregated[b.email].net = toMajorNumber(
+                aggregatedMinor[b.email],
+                currency.code,
+              );
+              aggregated[b.email].groups.push({
+                groupId,
+                name: groupName,
+                amount: toMajorNumber(b.net, currency.code),
+              });
             });
-          });
-        },
-      );
-      const result = Object.values(aggregated)
-        .filter(b => Math.abs(b.net) > 0.009)
-        .sort((a, b) => Math.abs(b.net) - Math.abs(a.net));
-      setBalances(result);
-    } catch (_) {
-      setBalances([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+          },
+        );
+        const result = Object.values(aggregated)
+          .filter(b => Math.abs(b.net) > 0.009)
+          .sort((a, b) => Math.abs(b.net) - Math.abs(a.net));
+        setBalances(result);
+      } catch (_) {
+        setBalances([]);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+      // calculateBalancesForSplits is pure (it uses only its arguments).
+    },
+    [currency.code],
+  );
 
   useFocusEffect(
     useCallback(() => {

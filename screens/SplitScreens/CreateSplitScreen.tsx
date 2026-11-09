@@ -58,6 +58,12 @@ import {
 } from '../../utils/CategoryData';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../../src/constants/theme';
 import {formatInputAmount} from '../../src/utils/formatters';
+import {
+  balanceEffect,
+  editBalanceDelta,
+  transactionMoneyFields,
+} from '../../src/utils/amounts';
+import {tryToMinor} from '../../src/utils/money';
 
 type SplitType = 'equal' | 'percentage';
 type RecurringFrequency = 'weekly' | 'monthly';
@@ -85,6 +91,8 @@ interface RecurringConfig {
 interface SplitData {
   title: string;
   amount: number;
+  /** Integer minor units of `amount` (the exact value); see src/utils/amounts.ts. */
+  amountMinor?: number;
   paidBy: {email: string; name: string; userId: string | null};
   splitType: SplitType;
   splitUsers: SplitUser[];
@@ -422,10 +430,13 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       }
 
       const splitAmount = parseFloat(amount);
+      const splitMinor = tryToMinor(amount, (currency as any).code || 'INR');
       const splitDate = Timestamp.fromDate(date);
       const splitData: SplitData = {
         title,
         amount: splitAmount,
+        // Omitted (never undefined) when the typed amount cannot be converted.
+        ...(splitMinor === null ? {} : {amountMinor: splitMinor}),
         paidBy: {
           email: paidBy.email,
           name: paidBy.name,
@@ -757,6 +768,10 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       }
       const email = u.email?.toLowerCase();
       const isPayer = data.paidBy?.email?.toLowerCase() === email;
+      // The payer's own transaction keeps the legacy two-decimal string; the balance follows that
+      // same rounded amount so adding, editing and removing it cancel exactly.
+      const txAmount = String(parseFloat(amount.toFixed(2)));
+      const currencyCode = (currency as any).code || 'INR';
 
       if (!isPayer && data.paidBy?.userId && include) {
         try {
@@ -777,7 +792,8 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                     title: data.title,
                     type: 'expense',
                     category: data.category || 'Split',
-                    amount: String(parseFloat(amount.toFixed(2))),
+                    amount: txAmount,
+                    ...transactionMoneyFields(txAmount, currencyCode),
                     date: dateStr,
                     source: 'split',
                     splitId,
@@ -785,7 +801,11 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                     groupName: group.name,
                     splitRole: 'payer',
                   },
-                  balanceDelta: -amount,
+                  balanceDelta: balanceEffect(
+                    'expense',
+                    {amount: txAmount},
+                    currencyCode,
+                  ),
                   isEdit,
                 }),
               },
@@ -811,11 +831,16 @@ const CreateSplitScreen = ({route, navigation}: any) => {
             query(txCol, where('splitId', '==', splitId)),
           );
           if (!snap.empty) {
-            const oldAmount = parseFloat(snap.docs[0].data().amount || '0');
+            // Removing the payer's transaction reverses what it did to the balance.
+            const reversal = -balanceEffect(
+              'expense',
+              snap.docs[0].data(),
+              currencyCode,
+            );
             await deleteDoc(snap.docs[0].ref);
-            if (oldAmount > 0) {
+            if (reversal > 0) {
               await updateDoc(userRef, {
-                balance: increment(oldAmount),
+                balance: increment(reversal),
               });
             }
           } else {
@@ -829,7 +854,8 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         title: data.title,
         type: 'expense',
         category: data.category || 'Split',
-        amount: String(parseFloat(amount.toFixed(2))),
+        amount: txAmount,
+        ...transactionMoneyFields(txAmount, currencyCode),
         date: dateStr,
         source: 'split',
         splitId,
@@ -844,8 +870,12 @@ const CreateSplitScreen = ({route, navigation}: any) => {
           query(txCol, where('splitId', '==', splitId)),
         );
         if (!snap.empty) {
-          const oldAmount = parseFloat(snap.docs[0].data().amount || '0');
-          const delta = oldAmount - amount;
+          const existing = snap.docs[0].data();
+          // Exact integer math first; the old float subtraction only if an amount cannot be
+          // converted to minor units.
+          const delta =
+            editBalanceDelta(existing, 'expense', txAmount, currencyCode) ??
+            parseFloat(existing.amount || '0') - amount;
           await updateDoc(snap.docs[0].ref, txData);
           if (Math.abs(delta) > 0.001) {
             await updateDoc(userRef, {
@@ -856,13 +886,17 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         } else {
           await addDoc(txCol, txData);
           await updateDoc(userRef, {
-            balance: increment(-amount),
+            balance: increment(
+              balanceEffect('expense', {amount: txAmount}, currencyCode),
+            ),
           });
         }
       } else {
         await addDoc(txCol, txData);
         await updateDoc(userRef, {
-          balance: increment(-amount),
+          balance: increment(
+            balanceEffect('expense', {amount: txAmount}, currencyCode),
+          ),
         });
       }
     } catch (e) {
