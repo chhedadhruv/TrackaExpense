@@ -74,6 +74,12 @@ const TARGETS: Target[] = [
     accept: path => path.startsWith('groups/'),
   },
   {
+    kind: 'group',
+    label: 'groups',
+    query: db => db.collection('groups'),
+    accept: () => true,
+  },
+  {
     kind: 'iou',
     label: 'ious',
     query: db => db.collection('ious'),

@@ -3,6 +3,7 @@ import {describe, it} from 'node:test';
 import {
   changedFields,
   deriveAmountDocument,
+  deriveGroup,
   deriveSavingsHistory,
   deriveTransaction,
   deriveUser,
@@ -10,6 +11,45 @@ import {
   resolveCurrency,
   type Fields,
 } from './derive';
+
+describe('deriveGroup', () => {
+  const group: Fields = {members: ['a@x.com', 'b@x.com', 'c@x.com']};
+
+  it('lists the uid of every member in order', () => {
+    const out = deriveGroup(group, ['u1', 'u2', 'u3']);
+    assert.deepEqual(out.fields, {memberIds: ['u1', 'u2', 'u3']});
+    assert.deepEqual(out.skipped, []);
+  });
+
+  it('keeps resolved members and reports the unresolved ones once', () => {
+    const out = deriveGroup(group, ['u1', undefined, undefined]);
+    assert.deepEqual(out.fields, {memberIds: ['u1']});
+    assert.deepEqual(out.skipped, ['members']);
+  });
+
+  it('drops repeated uids and handles an empty member list', () => {
+    assert.deepEqual(deriveGroup(group, ['u1', 'u1', 'u2']).fields, {
+      memberIds: ['u1', 'u2'],
+    });
+    assert.deepEqual(deriveGroup({members: []}, []).fields, {memberIds: []});
+  });
+
+  it('does nothing for a group without a members array', () => {
+    assert.deepEqual(deriveGroup({name: 'x'}, []).fields, {});
+    assert.deepEqual(deriveGroup({members: 'a@x.com'}, []).fields, {});
+  });
+
+  it('is stable once written', () => {
+    const written: Fields = {
+      ...group,
+      ...deriveGroup(group, ['u1', 'u2', 'u3']).fields,
+    };
+    assert.equal(
+      changedFields(written, deriveGroup(written, ['u1', 'u2', 'u3']).fields),
+      null,
+    );
+  });
+});
 
 describe('resolveCurrency', () => {
   it('takes the first valid code, upper-cased, else INR', () => {

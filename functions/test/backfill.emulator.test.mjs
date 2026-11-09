@@ -68,6 +68,11 @@ await db
 await db
   .doc('users/u1/savingsHistory/h2')
   .set({type: 'goal_created', newGoal: {target: 5}});
+await db.doc('groups/g1').set({
+  name: 'Trip',
+  members: ['a@example.com', 'b@example.com'],
+  pendingInvites: ['later@example.com'],
+});
 // A same-named collection elsewhere must be ignored.
 await db.doc('other/x/transactions/ignored').set({amount: '5'});
 
@@ -84,6 +89,8 @@ await step('dry run reports what would change and writes nothing', async () => {
   assert.equal(report.targets.splits.wouldUpdate, 1);
   assert.equal(report.targets.settlements.wouldUpdate, 1);
   assert.equal(report.targets.ious.wouldUpdate, 1);
+  assert.equal(report.targets.groups.scanned, 1);
+  assert.equal(report.targets.groups.wouldUpdate, 1);
   assert.equal(report.targets.savingsHistory.scanned, 2);
   assert.equal(report.targets.savingsHistory.wouldUpdate, 1);
   assert.equal(report.totals.updated, 0);
@@ -130,6 +137,11 @@ await step(
     assert.equal(report.totals.updated, report.totals.wouldUpdate);
     assert.equal(report.totals.conflicts, 0);
     assert.equal(report.totals.failed, 0);
+
+    const g1 = (await db.doc('groups/g1').get()).data();
+    assert.deepEqual(g1.memberIds, ['u1', 'u2']);
+    assert.deepEqual(g1.members, ['a@example.com', 'b@example.com']);
+    assert.deepEqual(g1.pendingInvites, ['later@example.com']);
 
     const t1 = (await db.doc('users/u1/transactions/t1').get()).data();
     assert.equal(t1.amountMinor, 12346);

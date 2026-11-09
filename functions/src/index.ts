@@ -27,7 +27,7 @@ const apply = async (
   derived: Derived,
 ): Promise<void> => {
   if (derived.skipped.length > 0) {
-    logger.warn('Value could not be converted to minor units', {
+    logger.warn('Value could not be derived', {
       path: ref.path,
       skipped: derived.skipped,
     });
@@ -76,3 +76,5 @@ export const minorFromSavingsHistory = onWritten(
   'savingsHistory',
 );
 export const minorFromUser = onWritten('users/{uid}', 'user');
+// memberIds (uids) follows the email list `members`, which old apps keep writing.
+export const memberIdsFromGroup = onWritten('groups/{groupId}', 'group');
