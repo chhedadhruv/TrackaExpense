@@ -75,6 +75,9 @@ const createStack = (screens: ScreenConfig[]) => (
         options={
           {
             headerShown,
+            // App.tsx already pads the top safe area; without this the stack header adds the
+            // status bar height a second time and the header is about twice as tall.
+            headerStatusBarHeight: 0,
             headerTitle: title,
             headerTitleAlign: 'center',
             headerStyle,
