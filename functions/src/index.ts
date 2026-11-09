@@ -2,6 +2,7 @@ import {initializeApp} from 'firebase-admin/app';
 import {DocumentReference, getFirestore} from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import {setGlobalOptions} from 'firebase-functions/v2';
+import {defineSecret, defineString} from 'firebase-functions/params';
 import {onDocumentWritten} from 'firebase-functions/v2/firestore';
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
 import {
@@ -9,6 +10,7 @@ import {
   respondToInvitation as respondToInvitationCore,
 } from './invitation';
 import {LookupInputError, lookupUsers} from './lookup';
+import {PushError, sendPush as sendPushCore} from './push';
 import {
   SettlementError,
   deleteSettlement as deleteSettlementCore,
@@ -119,6 +121,46 @@ export const deleteSettlement = settlementCallable(
   'deleteSettlement',
   deleteSettlementCore,
 );
+
+// The OneSignal REST API key lives only in Secret Manager (firebase functions:secrets:set).
+const oneSignalApiKey = defineSecret('ONESIGNAL_API_KEY');
+const oneSignalAppId = defineString('ONESIGNAL_APP_ID', {
+  default: '5dc1c59a-d523-4725-8434-d7ea90803d29',
+});
+
+/**
+ * Sends a push notification through OneSignal to the caller or to people in one of the caller's
+ * groups. This replaces the app reading other users' FCM tokens.
+ */
+export const sendPush = onCall({secrets: [oneSignalApiKey]}, async request => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Sign in to send notifications.');
+  }
+  const token = request.auth.token;
+  try {
+    return await sendPushCore(
+      {
+        db,
+        fetchFn: fetch,
+        // Not set (for example in the emulator): the function stores the in-app copy only.
+        apiKey: process.env.ONESIGNAL_API_KEY || undefined,
+        appId: oneSignalAppId.value(),
+      },
+      {
+        uid: request.auth.uid,
+        email: token.email,
+        emailVerified: token.email_verified === true,
+      },
+      request.data,
+    );
+  } catch (error) {
+    if (error instanceof PushError) {
+      throw new HttpsError(error.code, error.message);
+    }
+    logger.error('sendPush failed', {error: String(error)});
+    throw new HttpsError('internal', 'The notification could not be sent.');
+  }
+});
 
 /** Accepts or declines a group invitation addressed to the (verified) caller. */
 export const respondToInvitation = onCall(async request => {
