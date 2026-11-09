@@ -5,6 +5,11 @@ import {setGlobalOptions} from 'firebase-functions/v2';
 import {onDocumentWritten} from 'firebase-functions/v2/firestore';
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
 import {LookupInputError, lookupUsers} from './lookup';
+import {
+  SettlementError,
+  deleteSettlement as deleteSettlementCore,
+  recordSettlement as recordSettlementCore,
+} from './settlement';
 import {changedFields, type Derived, type Fields} from './derive';
 import {deriveForKind, makeLookups, type Kind} from './sources';
 
@@ -42,7 +47,7 @@ const apply = async (
     await ref.update(changed);
   } catch (error) {
     // The document may have been deleted since the event; there is nothing to repair then.
-    logger.error('Could not write minor-unit fields', {
+    logger.warn('Could not write minor-unit fields', {
       path: ref.path,
       error: String(error),
     });
@@ -80,6 +85,36 @@ export const minorFromSavingsHistory = onWritten(
 export const minorFromUser = onWritten('users/{uid}', 'user');
 // memberIds (uids) follows the email list `members`, which old apps keep writing.
 export const memberIdsFromGroup = onWritten('groups/{groupId}', 'group');
+
+const settlementCallable = (
+  name: string,
+  run: typeof recordSettlementCore | typeof deleteSettlementCore,
+) =>
+  onCall(async request => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Sign in to settle up.');
+    }
+    try {
+      return await run(db, request.auth.uid, request.data);
+    } catch (error) {
+      if (error instanceof SettlementError) {
+        throw new HttpsError(error.code, error.message);
+      }
+      logger.error(`${name} failed`, {error: String(error)});
+      throw new HttpsError('internal', 'The settlement could not be saved.');
+    }
+  });
+
+/** Records a settlement atomically: documents, both balances and the transactions. */
+export const recordSettlement = settlementCallable(
+  'recordSettlement',
+  recordSettlementCore,
+);
+/** Deletes a settlement atomically and reverses everything recordSettlement did. */
+export const deleteSettlement = settlementCallable(
+  'deleteSettlement',
+  deleteSettlementCore,
+);
 
 /**
  * Finds other users by email or phone and returns only uid, email, name and avatar. Signed-in
