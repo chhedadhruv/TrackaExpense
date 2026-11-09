@@ -12,7 +12,7 @@ import {Card} from 'react-native-paper';
 import FormInput from '../components/FormInput';
 import FormButton from '../components/FormButton';
 import {AuthContext} from '../navigation/AuthProvider';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
+import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import {
   GoogleSignin,
   statusCodes,

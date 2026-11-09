@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import {Text, Card, ActivityIndicator} from 'react-native-paper';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
+import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
 import {
   collection,
   getFirestore,

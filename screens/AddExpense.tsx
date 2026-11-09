@@ -30,7 +30,7 @@ import {requestPushPermissionAfterFirstExpense} from '../src/services/PushServic
 import * as PerformanceService from '../src/services/PerformanceService';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
+import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import FormButton from '../components/FormButton';
 import {useCurrency} from '../utils/CurrencyUtil';

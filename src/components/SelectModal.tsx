@@ -1,7 +1,6 @@
 import React, {useMemo, useState} from 'react';
 import {
   FlatList,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -10,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import {PRIMARY_COLOR} from '../constants/theme';
+import {KeyboardAvoidingModal} from './KeyboardAvoidingModal';
 
 export interface SelectOption {
   label: string;
@@ -61,48 +61,47 @@ const SelectModal = ({
           {selected ? selected.label : placeholder}
         </Text>
       </TouchableOpacity>
-      <Modal
+      <KeyboardAvoidingModal
         visible={open}
         animationType="slide"
         onRequestClose={close}
-        transparent={false}>
-        <View style={styles.modal}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{title ?? placeholder}</Text>
-            <Pressable onPress={close} hitSlop={12}>
-              <Text style={styles.close}>Close</Text>
-            </Pressable>
-          </View>
-          <TextInput
-            style={styles.search}
-            value={search}
-            onChangeText={setSearch}
-            placeholder={searchPlaceholder}
-            placeholderTextColor="#999"
-          />
-          <FlatList
-            data={filtered}
-            keyExtractor={item => item.value}
-            keyboardShouldPersistTaps="handled"
-            renderItem={({item}) => (
-              <TouchableOpacity
-                style={[
-                  styles.row,
-                  item.value === value ? styles.rowSelected : null,
-                ]}
-                onPress={() => {
-                  onChange(item.value);
-                  close();
-                }}>
-                {item.icon ? (
-                  <View style={styles.icon}>{item.icon()}</View>
-                ) : null}
-                <Text style={styles.rowText}>{item.label}</Text>
-              </TouchableOpacity>
-            )}
-          />
+        transparent={false}
+        overlayStyle={styles.modal}>
+        <View style={styles.header}>
+          <Text style={styles.title}>{title ?? placeholder}</Text>
+          <Pressable onPress={close} hitSlop={12}>
+            <Text style={styles.close}>Close</Text>
+          </Pressable>
         </View>
-      </Modal>
+        <TextInput
+          style={styles.search}
+          value={search}
+          onChangeText={setSearch}
+          placeholder={searchPlaceholder}
+          placeholderTextColor="#999"
+        />
+        <FlatList
+          data={filtered}
+          keyExtractor={item => item.value}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({item}) => (
+            <TouchableOpacity
+              style={[
+                styles.row,
+                item.value === value ? styles.rowSelected : null,
+              ]}
+              onPress={() => {
+                onChange(item.value);
+                close();
+              }}>
+              {item.icon ? (
+                <View style={styles.icon}>{item.icon()}</View>
+              ) : null}
+              <Text style={styles.rowText}>{item.label}</Text>
+            </TouchableOpacity>
+          )}
+        />
+      </KeyboardAvoidingModal>
     </>
   );
 };

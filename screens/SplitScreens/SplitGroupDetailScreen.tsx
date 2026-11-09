@@ -30,7 +30,7 @@ import {
 import {lookupUsersByEmail} from '../../src/services/UserLookup';
 import moment from 'moment';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
+import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
 import {AuthContext} from '../../navigation/AuthProvider';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import {useCurrency} from '../../utils/CurrencyUtil';

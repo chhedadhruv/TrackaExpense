@@ -38,7 +38,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import UserAvatar from '../../src/components/Avatar';
 import SelectModal from '../../src/components/SelectModal';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
+import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import ReminderNotificationService from '../../services/ReminderNotificationService';
 import {getConfig} from '../../src/services/RemoteConfigService';
