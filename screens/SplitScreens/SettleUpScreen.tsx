@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -12,16 +12,14 @@ import {
 import {Card, Switch} from 'react-native-paper';
 import UserAvatar from '../../src/components/Avatar';
 import {
-  Timestamp,
   addDoc,
   collection,
   doc,
   getDoc,
   getFirestore,
-  increment,
   serverTimestamp,
-  updateDoc,
 } from '@react-native-firebase/firestore';
+import {recordSettlement} from '../../src/services/SettlementService';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../../src/services/ErrorReporter';
@@ -37,12 +35,7 @@ import {
   EXPENSE_COLOR,
 } from '../../src/constants/theme';
 import {formatInputAmount} from '../../src/utils/formatters';
-import {transactionMoneyFields} from '../../src/utils/amounts';
 import {toMajorNumber, tryToMinor} from '../../src/utils/money';
-import {
-  NOTIFICATION_SERVER_URL,
-  EXPO_PUBLIC_NOTIFICATION_SERVER_URL,
-} from '@env';
 
 interface GroupMember {
   email: string;
@@ -84,6 +77,8 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [includeInTransactions, setIncludeInTransactions] = useState(true);
+  // Kept across a failed attempt so a retry cannot record the settlement twice.
+  const requestIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const currentUserEmail = getAuth().currentUser?.email;
@@ -157,44 +152,25 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
         }
       } catch (_) {}
 
-      const settlementData = {
-        from: selectedBorrower,
-        to: selectedLender,
-        amount: settlementAmount,
-        amountMinor: settlementMinor,
-        currency: currency.code,
-        note: note.trim(),
-        status: 'completed',
-        createdAt: serverTimestamp(),
+      // The server records the whole settlement in one step: the settlement, the splits-list
+      // entry, both balances and the transactions. The same request id is kept for a retry after
+      // a failure, so the settlement can never be applied twice.
+      if (!requestIdRef.current) {
+        requestIdRef.current = doc(
+          collection(getFirestore(), 'groups', group.id, 'splits'),
+        ).id;
+      }
+      const recorded = await recordSettlement({
         groupId: group.id,
-      };
-      await addDoc(
-        collection(getFirestore(), 'groups', group.id, 'settlements'),
-        settlementData,
-      );
-
-      const settlementSplit = {
-        title: note.trim() || 'Settlement Payment',
-        amount: settlementAmount,
-        amountMinor: settlementMinor,
-        currency: currency.code,
-        category: 'Settlement',
-        paidBy: selectedBorrower,
-        splitUsers: [selectedLender],
-        date: Timestamp.now(),
-        createdAt: serverTimestamp(),
-        type: 'settlement',
-        isSettlement: true,
-        settlement: {
-          from: selectedBorrower,
-          to: selectedLender,
-          amount: settlementAmount,
-        },
-      };
-      const splitRef = await addDoc(
-        collection(getFirestore(), 'groups', group.id, 'splits'),
-        settlementSplit,
-      );
+        fromEmail: selectedBorrower.email,
+        toEmail: selectedLender.email,
+        amount,
+        note: note.trim(),
+        includeInTransactions,
+        requestId: requestIdRef.current,
+      });
+      const splitRef = {id: recorded.splitId};
+      const splitTitle = note.trim() || 'Settlement Payment';
 
       SplitNotificationService.notifySettlementMade(
         {
@@ -211,7 +187,7 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
         groupId: group.id,
         groupName: group.name,
         splitId: splitRef.id,
-        splitTitle: settlementSplit.title,
+        splitTitle,
         amount: settlementAmount,
         category: 'Settlement',
         date: serverTimestamp(),
@@ -239,137 +215,10 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
         );
       } catch (histErr) {}
 
-      const todayStr = new Date().toISOString().split('T')[0];
-      const counterparty =
-        selectedBorrower.email === currentUserEmail
-          ? selectedLender
-          : selectedBorrower;
-      const counterpartyIsPayer = counterparty.email === selectedBorrower.email;
-
-      // Current user's own transaction entry (respects their includeInTransactions toggle)
-      if (includeInTransactions) {
-        try {
-          const txCol = collection(
-            getFirestore(),
-            'users',
-            currentUser.uid,
-            'transactions',
-          );
-          if (selectedBorrower.email === currentUserEmail) {
-            await addDoc(txCol, {
-              title: note.trim() || `Settlement: ${group.name}`,
-              type: 'expense',
-              category: 'Settlement',
-              amount: String(settlementAmount),
-              ...transactionMoneyFields(
-                String(settlementAmount),
-                currency.code,
-              ),
-              date: todayStr,
-              source: 'split',
-              splitId: splitRef.id,
-              groupId: group.id,
-              groupName: group.name,
-              splitRole: 'settlement_payer',
-              createdAt: serverTimestamp(),
-            });
-          } else if (selectedLender.email === currentUserEmail) {
-            await addDoc(txCol, {
-              title: note.trim() || `Settlement: ${group.name}`,
-              type: 'income',
-              category: 'Settlement',
-              amount: String(settlementAmount),
-              ...transactionMoneyFields(
-                String(settlementAmount),
-                currency.code,
-              ),
-              date: todayStr,
-              source: 'split',
-              splitId: splitRef.id,
-              groupId: group.id,
-              groupName: group.name,
-              splitRole: 'settlement_receiver',
-              createdAt: serverTimestamp(),
-            });
-          }
-        } catch (txErr) {}
-      }
-
-      // Counterparty's transaction entry via notification server (balance handled separately below).
-      // Borrower (payer) gets an expense; lender (receiver) gets an income.
-      if (counterparty.userId && counterparty.email !== currentUserEmail) {
-        try {
-          const endpoint =
-            NOTIFICATION_SERVER_URL ||
-            EXPO_PUBLIC_NOTIFICATION_SERVER_URL ||
-            '';
-          if (endpoint) {
-            await fetch(
-              `${endpoint.replace(/\/$/, '')}/createSplitTransaction`,
-              {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                  targetUserId: counterparty.userId,
-                  txData: {
-                    title: note.trim() || `Settlement: ${group.name}`,
-                    type: counterpartyIsPayer ? 'expense' : 'income',
-                    category: 'Settlement',
-                    amount: String(settlementAmount),
-                    ...transactionMoneyFields(
-                      String(settlementAmount),
-                      currency.code,
-                    ),
-                    date: todayStr,
-                    source: 'split',
-                    splitId: splitRef.id,
-                    groupId: group.id,
-                    groupName: group.name,
-                    splitRole: counterpartyIsPayer
-                      ? 'settlement_payer'
-                      : 'settlement_receiver',
-                  },
-                }),
-              },
-            );
-          }
-        } catch (serverErr) {}
-      }
-
-      // Balance updates for both parties via FieldValue.increment.
-      // Borrower (payer) balance decreases; lender (receiver) balance increases.
-      const borrowerRef =
-        selectedBorrower.email === currentUserEmail
-          ? doc(getFirestore(), 'users', currentUser.uid)
-          : selectedBorrower.userId
-          ? doc(getFirestore(), 'users', selectedBorrower.userId)
-          : null;
-      const lenderRef =
-        selectedLender.email === currentUserEmail
-          ? doc(getFirestore(), 'users', currentUser.uid)
-          : selectedLender.userId
-          ? doc(getFirestore(), 'users', selectedLender.userId)
-          : null;
-      const balanceUpdates: Promise<void>[] = [];
-      if (borrowerRef) {
-        balanceUpdates.push(
-          updateDoc(borrowerRef, {
-            balance: increment(-settlementAmount),
-          }),
-        );
-      }
-      if (lenderRef) {
-        balanceUpdates.push(
-          updateDoc(lenderRef, {
-            balance: increment(settlementAmount),
-          }),
-        );
-      }
-      await Promise.all(balanceUpdates);
-
       AnalyticsService.logSettleUp(
         AnalyticsService.getAmountRange(settlementAmount),
       );
+      requestIdRef.current = null;
       Alert.alert('Success', 'Settlement recorded successfully');
       navigation.goBack();
     } catch (e) {
