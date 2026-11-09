@@ -24,6 +24,7 @@ import {getAuth} from '@react-native-firebase/auth';
 import Share from 'react-native-share';
 import {File, Paths} from 'expo-file-system';
 import {useCurrency} from '../utils/CurrencyUtil';
+import {majorOf} from '../src/utils/amounts';
 import {getCategoryIcon} from '../utils/CategoryData';
 import {
   PRIMARY_COLOR,
@@ -39,7 +40,7 @@ import type {McIconName} from '../src/types/icons';
 type FilterType = 'all' | '7days' | '30days' | 'custom';
 
 const TransactionScreen = ({navigation}: {navigation: any}) => {
-  const {formatAmount} = useCurrency();
+  const {currency, formatAmount} = useCurrency();
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<TransactionDocument[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<
@@ -441,7 +442,7 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
                         : styles.amountExpense
                     }>
                     {transaction.type === 'income' ? '+ ' : '- '}
-                    {formatAmount(transaction.amount)}
+                    {formatAmount(majorOf(transaction, currency.code))}
                   </Text>
                 </View>
               </Card>

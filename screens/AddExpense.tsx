@@ -41,6 +41,7 @@ import {
   EXPENSE_COLOR,
 } from '../src/constants/theme';
 import {useTransactionForm} from '../src/hooks/useTransactionForm';
+import {balanceEffect, transactionMoneyFields} from '../src/utils/amounts';
 import CategorySelector from '../src/components/CategorySelector';
 import AmountInput from '../src/components/AmountInput';
 import DateInput from '../src/components/DateInput';
@@ -148,6 +149,7 @@ const AddExpense = ({navigation}: {navigation: any}) => {
           title: title.trim(),
           description: description.trim(),
           amount,
+          ...transactionMoneyFields(amount, currency.code),
           category,
           date,
           image: imageUrl,
@@ -156,7 +158,7 @@ const AddExpense = ({navigation}: {navigation: any}) => {
         };
         const expenseDocRef = await addDoc(transactionRef, expenseData);
         transaction.update(expenseDocRef, {documentId: expenseDocRef.id});
-        const balanceDelta = -parseFloat(amount);
+        const balanceDelta = balanceEffect('expense', {amount}, currency.code);
         transaction.update(userDocRef, {
           balance: increment(balanceDelta),
         });

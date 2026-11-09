@@ -26,6 +26,7 @@ import {
 import {reportError} from '../src/services/ErrorReporter';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import {useCurrency} from '../utils/CurrencyUtil';
+import {balanceEffect, majorOf} from '../src/utils/amounts';
 import {
   PRIMARY_COLOR,
   BACKGROUND_COLOR,
@@ -40,7 +41,7 @@ const TransactionDetailScreen = ({
   route: any;
   navigation: any;
 }) => {
-  const {formatAmount} = useCurrency();
+  const {currency, formatAmount} = useCurrency();
   const {transaction} = route.params;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -58,8 +59,9 @@ const TransactionDetailScreen = ({
   const deleteTransaction = async () => {
     setLoading(true);
     setError('');
-    const {userId, id, imageUrl, amount, type} = transaction;
-    const balanceIncrement = type === 'expense' ? +amount : -amount;
+    const {userId, id, imageUrl, type} = transaction;
+    // Deleting reverses what the transaction did to the balance.
+    const balanceIncrement = -balanceEffect(type, transaction, currency.code);
     try {
       await deleteDoc(doc(getFirestore(), 'users', userId, 'transactions', id));
       await updateDoc(doc(getFirestore(), 'users', userId), {
@@ -125,7 +127,7 @@ const TransactionDetailScreen = ({
             <Text style={styles.headerTitle}>{transaction.title}</Text>
             <Text style={[styles.headerAmount, {color: accentColor}]}>
               {transaction.type === 'income' ? '+ ' : '- '}
-              {formatAmount(transaction.amount)}
+              {formatAmount(majorOf(transaction, currency.code))}
             </Text>
           </View>
         </View>
