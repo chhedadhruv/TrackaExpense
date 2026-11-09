@@ -27,6 +27,7 @@ import {
   writeBatch,
 } from '@react-native-firebase/firestore';
 import type {DocumentData} from '@react-native-firebase/firestore';
+import {planGroupEdit} from '../../src/utils/groupEdit';
 import {
   lookupUserByEmail,
   lookupUserByPhone,
@@ -460,16 +461,62 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
         pendingInvites: inviteeEmails,
       };
       if (editingGroupId) {
+        // Editing must not rebuild the member list from scratch: people who are already members
+        // stay members, pending invitations stay pending, and only people added now are invited.
+        // createdBy is never rewritten (whoever edits would otherwise become the owner).
+        const plan = planGroupEdit(
+          prevGroup?.members ?? [],
+          prevGroup?.pendingInvites ?? [],
+          inviteeEmails,
+          currentUser?.email ?? '',
+        );
+        const keptMembers = plan.members;
+        const newInvitees = plan.newInvitees;
+        const editData: DocumentData = {
+          name: groupName,
+          category,
+          updatedAt: serverTimestamp(),
+          memberNames,
+          members: plan.members,
+          pendingInvites: plan.pendingInvites,
+        };
         await updateDoc(
           fsDoc(getFirestore(), 'groups', editingGroupId),
-          groupData,
+          editData,
         );
+        if (newInvitees.length > 0) {
+          const inviteBatch = writeBatch(getFirestore());
+          const editorName = currentUser?.displayName || currentUser?.email;
+          newInvitees.forEach(email => {
+            inviteBatch.set(fsDoc(collection(getFirestore(), 'invitations')), {
+              email,
+              groupId: editingGroupId,
+              groupName: groupName,
+              category,
+              inviterUid: currentUser?.uid,
+              inviterEmail: currentUser?.email,
+              inviterName: editorName,
+              status: 'pending',
+              createdAt: Timestamp.fromDate(new Date()),
+            });
+          });
+          await inviteBatch.commit();
+          newInvitees.forEach(email => {
+            SplitNotificationService.notifySplitInvite(
+              {id: editingGroupId, name: groupName, category} as any,
+              currentUser?.displayName ||
+                currentUser?.email?.split('@')[0] ||
+                'Someone',
+              email,
+            ).catch(() => {});
+          });
+        }
         setGroups(prev =>
           prev.map(g =>
             g.id === editingGroupId
               ? {
                   ...g,
-                  ...groupData,
+                  ...editData,
                   memberDetails: [
                     ...selectedUsers,
                     {
@@ -500,7 +547,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
             id: editingGroupId,
             name: groupName,
             category,
-            members: [currentUser?.email ?? '', ...inviteeEmails],
+            members: [...keptMembers, ...newInvitees],
           } as any,
           currentUser?.displayName ||
             currentUser?.email?.split('@')[0] ||
