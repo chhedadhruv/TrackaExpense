@@ -109,12 +109,12 @@ Planned commands: EAS build and update scripts (Phase 1b).
 
 ## 11. Current phase
 
-Phase 1a is complete (tooling, local quality gates, minimum-version gate, server on yarn; CI skipped because of a billing issue). Phase 1b-i is complete on Android: Sentry (with source map upload), Mixpanel (dedicated project) and OneSignal (Android push credentials added) are verified; the iOS parts are deferred (see `docs/deferred-tasks.md`). Phase 1b-ii (Expo conversion) starts with a library compatibility audit and needs owner sign-off on the SDK choice.
+Phase 1a is complete (tooling, local quality gates, minimum-version gate, server on yarn; CI skipped because of a billing issue). Phase 1b-i is complete on Android: Sentry (with source map upload), Mixpanel (dedicated project) and OneSignal (Android push credentials added) are verified; the iOS parts are deferred (see `docs/deferred-tasks.md`). Phase 1b-ii (Expo conversion) is complete on Android: Expo SDK 58 on React Native 0.88 and React 19, RN Firebase v27, Notifee and CodePush removed, EAS Build and EAS Update configured, `android/` and `ios/` generated on every prebuild, and a first EAS preview build checked on an emulator (2026-11-09). Not done and deferred: the iOS build and test (Apple billing issue), the first EAS production build and any `eas update`, a real OneSignal push tap test, and the split and settle-up write paths and Google sign-in on a device (see `docs/deferred-tasks.md`). The next phase is Phase 2 (data and security) and waits for owner sign-off.
 
 - [x] Phase 0: audit, plus stage 1 Firestore and Storage rules and indexes deployed
 - [x] Phase 1a: tooling and safety net
 - [x] Phase 1b-i: Sentry, Mixpanel, OneSignal (Android verified, iOS deferred)
-- [ ] Phase 1b-ii: Expo conversion (audit first)
+- [x] Phase 1b-ii: Expo conversion (Android verified, iOS deferred)
 - [ ] Phase 2: data and security (money to integers, uid-based membership, tighter rules)
 - [ ] Phase 3: core features
 - [ ] Phase 4: growth features
