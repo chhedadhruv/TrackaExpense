@@ -8,7 +8,7 @@ Guidance for working in this repository. Detail lives in `../trackaexpense-audit
 - Platforms: Android and iOS. Live, published app with real users on both stores.
 - Android applicationId: `com.trackaexpense`. iOS bundle ID: `com.dhruvchheda.trackaexpense`. URL scheme: `trackaexpense`.
 - Firebase project ID: `trackaexpense` (single project, single environment). EAS project ID: none yet, OWNER TO CONFIRM.
-- Version today: 1.3.5 (build 26062421).
+- Version: the live store build is 1.3.5 (build 26062421). The next release is 1.4.0 (`app.json` and `package.json`, versionCode 26111009), the first build with the Phase 1 and 2 work. The Android release is signed with the upload key whose SHA-1 is `3D:59:93:EA:7E:7B:0A:00:C6:80:B4:58:4E:79:DA:08:4E:53:5D:FD` (EAS holds it, and it matches Play Console); Play's own app signing key is `E3:89:66:0F:7C:0E:56:60:81:B0:8F:C4:40:B3:94:31:E6:E1:ED:FA`. Both are registered in Firebase for Google sign-in.
 
 ## 2. Stack today and target
 
@@ -152,7 +152,8 @@ Phase 1a is complete (tooling, local quality gates, minimum-version gate, server
 - `react-native-gifted-charts` needs a gradient package at startup (`expo-linear-gradient` is installed for it). Removing it crashes the app on launch even though no app file imports it. Check what a package needs at runtime before calling it unused.
 - RN Firebase is on v27: `snapshot.exists()` is a method (a property access is always truthy and fails silently, so grep for `.exists` without a call when adding Firestore code), Remote Config uses `remoteConfig.defaultConfig` and `remoteConfig.settings` assignments, and Storage uses `ref(storage, url)` for URLs. The Firebase Android SDK needs Kotlin 2.4.0 (`kotlinVersion` in the `expo-build-properties` plugin in `app.json`).
 - Notifee is removed and `expo-notifications` must not be added: it registers a second Android Firebase messaging service that competes with RN Firebase and OneSignal. Notification taps are handled by the OneSignal click listener (`src/services/PushService.ts`) and `services/NotificationNavigation.ts`.
-- `app.json` version (1.3.3) lags `package.json` (1.3.5): `app.json`.
+- Run `yarn version:bump` before every store build: it stamps `app.json` (`version`, `android.versionCode`, `ios.buildNumber`) from `package.json` and the current hour. Play rejects a versionCode it has already seen, so bump again if a build has to be redone in a later hour.
+- Android release builds no longer allow cleartext (plain http) traffic (`usesCleartextTraffic` is false in `app.json`). The old `NOTIFICATION_SERVER_URL` is an http address and must not be set in the EAS production environment.
 - `metro.config.js` blocks only this project's `server/` folder (anchored path). A looser pattern broke Sentry's `mcp-server` folder; do not loosen it.
 - After adding or changing native dependencies, restart Metro with `yarn start --reset-cache` and reinstall the app (`yarn android` / rebuild iOS); an emulator can revert to an older installed build after a restart.
 - Android release builds upload JavaScript source maps to Sentry through the Sentry Expo plugin (it writes `android/sentry.properties` and applies the Gradle plugin on prebuild); they need `SENTRY_AUTH_TOKEN` in the environment (never in a file). Set `SENTRY_DISABLE_AUTO_UPLOAD=true` for a local release build without a token. Always run `./gradlew :app:assembleRelease` after adding a native dependency: R8 shrinking can fail on missing classes that debug builds never show (rules live in `config/android-proguard-rules.pro`, injected by `app.config.js`).
