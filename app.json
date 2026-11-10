@@ -37,8 +37,9 @@
       "softwareKeyboardLayoutMode": "resize",
       "allowBackup": false,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#050A30"
+        "foregroundImage": "./assets/icon-foreground.png",
+        "backgroundImage": "./assets/icon-background.png",
+        "backgroundColor": "#2b3787"
       },
       "permissions": [
         "android.permission.INTERNET",
@@ -115,9 +116,9 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/icon.png",
-          "imageWidth": 200,
-          "backgroundColor": "#050A30"
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 288,
+          "backgroundColor": "#4553b3"
         }
       ],
       "./plugins/with-release-signing"
