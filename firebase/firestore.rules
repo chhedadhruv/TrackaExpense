@@ -2,6 +2,9 @@ rules_version = '2';
 
 // Stage 1 rules: require sign-in everywhere and restrict each collection to the
 // access patterns the current app uses. Known interim compromises are marked INTERIM.
+// Stage A (this file): group membership is also recognised by uid (memberIds), memberIds is
+// server-only, a group's owner cannot change, and only members can invite. Nothing that an old
+// installed app does is blocked; the INTERIM items are still open and belong to stage B.
 // The notification server uses the Admin SDK and is not affected by these rules.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -29,12 +32,18 @@ service cloud.firestore {
         && request.resource.data.balance is number;
     }
 
-    function groupMembers(groupId) {
-      return get(/databases/$(database)/documents/groups/$(groupId)).data.members;
+    // Stage A: a group member is recognised by email (old apps and every existing group) or by
+    // uid in memberIds (set by the memberIdsFromGroup function, never by a client).
+    function memberOf(data) {
+      return inList(data.members) || request.auth.uid in data.get('memberIds', []);
+    }
+
+    function groupData(groupId) {
+      return get(/databases/$(database)/documents/groups/$(groupId)).data;
     }
 
     function isGroupMember(groupId) {
-      return signedIn() && inList(groupMembers(groupId));
+      return signedIn() && memberOf(groupData(groupId));
     }
 
     // INTERIM: any signed-in user can read user profiles, because the app looks users up
@@ -52,19 +61,25 @@ service cloud.firestore {
 
     match /groups/{groupId} {
       allow read: if signedIn() && (
-        inList(resource.data.members)
+        memberOf(resource.data)
         || inList(resource.data.get('pendingInvites', []))
         || resource.data.get('createdBy', '') == request.auth.uid
       );
-      allow create: if signedIn() && request.resource.data.createdBy == request.auth.uid;
-      // Members update the group; invitees update it to accept or decline.
+      // memberIds is written only by the server (trigger and backfill), never by a client.
+      allow create: if signedIn()
+        && request.resource.data.createdBy == request.auth.uid
+        && !('memberIds' in request.resource.data);
+      // Members update the group; invitees update it to accept or decline. The owner
+      // (createdBy) can never be changed, and memberIds cannot be touched by a client.
       allow update: if signedIn() && (
-        inList(resource.data.members)
+        memberOf(resource.data)
         || inList(resource.data.get('pendingInvites', []))
         || resource.data.get('createdBy', '') == request.auth.uid
-      );
+      )
+        && request.resource.data.get('createdBy', '') == resource.data.get('createdBy', '')
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['memberIds']);
       allow delete: if signedIn() && (
-        inList(resource.data.members)
+        memberOf(resource.data)
         || resource.data.get('createdBy', '') == request.auth.uid
       );
 
@@ -78,7 +93,11 @@ service cloud.firestore {
     // invitations by group and email.
     match /invitations/{invitationId} {
       allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.inviterUid == request.auth.uid;
+      // Only a member of the group can invite to it, and a new invitation starts as pending.
+      allow create: if signedIn()
+        && request.resource.data.inviterUid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && isGroupMember(request.resource.data.groupId);
       allow update: if signedIn() && (
         resource.data.email == myEmail()
         || resource.data.inviterUid == request.auth.uid
