@@ -58,3 +58,15 @@ Counts only; details in `../trackaexpense-audit/09-phase-2-data-profile.md`.
 - Move push sending to Cloud Functions; the Express notification server is not deployed.
 - Set `min_supported_version` in Firebase Remote Config when a forced update is needed (live change, needs approval).
 - One store release after all phases are complete. Never ship this JavaScript over the air to the live store builds: it needs native modules they do not contain. CodePush and its release scripts were removed in the Expo conversion.
+
+## Left over from Phase 2 (closed 2026-11-10; full list in `../trackaexpense-audit/10-phase-2-signoff.md`)
+
+- Rules stage B (profiles owner-only, no cross-user balance writes, no open invitation reads, no email-only membership paths): written nowhere yet, deliberately. It locks out old app versions, so it waits for the adoption threshold the owner has to choose (proposal: 95 percent of users active in the last 30 days on the new version). Draft it with emulator tests for every query the old and the new app make, deploy only with the owner's approval.
+- Not tested on a device: iOS, Google sign-in, tapping a push to open its screen, and the keyboard behaviour of Forgot Password, Edit Profile, Edit Transaction, Create Split and the savings withdraw pop-up.
+- Set a cleanup policy for the Cloud Functions container images in Artifact Registry (`firebase functions:artifacts:setpolicy`), or old images accumulate for a small monthly cost.
+- App Check is not enabled; the callables log a harmless "AppCheck token was rejected" warning because enforcement is off.
+- The `firestore-send-email` extension is in an error state (no successful deliveries); nobody has asked to fix it.
+- Split documents still embed full user profiles (phone, token, stale balance). The new app stops writing them; scrub the old copies only after old apps are gone.
+- The 15 values the backfill skipped on purpose (5 absurd transaction amounts, 4 unparseable user balances, 6 groups with an unresolved member email) are listed by path in the backfill report; what to do with them is an owner decision.
+- A balance reconciliation report was never built (`balance` also moves through splits, settlements and savings, so it is a report, never an automatic fix).
+- The Express server in `server/` is no longer used for push; remove it in a later phase.
