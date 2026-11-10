@@ -309,6 +309,7 @@ describe('firestore: invitations', () => {
         email: CAROL.email,
         groupId: 'g1',
         inviterUid: 'alice',
+        status: 'pending',
       }),
     );
     await assertFails(
@@ -316,6 +317,7 @@ describe('firestore: invitations', () => {
         email: CAROL.email,
         groupId: 'g1',
         inviterUid: 'alice',
+        status: 'pending',
       }),
     );
   });
@@ -512,6 +514,210 @@ describe('flows replayed from the app', () => {
         status: 'pending',
         createdAt: new Date(),
       }),
+    );
+  });
+});
+
+// ---- Stage A: uid membership, server-only memberIds, immutable owner, member-only invitations.
+async function seedUidGroup() {
+  // A group the way the memberIds trigger leaves it: Alice is a member by uid only here (her
+  // email is not in members), Bob by email.
+  await env.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'groups/g2'), {
+      name: 'Uid group',
+      members: [BOB.email],
+      memberIds: ['alice', 'bob'],
+      memberNames: {[BOB.email]: 'Bob'},
+      pendingInvites: [],
+      createdBy: 'bob',
+    });
+    await setDoc(doc(db, 'groups/g2/splits/s1'), {title: 'Lunch', amount: 10});
+  });
+}
+
+describe('stage A: group membership by uid', () => {
+  beforeEach(seedUidGroup);
+
+  it('a member by uid can list their groups with memberIds array-contains and read the group', async () => {
+    const db = dbOf(ALICE);
+    await assertSucceeds(
+      getDocs(
+        query(
+          collection(db, 'groups'),
+          where('memberIds', 'array-contains', 'alice'),
+        ),
+      ),
+    );
+    await assertSucceeds(getDoc(doc(db, 'groups/g2')));
+  });
+  it('listing by someone else uid is refused', async () => {
+    await assertFails(
+      getDocs(
+        query(
+          collection(dbOf(CAROL), 'groups'),
+          where('memberIds', 'array-contains', 'alice'),
+        ),
+      ),
+    );
+    await assertFails(getDoc(doc(dbOf(CAROL), 'groups/g2')));
+  });
+  it('a member by uid can use the splits and settlements of the group', async () => {
+    const db = dbOf(ALICE);
+    await assertSucceeds(getDoc(doc(db, 'groups/g2/splits/s1')));
+    await assertSucceeds(
+      setDoc(doc(db, 'groups/g2/splits/s2'), {title: 'Taxi'}),
+    );
+    await assertSucceeds(
+      setDoc(doc(db, 'groups/g2/settlements/x1'), {amount: 5}),
+    );
+    await assertFails(getDoc(doc(dbOf(CAROL), 'groups/g2/splits/s1')));
+  });
+  it('a member by uid can update the group but not take it over', async () => {
+    const db = dbOf(ALICE);
+    await assertSucceeds(updateDoc(doc(db, 'groups/g2'), {name: 'Renamed'}));
+    await assertFails(updateDoc(doc(db, 'groups/g2'), {createdBy: 'alice'}));
+  });
+  it('the old email based access still works for groups without memberIds', async () => {
+    await assertSucceeds(
+      getDocs(
+        query(
+          collection(dbOf(ALICE), 'groups'),
+          where('members', 'array-contains', ALICE.email),
+        ),
+      ),
+    );
+    await assertSucceeds(getDoc(doc(dbOf(ALICE), 'groups/g1/splits/s1')));
+  });
+});
+
+describe('stage A: memberIds is written only by the server', () => {
+  beforeEach(seedUidGroup);
+
+  it('a client cannot create a group with memberIds', async () => {
+    const base = {name: 'New', members: [ALICE.email], createdBy: 'alice'};
+    await assertSucceeds(setDoc(doc(dbOf(ALICE), 'groups/new1'), base));
+    await assertFails(
+      setDoc(doc(dbOf(ALICE), 'groups/new2'), {
+        ...base,
+        memberIds: ['alice', 'carol'],
+      }),
+    );
+  });
+  it('a client cannot set, add to or remove memberIds on an existing group', async () => {
+    const db = dbOf(ALICE);
+    await assertFails(
+      updateDoc(doc(db, 'groups/g2'), {memberIds: ['alice', 'carol']}),
+    );
+    await assertFails(
+      updateDoc(doc(db, 'groups/g2'), {memberIds: arrayUnion('carol')}),
+    );
+    await assertFails(
+      updateDoc(doc(db, 'groups/g2'), {memberIds: deleteField()}),
+    );
+    // A group without memberIds cannot get one from a client either.
+    await assertFails(updateDoc(doc(db, 'groups/g1'), {memberIds: ['alice']}));
+  });
+  it('other fields can still be updated while memberIds is present and untouched', async () => {
+    await assertSucceeds(
+      updateDoc(doc(dbOf(ALICE), 'groups/g2'), {
+        members: arrayUnion(CAROL.email),
+        memberNames: {[BOB.email]: 'Bob', [CAROL.email]: 'Carol'},
+        updatedAt: new Date(),
+      }),
+    );
+  });
+});
+
+describe('stage A: the owner of a group cannot change', () => {
+  const oldEditShape = (uid, email) => ({
+    name: 'Edited',
+    category: 'Work',
+    members: [email],
+    createdBy: uid,
+    updatedAt: new Date(),
+    memberNames: {[email]: 'x'},
+    pendingInvites: [BOB.email],
+  });
+
+  it('the creator saving a group keeps working (createdBy unchanged)', async () => {
+    await assertSucceeds(
+      updateDoc(
+        doc(dbOf(ALICE), 'groups/g1'),
+        oldEditShape('alice', ALICE.email),
+      ),
+    );
+  });
+  it('another member cannot make themselves the owner', async () => {
+    await env.withSecurityRulesDisabled(async ctx => {
+      await updateDoc(doc(ctx.firestore(), 'groups/g1'), {
+        members: [ALICE.email, BOB.email],
+      });
+    });
+    await assertFails(
+      updateDoc(doc(dbOf(BOB), 'groups/g1'), oldEditShape('bob', BOB.email)),
+    );
+    await assertFails(
+      updateDoc(doc(dbOf(BOB), 'groups/g1'), {createdBy: 'bob'}),
+    );
+    await assertSucceeds(
+      updateDoc(doc(dbOf(BOB), 'groups/g1'), {name: 'Bob renamed'}),
+    );
+  });
+  it('accept and decline still work for an invitee', async () => {
+    await assertSucceeds(
+      updateDoc(doc(dbOf(BOB), 'groups/g1'), {
+        members: arrayUnion(BOB.email),
+        pendingInvites: arrayRemove(BOB.email),
+      }),
+    );
+  });
+});
+
+describe('stage A: only a member can invite to a group', () => {
+  beforeEach(seedUidGroup);
+  const invite = (groupId, extra = {}) => ({
+    email: CAROL.email,
+    groupId,
+    groupName: 'x',
+    inviterUid: 'alice',
+    inviterEmail: ALICE.email,
+    status: 'pending',
+    ...extra,
+  });
+
+  it('a member by email or by uid can create a pending invitation', async () => {
+    await assertSucceeds(
+      addDoc(collection(dbOf(ALICE), 'invitations'), invite('g1')),
+    );
+    await assertSucceeds(
+      addDoc(collection(dbOf(ALICE), 'invitations'), invite('g2')),
+    );
+  });
+  it('a non-member cannot invite to someone else group', async () => {
+    await assertFails(
+      addDoc(
+        collection(dbOf(CAROL), 'invitations'),
+        invite('g1', {inviterUid: 'carol'}),
+      ),
+    );
+    await assertFails(
+      addDoc(
+        collection(dbOf(CAROL), 'invitations'),
+        invite('g2', {inviterUid: 'carol'}),
+      ),
+    );
+  });
+  it('an invitation must start as pending and belong to an existing group', async () => {
+    const col = collection(dbOf(ALICE), 'invitations');
+    await assertFails(addDoc(col, invite('g1', {status: 'accepted'})));
+    const {status: _omitted, ...withoutStatus} = invite('g1');
+    await assertFails(addDoc(col, withoutStatus));
+    await assertFails(addDoc(col, invite('no-such-group')));
+  });
+  it('an invitee still responds to their own invitation', async () => {
+    await assertSucceeds(
+      updateDoc(doc(dbOf(BOB), 'invitations/i1'), {status: 'declined'}),
     );
   });
 });

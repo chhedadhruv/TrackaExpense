@@ -129,7 +129,8 @@
     "typescript": "~6.0.3"
   },
   "resolutions": {
-    "**/react-native-device-info": "10.3.0"
+    "**/react-native-device-info": "10.3.0",
+    "**/firebase": "13.2.0"
   },
   "engines": {
     "node": ">=24.12.0"
