@@ -61,7 +61,7 @@ Candidates for the next release, 1.4.1 or similar. None blocks 1.4.0.
 - The in-app notification pre-prompt: on the emulator, choosing Cancel on the app's own dialog still led to the system permission prompt. Confirm whether Cancel is wired to the system prompt.
 - Test account note: the Yisek test account received a "Monthly Salary" income of 5,000 at about 05:40 UTC on 2026-11-10 that the test sessions did not create; the source is unknown.
 - `develop` is 82 commits behind `main`; see section 7 of the project guidance file.
-- Sentry carries 12 old unresolved issues from 1.3.5 debug builds of 8 to 9 November (local file paths in the stack traces); they are noise and can be resolved. Release-1.4.0 issues so far: two transient `firestore/unavailable` errors and one `TOO_MANY_REGISTRATIONS` push-registration error, all from the owner's phone.
+- The 12 old Sentry issues from 1.3.5 debug builds of 8 to 9 November (local file paths in the stack traces) were resolved on 2026-11-10 as noise. Release-1.4.0 issues so far: two transient `firestore/unavailable` errors and one `TOO_MANY_REGISTRATIONS` push-registration error, all from the owner's phone.
 - The store listing sources, backups and restore payloads for the demo data are in `../trackaexpense-audit/store-listing/` (README inside). The demo data was restored; all 5 screenshots and the feature graphic are ready there.
 
 ## Deferred until after Expo and the later phases
