@@ -55,7 +55,7 @@ import {
   getCategoryIcon,
   getCategoryLabel,
 } from '../../utils/CategoryData';
-import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../../src/constants/theme';
+import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {formatInputAmount} from '../../src/utils/formatters';
 import {
   balanceEffect,
@@ -130,6 +130,8 @@ interface Group {
 
 const CreateSplitScreen = ({route, navigation}: any) => {
   const {currency} = useCurrency();
+  const {colors} = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [isSplitByPercentage, setIsSplitByPercentage] = useState(false);
   const {group, split}: {group: Group; split?: ExistingSplit} =
     route.params || {};
@@ -998,14 +1000,14 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                       <MaterialCommunityIcons
                         name="check"
                         size={18}
-                        color="#FFFFFF"
+                        color={colors.onPrimary}
                       />
                     )}
                   </View>
                 ) : (
                   <Checkbox
                     status={isSelected ? 'checked' : 'unchecked'}
-                    color={PRIMARY_COLOR}
+                    color={colors.primary}
                   />
                 )}
                 <Text style={styles.memberName}>
@@ -1024,6 +1026,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                     value={selectedPercentages[member.email]}
                     onChangeText={text => updatePercentages(member.email, text)}
                     placeholder="0"
+                    placeholderTextColor={colors.textPlaceholder}
                     onFocus={e => e.stopPropagation()}
                   />
                   <Text style={styles.percentageSymbol}>%</Text>
@@ -1039,7 +1042,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading group members...</Text>
       </View>
     );
@@ -1057,7 +1060,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
               <MaterialCommunityIcons
                 name="cash-multiple"
                 size={32}
-                color={PRIMARY_COLOR}
+                color={colors.primary}
               />
               <Text style={styles.headerTitle}>
                 {isEditMode ? 'Edit Split' : 'Create Split'}
@@ -1084,7 +1087,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                   placeholder="Enter split title"
                   value={title}
                   onChangeText={setTitle}
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textPlaceholder}
                   maxLength={100}
                 />
                 <Text style={styles.characterCount}>{title.length}/100</Text>
@@ -1104,7 +1107,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                     keyboardType="numeric"
                     value={formatInputAmount(amount)}
                     onChangeText={text => setAmount(text.replace(/,/g, ''))}
-                    placeholderTextColor="#999"
+                    placeholderTextColor={colors.textPlaceholder}
                   />
                 </View>
               </View>
@@ -1120,7 +1123,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                   <MaterialCommunityIcons
                     name="calendar"
                     size={20}
-                    color={PRIMARY_COLOR}
+                    color={colors.primary}
                   />
                 </TouchableOpacity>
                 <DatePickerModal
@@ -1149,7 +1152,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                       <MaterialCommunityIcons
                         name={getCategoryIcon(category)}
                         size={20}
-                        color={PRIMARY_COLOR}
+                        color={colors.primary}
                       />
                       <Text style={styles.categorySelectorText}>
                         {getCategoryLabel(category, 'split')}
@@ -1163,7 +1166,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                   <MaterialCommunityIcons
                     name="chevron-down"
                     size={20}
-                    color="#999"
+                    color={colors.textPlaceholder}
                   />
                 </TouchableOpacity>
               </View>
@@ -1175,7 +1178,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                   placeholder="Add a note..."
                   value={notes}
                   onChangeText={setNotes}
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textPlaceholder}
                   multiline
                   maxLength={200}
                   numberOfLines={3}
@@ -1198,7 +1201,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                         <MaterialCommunityIcons
                           name="camera-switch"
                           size={18}
-                          color={PRIMARY_COLOR}
+                          color={colors.primary}
                         />
                         <Text style={styles.receiptActionText}>Change</Text>
                       </TouchableOpacity>
@@ -1208,12 +1211,12 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                         <MaterialCommunityIcons
                           name="delete"
                           size={18}
-                          color="#F64E4E"
+                          color={colors.expense}
                         />
                         <Text
                           style={[
                             styles.receiptActionText,
-                            {color: '#F64E4E'},
+                            styles.removeActionText,
                           ]}>
                           Remove
                         </Text>
@@ -1227,7 +1230,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                     <MaterialCommunityIcons
                       name="camera-plus"
                       size={28}
-                      color={PRIMARY_COLOR}
+                      color={colors.primary}
                     />
                     <Text style={styles.receiptUploadText}>Attach Receipt</Text>
                   </TouchableOpacity>
@@ -1245,7 +1248,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                   <Switch
                     value={recurringEnabled}
                     onValueChange={setRecurringEnabled}
-                    color={PRIMARY_COLOR}
+                    color={colors.primary}
                   />
                 </View>
                 {recurringEnabled && (
@@ -1298,7 +1301,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                   <Switch
                     value={includeInTransactions}
                     onValueChange={setIncludeInTransactions}
-                    color={PRIMARY_COLOR}
+                    color={colors.primary}
                   />
                 </View>
               </View>
@@ -1387,7 +1390,11 @@ const CreateSplitScreen = ({route, navigation}: any) => {
               <Text style={styles.submitButtonText}>
                 {isEditMode ? 'Update Split' : 'Create Split'}
               </Text>
-              <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
+              <MaterialCommunityIcons
+                name="check"
+                size={20}
+                color={colors.onPrimary}
+              />
             </TouchableOpacity>
           </View>
 
@@ -1408,7 +1415,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                     <MaterialCommunityIcons
                       name="close"
                       size={24}
-                      color="#666"
+                      color={colors.textSecondary}
                     />
                   </TouchableOpacity>
                 </View>
@@ -1429,7 +1436,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                         <MaterialCommunityIcons
                           name={cat.icon}
                           size={22}
-                          color={isSelected ? '#FFFFFF' : PRIMARY_COLOR}
+                          color={isSelected ? colors.onPrimary : colors.primary}
                         />
                         <Text
                           style={[
@@ -1464,7 +1471,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                   <MaterialCommunityIcons
                     name="camera"
                     size={24}
-                    color={PRIMARY_COLOR}
+                    color={colors.primary}
                   />
                   <Text style={styles.modalOptionText}>Take Photo</Text>
                 </TouchableOpacity>
@@ -1474,7 +1481,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                   <MaterialCommunityIcons
                     name="image"
                     size={24}
-                    color={PRIMARY_COLOR}
+                    color={colors.primary}
                   />
                   <Text style={styles.modalOptionText}>
                     Choose from Gallery
@@ -1495,535 +1502,538 @@ const CreateSplitScreen = ({route, navigation}: any) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: BACKGROUND_COLOR,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: BACKGROUND_COLOR,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: PRIMARY_COLOR,
-    marginTop: 15,
-    fontFamily: 'Lato-Regular',
-  },
-  headerSection: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 30,
-    paddingBottom: 20,
-  },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginLeft: 12,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  formCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  sectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginHorizontal: 20,
-    marginBottom: 15,
-  },
-  cardContent: {
-    padding: 20,
-  },
-  inputContainer: {
-    marginBottom: 15,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 8,
-    fontFamily: 'Lato-Bold',
-  },
-  textInput: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-  },
-  amountInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-  },
-  currencySymbol: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    marginRight: 12,
-    fontFamily: 'Lato-Bold',
-  },
-  textInputAmount: {
-    flex: 1,
-    fontSize: 16,
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-  },
-  // last definition wins for dateInput (overrides earlier declaration)
-  dateInput: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  dateText: {
-    fontSize: 16,
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 15,
-    fontFamily: 'Lato-Bold',
-  },
-  paidByContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  paidByOption: {
-    backgroundColor: '#F8F9FA',
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    marginRight: 10,
-    marginBottom: 10,
-  },
-  selectedPaidByOption: {
-    backgroundColor: PRIMARY_COLOR,
-    borderColor: PRIMARY_COLOR,
-  },
-  paidByText: {
-    fontSize: 14,
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-  },
-  selectedPaidByText: {
-    color: '#FFFFFF',
-    fontFamily: 'Lato-Bold',
-  },
-  memberCard: {
-    marginBottom: 10,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    elevation: Platform.OS === 'android' ? 0 : 1,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-  },
-  memberCardSelected: {
-    borderWidth: 1,
-    borderColor: PRIMARY_COLOR + '30',
-  },
-  memberCheckboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-  },
-  memberInfo: {
-    flex: 1,
-  },
-  memberNameContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  customCheckboxIOS: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#999',
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 4,
-  },
-  customCheckboxIOSSelected: {
-    backgroundColor: PRIMARY_COLOR,
-    borderColor: PRIMARY_COLOR,
-  },
-  memberName: {
-    fontSize: 16,
-    color: '#3A3B3E',
-    flex: 1,
-  },
-  percentageInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    marginTop: 8,
-    paddingHorizontal: 12,
-    height: 40,
-  },
-  // last definition wins for percentageInput (overrides earlier declaration)
-  percentageInput: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 5,
-    width: 70,
-    padding: 5,
-    marginLeft: 10,
-    textAlign: 'center',
-  },
-  percentageSymbol: {
-    marginLeft: 4,
-    color: '#666',
-    fontSize: 16,
-  },
-  percentageNote: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 10,
-    textAlign: 'right',
-  },
-  // last definition wins for dropdown
-  dropdown: {
-    borderColor: PRIMARY_COLOR,
-    borderWidth: 1,
-    marginVertical: 10,
-    borderRadius: 10,
-  },
-  // last definition wins for dropdownContainer
-  dropdownContainer: {
-    borderColor: PRIMARY_COLOR,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-  },
-  // last definition wins for categoryIcon
-  categoryIcon: {
-    marginRight: 10,
-  },
-  splitTypeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  splitTypeToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  splitTypeButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  splitTypeButton: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: PRIMARY_COLOR,
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-  },
-  splitTypeButtonActive: {
-    backgroundColor: PRIMARY_COLOR,
-  },
-  splitTypeButtonText: {
-    color: PRIMARY_COLOR,
-    fontWeight: '500',
-  },
-  splitTypeButtonTextActive: {
-    color: '#fff',
-  },
-  splitWithHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  buttonContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 30,
-  },
-  submitButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: PRIMARY_COLOR,
-    paddingVertical: 15,
-    borderRadius: 12,
-    elevation: Platform.OS === 'android' ? 0 : 1,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-  },
-  submitButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginRight: 8,
-    fontFamily: 'Lato-Bold',
-  },
-  characterCount: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-    textAlign: 'right',
-    fontFamily: 'Lato-Regular',
-  },
-  notesInput: {
-    minHeight: 70,
-    textAlignVertical: 'top',
-    paddingTop: 10,
-  },
-  cardAndroid: {
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-  },
-  receiptPreviewContainer: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#E0E4F0',
-  },
-  receiptPreview: {
-    width: '100%',
-    height: 150,
-    resizeMode: 'cover',
-  },
-  receiptActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 8,
-    backgroundColor: '#F9FAFF',
-  },
-  receiptActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  receiptActionText: {
-    fontSize: 13,
-    color: '#677CD2',
-    fontFamily: 'Lato-Regular',
-  },
-  removeBtn: {},
-  receiptUploadBtn: {
-    borderWidth: 1,
-    borderColor: '#E0E4F0',
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-    backgroundColor: '#F9FAFF',
-    gap: 6,
-  },
-  receiptUploadText: {
-    fontSize: 14,
-    color: '#677CD2',
-    fontFamily: 'Lato-Regular',
-  },
-  recurringRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  recurringSubtext: {
-    fontSize: 12,
-    color: '#888',
-    fontFamily: 'Lato-Regular',
-    marginTop: 2,
-  },
-  frequencyRow: {
-    flexDirection: 'row',
-    marginTop: 12,
-    gap: 10,
-  },
-  freqBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 10,
-    backgroundColor: '#EEF0FB',
-  },
-  freqBtnActive: {
-    backgroundColor: '#677CD2',
-  },
-  freqBtnText: {
-    fontSize: 14,
-    color: '#677CD2',
-    fontFamily: 'Lato-Bold',
-  },
-  freqBtnTextActive: {
-    color: '#FFFFFF',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-    paddingBottom: 40,
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  modalOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  modalOptionText: {
-    fontSize: 16,
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-  },
-  modalCancel: {
-    alignItems: 'center',
-    paddingVertical: 16,
-    marginTop: 8,
-  },
-  modalCancelText: {
-    fontSize: 16,
-    color: '#F64E4E',
-    fontFamily: 'Lato-Bold',
-  },
-  categorySelectorButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    paddingHorizontal: 15,
-    paddingVertical: 14,
-    gap: 10,
-  },
-  categorySelectorText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-  },
-  categorySelectorPlaceholder: {
-    flex: 1,
-    fontSize: 16,
-    color: '#999',
-    fontFamily: 'Lato-Regular',
-  },
-  categoryModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  categoryModalSheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    paddingBottom: 40,
-  },
-  categoryModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  categoryModalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  categoryChip: {
-    width: '30%',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-  },
-  categoryChipSelected: {
-    backgroundColor: PRIMARY_COLOR,
-    borderColor: PRIMARY_COLOR,
-  },
-  categoryChipText: {
-    fontSize: 12,
-    color: '#555',
-    marginTop: 5,
-    fontFamily: 'Lato-Regular',
-    textAlign: 'center',
-  },
-  categoryChipTextSelected: {
-    color: '#FFFFFF',
-    fontFamily: 'Lato-Bold',
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    loadingText: {
+      fontSize: 16,
+      color: colors.primary,
+      marginTop: 15,
+      fontFamily: 'Lato-Regular',
+    },
+    headerSection: {
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: 30,
+      paddingBottom: 20,
+    },
+    headerTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    headerTitle: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: colors.primary,
+      fontFamily: 'Kufam-SemiBoldItalic',
+      marginLeft: 12,
+    },
+    headerSubtitle: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      fontFamily: 'Lato-Regular',
+    },
+    formCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      marginHorizontal: 20,
+      marginBottom: 20,
+    },
+    sectionCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      marginHorizontal: 20,
+      marginBottom: 15,
+    },
+    cardContent: {
+      padding: 20,
+    },
+    inputContainer: {
+      marginBottom: 15,
+    },
+    inputLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textStrong,
+      marginBottom: 8,
+      fontFamily: 'Lato-Bold',
+    },
+    textInput: {
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      paddingHorizontal: 15,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+    },
+    amountInputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      paddingHorizontal: 15,
+      paddingVertical: 12,
+    },
+    currencySymbol: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.primary,
+      marginRight: 12,
+      fontFamily: 'Lato-Bold',
+    },
+    textInputAmount: {
+      flex: 1,
+      fontSize: 16,
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+    },
+    // last definition wins for dateInput (overrides earlier declaration)
+    dateInput: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 12,
+      fontSize: 16,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    dateText: {
+      fontSize: 16,
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.textStrong,
+      marginBottom: 15,
+      fontFamily: 'Lato-Bold',
+    },
+    paidByContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+    paidByOption: {
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      borderRadius: 12,
+      paddingHorizontal: 15,
+      paddingVertical: 10,
+      marginRight: 10,
+      marginBottom: 10,
+    },
+    selectedPaidByOption: {
+      backgroundColor: colors.primaryFill,
+      borderColor: colors.primaryFill,
+    },
+    paidByText: {
+      fontSize: 14,
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+    },
+    selectedPaidByText: {
+      color: colors.onPrimary,
+      fontFamily: 'Lato-Bold',
+    },
+    memberCard: {
+      marginBottom: 10,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      elevation: Platform.OS === 'android' ? 0 : 1,
+      shadowColor: colors.shadow,
+      shadowOffset: {width: 0, height: 1},
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+    },
+    memberCardSelected: {
+      borderWidth: 1,
+      borderColor: colors.primarySoft,
+    },
+    memberCheckboxContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 15,
+    },
+    memberInfo: {
+      flex: 1,
+    },
+    memberNameContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    customCheckboxIOS: {
+      width: 24,
+      height: 24,
+      borderRadius: 4,
+      borderWidth: 2,
+      borderColor: colors.textMuted,
+      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 4,
+    },
+    customCheckboxIOSSelected: {
+      backgroundColor: colors.primaryFill,
+      borderColor: colors.primaryFill,
+    },
+    memberName: {
+      fontSize: 16,
+      color: colors.text,
+      flex: 1,
+    },
+    percentageInputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: 8,
+      marginTop: 8,
+      paddingHorizontal: 12,
+      height: 40,
+    },
+    // last definition wins for percentageInput (overrides earlier declaration)
+    percentageInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 5,
+      width: 70,
+      padding: 5,
+      marginLeft: 10,
+      textAlign: 'center',
+      color: colors.textStrong,
+    },
+    percentageSymbol: {
+      marginLeft: 4,
+      color: colors.textSecondary,
+      fontSize: 16,
+    },
+    percentageNote: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginBottom: 10,
+      textAlign: 'right',
+    },
+    // last definition wins for dropdown
+    dropdown: {
+      borderColor: colors.primary,
+      borderWidth: 1,
+      marginVertical: 10,
+      borderRadius: 10,
+    },
+    // last definition wins for dropdownContainer
+    dropdownContainer: {
+      borderColor: colors.primary,
+      backgroundColor: colors.surface,
+      borderRadius: 10,
+    },
+    // last definition wins for categoryIcon
+    categoryIcon: {
+      marginRight: 10,
+    },
+    splitTypeContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    splitTypeToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    splitTypeButtons: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: 10,
+    },
+    splitTypeButton: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      borderRadius: 8,
+      padding: 12,
+      alignItems: 'center',
+    },
+    splitTypeButtonActive: {
+      backgroundColor: colors.primaryFill,
+    },
+    splitTypeButtonText: {
+      color: colors.primary,
+      fontWeight: '500',
+    },
+    splitTypeButtonTextActive: {
+      color: colors.onPrimary,
+    },
+    splitWithHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 15,
+    },
+    buttonContainer: {
+      paddingHorizontal: 20,
+      paddingBottom: 30,
+    },
+    submitButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primaryFill,
+      paddingVertical: 15,
+      borderRadius: 12,
+      elevation: Platform.OS === 'android' ? 0 : 1,
+      shadowColor: colors.primaryFill,
+      shadowOffset: {width: 0, height: 1},
+      shadowOpacity: 0.15,
+      shadowRadius: 2,
+    },
+    submitButtonText: {
+      color: colors.onPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+      marginRight: 8,
+      fontFamily: 'Lato-Bold',
+    },
+    characterCount: {
+      fontSize: 12,
+      color: colors.textPlaceholder,
+      marginTop: 4,
+      textAlign: 'right',
+      fontFamily: 'Lato-Regular',
+    },
+    notesInput: {
+      minHeight: 70,
+      textAlignVertical: 'top',
+      paddingTop: 10,
+    },
+    cardAndroid: {
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    receiptPreviewContainer: {
+      borderRadius: 12,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    receiptPreview: {
+      width: '100%',
+      height: 150,
+      resizeMode: 'cover',
+    },
+    receiptActions: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      padding: 8,
+      backgroundColor: colors.surfaceMuted,
+    },
+    receiptActionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+    },
+    receiptActionText: {
+      fontSize: 13,
+      color: colors.primary,
+      fontFamily: 'Lato-Regular',
+    },
+    removeBtn: {},
+    removeActionText: {color: colors.expenseText},
+    receiptUploadBtn: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderStyle: 'dashed',
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 20,
+      backgroundColor: colors.surfaceMuted,
+      gap: 6,
+    },
+    receiptUploadText: {
+      fontSize: 14,
+      color: colors.primary,
+      fontFamily: 'Lato-Regular',
+    },
+    recurringRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    recurringSubtext: {
+      fontSize: 12,
+      color: colors.textMuted,
+      fontFamily: 'Lato-Regular',
+      marginTop: 2,
+    },
+    frequencyRow: {
+      flexDirection: 'row',
+      marginTop: 12,
+      gap: 10,
+    },
+    freqBtn: {
+      flex: 1,
+      paddingVertical: 10,
+      alignItems: 'center',
+      borderRadius: 10,
+      backgroundColor: colors.primarySoft,
+    },
+    freqBtnActive: {
+      backgroundColor: colors.primaryFill,
+    },
+    freqBtnText: {
+      fontSize: 14,
+      color: colors.primary,
+      fontFamily: 'Lato-Bold',
+    },
+    freqBtnTextActive: {
+      color: colors.onPrimary,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: 'flex-end',
+    },
+    modalSheet: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      padding: 24,
+      paddingBottom: 40,
+    },
+    modalTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textStrong,
+      fontFamily: 'Lato-Bold',
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    modalOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 16,
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.divider,
+    },
+    modalOptionText: {
+      fontSize: 16,
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+    },
+    modalCancel: {
+      alignItems: 'center',
+      paddingVertical: 16,
+      marginTop: 8,
+    },
+    modalCancelText: {
+      fontSize: 16,
+      color: colors.expenseText,
+      fontFamily: 'Lato-Bold',
+    },
+    categorySelectorButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      paddingHorizontal: 15,
+      paddingVertical: 14,
+      gap: 10,
+    },
+    categorySelectorText: {
+      flex: 1,
+      fontSize: 16,
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+    },
+    categorySelectorPlaceholder: {
+      flex: 1,
+      fontSize: 16,
+      color: colors.textPlaceholder,
+      fontFamily: 'Lato-Regular',
+    },
+    categoryModalOverlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: 'flex-end',
+    },
+    categoryModalSheet: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      padding: 24,
+      paddingBottom: 40,
+    },
+    categoryModalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 20,
+    },
+    categoryModalTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.textStrong,
+      fontFamily: 'Lato-Bold',
+    },
+    categoryGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+    categoryChip: {
+      width: '30%',
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 8,
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    categoryChipSelected: {
+      backgroundColor: colors.primaryFill,
+      borderColor: colors.primaryFill,
+    },
+    categoryChipText: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 5,
+      fontFamily: 'Lato-Regular',
+      textAlign: 'center',
+    },
+    categoryChipTextSelected: {
+      color: colors.onPrimary,
+      fontFamily: 'Lato-Bold',
+    },
+  });
 
 export default CreateSplitScreen;
