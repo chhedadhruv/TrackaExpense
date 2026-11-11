@@ -3,8 +3,8 @@
   "updated": "2026-11-11",
   "counts": {
     "eslintErrors": 0,
-    "eslintWarnings": 55,
+    "eslintWarnings": 48,
     "tscErrors": 0,
-    "prettierUnformattedFiles": 7
+    "prettierUnformattedFiles": 5
   }
 }

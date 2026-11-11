@@ -1,6 +1,6 @@
 import React from 'react';
-import {View, Text, TextInput, StyleSheet} from 'react-native';
-import {PRIMARY_COLOR} from '../constants/theme';
+import {View, Text, TextInput} from 'react-native';
+import {useTheme} from '../theme';
 import {formatInputAmount} from '../utils/formatters';
 
 interface AmountInputProps {
@@ -21,19 +21,28 @@ const AmountInput = ({
   label,
   placeholder = 'Enter amount',
 }: AmountInputProps) => {
+  const {colors} = useTheme();
   return (
-    <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
-      <View style={[styles.inputWrapper, disabled && styles.inputWrapperDisabled]}>
-        <Text style={styles.currencySymbol}>{currencySymbol}</Text>
+    <View className="mb-2">
+      {label && (
+        <Text className="mb-1.5 font-sans-bold text-sm text-text">{label}</Text>
+      )}
+      <View
+        className={`min-h-[48px] flex-row items-center rounded-[10px] border border-border px-3.5 ${
+          disabled ? 'bg-surface-muted' : 'bg-surface'
+        }`}>
+        <Text className="mr-2 min-w-[20px] font-sans-bold text-base text-primary">
+          {currencySymbol}
+        </Text>
         <TextInput
           placeholder={placeholder}
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textPlaceholder}
+          selectionColor={colors.primary}
           keyboardType="numeric"
           autoCorrect={false}
           value={formatInputAmount(value)}
           onChangeText={text => onChangeText(text.replace(/,/g, ''))}
-          style={styles.input}
+          className="flex-1 py-3 font-sans text-base text-text"
           editable={!disabled}
           accessibilityLabel={label ?? 'Amount'}
         />
@@ -43,42 +52,3 @@ const AmountInput = ({
 };
 
 export default AmountInput;
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontFamily: 'Lato-Bold',
-    color: '#333',
-    marginBottom: 6,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    backgroundColor: '#FFFFFF',
-    minHeight: 48,
-  },
-  inputWrapperDisabled: {
-    backgroundColor: '#F5F5F5',
-  },
-  currencySymbol: {
-    fontSize: 16,
-    color: PRIMARY_COLOR,
-    fontFamily: 'Lato-Bold',
-    marginRight: 8,
-    minWidth: 20,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: '#333',
-    fontFamily: 'Lato-Regular',
-    paddingVertical: 12,
-  },
-});
