@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {PRIMARY_COLOR} from '../constants/theme';
+import {useTheme, useThemedStyles, type ThemeColors} from '../theme';
 import {KeyboardAvoidingModal} from './KeyboardAvoidingModal';
 
 export interface SelectOption {
@@ -34,6 +34,8 @@ const SelectModal = ({
   title,
   searchPlaceholder = 'Search...',
 }: SelectModalProps) => {
+  const {colors} = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -78,7 +80,7 @@ const SelectModal = ({
           value={search}
           onChangeText={setSearch}
           placeholder={searchPlaceholder}
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textPlaceholder}
         />
         <FlatList
           data={filtered}
@@ -108,47 +110,48 @@ const SelectModal = ({
 
 export default SelectModal;
 
-const styles = StyleSheet.create({
-  field: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderColor: PRIMARY_COLOR,
-    borderWidth: 1,
-    borderRadius: 10,
-    marginVertical: 10,
-    paddingHorizontal: 12,
-    minHeight: 50,
-    backgroundColor: '#fff',
-  },
-  value: {fontSize: 16, color: '#222'},
-  placeholder: {fontSize: 16, color: '#999'},
-  icon: {marginRight: 10},
-  modal: {flex: 1, backgroundColor: '#fff', paddingTop: 48},
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 12,
-  },
-  title: {fontSize: 18, fontWeight: '600', color: '#222'},
-  close: {fontSize: 16, color: PRIMARY_COLOR},
-  search: {
-    borderColor: PRIMARY_COLOR,
-    borderWidth: 1,
-    borderRadius: 10,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    paddingHorizontal: 12,
-    height: 44,
-    color: '#222',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  rowSelected: {backgroundColor: '#EEF1FB'},
-  rowText: {fontSize: 16, color: '#222'},
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    field: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderColor: colors.primary,
+      borderWidth: 1,
+      borderRadius: 10,
+      marginVertical: 10,
+      paddingHorizontal: 12,
+      minHeight: 50,
+      backgroundColor: colors.surface,
+    },
+    value: {fontSize: 16, color: colors.textStrong},
+    placeholder: {fontSize: 16, color: colors.textPlaceholder},
+    icon: {marginRight: 10},
+    modal: {flex: 1, backgroundColor: colors.surface, paddingTop: 48},
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      marginBottom: 12,
+    },
+    title: {fontSize: 18, fontWeight: '600', color: colors.textStrong},
+    close: {fontSize: 16, color: colors.primary},
+    search: {
+      borderColor: colors.primary,
+      borderWidth: 1,
+      borderRadius: 10,
+      marginHorizontal: 16,
+      marginBottom: 8,
+      paddingHorizontal: 12,
+      height: 44,
+      color: colors.textStrong,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+    },
+    rowSelected: {backgroundColor: colors.primarySoft},
+    rowText: {fontSize: 16, color: colors.textStrong},
+  });
