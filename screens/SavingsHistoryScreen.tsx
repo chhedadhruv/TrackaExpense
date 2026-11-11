@@ -7,7 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import {Card, ActivityIndicator, Text} from 'react-native-paper';
+import {Card, Text} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {
   collection,
@@ -24,6 +24,8 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {useTheme, useThemedStyles, type ThemeColors} from '../src/theme';
+import {ErrorState, LoadingState} from '../src/components/ScreenState';
+import {useLoadFailure} from '../src/hooks/useLoadFailure';
 
 type HistoryType = 'deposit' | 'withdrawal' | 'create' | 'delete' | 'update';
 
@@ -46,60 +48,65 @@ const SavingsHistoryScreen = () => {
   const styles = useThemedStyles(createStyles);
   const {formatAmount} = useCurrency();
   const [loading, setLoading] = useState(true);
+  const {failed, succeed, fail} = useLoadFailure();
   const [allHistory, setAllHistory] = useState<HistoryItem[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [goals, setGoals] = useState<GoalRef[]>([]);
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-    try {
-      const currentUser = getAuth().currentUser;
-      if (!currentUser) {
-        return;
+  const load = useCallback(
+    async (isRefresh = false) => {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
       }
-      const userDoc = await getDoc(
-        fsDoc(getFirestore(), 'users', currentUser.uid),
-      );
-      const savedGoals = ((userDoc.data()?.savingsGoals ?? []) as any[]).map(
-        g => ({id: g.id, name: g.name}),
-      );
-      setGoals(savedGoals);
-      const snapshot = await getDocs(
-        query(
-          collection(
-            getFirestore(),
-            'users',
-            currentUser.uid,
-            'savingsHistory',
+      try {
+        const currentUser = getAuth().currentUser;
+        if (!currentUser) {
+          return;
+        }
+        const userDoc = await getDoc(
+          fsDoc(getFirestore(), 'users', currentUser.uid),
+        );
+        const savedGoals = ((userDoc.data()?.savingsGoals ?? []) as any[]).map(
+          g => ({id: g.id, name: g.name}),
+        );
+        setGoals(savedGoals);
+        const snapshot = await getDocs(
+          query(
+            collection(
+              getFirestore(),
+              'users',
+              currentUser.uid,
+              'savingsHistory',
+            ),
+            orderBy('createdAt', 'desc'),
+            limit(100),
           ),
-          orderBy('createdAt', 'desc'),
-          limit(100),
-        ),
-      );
-      const items: HistoryItem[] = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          goalName: data.goalName || data.goal?.name || 'savings goal',
-        } as HistoryItem;
-      });
-      setAllHistory(items);
-      setHistory(items);
-    } catch (_) {
-      setAllHistory([]);
-      setHistory([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+        );
+        const items: HistoryItem[] = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            goalName: data.goalName || data.goal?.name || 'savings goal',
+          } as HistoryItem;
+        });
+        setAllHistory(items);
+        setHistory(items);
+        succeed();
+      } catch (e) {
+        // A failed load must not read as "no savings activity": show the error state instead.
+        fail(e);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [succeed, fail],
+  );
 
   useEffect(() => {
     load();
@@ -180,10 +187,12 @@ const SavingsHistoryScreen = () => {
     <SafeAreaProvider>
       <View style={styles.container}>
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Loading activity...</Text>
-          </View>
+          <LoadingState message="Loading activity..." />
+        ) : failed ? (
+          <ErrorState
+            title="Could not load savings activity"
+            onRetry={() => load()}
+          />
         ) : (
           <KeyboardAwareScrollView
             style={styles.scrollView}
@@ -208,8 +217,8 @@ const SavingsHistoryScreen = () => {
                   <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
-                    style={{marginBottom: 15}}
-                    contentContainerStyle={{flexDirection: 'row'}}>
+                    style={styles.filterScroll}
+                    contentContainerStyle={styles.filterScrollContent}>
                     <TouchableOpacity
                       onPress={() => setSelectedGoalId(null)}
                       style={[
@@ -303,18 +312,8 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {flex: 1, backgroundColor: colors.background},
     scrollView: {flex: 1},
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.background,
-    },
-    loadingText: {
-      fontSize: 16,
-      color: colors.primary,
-      marginTop: 15,
-      fontFamily: 'Lato-Regular',
-    },
+    filterScroll: {marginBottom: 15},
+    filterScrollContent: {flexDirection: 'row'},
     historyCard: {
       backgroundColor: colors.surface,
       borderRadius: 20,

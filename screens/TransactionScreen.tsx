@@ -9,7 +9,8 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
-import {Searchbar, ActivityIndicator} from 'react-native-paper';
+import {Searchbar} from 'react-native-paper';
+import ReceiptText from 'lucide-react-native/icons/receipt-text';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {
   collection,
@@ -19,7 +20,6 @@ import {
   orderBy,
   query as fsQuery,
 } from '@react-native-firebase/firestore';
-import {reportError} from '../src/services/ErrorReporter';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {getAuth} from '@react-native-firebase/auth';
@@ -34,6 +34,12 @@ import * as AnalyticsService from '../src/services/AnalyticsService';
 import type {TransactionDocument} from '../src/types';
 import type {McIconName} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from '../src/components/ScreenState';
+import {useLoadFailure} from '../src/hooks/useLoadFailure';
 
 type FilterType = 'all' | '7days' | '30days' | 'custom';
 
@@ -58,6 +64,7 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
   const searchStyles = useThemedStyles(createSearchStyles);
   const {currency, formatAmount} = useCurrency();
   const [loading, setLoading] = useState(true);
+  const {failed, succeed, fail} = useLoadFailure();
   const [transactions, setTransactions] = useState<TransactionDocument[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<
     TransactionDocument[]
@@ -69,20 +76,7 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
   const [startDatePickerVisible, setStartDatePickerVisible] = useState(false);
   const [endDatePickerVisible, setEndDatePickerVisible] = useState(false);
 
-  // Refetch whenever the screen is shown again, so a delete or edit made on the detail screen
-  // appears here when you come back (it used to load only once).
-  useFocusEffect(
-    useCallback(() => {
-      fetchTransactions();
-    }, []),
-  );
-
-  useEffect(() => {
-    filterTransactions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, transactions, customStartDate, customEndDate]);
-
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     try {
       const currentUser = getAuth().currentUser!;
       const snapshot = await getDocs(
@@ -99,12 +93,27 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
         ...doc.data(),
       })) as TransactionDocument[];
       setTransactions(fetched);
+      succeed();
     } catch (e) {
-      reportError(e as Error);
+      // A failed load must not read as "No transactions found": show the error state instead.
+      fail(e);
     } finally {
       setLoading(false);
     }
-  };
+  }, [succeed, fail]);
+
+  // Refetch whenever the screen is shown again, so a delete or edit made on the detail screen
+  // appears here when you come back (it used to load only once).
+  useFocusEffect(
+    useCallback(() => {
+      fetchTransactions();
+    }, [fetchTransactions]),
+  );
+
+  useEffect(() => {
+    filterTransactions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, transactions, customStartDate, customEndDate]);
 
   const filterTransactions = () => {
     let filtered = transactions;
@@ -225,13 +234,18 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
   };
 
   if (loading) {
+    return <LoadingState message="Loading transactions..." />;
+  }
+
+  if (failed) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text className="mt-[15px] font-sans text-base text-primary">
-          Loading transactions...
-        </Text>
-      </View>
+      <ErrorState
+        title="Could not load transactions"
+        onRetry={() => {
+          setLoading(true);
+          fetchTransactions();
+        }}
+      />
     );
   }
 
@@ -329,21 +343,15 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
           </View>
         )}
         ListEmptyComponent={
-          <View className="items-center px-5 py-[60px]">
-            <MaterialCommunityIcons
-              name="note-text-outline"
-              size={64}
-              color={colors.iconMuted}
-            />
-            <Text className="mt-4 font-sans-bold text-lg font-bold text-text-strong">
-              No transactions found
-            </Text>
-            <Text className="mt-2 text-center font-sans text-sm text-text-secondary">
-              {searchQuery
+          <EmptyState
+            icon={ReceiptText}
+            title="No transactions found"
+            message={
+              searchQuery
                 ? 'Try adjusting your search terms'
-                : 'Transactions will appear here once you add them'}
-            </Text>
-          </View>
+                : 'Transactions will appear here once you add them'
+            }
+          />
         }
         ListFooterComponent={<View className="h-[30px]" />}
         ListHeaderComponent={

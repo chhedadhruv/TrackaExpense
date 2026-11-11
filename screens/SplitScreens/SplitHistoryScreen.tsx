@@ -7,7 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import {Card, ActivityIndicator, Text} from 'react-native-paper';
+import {Card, Text} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {
   collection,
@@ -23,6 +23,8 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
+import {ErrorState, LoadingState} from '../../src/components/ScreenState';
+import {useLoadFailure} from '../../src/hooks/useLoadFailure';
 
 interface HistoryItem {
   id: string;
@@ -54,76 +56,81 @@ const SplitHistoryScreen = () => {
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
   const [loading, setLoading] = useState(true);
+  const {failed, succeed, fail} = useLoadFailure();
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [allHistory, setAllHistory] = useState<HistoryItem[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = React.useCallback(async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-    try {
-      const currentUser = getAuth().currentUser;
-      if (!currentUser) {
-        setLoading(false);
-        setRefreshing(false);
-        return;
+  const load = React.useCallback(
+    async (isRefresh = false) => {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
       }
-      const userEmail = currentUser.email;
-      const groupsSnapshot = await getDocs(
-        query(
-          collection(getFirestore(), 'groups'),
-          where('members', 'array-contains', userEmail),
-        ),
-      );
-      const groupIds: Group[] = groupsSnapshot.docs.map(d => ({
-        id: d.id,
-        name: d.data()?.name,
-      }));
-      setGroups(groupIds);
-      const historySnapshots = await Promise.all(
-        groupIds.map(g =>
-          getDocs(
-            query(
-              collection(getFirestore(), 'groups', g.id, 'splitHistory'),
-              orderBy('createdAt', 'desc'),
-              limit(50),
-            ),
-          ).then(s =>
-            s.docs.map(
-              d =>
-                ({
-                  id: `${g.id}:${d.id}`,
-                  groupId: g.id,
-                  groupName: g.name,
-                  ...d.data(),
-                } as HistoryItem),
+      try {
+        const currentUser = getAuth().currentUser;
+        if (!currentUser) {
+          setLoading(false);
+          setRefreshing(false);
+          return;
+        }
+        const userEmail = currentUser.email;
+        const groupsSnapshot = await getDocs(
+          query(
+            collection(getFirestore(), 'groups'),
+            where('members', 'array-contains', userEmail),
+          ),
+        );
+        const groupIds: Group[] = groupsSnapshot.docs.map(d => ({
+          id: d.id,
+          name: d.data()?.name,
+        }));
+        setGroups(groupIds);
+        const historySnapshots = await Promise.all(
+          groupIds.map(g =>
+            getDocs(
+              query(
+                collection(getFirestore(), 'groups', g.id, 'splitHistory'),
+                orderBy('createdAt', 'desc'),
+                limit(50),
+              ),
+            ).then(s =>
+              s.docs.map(
+                d =>
+                  ({
+                    id: `${g.id}:${d.id}`,
+                    groupId: g.id,
+                    groupName: g.name,
+                    ...d.data(),
+                  } as HistoryItem),
+              ),
             ),
           ),
-        ),
-      );
-      const merged = historySnapshots.flat();
-      merged.sort((a, b) => {
-        const ta =
-          a.createdAt?.toMillis?.() ?? (a.createdAt?.seconds ?? 0) * 1000;
-        const tb =
-          b.createdAt?.toMillis?.() ?? (b.createdAt?.seconds ?? 0) * 1000;
-        return tb - ta;
-      });
-      setAllHistory(merged);
-      setHistory(merged);
-    } catch (_) {
-      setAllHistory([]);
-      setHistory([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+        );
+        const merged = historySnapshots.flat();
+        merged.sort((a, b) => {
+          const ta =
+            a.createdAt?.toMillis?.() ?? (a.createdAt?.seconds ?? 0) * 1000;
+          const tb =
+            b.createdAt?.toMillis?.() ?? (b.createdAt?.seconds ?? 0) * 1000;
+          return tb - ta;
+        });
+        setAllHistory(merged);
+        setHistory(merged);
+        succeed();
+      } catch (e) {
+        // A failed load must not read as "No split history yet": show the error state instead.
+        fail(e);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [succeed, fail],
+  );
 
   useEffect(() => {
     load();
@@ -269,10 +276,12 @@ const SplitHistoryScreen = () => {
     <SafeAreaProvider>
       <View style={styles.container}>
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Loading activity...</Text>
-          </View>
+          <LoadingState message="Loading activity..." />
+        ) : failed ? (
+          <ErrorState
+            title="Could not load split history"
+            onRetry={() => load()}
+          />
         ) : (
           <KeyboardAwareScrollView
             style={styles.scrollView}
@@ -389,18 +398,6 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {flex: 1, backgroundColor: colors.background},
     scrollView: {flex: 1},
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.background,
-    },
-    loadingText: {
-      fontSize: 16,
-      color: colors.primary,
-      marginTop: 15,
-      fontFamily: 'Lato-Regular',
-    },
     historyCard: {
       backgroundColor: colors.surface,
       borderRadius: 20,
