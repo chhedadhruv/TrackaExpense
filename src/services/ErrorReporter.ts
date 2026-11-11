@@ -1,5 +1,4 @@
 import * as Sentry from '@sentry/react-native';
-import {getCrashlytics, recordError} from '@react-native-firebase/crashlytics';
 import {SENTRY_DSN} from '@env';
 import {isServiceEnabled} from '../utils/serviceGate';
 
@@ -38,9 +37,17 @@ export const setErrorReportingUser = (uid: string | null): void => {
 };
 
 /**
- * Reports a handled error. Sent to Sentry, and also to Crashlytics while both run side by side.
- * Never throws.
+ * Adds a short tag (sign-in method, currency) to future Sentry events, to help triage. Values are
+ * not personal data. Replaces the Crashlytics custom attributes.
  */
+export const setErrorReportingTag = (key: string, value: string): void => {
+  if (!sentryEnabled) {
+    return;
+  }
+  Sentry.setTag(key, value);
+};
+
+/** Reports a handled error to Sentry (the console in a development build). Never throws. */
 export const reportError = (
   error: unknown,
   context?: Record<string, string>,
@@ -60,14 +67,6 @@ export const reportError = (
     } catch (_) {
       // reporting must never break the app
     }
-  }
-  try {
-    recordError(
-      getCrashlytics(),
-      error instanceof Error ? error : new Error(String(error)),
-    );
-  } catch (_) {
-    // reporting must never break the app
   }
 };
 

@@ -4,7 +4,6 @@ const {withProjectBuildGradle} = require('expo/config-plugins');
 // Gradle Plugin APIs removed in AGP 9 (the Transform API). Use releases that support AGP 9.
 const VERSIONS = {
   'com.google.firebase:perf-plugin': '2.0.2',
-  'com.google.firebase:firebase-crashlytics-gradle': '3.0.8',
 };
 
 module.exports = config =>
