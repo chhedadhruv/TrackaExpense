@@ -42,6 +42,9 @@ import {
 } from '../src/components/form/FormParts';
 import TextField from '../src/components/form/TextField';
 import ReceiptField from '../src/components/form/ReceiptField';
+import TagField from '../src/components/form/TagField';
+import {useKnownTags} from '../src/hooks/useKnownTags';
+import {recordTagUse} from '../src/services/TagService';
 import {snackbar} from '../src/utils/snackbarStore';
 
 const DISABLED_BUTTON = {opacity: 0.5} as const;
@@ -56,17 +59,20 @@ const AddExpense = ({navigation}: {navigation: any}) => {
     category,
     date,
     image,
+    tags,
     setTitle,
     setDescription,
     setAmount,
     setCategory,
     setDate,
     setImage,
+    setTags,
     errorMessage,
     setErrorMessage,
     isFormValid,
     validateForm,
   } = useTransactionForm();
+  const knownTags = useKnownTags();
 
   const [uploading, setUploading] = useState(false);
   const [transferred, setTransferred] = useState(0);
@@ -143,6 +149,8 @@ const AddExpense = ({navigation}: {navigation: any}) => {
           date,
           // Both fields: other screens read imageUrl, older apps and data use image.
           ...receiptFields(imageUrl),
+          // Only written when there are tags; documents without the field are valid.
+          ...(tags.length > 0 ? {tags} : {}),
           createdAt: Timestamp.fromDate(new Date()),
           type: 'expense',
         };
@@ -159,6 +167,8 @@ const AddExpense = ({navigation}: {navigation: any}) => {
         has_image: !!image,
         has_description: description.trim().length > 0,
       });
+      // The suggestion list is a convenience: record the tags without holding up the screen.
+      recordTagUse(uid, tags, knownTags).catch(reportError);
       // Deferred notification prompt: asked once, right after a saved expense.
       requestPushPermissionAfterFirstExpense();
       snackbar.success('Expense added');
@@ -255,6 +265,13 @@ const AddExpense = ({navigation}: {navigation: any}) => {
                 label="Date"
               />
             </FormSection>
+
+            <TagField
+              tags={tags}
+              onChange={setTags}
+              knownTags={knownTags}
+              disabled={isSubmitting}
+            />
 
             <ReceiptField
               image={image}

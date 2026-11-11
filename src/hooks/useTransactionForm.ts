@@ -8,6 +8,7 @@ export interface TransactionFormState {
   category: string;
   date: string;
   image: string | null;
+  tags: string[];
 }
 
 interface UseTransactionFormReturn extends TransactionFormState {
@@ -17,6 +18,7 @@ interface UseTransactionFormReturn extends TransactionFormState {
   setCategory: (v: string) => void;
   setDate: (v: string) => void;
   setImage: (v: string | null) => void;
+  setTags: (v: string[]) => void;
   errorMessage: string | null;
   setErrorMessage: (v: string | null) => void;
   isFormValid: () => boolean;
@@ -32,11 +34,16 @@ export function useTransactionForm(
   initialState?: Partial<TransactionFormState>,
 ): UseTransactionFormReturn {
   const [title, setTitle] = useState(initialState?.title ?? '');
-  const [description, setDescription] = useState(initialState?.description ?? '');
+  const [description, setDescription] = useState(
+    initialState?.description ?? '',
+  );
   const [amount, setAmount] = useState(initialState?.amount ?? '');
   const [category, setCategory] = useState(initialState?.category ?? '');
   const [date, setDate] = useState(initialState?.date ?? todayAsYMD());
-  const [image, setImage] = useState<string | null>(initialState?.image ?? null);
+  const [image, setImage] = useState<string | null>(
+    initialState?.image ?? null,
+  );
+  const [tags, setTags] = useState<string[]>(initialState?.tags ?? []);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const isFormValid = (): boolean =>
@@ -91,6 +98,7 @@ export function useTransactionForm(
     setCategory('');
     setDate(todayAsYMD());
     setImage(null);
+    setTags([]);
     setErrorMessage(null);
   };
 
@@ -101,6 +109,8 @@ export function useTransactionForm(
     category,
     date,
     image,
+    tags,
+    setTags,
     setTitle,
     setDescription,
     setAmount: (v: string) => setAmount(v.replace(/,/g, '')),
