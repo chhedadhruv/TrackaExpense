@@ -16,6 +16,8 @@ import {reportError} from '../../src/services/ErrorReporter';
 import * as AnalyticsService from '../../src/services/AnalyticsService';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
+import {ErrorState} from '../../src/components/ScreenState';
+import {useLoadFailure} from '../../src/hooks/useLoadFailure';
 import {snackbar} from '../../src/utils/snackbarStore';
 
 interface Invitation {
@@ -32,6 +34,8 @@ const InvitationsScreen = () => {
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
   const [loading, setLoading] = useState(true);
+  const [retryKey, setRetryKey] = useState(0);
+  const {failed, succeed, fail} = useLoadFailure();
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const currentUser = getAuth().currentUser;
 
@@ -50,12 +54,17 @@ const InvitationsScreen = () => {
           d => ({id: d.id, ...d.data()} as Invitation),
         );
         setInvitations(data);
+        succeed();
         setLoading(false);
       },
-      () => setLoading(false),
+      e => {
+        // A failed listener must not read as "No invitations yet".
+        fail(e);
+        setLoading(false);
+      },
     );
     return () => unsub && unsub();
-  }, [currentUser?.email]);
+  }, [currentUser?.email, retryKey, succeed, fail]);
 
   const acceptInvitation = useCallback(
     async (invite: Invitation) => {
@@ -95,6 +104,15 @@ const InvitationsScreen = () => {
             <Text style={styles.placeholderTitle}>Invitations</Text>
             {loading ? (
               <ActivityIndicator style={styles.loader} color={colors.primary} />
+            ) : failed ? (
+              <ErrorState
+                fill={false}
+                title="Could not load invitations"
+                onRetry={() => {
+                  setLoading(true);
+                  setRetryKey(k => k + 1);
+                }}
+              />
             ) : invitations.length === 0 ? (
               <Text style={styles.placeholderSubtitle}>No invitations yet</Text>
             ) : (

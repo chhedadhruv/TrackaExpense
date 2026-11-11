@@ -31,6 +31,8 @@ import {useCurrency} from '../utils/CurrencyUtil';
 import {GOAL_KEYWORD_MAP} from '../utils/CategoryData';
 import ReminderNotificationService from '../services/ReminderNotificationService';
 import {useTheme, useThemedStyles, type ThemeColors} from '../src/theme';
+import {ErrorState, LoadingState} from '../src/components/ScreenState';
+import {useLoadFailure} from '../src/hooks/useLoadFailure';
 import {formatDisplayDate} from '../src/utils/formatters';
 import {
   addMajor,
@@ -88,6 +90,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
   const styles = useThemedStyles(createStyles);
   const {currency, formatAmount: formatCurrencyAmount} = useCurrency();
   const [loading, setLoading] = useState(true);
+  const {failed, succeed, fail} = useLoadFailure();
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
@@ -109,6 +112,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
 
   useEffect(() => {
     fetchSavingsData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -127,7 +131,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
     try {
       const currentUser = getAuth().currentUser;
       if (!currentUser) {
-        snackbar.error('User not authenticated. Please log in again.');
+        fail(new Error('Savings: no signed-in user'));
         setLoading(false);
         return;
       }
@@ -137,7 +141,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
       );
 
       if (!userDoc.exists()) {
-        snackbar.error('User document not found. Please try again.');
+        fail(new Error('Savings: user document not found'));
         setLoading(false);
         return;
       }
@@ -167,10 +171,12 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         setSavingsGoals([defaultGoal]);
       }
 
+      succeed();
       setLoading(false);
     } catch (error: any) {
-      reportError(error as Error);
-      snackbar.error('Failed to load savings data. Please try again.');
+      // A failed load must not show an empty goals list: the client rewrites the whole goals
+      // array on every change, so adding a goal on top of "no goals" could overwrite real ones.
+      fail(error);
       setLoading(false);
     }
   };
@@ -813,11 +819,18 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
   };
 
   if (loading) {
+    return <LoadingState message="Loading savings..." />;
+  }
+
+  if (failed) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading savings...</Text>
-      </View>
+      <ErrorState
+        title="Could not load your savings"
+        onRetry={() => {
+          setLoading(true);
+          fetchSavingsData();
+        }}
+      />
     );
   }
 
@@ -1472,7 +1485,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                 />
               </View>
             </ScrollView>
-            <View style={[styles.modalButtons, {marginTop: 10}]}>
+            <View style={[styles.modalButtons, styles.modalButtonsSpaced]}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalCancelButton]}
                 onPress={() => {
@@ -1688,18 +1701,6 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {flex: 1, backgroundColor: colors.background},
     scrollView: {flex: 1},
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.background,
-    },
-    loadingText: {
-      fontSize: 16,
-      color: colors.primary,
-      marginTop: 15,
-      fontFamily: 'Lato-Regular',
-    },
     headerSection: {
       alignItems: 'center',
       paddingHorizontal: 20,
@@ -2218,5 +2219,6 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       width: '100%',
     },
+    modalButtonsSpaced: {marginTop: 10},
     cardAndroid: {borderWidth: 1, borderColor: colors.cardBorder},
   });

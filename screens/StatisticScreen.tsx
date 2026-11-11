@@ -7,7 +7,6 @@ import {
   Platform,
 } from 'react-native';
 import React, {useState, useEffect, useCallback, useMemo, useRef} from 'react';
-import {ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {BarChart, PieChart} from 'react-native-gifted-charts';
 import {compactAxisLabel, niceAxisMax} from '../src/utils/chartAxis';
@@ -25,6 +24,7 @@ import {DatePickerModal} from 'react-native-paper-dates';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {getCategoryIcon} from '../utils/CategoryData';
 import {useTheme} from '../src/theme';
+import {ErrorState, LoadingState} from '../src/components/ScreenState';
 import {formatDisplayDate} from '../src/utils/formatters';
 import {majorOf, minorOf, totalMajor} from '../src/utils/amounts';
 import {toMajorNumber} from '../src/utils/money';
@@ -421,38 +421,15 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
     TIME_RANGES.find(r => r.key === timeRange)?.label ?? 'Selected Period';
 
   if (loading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text className="mt-[15px] font-sans text-base text-primary">
-          Loading your statistics…
-        </Text>
-      </View>
-    );
+    return <LoadingState message="Loading your statistics…" />;
   }
 
   if (error) {
     return (
-      <View className="flex-1 items-center justify-center bg-background px-5">
-        <MaterialCommunityIcons
-          name="cloud-off-outline"
-          size={56}
-          color={colors.iconMuted}
-        />
-        <Text
-          accessibilityRole="alert"
-          className="my-4 text-center font-sans text-base text-expense-text">
-          {error}
-        </Text>
-        <TouchableOpacity
-          className="rounded-xl bg-primary-fill px-6 py-3"
-          accessibilityRole="button"
-          onPress={fetchTransactions}>
-          <Text className="font-sans-bold text-base font-semibold text-on-primary">
-            Retry
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <ErrorState
+        title="Could not load statistics"
+        onRetry={fetchTransactions}
+      />
     );
   }
 

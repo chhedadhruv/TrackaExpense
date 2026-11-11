@@ -7,7 +7,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import {ActivityIndicator, Card, Button} from 'react-native-paper';
+import {Card, Button} from 'react-native-paper';
 import {useFocusEffect} from '@react-navigation/native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import UserAvatar from '../../src/components/Avatar';
@@ -42,6 +42,9 @@ import {
   totalSpentMajor,
 } from '../../src/utils/splitMath';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
+import {ErrorState, LoadingState} from '../../src/components/ScreenState';
+import {useLoadFailure} from '../../src/hooks/useLoadFailure';
+import {reportError} from '../../src/services/ErrorReporter';
 import {snackbar} from '../../src/utils/snackbarStore';
 
 interface GroupMember {
@@ -149,6 +152,7 @@ const SplitGroupDetailScreen = ({
       : null);
   const {user} = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
+  const {failed, succeed, fail} = useLoadFailure();
   const [splits, setSplits] = useState<SplitItem[]>([]);
   const [totalSplitAmount, setTotalSplitAmount] = useState(0);
   const [detailedLendingInfo, setDetailedLendingInfo] = useState<
@@ -242,7 +246,9 @@ const SplitGroupDetailScreen = ({
           : {email, name: email.split('@')[0], avatar: null, userId: null};
       });
       setGroupMembers(resolved);
-    } catch (err) {}
+    } catch (err) {
+      reportError(err);
+    }
   };
 
   const fetchGroupSplits = async (showSpinner = true) => {
@@ -263,8 +269,10 @@ const SplitGroupDetailScreen = ({
       setTotalSplitAmount(totalSpentMajor(fetched, currency.code));
       setSplits(fetched);
       hasLoadedOnce.current = true;
+      succeed();
     } catch (err) {
-      snackbar.error('Failed to fetch group splits');
+      // A failed load must not read as "No splits yet" with no settlement suggestions.
+      fail(err);
     } finally {
       setLoading(false);
     }
@@ -918,11 +926,15 @@ const SplitGroupDetailScreen = ({
   };
 
   if (loading) {
+    return <LoadingState message="Loading group details..." />;
+  }
+
+  if (failed) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading group details...</Text>
-      </View>
+      <ErrorState
+        title="Could not load this group"
+        onRetry={() => fetchGroupSplits(true)}
+      />
     );
   }
 
@@ -974,12 +986,6 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
       alignItems: 'center',
       backgroundColor: colors.background,
-    },
-    loadingText: {
-      fontSize: 16,
-      color: colors.primary,
-      marginTop: 15,
-      fontFamily: 'Lato-Regular',
     },
     splitsSection: {paddingBottom: 30},
     groupSummaryCard: {
