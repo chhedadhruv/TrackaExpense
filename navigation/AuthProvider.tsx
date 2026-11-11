@@ -23,6 +23,7 @@ import {
 import {reportError} from '../src/services/ErrorReporter';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import type {User as FirebaseUser} from '@react-native-firebase/auth';
+import {snackbar} from '../src/utils/snackbarStore';
 
 interface AuthContextValue {
   user: FirebaseUser | null;
@@ -108,9 +109,9 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
     };
     const alertData = error.code ? errorMessages[error.code] : undefined;
     if (alertData) {
-      Alert.alert(alertData.title, alertData.message, [{text: 'OK'}]);
+      snackbar.error(alertData.message);
     } else {
-      Alert.alert('Error', error.message, [{text: 'OK'}]);
+      snackbar.error(error.message);
     }
   };
 
@@ -122,11 +123,7 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
         validateUserData,
         login: async (email: string, password: string) => {
           if (!email || !password) {
-            Alert.alert(
-              'Missing Information',
-              'Please enter both email and password.',
-              [{text: 'OK'}],
-            );
+            snackbar.error('Please enter both email and password.');
             return;
           }
           try {
@@ -157,16 +154,12 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
                         );
                         await sendEmailVerification(tempUser.user);
                         await signOutOfFirebase(getAuth());
-                        Alert.alert(
-                          'Verification Email Sent',
+                        snackbar.success(
                           'A new verification email has been sent to your inbox.',
-                          [{text: 'OK'}],
                         );
                       } catch (_) {
-                        Alert.alert(
-                          'Error',
+                        snackbar.error(
                           'Failed to send verification email. Please try again later.',
-                          [{text: 'OK'}],
                         );
                       }
                     },
@@ -188,11 +181,7 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
           currency = 'INR',
         ) => {
           if (!email || !password || !name) {
-            Alert.alert(
-              'Missing Information',
-              'All fields are required to create your account.',
-              [{text: 'OK'}],
-            );
+            snackbar.error('All fields are required to create your account.');
             return;
           }
           try {
@@ -233,27 +222,21 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
             await signOutOfFirebase(getAuth());
             setUserId(getCrashlytics(), '');
           } catch (_) {
-            Alert.alert('Error', 'Failed to log out. Please try again.', [
-              {text: 'OK'},
-            ]);
+            snackbar.error('Failed to log out. Please try again.');
           }
         },
         forgotPassword: async (email: string) => {
           if (!email) {
-            Alert.alert(
-              'Email Required',
+            snackbar.error(
               'Please enter your email address to reset your password.',
-              [{text: 'OK'}],
             );
             return;
           }
           try {
             await sendPasswordResetEmail(getAuth(), email);
             AnalyticsService.logPasswordResetRequested();
-            Alert.alert(
-              'Password Reset Email Sent',
+            snackbar.success(
               'Check your inbox for instructions to reset your password.',
-              [{text: 'OK'}],
             );
           } catch (error) {
             handleAuthError(error as {code?: string; message: string});

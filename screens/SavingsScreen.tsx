@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Alert,
   Modal,
   Platform,
 } from 'react-native';
@@ -45,6 +44,8 @@ import {
 } from '../src/utils/amounts';
 import type {SavingsGoal} from '../src/types';
 import type {McIconName} from '../src/types/icons';
+import {snackbar} from '../src/utils/snackbarStore';
+import {ModalSnackbar} from '../src/components/Snackbar';
 
 const SUCCESS_COLOR = '#25B07F';
 const ORANGE_COLOR = '#F5A623';
@@ -131,7 +132,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
     try {
       const currentUser = getAuth().currentUser;
       if (!currentUser) {
-        Alert.alert('Error', 'User not authenticated. Please log in again.');
+        snackbar.error('User not authenticated. Please log in again.');
         setLoading(false);
         return;
       }
@@ -141,7 +142,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
       );
 
       if (!userDoc.exists()) {
-        Alert.alert('Error', 'User document not found. Please try again.');
+        snackbar.error('User document not found. Please try again.');
         setLoading(false);
         return;
       }
@@ -174,7 +175,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
       setLoading(false);
     } catch (error: any) {
       reportError(error as Error);
-      Alert.alert('Error', 'Failed to load savings data. Please try again.');
+      snackbar.error('Failed to load savings data. Please try again.');
       setLoading(false);
     }
   };
@@ -211,44 +212,41 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
     monthly: number,
   ): boolean => {
     if (!values.name || !values.current || !values.target || !values.monthly) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      snackbar.error('Please fill in all required fields');
       return false;
     }
     if (values.name.trim().length > 50) {
-      Alert.alert('Error', 'Goal name must be 50 characters or less');
+      snackbar.error('Goal name must be 50 characters or less');
       return false;
     }
     if (values.description.trim().length > 200) {
-      Alert.alert('Error', 'Description must be 200 characters or less');
+      snackbar.error('Description must be 200 characters or less');
       return false;
     }
     if (isNaN(current) || isNaN(target) || isNaN(monthly)) {
-      Alert.alert('Error', 'Please enter valid numbers');
+      snackbar.error('Please enter valid numbers');
       return false;
     }
     if (current < 0 || target < 0 || monthly < 0) {
-      Alert.alert('Error', 'Values cannot be negative');
+      snackbar.error('Values cannot be negative');
       return false;
     }
     if (current > 999999999 || target > 999999999 || monthly > 999999999) {
-      Alert.alert(
-        'Error',
-        'Values are too large. Please enter smaller amounts.',
-      );
+      snackbar.error('Values are too large. Please enter smaller amounts.');
       return false;
     }
     if (current > target) {
-      Alert.alert('Error', 'Current amount cannot exceed target amount');
+      snackbar.error('Current amount cannot exceed target amount');
       return false;
     }
     if (values.targetDate && !/^\d{4}-\d{2}-\d{2}$/.test(values.targetDate)) {
-      Alert.alert('Error', 'Target date must be in YYYY-MM-DD format');
+      snackbar.error('Target date must be in YYYY-MM-DD format');
       return false;
     }
     if (values.targetDate) {
       const date = new Date(values.targetDate);
       if (isNaN(date.getTime()) || date <= new Date()) {
-        Alert.alert('Error', 'Target date must be a valid future date');
+        snackbar.error('Target date must be a valid future date');
         return false;
       }
     }
@@ -267,7 +265,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
     try {
       const currentUser = getAuth().currentUser;
       if (!currentUser) {
-        Alert.alert('Error', 'User not authenticated. Please log in again.');
+        snackbar.error('User not authenticated. Please log in again.');
         setIsSubmitting(false);
         return;
       }
@@ -317,10 +315,10 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
       setSavingsGoals(updatedGoals);
       setIsEditing(false);
       setEditingGoalId(null);
-      Alert.alert('Success', 'Savings goal updated successfully');
+      snackbar.success('Savings goal updated successfully');
     } catch (error: any) {
       reportError(error as Error);
-      Alert.alert('Error', `Failed to update savings goal: ${error.message}`);
+      snackbar.error(`Failed to update savings goal: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -329,25 +327,22 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
   const addToSavings = async (amount: string) => {
     const parsed = parseFloat(amount);
     if (!amount || isNaN(parsed) || parsed <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      snackbar.error('Please enter a valid amount');
       return;
     }
     if (parsed > 999999999) {
-      Alert.alert(
-        'Error',
-        'Amount is too large. Please enter a smaller amount.',
-      );
+      snackbar.error('Amount is too large. Please enter a smaller amount.');
       return;
     }
     if (!selectedGoalId) {
-      Alert.alert('Error', 'Please select a savings goal first');
+      snackbar.error('Please select a savings goal first');
       return;
     }
     setIsSubmitting(true);
     try {
       const currentUser = getAuth().currentUser;
       if (!currentUser) {
-        Alert.alert('Error', 'User not authenticated. Please log in again.');
+        snackbar.error('User not authenticated. Please log in again.');
         setIsSubmitting(false);
         return;
       }
@@ -394,15 +389,14 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         goal_category:
           savingsGoals.find(g => g.id === selectedGoalId)?.category ?? 'other',
       });
-      Alert.alert(
-        'Success',
+      snackbar.success(
         `${formatCurrencyAmount(parsed)} added to ${
           savingsGoals.find(g => g.id === selectedGoalId)?.name
         }`,
       );
     } catch (error: any) {
       reportError(error as Error);
-      Alert.alert('Error', `Failed to add to savings: ${error.message}`);
+      snackbar.error(`Failed to add to savings: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -411,24 +405,21 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
   const withdrawFromSavings = async (amount: string) => {
     const parsed = parseFloat(amount);
     if (!amount || isNaN(parsed) || parsed <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      snackbar.error('Please enter a valid amount');
       return;
     }
     if (parsed > 999999999) {
-      Alert.alert(
-        'Error',
-        'Amount is too large. Please enter a smaller amount.',
-      );
+      snackbar.error('Amount is too large. Please enter a smaller amount.');
       return;
     }
     if (!selectedGoalId) {
-      Alert.alert('Error', 'Please select a savings goal first');
+      snackbar.error('Please select a savings goal first');
       return;
     }
 
     const selectedGoal = savingsGoals.find(g => g.id === selectedGoalId);
     if (!selectedGoal || parsed > selectedGoal.current) {
-      Alert.alert('Error', 'Insufficient savings balance');
+      snackbar.error('Insufficient savings balance');
       return;
     }
 
@@ -436,7 +427,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
     try {
       const currentUser = getAuth().currentUser;
       if (!currentUser) {
-        Alert.alert('Error', 'User not authenticated. Please log in again.');
+        snackbar.error('User not authenticated. Please log in again.');
         setIsSubmitting(false);
         return;
       }
@@ -485,13 +476,12 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
       AnalyticsService.logWithdrawFromGoal({
         amount_range: AnalyticsService.getAmountRange(parsed),
       });
-      Alert.alert(
-        'Success',
+      snackbar.success(
         `${formatCurrencyAmount(parsed)} withdrawn from ${selectedGoal.name}`,
       );
     } catch (error: any) {
       reportError(error as Error);
-      Alert.alert('Error', `Failed to withdraw from savings: ${error.message}`);
+      snackbar.error(`Failed to withdraw from savings: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -624,7 +614,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
       isNaN(parseFloat(inputAmount)) ||
       parseFloat(inputAmount) <= 0
     ) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      snackbar.error('Please enter a valid amount');
       return;
     }
     setShowInputModal(false);
@@ -653,7 +643,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
     try {
       const currentUser = getAuth().currentUser;
       if (!currentUser) {
-        Alert.alert('Error', 'User not authenticated. Please log in again.');
+        snackbar.error('User not authenticated. Please log in again.');
         setIsSubmitting(false);
         return;
       }
@@ -693,10 +683,10 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         has_target_date: !!editValues.targetDate,
         has_monthly_target: parseFloat(editValues.monthly) > 0,
       });
-      Alert.alert('Success', 'Savings goal created successfully');
+      snackbar.success('Savings goal created successfully');
     } catch (error: any) {
       reportError(error as Error);
-      Alert.alert('Error', `Failed to create savings goal: ${error.message}`);
+      snackbar.error(`Failed to create savings goal: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -710,7 +700,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
     try {
       const currentUser = getAuth().currentUser;
       if (!currentUser) {
-        Alert.alert('Error', 'User not authenticated. Please log in again.');
+        snackbar.error('User not authenticated. Please log in again.');
         setIsSubmitting(false);
         return;
       }
@@ -733,10 +723,10 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
       setShowDeleteModal(false);
       setGoalToDelete(null);
       AnalyticsService.logDeleteSavingsGoal();
-      Alert.alert('Success', 'Savings goal deleted successfully');
+      snackbar.success('Savings goal deleted successfully');
     } catch (error: any) {
       reportError(error as Error);
-      Alert.alert('Error', `Failed to delete savings goal: ${error.message}`);
+      snackbar.error(`Failed to delete savings goal: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -785,8 +775,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
             currentUser.uid,
           );
         }
-        Alert.alert(
-          'Reminder Set',
+        snackbar.success(
           `You'll receive ${frequency} reminders for "${goal?.name}".`,
         );
       }
@@ -1539,6 +1528,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
               </View>
             </View>
           </View>
+          <ModalSnackbar />
         </Modal>
 
         {/* Reminder Frequency Modal */}
@@ -1611,6 +1601,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
               </TouchableOpacity>
             </View>
           </View>
+          <ModalSnackbar />
         </Modal>
 
         <DatePickerModal
@@ -1676,6 +1667,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
               </View>
             </View>
           </View>
+          <ModalSnackbar />
         </Modal>
       </View>
     </SafeAreaProvider>
