@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useCallback, useMemo} from 'react';
 import {useFocusEffect} from '@react-navigation/native';
 import {
   View,
@@ -41,8 +41,13 @@ import {
 } from '../src/components/ScreenState';
 import {useLoadFailure} from '../src/hooks/useLoadFailure';
 import TagChips from '../src/components/TagChips';
+import {collectTags, tagKey} from '../src/utils/tags';
+import {
+  filterTransactions,
+  type PeriodFilter,
+} from '../src/utils/transactionFilter';
 
-type FilterType = 'all' | '7days' | '30days' | 'custom';
+type FilterType = PeriodFilter;
 
 const FILTERS: FilterType[] = ['all', '7days', '30days', 'custom'];
 
@@ -67,10 +72,8 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
   const [loading, setLoading] = useState(true);
   const {failed, succeed, fail} = useLoadFailure();
   const [transactions, setTransactions] = useState<TransactionDocument[]>([]);
-  const [filteredTransactions, setFilteredTransactions] = useState<
-    TransactionDocument[]
-  >([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>('all');
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
   const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
@@ -111,65 +114,39 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
     }, [fetchTransactions]),
   );
 
-  useEffect(() => {
-    filterTransactions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, transactions, customStartDate, customEndDate]);
+  // Tags on the loaded transactions, most used first, so the tag filter only offers tags that
+  // would return rows.
+  const availableTags = useMemo(
+    () => collectTags(transactions),
+    [transactions],
+  );
+  // A reload can drop the chosen tag (its last transaction was edited or deleted); then the
+  // filter lapses instead of leaving an empty list with no chip to switch it off.
+  const activeTag =
+    selectedTag &&
+    availableTags.some(t => tagKey(t.tag) === tagKey(selectedTag))
+      ? selectedTag
+      : null;
 
-  const filterTransactions = () => {
-    let filtered = transactions;
-    switch (filter) {
-      case '7days':
-        filtered = transactions.filter(t =>
-          moment((t.createdAt as any).toDate()).isAfter(
-            moment().subtract(7, 'days'),
-          ),
-        );
-        break;
-      case '30days':
-        filtered = transactions.filter(t =>
-          moment((t.createdAt as any).toDate()).isAfter(
-            moment().subtract(30, 'days'),
-          ),
-        );
-        break;
-      case 'custom':
-        if (customStartDate && customEndDate) {
-          filtered = transactions.filter(t =>
-            moment((t.createdAt as any).toDate()).isBetween(
-              customStartDate,
-              customEndDate,
-              undefined,
-              '[]',
-            ),
-          );
-        }
-        break;
-      default:
-        break;
-    }
-    setFilteredTransactions(filtered);
-  };
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    if (!query.trim()) {
-      setFilteredTransactions(transactions);
-      return;
-    }
-    const lower = query.toLowerCase();
-    const filtered = transactions.filter(t => {
-      const matchTitle = t.title.toLowerCase().includes(lower);
-      const matchDate = moment((t.createdAt as any).toDate())
-        .format('MMM D, YYYY')
-        .toLowerCase()
-        .includes(lower);
-      const matchCategory = t.category?.toLowerCase().includes(lower);
-      const matchAmount = t.amount.toString().includes(query);
-      return matchTitle || matchDate || matchCategory || matchAmount;
-    });
-    setFilteredTransactions(filtered);
-  };
+  // One derived list: the period, the search text and the tag all apply together.
+  const filteredTransactions = useMemo(
+    () =>
+      filterTransactions(transactions, {
+        period: filter,
+        customStart: customStartDate,
+        customEnd: customEndDate,
+        query: searchQuery,
+        tag: activeTag,
+      }),
+    [
+      transactions,
+      filter,
+      customStartDate,
+      customEndDate,
+      searchQuery,
+      activeTag,
+    ],
+  );
 
   const generateCSV = (): string | undefined => {
     if (filteredTransactions.length === 0) {
@@ -360,9 +337,9 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
           <>
             <View className="px-5 pt-5">
               <Searchbar
-                placeholder="Search by title, amount, or category..."
+                placeholder="Search by title, amount, category or tag..."
                 placeholderTextColor={colors.textPlaceholder}
-                onChangeText={handleSearch}
+                onChangeText={setSearchQuery}
                 value={searchQuery}
                 style={searchStyles.searchBar}
                 inputStyle={searchStyles.searchInput}
@@ -407,6 +384,51 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
                 })}
               </ScrollView>
             </View>
+
+            {availableTags.length > 0 && (
+              <View className="px-5 pt-5">
+                <Text className="mb-2.5 font-sans-bold text-base font-semibold text-text-strong">
+                  Filter by tag
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {availableTags.map(({tag, count}) => {
+                    const active =
+                      activeTag !== null && tagKey(activeTag) === tagKey(tag);
+                    return (
+                      <TouchableOpacity
+                        key={tag}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Tag ${tag}, ${count} ${
+                          count === 1 ? 'transaction' : 'transactions'
+                        }`}
+                        accessibilityState={{selected: active}}
+                        onPress={() => {
+                          setSelectedTag(active ? null : tag);
+                          AnalyticsService.logTransactionFilterChanged('tag');
+                        }}
+                        className={`mr-2.5 flex-row items-center rounded-full border px-3.5 py-2 ${
+                          active
+                            ? 'border-primary-fill bg-primary-fill'
+                            : 'border-card-border bg-surface'
+                        }`}>
+                        <Text
+                          className={`font-sans-bold text-[13px] font-semibold ${
+                            active ? 'text-on-primary' : 'text-primary'
+                          }`}>
+                          {tag}
+                        </Text>
+                        <Text
+                          className={`ml-1.5 font-sans text-xs ${
+                            active ? 'text-on-primary' : 'text-text-secondary'
+                          }`}>
+                          {count}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
 
             {filter === 'custom' && (
               <View className="mx-5 mt-5 rounded-2xl border border-card-border bg-surface p-5">
@@ -454,21 +476,6 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
                     </View>
                   </TouchableOpacity>
                 </View>
-                {customStartDate && customEndDate && (
-                  <TouchableOpacity
-                    className="mt-[15px] flex-row items-center justify-center rounded-xl bg-primary-fill py-3"
-                    accessibilityRole="button"
-                    onPress={filterTransactions}>
-                    <MaterialCommunityIcons
-                      name="check"
-                      size={20}
-                      color={colors.onPrimary}
-                    />
-                    <Text className="ml-2 font-sans-bold text-base font-semibold text-on-primary">
-                      Apply Filter
-                    </Text>
-                  </TouchableOpacity>
-                )}
                 <DatePickerModal
                   locale="en"
                   mode="single"
