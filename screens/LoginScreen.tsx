@@ -260,7 +260,7 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
         <View style={styles.content}>
           <View style={styles.logoContainer}>
             <Image
-              source={require('../assets/Tracka.png')}
+              source={require('../assets/login-logo.png')}
               style={styles.logo}
             />
             <Text style={styles.welcomeText}>Welcome Back!</Text>
@@ -445,7 +445,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoContainer: {alignItems: 'center', marginBottom: 30},
-  logo: {height: 180, width: 180, resizeMode: 'cover', marginBottom: 20},
+  logo: {
+    height: 120,
+    width: 120,
+    borderRadius: 27,
+    resizeMode: 'contain',
+    marginBottom: 24,
+  },
   welcomeText: {
     fontSize: 28,
     fontWeight: 'bold',
