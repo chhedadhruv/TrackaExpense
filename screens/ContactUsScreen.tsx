@@ -2,7 +2,6 @@ import React, {useState, useEffect} from 'react';
 import {
   View,
   StyleSheet,
-  Alert,
   TextInput,
   SafeAreaView,
   TouchableOpacity,
@@ -22,6 +21,7 @@ import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView
 import FormButton from '../components/FormButton';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../src/constants/theme';
 import type {McIconName} from '../src/types/icons';
+import {snackbar} from '../src/utils/snackbarStore';
 
 const SUCCESS_COLOR = '#25B07F';
 
@@ -94,11 +94,8 @@ const ContactUsScreen = ({navigation}: {navigation: any}) => {
         status: 'pending',
       });
       setFeedbackText('');
-      Alert.alert(
-        'Message Sent! 🎉',
-        "Your message has been submitted successfully! We'll get back to you as soon as possible.",
-        [{text: 'OK', onPress: () => navigation.goBack()}],
-      );
+      snackbar.success("Message sent. We'll get back to you soon.");
+      navigation.goBack();
     } catch (_) {
       setErrorMessage(
         'Failed to send message. Please check your connection and try again.',

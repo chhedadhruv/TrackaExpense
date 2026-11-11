@@ -33,6 +33,7 @@ import {
   EXPENSE_COLOR,
   INCOME_COLOR,
 } from '../src/constants/theme';
+import {snackbar} from '../src/utils/snackbarStore';
 
 const TransactionDetailScreen = ({
   route,
@@ -75,12 +76,12 @@ const TransactionDetailScreen = ({
         type: transaction.type,
         category: transaction.category,
       });
-      Alert.alert('Transaction deleted successfully!');
+      snackbar.success('Transaction deleted successfully!');
       navigation.goBack();
     } catch (e) {
       reportError(e as Error);
       setError('An error occurred while deleting the transaction.');
-      Alert.alert('Error', 'An error occurred while deleting the transaction.');
+      snackbar.error('An error occurred while deleting the transaction.');
     } finally {
       setLoading(false);
     }

@@ -7,7 +7,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import {ActivityIndicator, Card, Button, Snackbar} from 'react-native-paper';
+import {ActivityIndicator, Card, Button} from 'react-native-paper';
 import {useFocusEffect} from '@react-navigation/native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import UserAvatar from '../../src/components/Avatar';
@@ -47,6 +47,7 @@ import {
   INCOME_COLOR as SUCCESS_COLOR,
   EXPENSE_COLOR,
 } from '../../src/constants/theme';
+import {snackbar} from '../../src/utils/snackbarStore';
 
 interface GroupMember {
   email: string;
@@ -154,7 +155,6 @@ const SplitGroupDetailScreen = ({
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [filteredSplits, setFilteredSplits] = useState<SplitItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [pendingInvites, setPendingInvites] = useState<string[]>([]);
   const hasLoadedOnce = useRef(false);
   const groupId = group?.id ?? '';
@@ -176,11 +176,7 @@ const SplitGroupDetailScreen = ({
         });
       });
     }
-    // Improvement 4: success snackbar when navigated back from create
-    if (route.params?.showSuccessToast) {
-      setSnackbarVisible(true);
-    }
-  }, [route.params?.newSplit, route.params?.showSuccessToast, groupId]);
+  }, [route.params?.newSplit, groupId]);
 
   useEffect(() => {
     const gp = route.params?.group;
@@ -266,7 +262,7 @@ const SplitGroupDetailScreen = ({
       setSplits(fetched);
       hasLoadedOnce.current = true;
     } catch (err) {
-      Alert.alert('Error', 'Failed to fetch group splits');
+      snackbar.error('Failed to fetch group splits');
     } finally {
       setLoading(false);
     }
@@ -290,9 +286,9 @@ const SplitGroupDetailScreen = ({
         );
       } catch (notifErr) {}
       fetchGroupSplits();
-      Alert.alert('Success', 'Split deleted successfully');
+      snackbar.success('Split deleted successfully');
     } catch (err) {
-      Alert.alert('Error', 'Failed to delete split');
+      snackbar.error('Failed to delete split');
     }
   };
 
@@ -464,9 +460,9 @@ const SplitGroupDetailScreen = ({
         actorName,
         email,
       );
-      Alert.alert('Sent', `Invitation resent to ${email}`);
+      snackbar.success(`Invitation resent to ${email}`);
     } catch (_) {
-      Alert.alert('Error', 'Failed to resend invitation');
+      snackbar.error('Failed to resend invitation');
     }
   };
 
@@ -558,7 +554,7 @@ const SplitGroupDetailScreen = ({
                       try {
                         const userEmail = (user?.email || '').toLowerCase();
                         if (!userEmail) {
-                          Alert.alert('Error', 'User not found');
+                          snackbar.error('User not found');
                           return;
                         }
                         await updateDoc(
@@ -568,10 +564,10 @@ const SplitGroupDetailScreen = ({
                             [`memberNames.${userEmail}`]: deleteField(),
                           },
                         );
-                        Alert.alert('Left Group', 'You have left the group.');
+                        snackbar.info('You have left the group.');
                         navigation.goBack();
                       } catch (_) {
-                        Alert.alert('Error', 'Failed to leave group');
+                        snackbar.error('Failed to leave group');
                       }
                     },
                   },
@@ -612,10 +608,10 @@ const SplitGroupDetailScreen = ({
                         await deleteDoc(
                           fsDoc(getFirestore(), 'groups', group!.id),
                         );
-                        Alert.alert('Deleted', 'Group deleted successfully');
+                        snackbar.success('Group deleted successfully');
                         navigation.goBack();
                       } catch (_) {
-                        Alert.alert('Error', 'Failed to delete group');
+                        snackbar.error('Failed to delete group');
                       }
                     },
                   },
@@ -781,18 +777,16 @@ const SplitGroupDetailScreen = ({
                               detail.amount,
                             );
                           if (result?.reason === 'cooldown') {
-                            Alert.alert(
-                              'Already Reminded',
+                            snackbar.error(
                               'You already sent a reminder in the last 24 hours.',
                             );
                           } else if (result?.success) {
-                            Alert.alert(
-                              'Reminder Sent',
+                            snackbar.success(
                               `${detail.borrower.name} has been reminded to pay you.`,
                             );
                           }
                         } catch (_) {
-                          Alert.alert('Error', 'Failed to send reminder');
+                          snackbar.error('Failed to send reminder');
                         }
                       }}>
                       <MaterialCommunityIcons
@@ -951,14 +945,6 @@ const SplitGroupDetailScreen = ({
           accessibilityRole="button">
           <MaterialCommunityIcons name="plus" size={28} color="#fff" />
         </TouchableOpacity>
-        {/* Improvement 4: success snackbar after creating a split */}
-        <Snackbar
-          visible={snackbarVisible}
-          onDismiss={() => setSnackbarVisible(false)}
-          duration={2500}
-          style={{backgroundColor: '#25B07F'}}>
-          Split added successfully
-        </Snackbar>
       </View>
     </SafeAreaProvider>
   );

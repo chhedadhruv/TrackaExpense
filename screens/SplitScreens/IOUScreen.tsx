@@ -40,6 +40,7 @@ import {
   NOTIFICATION_SERVER_URL,
   EXPO_PUBLIC_NOTIFICATION_SERVER_URL,
 } from '@env';
+import {snackbar} from '../../src/utils/snackbarStore';
 
 interface IOU {
   id: string;
@@ -211,7 +212,7 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
       }
       loadIOUs(true);
     } catch (_) {
-      Alert.alert('Error', 'Failed to mark as settled');
+      snackbar.error('Failed to mark as settled');
     } finally {
       setSettlingId(null);
     }
