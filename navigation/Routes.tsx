@@ -19,7 +19,6 @@ import {
   getMessaging,
   onNotificationOpenedApp,
 } from '@react-native-firebase/messaging';
-import {getAnalytics, logScreenView} from '@react-native-firebase/analytics';
 import type {User as FirebaseUser} from '@react-native-firebase/auth';
 import {setErrorReportingUser} from '../src/services/ErrorReporter';
 import {identifyUser, resetMixpanel} from '../src/services/MixpanelService';
@@ -143,16 +142,7 @@ const Routes = () => {
     <NavigationContainer
       ref={navigationRef}
       theme={navigationTheme}
-      linking={linking}
-      onStateChange={() => {
-        const routeName = navigationRef.current?.getCurrentRoute()?.name;
-        if (routeName) {
-          logScreenView(getAnalytics(), {
-            screen_name: routeName,
-            screen_class: routeName,
-          }).catch(() => {});
-        }
-      }}>
+      linking={linking}>
       {user ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   );
