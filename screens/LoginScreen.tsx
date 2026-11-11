@@ -36,6 +36,8 @@ import {
 } from '../utils/AppleSignInConfig';
 import {setErrorReportingTag} from '../src/services/ErrorReporter';
 import * as AnalyticsService from '../src/services/AnalyticsService';
+import Check from 'lucide-react-native/icons/check';
+import Circle from 'lucide-react-native/icons/circle';
 import {useTheme} from '../src/theme';
 
 interface PasswordValidation {
@@ -353,14 +355,19 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
                       ],
                     ] as [boolean, string][]
                   ).map(([met, label]) => (
-                    <View key={label} className="mb-1">
+                    <View key={label} className="mb-1 flex-row items-center">
+                      {met ? (
+                        <Check size={14} color={colors.incomeText} />
+                      ) : (
+                        <Circle size={14} color={colors.textSecondary} />
+                      )}
                       <Text
-                        className={`font-sans text-[13px] ${
+                        className={`ml-1.5 font-sans text-[13px] ${
                           met
                             ? 'font-semibold text-income-text'
                             : 'text-text-secondary'
                         }`}>
-                        {met ? '✓' : '○'} {label}
+                        {label}
                       </Text>
                     </View>
                   ))}
