@@ -41,9 +41,9 @@
     "test:functions": "yarn --cwd functions test",
     "test:backfill": "yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only firestore --project demo-trackaexpense-backfill \"$(command -v node) functions/test/backfill.emulator.test.mjs\"",
     "test:push": "yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only functions,firestore,auth --project demo-trackaexpense-push \"$(command -v node) functions/test/push.emulator.test.mjs\"",
-    "test:invitation":"yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only functions,firestore,auth --project demo-trackaexpense-invitation \"$(command -v node) functions/test/invitation.emulator.test.mjs\"",
-    "test:settlement":"yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only functions,firestore,auth --project demo-trackaexpense-settlement \"$(command -v node) functions/test/settlement.emulator.test.mjs\"",
-    "test:triggers":"yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only functions,firestore,auth --project demo-trackaexpense-functions \"$(command -v node) functions/test/triggers.emulator.test.mjs\""
+    "test:invitation": "yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only functions,firestore,auth --project demo-trackaexpense-invitation \"$(command -v node) functions/test/invitation.emulator.test.mjs\"",
+    "test:settlement": "yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only functions,firestore,auth --project demo-trackaexpense-settlement \"$(command -v node) functions/test/settlement.emulator.test.mjs\"",
+    "test:triggers": "yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only functions,firestore,auth --project demo-trackaexpense-functions \"$(command -v node) functions/test/triggers.emulator.test.mjs\""
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -80,6 +80,7 @@
     "expo-system-ui": "~58.0.7",
     "expo-updates": "~58.0.21",
     "jest-expo": "~58.0.14",
+    "lucide-react-native": "^1.72.0",
     "mixpanel-react-native": "4.1.0",
     "moment": "^2.30.1",
     "react": "19.3.0",
