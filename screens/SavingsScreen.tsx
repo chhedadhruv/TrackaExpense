@@ -30,11 +30,7 @@ import {DatePickerModal} from 'react-native-paper-dates';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {GOAL_KEYWORD_MAP} from '../utils/CategoryData';
 import ReminderNotificationService from '../services/ReminderNotificationService';
-import {
-  PRIMARY_COLOR,
-  BACKGROUND_COLOR,
-  EXPENSE_COLOR,
-} from '../src/constants/theme';
+import {useTheme, useThemedStyles, type ThemeColors} from '../src/theme';
 import {formatDisplayDate} from '../src/utils/formatters';
 import {
   addMajor,
@@ -46,9 +42,6 @@ import type {SavingsGoal} from '../src/types';
 import type {McIconName} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
 import {ModalSnackbar} from '../src/components/Snackbar';
-
-const SUCCESS_COLOR = '#25B07F';
-const ORANGE_COLOR = '#F5A623';
 
 interface GoalCategory {
   id: string;
@@ -91,6 +84,8 @@ const EMPTY_EDIT_VALUES: EditValues = {
 };
 
 const SavingsScreen = ({navigation}: {navigation: any}) => {
+  const {colors} = useTheme();
+  const styles = useThemedStyles(createStyles);
   const {currency, formatAmount: formatCurrencyAmount} = useCurrency();
   const [loading, setLoading] = useState(true);
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
@@ -507,12 +502,12 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
 
   const getProgressColor = (progress: number): string => {
     if (progress >= 75) {
-      return SUCCESS_COLOR;
+      return colors.success;
     }
     if (progress >= 25) {
-      return ORANGE_COLOR;
+      return colors.warning;
     }
-    return EXPENSE_COLOR;
+    return colors.expense;
   };
 
   const getCategoryIcon = (category: string): McIconName => {
@@ -808,7 +803,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
         <MaterialCommunityIcons
           name={cat.icon}
           size={20}
-          color={PRIMARY_COLOR}
+          color={colors.primary}
         />
         <Text style={styles.categorySelectorText}>{cat.label}</Text>
       </>
@@ -820,7 +815,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading savings...</Text>
       </View>
     );
@@ -840,7 +835,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                 <MaterialCommunityIcons
                   name="piggy-bank"
                   size={32}
-                  color={SUCCESS_COLOR}
+                  color={colors.success}
                 />
                 <Text style={styles.headerTitle}>Savings Goals</Text>
               </View>
@@ -850,7 +845,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                 <MaterialCommunityIcons
                   name="history"
                   size={20}
-                  color="#FFFFFF"
+                  color={colors.onPrimary}
                 />
               </TouchableOpacity>
             </View>
@@ -860,7 +855,11 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
             <TouchableOpacity
               style={styles.addGoalButton}
               onPress={() => setShowCreateModal(true)}>
-              <MaterialCommunityIcons name="plus" size={20} color="#FFFFFF" />
+              <MaterialCommunityIcons
+                name="plus"
+                size={20}
+                color={colors.onPrimary}
+              />
               <Text style={styles.addGoalButtonText}>Add New Goal</Text>
             </TouchableOpacity>
           </View>
@@ -928,7 +927,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                         <MaterialCommunityIcons
                           name={getCategoryIcon(goal.category)}
                           size={24}
-                          color={PRIMARY_COLOR}
+                          color={colors.primary}
                         />
                       </View>
                       <View style={styles.goalInfo}>
@@ -949,7 +948,9 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                             }
                             size={20}
                             color={
-                              goal.reminderEnabled ? PRIMARY_COLOR : '#999'
+                              goal.reminderEnabled
+                                ? colors.primary
+                                : colors.textPlaceholder
                             }
                           />
                         </TouchableOpacity>
@@ -959,7 +960,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                           <MaterialCommunityIcons
                             name="pencil"
                             size={20}
-                            color={PRIMARY_COLOR}
+                            color={colors.primary}
                           />
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -968,7 +969,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                           <MaterialCommunityIcons
                             name="delete"
                             size={20}
-                            color={EXPENSE_COLOR}
+                            color={colors.expense}
                           />
                         </TouchableOpacity>
                       </View>
@@ -985,7 +986,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                               setEditValues({...editValues, name: text})
                             }
                             placeholder="Enter goal name"
-                            placeholderTextColor="#999"
+                            placeholderTextColor={colors.textPlaceholder}
                             maxLength={50}
                           />
                           <Text style={styles.characterCount}>
@@ -1003,7 +1004,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                               setEditValues({...editValues, description: text})
                             }
                             placeholder="Enter description"
-                            placeholderTextColor="#999"
+                            placeholderTextColor={colors.textPlaceholder}
                             maxLength={200}
                             multiline
                             numberOfLines={2}
@@ -1021,7 +1022,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                             <MaterialCommunityIcons
                               name="chevron-down"
                               size={20}
-                              color="#999"
+                              color={colors.textPlaceholder}
                             />
                           </TouchableOpacity>
                         </View>
@@ -1037,7 +1038,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                             }
                             keyboardType="numeric"
                             placeholder="Enter current amount"
-                            placeholderTextColor="#999"
+                            placeholderTextColor={colors.textPlaceholder}
                           />
                         </View>
                         <View style={styles.inputContainer}>
@@ -1052,7 +1053,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                             }
                             keyboardType="numeric"
                             placeholder="Enter target amount"
-                            placeholderTextColor="#999"
+                            placeholderTextColor={colors.textPlaceholder}
                           />
                         </View>
                         <View style={styles.inputContainer}>
@@ -1065,7 +1066,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                             <MaterialCommunityIcons
                               name="calendar"
                               size={20}
-                              color={PRIMARY_COLOR}
+                              color={colors.primary}
                               style={styles.inputIcon}
                             />
                             <Text
@@ -1081,7 +1082,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                             <MaterialCommunityIcons
                               name="chevron-down"
                               size={20}
-                              color="#999"
+                              color={colors.textPlaceholder}
                             />
                           </TouchableOpacity>
                         </View>
@@ -1097,7 +1098,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                             }
                             keyboardType="numeric"
                             placeholder="Enter monthly goal"
-                            placeholderTextColor="#999"
+                            placeholderTextColor={colors.textPlaceholder}
                           />
                         </View>
                         <View style={styles.editActions}>
@@ -1112,7 +1113,10 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                             onPress={handleSave}
                             disabled={isSubmitting}>
                             {isSubmitting ? (
-                              <ActivityIndicator size="small" color="#FFFFFF" />
+                              <ActivityIndicator
+                                size="small"
+                                color={colors.onPrimary}
+                              />
                             ) : (
                               <Text style={styles.saveButtonText}>Save</Text>
                             )}
@@ -1137,8 +1141,8 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                               size={12}
                               color={
                                 targetDateLabel === 'Overdue'
-                                  ? EXPENSE_COLOR
-                                  : PRIMARY_COLOR
+                                  ? colors.expense
+                                  : colors.primary
                               }
                             />
                             <Text
@@ -1226,7 +1230,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                             <MaterialCommunityIcons
                               name="plus"
                               size={20}
-                              color="#FFFFFF"
+                              color={colors.onPrimary}
                             />
                             <Text style={styles.goalActionText}>Add Money</Text>
                           </TouchableOpacity>
@@ -1243,7 +1247,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                             <MaterialCommunityIcons
                               name="minus"
                               size={20}
-                              color="#FFFFFF"
+                              color={colors.onPrimary}
                             />
                             <Text style={styles.goalActionText}>Withdraw</Text>
                           </TouchableOpacity>
@@ -1265,7 +1269,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                 <MaterialCommunityIcons
                   name="piggy-bank-outline"
                   size={64}
-                  color="#CBD3EE"
+                  color={colors.iconMuted}
                 />
                 <Text style={styles.emptyStateTitle}>No Savings Goals Yet</Text>
                 <Text style={styles.emptyStateSubtitle}>
@@ -1304,7 +1308,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
               value={inputAmount}
               onChangeText={setInputAmount}
               placeholder="Enter amount"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textPlaceholder}
               keyboardType="numeric"
               autoFocus
             />
@@ -1319,7 +1323,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                 onPress={handleAmountSubmit}
                 disabled={isSubmitting}>
                 {isSubmitting ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={colors.onPrimary} />
                 ) : (
                   <Text style={styles.modalSubmitButtonText}>
                     {inputType === 'add' ? 'Add' : 'Withdraw'}
@@ -1357,7 +1361,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                     setEditValues({...editValues, name: text})
                   }
                   placeholder="e.g., Emergency Fund, Vacation"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textPlaceholder}
                   maxLength={50}
                 />
                 <Text style={styles.characterCount}>
@@ -1373,7 +1377,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                     setEditValues({...editValues, description: text})
                   }
                   placeholder="Describe your savings goal"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textPlaceholder}
                   maxLength={200}
                   multiline
                   numberOfLines={2}
@@ -1391,7 +1395,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                   <MaterialCommunityIcons
                     name="chevron-down"
                     size={20}
-                    color="#999"
+                    color={colors.textPlaceholder}
                   />
                 </TouchableOpacity>
               </View>
@@ -1407,7 +1411,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                   }
                   keyboardType="numeric"
                   placeholder="Enter current amount"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textPlaceholder}
                 />
               </View>
               <View style={styles.inputContainer}>
@@ -1422,7 +1426,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                   }
                   keyboardType="numeric"
                   placeholder="Enter target amount"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textPlaceholder}
                 />
               </View>
               <View style={styles.inputContainer}>
@@ -1433,7 +1437,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                   <MaterialCommunityIcons
                     name="calendar"
                     size={20}
-                    color={PRIMARY_COLOR}
+                    color={colors.primary}
                     style={styles.inputIcon}
                   />
                   <Text
@@ -1448,7 +1452,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                   <MaterialCommunityIcons
                     name="chevron-down"
                     size={20}
-                    color="#999"
+                    color={colors.textPlaceholder}
                   />
                 </TouchableOpacity>
               </View>
@@ -1464,7 +1468,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                   }
                   keyboardType="numeric"
                   placeholder="Enter monthly goal"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textPlaceholder}
                 />
               </View>
             </ScrollView>
@@ -1482,7 +1486,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                 onPress={createNewGoal}
                 disabled={isSubmitting}>
                 {isSubmitting ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={colors.onPrimary} />
                 ) : (
                   <Text style={styles.modalSubmitButtonText}>Create Goal</Text>
                 )}
@@ -1502,7 +1506,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
               <MaterialCommunityIcons
                 name="alert-circle"
                 size={48}
-                color={EXPENSE_COLOR}
+                color={colors.expense}
               />
               <Text style={styles.modalTitle}>Delete Savings Goal</Text>
               <Text style={styles.modalSubtitle}>
@@ -1520,7 +1524,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                   onPress={() => deleteGoal(goalToDelete?.id)}
                   disabled={isSubmitting}>
                   {isSubmitting ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <ActivityIndicator size="small" color={colors.onPrimary} />
                   ) : (
                     <Text style={styles.deleteButtonText}>Delete</Text>
                   )}
@@ -1542,7 +1546,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
               <MaterialCommunityIcons
                 name="bell-ring"
                 size={40}
-                color={PRIMARY_COLOR}
+                color={colors.primary}
               />
               <Text style={styles.modalTitle}>Set Reminder</Text>
               <Text style={styles.modalSubtitle}>
@@ -1557,7 +1561,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                 <MaterialCommunityIcons
                   name="calendar-week"
                   size={22}
-                  color={PRIMARY_COLOR}
+                  color={colors.primary}
                 />
                 <View style={styles.reminderOptionText}>
                   <Text style={styles.reminderOptionTitle}>Weekly</Text>
@@ -1568,7 +1572,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                 <MaterialCommunityIcons
                   name="chevron-right"
                   size={20}
-                  color="#CCC"
+                  color={colors.textPlaceholder}
                 />
               </TouchableOpacity>
               <TouchableOpacity
@@ -1580,7 +1584,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                 <MaterialCommunityIcons
                   name="calendar-month"
                   size={22}
-                  color={PRIMARY_COLOR}
+                  color={colors.primary}
                 />
                 <View style={styles.reminderOptionText}>
                   <Text style={styles.reminderOptionTitle}>Monthly</Text>
@@ -1591,7 +1595,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                 <MaterialCommunityIcons
                   name="chevron-right"
                   size={20}
-                  color="#CCC"
+                  color={colors.textPlaceholder}
                 />
               </TouchableOpacity>
               <TouchableOpacity
@@ -1631,7 +1635,11 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
               <View style={styles.categoryModalHeader}>
                 <Text style={styles.categoryModalTitle}>Select Category</Text>
                 <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
-                  <MaterialCommunityIcons name="close" size={24} color="#666" />
+                  <MaterialCommunityIcons
+                    name="close"
+                    size={24}
+                    color={colors.textSecondary}
+                  />
                 </TouchableOpacity>
               </View>
               <View style={styles.categoryGrid}>
@@ -1652,7 +1660,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                       <MaterialCommunityIcons
                         name={cat.icon}
                         size={22}
-                        color={isSelected ? '#FFFFFF' : PRIMARY_COLOR}
+                        color={isSelected ? colors.onPrimary : colors.primary}
                       />
                       <Text
                         style={[
@@ -1676,527 +1684,539 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
 
 export default SavingsScreen;
 
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  scrollView: {flex: 1},
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: BACKGROUND_COLOR,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: PRIMARY_COLOR,
-    marginTop: 15,
-    fontFamily: 'Lato-Regular',
-  },
-  headerSection: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 30,
-    paddingBottom: 20,
-  },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginBottom: 8,
-  },
-  headerTitleLeft: {flexDirection: 'row', alignItems: 'center'},
-  historyIconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: PRIMARY_COLOR,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginLeft: 12,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  addGoalButton: {
-    backgroundColor: PRIMARY_COLOR,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 25,
-    marginTop: 15,
-  },
-  addGoalButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-    fontFamily: 'Lato-Bold',
-  },
-  summaryCard: {
-    backgroundColor: PRIMARY_COLOR,
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-    fontFamily: 'Lato-Regular',
-    marginBottom: 4,
-  },
-  summaryAmount: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginBottom: 4,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  summaryTarget: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.75)',
-    fontFamily: 'Lato-Regular',
-  },
-  summaryPercent: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    fontFamily: 'Lato-Bold',
-  },
-  summaryGoalCount: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
-    marginTop: 8,
-    fontFamily: 'Lato-Regular',
-  },
-  savingsCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  cardContent: {padding: 25},
-  savingsHeader: {flexDirection: 'row', alignItems: 'center', marginBottom: 15},
-  goalCategoryIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#EEF0FB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  goalInfo: {flex: 1},
-  goalName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  goalDescription: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 2,
-    fontFamily: 'Lato-Regular',
-  },
-  goalHeaderActions: {flexDirection: 'row', alignItems: 'center'},
-  actionIcon: {padding: 6, marginLeft: 2},
-  savingsAmount: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: SUCCESS_COLOR,
-    marginBottom: 8,
-    fontFamily: 'Kufam-SemiBoldItalic',
-  },
-  targetDateBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#EEF0FB',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-    marginBottom: 12,
-    gap: 4,
-  },
-  targetDateBadgeOverdue: {backgroundColor: '#FFF0F0'},
-  targetDateText: {
-    fontSize: 12,
-    color: PRIMARY_COLOR,
-    fontFamily: 'Lato-Regular',
-    marginLeft: 4,
-  },
-  targetDateTextOverdue: {color: EXPENSE_COLOR},
-  savingsInfo: {marginTop: 4, marginBottom: 4},
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  infoLabel: {fontSize: 14, color: '#666', fontFamily: 'Lato-Regular'},
-  infoValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  progressSection: {marginTop: 15, marginBottom: 15},
-  progressTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 10,
-    fontFamily: 'Lato-Bold',
-  },
-  progressBar: {
-    height: 12,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 6,
-    marginBottom: 8,
-    overflow: 'hidden',
-  },
-  progressFill: {height: '100%', borderRadius: 6},
-  progressText: {
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 4,
-    fontFamily: 'Lato-Bold',
-  },
-  monthsText: {
-    fontSize: 13,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  goalActionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  goalActionButton: {
-    flex: 0.48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  addButton: {backgroundColor: PRIMARY_COLOR},
-  withdrawButton: {backgroundColor: EXPENSE_COLOR},
-  goalActionText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
-    fontFamily: 'Lato-Bold',
-  },
-  editForm: {marginTop: 10},
-  inputContainer: {marginBottom: 15},
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 8,
-    fontFamily: 'Lato-Bold',
-  },
-  textInput: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-  },
-  dateInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-  },
-  inputIcon: {marginRight: 10},
-  dateText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-  },
-  placeholderText: {color: '#999'},
-  characterCount: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-    textAlign: 'right',
-    fontFamily: 'Lato-Regular',
-  },
-  categorySelectorButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    gap: 10,
-  },
-  categorySelectorText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-  },
-  categorySelectorPlaceholder: {
-    flex: 1,
-    fontSize: 16,
-    color: '#999',
-    fontFamily: 'Lato-Regular',
-  },
-  categoryModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  categoryModalSheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: 34,
-  },
-  categoryModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  categoryModalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  categoryGrid: {flexDirection: 'row', flexWrap: 'wrap', gap: 10},
-  categoryChip: {
-    width: '30%',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-  },
-  categoryChipSelected: {
-    backgroundColor: PRIMARY_COLOR,
-    borderColor: PRIMARY_COLOR,
-  },
-  categoryChipText: {
-    fontSize: 12,
-    color: '#555',
-    marginTop: 5,
-    fontFamily: 'Lato-Regular',
-    textAlign: 'center',
-  },
-  categoryChipTextSelected: {color: '#FFFFFF', fontFamily: 'Lato-Bold'},
-  editActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  actionButton: {
-    flex: 0.48,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#F8F9FA',
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-  },
-  saveButton: {backgroundColor: PRIMARY_COLOR},
-  cancelButtonText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'Lato-Bold',
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'Lato-Bold',
-  },
-  emptyStateCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 40,
-  },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    marginTop: 20,
-    marginBottom: 10,
-    textAlign: 'center',
-    fontFamily: 'Lato-Bold',
-  },
-  emptyStateSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 30,
-    lineHeight: 22,
-    fontFamily: 'Lato-Regular',
-  },
-  createFirstGoalButton: {
-    backgroundColor: PRIMARY_COLOR,
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 25,
-  },
-  createFirstGoalButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'Lato-Bold',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 25,
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '85%',
-    elevation: Platform.OS === 'android' ? 0 : 10,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    textAlign: 'center',
-    marginBottom: 10,
-    fontFamily: 'Lato-Bold',
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 20,
-    fontFamily: 'Lato-Regular',
-  },
-  modalInput: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-    marginBottom: 20,
-  },
-  modalButtons: {flexDirection: 'row', justifyContent: 'space-between'},
-  modalButton: {
-    flex: 0.48,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  modalCancelButton: {
-    backgroundColor: '#F8F9FA',
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-  },
-  modalSubmitButton: {backgroundColor: PRIMARY_COLOR},
-  modalCancelButtonText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'Lato-Bold',
-  },
-  modalSubmitButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'Lato-Bold',
-  },
-  deleteButton: {backgroundColor: EXPENSE_COLOR},
-  deleteButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'Lato-Bold',
-  },
-  reminderOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  reminderOptionText: {flex: 1, marginLeft: 14},
-  reminderOptionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  reminderOptionSubtitle: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 2,
-    fontFamily: 'Lato-Regular',
-  },
-  reminderCancelButton: {
-    marginTop: 12,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    width: '100%',
-  },
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {flex: 1, backgroundColor: colors.background},
+    scrollView: {flex: 1},
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    loadingText: {
+      fontSize: 16,
+      color: colors.primary,
+      marginTop: 15,
+      fontFamily: 'Lato-Regular',
+    },
+    headerSection: {
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: 30,
+      paddingBottom: 20,
+    },
+    headerTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      width: '100%',
+      marginBottom: 8,
+    },
+    headerTitleLeft: {flexDirection: 'row', alignItems: 'center'},
+    historyIconButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: colors.primaryFill,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitle: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: colors.primary,
+      fontFamily: 'Kufam-SemiBoldItalic',
+      marginLeft: 12,
+    },
+    headerSubtitle: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      fontFamily: 'Lato-Regular',
+    },
+    addGoalButton: {
+      backgroundColor: colors.primaryFill,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 25,
+      marginTop: 15,
+    },
+    addGoalButtonText: {
+      color: colors.onPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+      marginLeft: 8,
+      fontFamily: 'Lato-Bold',
+    },
+    summaryCard: {
+      backgroundColor: colors.primaryFill,
+      borderRadius: 20,
+      marginHorizontal: 20,
+      marginBottom: 20,
+    },
+    summaryLabel: {
+      fontSize: 14,
+      color: 'rgba(255,255,255,0.8)',
+      fontFamily: 'Lato-Regular',
+      marginBottom: 4,
+    },
+    summaryAmount: {
+      fontSize: 32,
+      fontWeight: 'bold',
+      color: colors.onPrimary,
+      fontFamily: 'Kufam-SemiBoldItalic',
+      marginBottom: 4,
+    },
+    summaryRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    summaryTarget: {
+      fontSize: 13,
+      color: 'rgba(255,255,255,0.75)',
+      fontFamily: 'Lato-Regular',
+    },
+    summaryPercent: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.onPrimary,
+      fontFamily: 'Lato-Bold',
+    },
+    summaryGoalCount: {
+      fontSize: 12,
+      color: 'rgba(255,255,255,0.7)',
+      marginTop: 8,
+      fontFamily: 'Lato-Regular',
+    },
+    savingsCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      marginHorizontal: 20,
+      marginBottom: 20,
+    },
+    cardContent: {padding: 25},
+    savingsHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 15,
+    },
+    goalCategoryIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: colors.primarySoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 10,
+    },
+    goalInfo: {flex: 1},
+    goalName: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.textStrong,
+      fontFamily: 'Lato-Bold',
+    },
+    goalDescription: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginTop: 2,
+      fontFamily: 'Lato-Regular',
+    },
+    goalHeaderActions: {flexDirection: 'row', alignItems: 'center'},
+    actionIcon: {padding: 6, marginLeft: 2},
+    savingsAmount: {
+      fontSize: 32,
+      fontWeight: 'bold',
+      color: colors.success,
+      marginBottom: 8,
+      fontFamily: 'Kufam-SemiBoldItalic',
+    },
+    targetDateBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.primarySoft,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 20,
+      alignSelf: 'flex-start',
+      marginBottom: 12,
+      gap: 4,
+    },
+    targetDateBadgeOverdue: {backgroundColor: colors.expenseSoft},
+    targetDateText: {
+      fontSize: 12,
+      color: colors.primary,
+      fontFamily: 'Lato-Regular',
+      marginLeft: 4,
+    },
+    targetDateTextOverdue: {color: colors.expense},
+    savingsInfo: {marginTop: 4, marginBottom: 4},
+    infoRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 8,
+    },
+    infoLabel: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      fontFamily: 'Lato-Regular',
+    },
+    infoValue: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textStrong,
+      fontFamily: 'Lato-Bold',
+    },
+    progressSection: {marginTop: 15, marginBottom: 15},
+    progressTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textStrong,
+      marginBottom: 10,
+      fontFamily: 'Lato-Bold',
+    },
+    progressBar: {
+      height: 12,
+      backgroundColor: colors.divider,
+      borderRadius: 6,
+      marginBottom: 8,
+      overflow: 'hidden',
+    },
+    progressFill: {height: '100%', borderRadius: 6},
+    progressText: {
+      fontSize: 14,
+      fontWeight: '600',
+      textAlign: 'center',
+      marginBottom: 4,
+      fontFamily: 'Lato-Bold',
+    },
+    monthsText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      fontFamily: 'Lato-Regular',
+    },
+    goalActionsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 10,
+    },
+    goalActionButton: {
+      flex: 0.48,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+    addButton: {backgroundColor: colors.primaryFill},
+    withdrawButton: {backgroundColor: colors.expenseFill},
+    goalActionText: {
+      color: colors.onPrimary,
+      fontSize: 14,
+      fontWeight: '600',
+      marginLeft: 6,
+      fontFamily: 'Lato-Bold',
+    },
+    editForm: {marginTop: 10},
+    inputContainer: {marginBottom: 15},
+    inputLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textStrong,
+      marginBottom: 8,
+      fontFamily: 'Lato-Bold',
+    },
+    textInput: {
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      paddingHorizontal: 15,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+    },
+    dateInputWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      paddingHorizontal: 15,
+      paddingVertical: 12,
+    },
+    inputIcon: {marginRight: 10},
+    dateText: {
+      flex: 1,
+      fontSize: 16,
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+    },
+    placeholderText: {color: colors.textPlaceholder},
+    characterCount: {
+      fontSize: 12,
+      color: colors.textPlaceholder,
+      marginTop: 4,
+      textAlign: 'right',
+      fontFamily: 'Lato-Regular',
+    },
+    categorySelectorButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      paddingHorizontal: 15,
+      paddingVertical: 12,
+      gap: 10,
+    },
+    categorySelectorText: {
+      flex: 1,
+      fontSize: 16,
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+    },
+    categorySelectorPlaceholder: {
+      flex: 1,
+      fontSize: 16,
+      color: colors.textPlaceholder,
+      fontFamily: 'Lato-Regular',
+    },
+    categoryModalOverlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: 'flex-end',
+    },
+    categoryModalSheet: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      padding: 20,
+      paddingBottom: 34,
+    },
+    categoryModalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    categoryModalTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.textStrong,
+      fontFamily: 'Lato-Bold',
+    },
+    categoryGrid: {flexDirection: 'row', flexWrap: 'wrap', gap: 10},
+    categoryChip: {
+      width: '30%',
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 8,
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    categoryChipSelected: {
+      backgroundColor: colors.primaryFill,
+      borderColor: colors.primaryFill,
+    },
+    categoryChipText: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 5,
+      fontFamily: 'Lato-Regular',
+      textAlign: 'center',
+    },
+    categoryChipTextSelected: {
+      color: colors.onPrimary,
+      fontFamily: 'Lato-Bold',
+    },
+    editActions: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 10,
+    },
+    actionButton: {
+      flex: 0.48,
+      paddingVertical: 12,
+      borderRadius: 12,
+      alignItems: 'center',
+    },
+    cancelButton: {
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    saveButton: {backgroundColor: colors.primaryFill},
+    cancelButtonText: {
+      color: colors.textSecondary,
+      fontSize: 16,
+      fontWeight: '600',
+      fontFamily: 'Lato-Bold',
+    },
+    saveButtonText: {
+      color: colors.onPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+      fontFamily: 'Lato-Bold',
+    },
+    emptyStateCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      marginHorizontal: 20,
+      marginBottom: 20,
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: 60,
+      paddingHorizontal: 40,
+    },
+    emptyStateTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.textStrong,
+      marginTop: 20,
+      marginBottom: 10,
+      textAlign: 'center',
+      fontFamily: 'Lato-Bold',
+    },
+    emptyStateSubtitle: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 30,
+      lineHeight: 22,
+      fontFamily: 'Lato-Regular',
+    },
+    createFirstGoalButton: {
+      backgroundColor: colors.primaryFill,
+      paddingVertical: 15,
+      paddingHorizontal: 30,
+      borderRadius: 25,
+    },
+    createFirstGoalButtonText: {
+      color: colors.onPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+      fontFamily: 'Lato-Bold',
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+    },
+    modalContent: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: 25,
+      width: '100%',
+      maxWidth: 400,
+      maxHeight: '85%',
+      elevation: Platform.OS === 'android' ? 0 : 10,
+      shadowColor: colors.shadow,
+      shadowOffset: {width: 0, height: 4},
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.textStrong,
+      textAlign: 'center',
+      marginBottom: 10,
+      fontFamily: 'Lato-Bold',
+    },
+    modalSubtitle: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 20,
+      fontFamily: 'Lato-Regular',
+    },
+    modalInput: {
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      paddingHorizontal: 15,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+      marginBottom: 20,
+    },
+    modalButtons: {flexDirection: 'row', justifyContent: 'space-between'},
+    modalButton: {
+      flex: 0.48,
+      paddingVertical: 12,
+      borderRadius: 12,
+      alignItems: 'center',
+    },
+    modalCancelButton: {
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    modalSubmitButton: {backgroundColor: colors.primaryFill},
+    modalCancelButtonText: {
+      color: colors.textSecondary,
+      fontSize: 16,
+      fontWeight: '600',
+      fontFamily: 'Lato-Bold',
+    },
+    modalSubmitButtonText: {
+      color: colors.onPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+      fontFamily: 'Lato-Bold',
+    },
+    deleteButton: {backgroundColor: colors.expenseFill},
+    deleteButtonText: {
+      color: colors.onPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+      fontFamily: 'Lato-Bold',
+    },
+    reminderOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 14,
+      paddingHorizontal: 4,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.divider,
+    },
+    reminderOptionText: {flex: 1, marginLeft: 14},
+    reminderOptionTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textStrong,
+      fontFamily: 'Lato-Bold',
+    },
+    reminderOptionSubtitle: {
+      fontSize: 12,
+      color: colors.textMuted,
+      marginTop: 2,
+      fontFamily: 'Lato-Regular',
+    },
+    reminderCancelButton: {
+      marginTop: 12,
+      paddingVertical: 12,
+      borderRadius: 12,
+      alignItems: 'center',
+      width: '100%',
+    },
+    cardAndroid: {borderWidth: 1, borderColor: colors.cardBorder},
+  });
