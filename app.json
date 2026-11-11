@@ -91,7 +91,15 @@
         "@sentry/react-native/expo",
         {
           "organization": "dhruv-chheda",
-          "project": "trackaexpense"
+          "project": "trackaexpense",
+          "experimental_android": {
+            "enableAndroidGradlePlugin": true,
+            "includeProguardMapping": true,
+            "autoUploadProguardMapping": true,
+            "uploadNativeSymbols": false,
+            "autoUploadNativeSymbols": false,
+            "includeNativeSources": false
+          }
         }
       ],
       [
