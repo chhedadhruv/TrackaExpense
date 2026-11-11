@@ -27,6 +27,8 @@ import {sharesMinor} from '../../src/utils/splitMath';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import {snackbar} from '../../src/utils/snackbarStore';
+import {ErrorState, LoadingState} from '../../src/components/ScreenState';
+import {useLoadFailure} from '../../src/hooks/useLoadFailure';
 
 interface Balance {
   email: string;
@@ -61,6 +63,7 @@ const FriendsBalanceScreen = () => {
   };
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const {failed, succeed, fail} = useLoadFailure();
   const [balances, setBalances] = useState<Balance[]>([]);
   const [remindingEmail, setRemindingEmail] = useState<string | null>(null);
 
@@ -225,15 +228,17 @@ const FriendsBalanceScreen = () => {
           .filter(b => Math.abs(b.net) > 0.009)
           .sort((a, b) => Math.abs(b.net) - Math.abs(a.net));
         setBalances(result);
-      } catch (_) {
-        setBalances([]);
+        succeed();
+      } catch (e) {
+        // A failed load must not read as "All settled up": show the error state instead.
+        fail(e);
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
       // calculateBalancesForSplits is pure (it uses only its arguments).
     },
-    [currency.code],
+    [currency.code, succeed, fail],
   );
 
   useFocusEffect(
@@ -292,11 +297,15 @@ const FriendsBalanceScreen = () => {
   };
 
   if (loading) {
+    return <LoadingState message="Loading balances..." />;
+  }
+
+  if (failed) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading balances...</Text>
-      </View>
+      <ErrorState
+        title="Could not load balances"
+        onRetry={() => loadBalances()}
+      />
     );
   }
 
@@ -461,18 +470,6 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {flex: 1, backgroundColor: colors.background},
     scrollView: {flex: 1},
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.background,
-    },
-    loadingText: {
-      fontSize: 16,
-      color: colors.primary,
-      marginTop: 15,
-      fontFamily: 'Lato-Regular',
-    },
     headerSection: {
       alignItems: 'center',
       paddingHorizontal: 20,
