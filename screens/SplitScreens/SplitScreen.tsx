@@ -43,7 +43,7 @@ import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollV
 import SplitNotificationService from '../../services/SplitNotificationService';
 import ReminderNotificationService from '../../services/ReminderNotificationService';
 import {getConfig} from '../../src/services/RemoteConfigService';
-import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../../src/constants/theme';
+import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import type {McIconName} from '../../src/types/icons';
 import {snackbar} from '../../src/utils/snackbarStore';
 
@@ -67,116 +67,36 @@ interface Group {
   updatedAt?: unknown;
 }
 
-const GROUP_CATEGORIES = [
-  {
-    label: 'Work',
-    value: 'Work',
-    icon: () => (
-      <MaterialCommunityIcons
-        name="briefcase"
-        size={24}
-        color={PRIMARY_COLOR}
-      />
-    ),
-  },
-  {
-    label: 'Family',
-    value: 'Family',
-    icon: () => (
-      <MaterialCommunityIcons
-        name="home-heart"
-        size={24}
-        color={PRIMARY_COLOR}
-      />
-    ),
-  },
-  {
-    label: 'Couple',
-    value: 'Couple',
-    icon: () => (
-      <MaterialCommunityIcons
-        name="heart-multiple"
-        size={24}
-        color={PRIMARY_COLOR}
-      />
-    ),
-  },
-  {
-    label: 'Friends',
-    value: 'Friends',
-    icon: () => (
-      <MaterialCommunityIcons
-        name="account-group"
-        size={24}
-        color={PRIMARY_COLOR}
-      />
-    ),
-  },
-  {
-    label: 'Travel',
-    value: 'Travel',
-    icon: () => (
-      <MaterialCommunityIcons name="airplane" size={24} color={PRIMARY_COLOR} />
-    ),
-  },
-  {
-    label: 'Sports',
-    value: 'Sports',
-    icon: () => (
-      <MaterialCommunityIcons
-        name="basketball"
-        size={24}
-        color={PRIMARY_COLOR}
-      />
-    ),
-  },
-  {
-    label: 'Hobby',
-    value: 'Hobby',
-    icon: () => (
-      <MaterialCommunityIcons name="palette" size={24} color={PRIMARY_COLOR} />
-    ),
-  },
-  {
-    label: 'Study',
-    value: 'Study',
-    icon: () => (
-      <MaterialCommunityIcons
-        name="book-open-variant"
-        size={24}
-        color={PRIMARY_COLOR}
-      />
-    ),
-  },
-  {
-    label: 'Other',
-    value: 'Other',
-    icon: () => (
-      <MaterialCommunityIcons
-        name="dots-horizontal-circle"
-        size={24}
-        color={PRIMARY_COLOR}
-      />
-    ),
-  },
-];
-
-const getCategoryIcon = (value: string): McIconName => {
-  const map: Record<string, McIconName> = {
-    Work: 'briefcase',
-    Family: 'home-heart',
-    Couple: 'heart-multiple',
-    Friends: 'account-group',
-    Travel: 'airplane',
-    Sports: 'basketball',
-    Hobby: 'palette',
-    Study: 'book-open-variant',
-    Other: 'dots-horizontal-circle',
-  };
-  return map[value] || 'account-group';
+const GROUP_CATEGORY_ICONS: Record<string, McIconName> = {
+  Work: 'briefcase',
+  Family: 'home-heart',
+  Couple: 'heart-multiple',
+  Friends: 'account-group',
+  Travel: 'airplane',
+  Sports: 'basketball',
+  Hobby: 'palette',
+  Study: 'book-open-variant',
+  Other: 'dots-horizontal-circle',
 };
 
+// The icon colour comes from the theme, so the options are built inside the component.
+const buildGroupCategories = (color: string) =>
+  Object.entries(GROUP_CATEGORY_ICONS).map(([value, name]) => ({
+    label: value,
+    value,
+    icon: () => <MaterialCommunityIcons name={name} size={24} color={color} />,
+  }));
+
+const getCategoryIcon = (value: string): McIconName =>
+  GROUP_CATEGORY_ICONS[value] || 'account-group';
+
 const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
+  const {colors} = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const groupCategories = React.useMemo(
+    () => buildGroupCategories(colors.primary),
+    [colors.primary],
+  );
   const [groupName, setGroupName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [userDetails, setUserDetails] = useState<UserDetail | null>(null);
@@ -702,7 +622,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                   <MaterialCommunityIcons
                     name="check"
                     size={18}
-                    color="#FFFFFF"
+                    color={colors.onPrimary}
                   />
                 )}
               </View>
@@ -746,7 +666,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                 <MaterialCommunityIcons
                   name={iconName}
                   size={24}
-                  color="#fff"
+                  color={colors.onPrimary}
                 />
               </View>
               <View style={styles.groupInfo}>
@@ -755,7 +675,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                   <MaterialCommunityIcons
                     name="account-multiple"
                     size={14}
-                    color="#666"
+                    color={colors.textSecondary}
                   />
                   <Text style={styles.groupMembers}>
                     {group.members.length}{' '}
@@ -773,7 +693,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading groups...</Text>
       </View>
     );
@@ -791,7 +711,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
               <MaterialCommunityIcons
                 name="account-group"
                 size={32}
-                color={PRIMARY_COLOR}
+                color={colors.primary}
               />
               <Text style={styles.headerTitle}>Split Groups</Text>
             </View>
@@ -806,7 +726,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
               <MaterialCommunityIcons
                 name="account-multiple"
                 size={22}
-                color={PRIMARY_COLOR}
+                color={colors.primary}
               />
               <Text style={styles.quickAccessText}>Friends</Text>
             </TouchableOpacity>
@@ -817,7 +737,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                 <MaterialCommunityIcons
                   name="handshake"
                   size={22}
-                  color={PRIMARY_COLOR}
+                  color={colors.primary}
                 />
                 <Text style={styles.quickAccessText}>IOUs</Text>
               </TouchableOpacity>
@@ -848,7 +768,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                 <MaterialCommunityIcons
                   name={isFormVisible ? 'chevron-up' : 'chevron-down'}
                   size={24}
-                  color={PRIMARY_COLOR}
+                  color={colors.primary}
                 />
               </TouchableOpacity>
               {isFormVisible && (
@@ -858,7 +778,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                     <TextInput
                       style={styles.textInput}
                       placeholder="Enter group name"
-                      placeholderTextColor="#999"
+                      placeholderTextColor={colors.textPlaceholder}
                       value={groupName}
                       onChangeText={setGroupName}
                       maxLength={50}
@@ -871,7 +791,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                     <Text style={styles.inputLabel}>Category</Text>
                     <SelectModal
                       value={category}
-                      options={GROUP_CATEGORIES}
+                      options={groupCategories}
                       onChange={setCategory}
                       placeholder="Select Group Category"
                       searchPlaceholder="Search categories..."
@@ -882,7 +802,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                     <TextInput
                       style={styles.textInput}
                       placeholder="Search user by email or phone number"
-                      placeholderTextColor="#999"
+                      placeholderTextColor={colors.textPlaceholder}
                       value={searchQuery}
                       onChangeText={query => {
                         setSearchQuery(query);
@@ -919,12 +839,15 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                     <TouchableOpacity
                       style={[
                         styles.createGroupButton,
-                        saving && {opacity: 0.6},
+                        saving && styles.createGroupButtonSaving,
                       ]}
                       onPress={createGroup}
                       disabled={saving}>
                       {saving ? (
-                        <ActivityIndicator size="small" color="#fff" />
+                        <ActivityIndicator
+                          size="small"
+                          color={colors.onPrimary}
+                        />
                       ) : (
                         <>
                           <Text style={styles.createGroupButtonText}>
@@ -933,7 +856,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                           <MaterialCommunityIcons
                             name={editingGroupId ? 'pencil' : 'check'}
                             size={20}
-                            color="#fff"
+                            color={colors.onPrimary}
                           />
                         </>
                       )}
@@ -952,7 +875,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                         <MaterialCommunityIcons
                           name="close"
                           size={20}
-                          color="#666"
+                          color={colors.textSecondary}
                         />
                       </TouchableOpacity>
                     )}
@@ -962,15 +885,9 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
             </View>
           </Card>
           <View style={styles.groupsSection}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: 12,
-              }}>
+            <View style={styles.groupsHeaderRow}>
               <Text
-                style={[styles.sectionTitle, {marginBottom: 0, flexShrink: 1}]}
+                style={[styles.sectionTitle, styles.groupsSectionTitle]}
                 numberOfLines={1}
                 ellipsizeMode="tail">
                 Your Groups
@@ -982,28 +899,12 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                   <MaterialCommunityIcons
                     name="account-multiple-plus-outline"
                     size={20}
-                    color="#FFFFFF"
+                    color={colors.onPrimary}
                   />
                   {invitationsCount > 0 && (
-                    <View
-                      style={{
-                        position: 'absolute',
-                        top: -6,
-                        right: -6,
-                        minWidth: 18,
-                        height: 18,
-                        borderRadius: 9,
-                        backgroundColor: '#FF3B30',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        paddingHorizontal: 3,
-                      }}>
+                    <View style={styles.invitationsBadge}>
                       <Text
-                        style={{
-                          color: '#fff',
-                          fontSize: 11,
-                          fontWeight: 'bold',
-                        }}
+                        style={styles.invitationsBadgeText}
                         numberOfLines={1}>
                         {invitationsCount > 99
                           ? '99+'
@@ -1018,7 +919,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                   <MaterialCommunityIcons
                     name="history"
                     size={20}
-                    color="#FFFFFF"
+                    color={colors.onPrimary}
                   />
                 </TouchableOpacity>
               </View>
@@ -1034,7 +935,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                   <MaterialCommunityIcons
                     name="account-group-outline"
                     size={64}
-                    color="#CBD3EE"
+                    color={colors.iconMuted}
                   />
                   <Text style={styles.emptyStateText}>
                     No groups created yet
@@ -1056,287 +957,333 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
 
 export default SplitScreen;
 
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  scrollView: {flex: 1},
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: BACKGROUND_COLOR,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: PRIMARY_COLOR,
-    marginTop: 15,
-    fontFamily: 'Lato-Regular',
-  },
-  headerSection: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 30,
-    paddingBottom: 20,
-  },
-  headerTitleRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 8},
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginLeft: 12,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  createGroupCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  cardContent: {padding: 25},
-  createGroupHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  createGroupTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  formContainer: {marginTop: 20},
-  inputContainer: {marginBottom: 15},
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 8,
-    fontFamily: 'Lato-Bold',
-  },
-  textInput: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-  },
-  userCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 10,
-    elevation: Platform.OS === 'android' ? 0 : 1,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-  },
-  userInfo: {marginLeft: 15, flex: 1},
-  userName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  userEmail: {fontSize: 14, color: '#666', fontFamily: 'Lato-Regular'},
-  customCheckboxIOS: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#999',
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 4,
-  },
-  customCheckboxIOSSelected: {
-    backgroundColor: PRIMARY_COLOR,
-    borderColor: PRIMARY_COLOR,
-  },
-  selectedContainer: {marginTop: 15},
-  selectedUsersLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 10,
-    fontFamily: 'Lato-Bold',
-  },
-  emptySelectionText: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-    fontStyle: 'italic',
-    fontFamily: 'Lato-Regular',
-  },
-  warningCard: {
-    backgroundColor: '#FFF3E0',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#FFB74D',
-  },
-  warningText: {fontSize: 14, color: '#E65100', fontFamily: 'Lato-Regular'},
-  buttonContainer: {marginTop: 20, gap: 12},
-  createGroupButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: PRIMARY_COLOR,
-    paddingVertical: 15,
-    borderRadius: 12,
-    elevation: Platform.OS === 'android' ? 0 : 1,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-  },
-  createGroupButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginRight: 8,
-    fontFamily: 'Lato-Bold',
-  },
-  cancelButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F8F9FA',
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    paddingVertical: 15,
-    borderRadius: 12,
-  },
-  cancelButtonText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '600',
-    marginRight: 8,
-    fontFamily: 'Lato-Bold',
-  },
-  groupsSection: {paddingHorizontal: 20, paddingBottom: 30},
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    marginBottom: 15,
-    fontFamily: 'Kufam-SemiBoldItalic',
-  },
-  groupCard: {backgroundColor: '#FFFFFF', borderRadius: 16, marginBottom: 15},
-  groupCardContent: {padding: 22},
-  groupCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  groupCardLeft: {flexDirection: 'row', alignItems: 'center', flex: 1},
-  groupInfo: {marginLeft: 12, flex: 1},
-  groupName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginBottom: 4,
-  },
-  memberCountContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  groupMembers: {
-    fontSize: 14,
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-    marginLeft: 4,
-  },
-  categoryIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: PRIMARY_COLOR,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  groupsHeaderActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconActionButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: PRIMARY_COLOR,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  emptyStateCard: {backgroundColor: '#FFFFFF', borderRadius: 16},
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-    marginTop: 15,
-    marginBottom: 5,
-    fontFamily: 'Lato-Bold',
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  characterCount: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-    textAlign: 'right',
-    fontFamily: 'Lato-Regular',
-  },
-  youLabel: {
-    fontSize: 12,
-    color: PRIMARY_COLOR,
-    fontStyle: 'italic',
-    marginTop: 2,
-    fontFamily: 'Lato-Regular',
-  },
-  quickAccessRow: {
-    flexDirection: 'row',
-    marginHorizontal: 20,
-    marginBottom: 15,
-    gap: 12,
-  },
-  quickAccessButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-  },
-  quickAccessText: {fontSize: 14, color: '#677CD2', fontFamily: 'Lato-Bold'},
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {flex: 1, backgroundColor: colors.background},
+    scrollView: {flex: 1},
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    loadingText: {
+      fontSize: 16,
+      color: colors.primary,
+      marginTop: 15,
+      fontFamily: 'Lato-Regular',
+    },
+    headerSection: {
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: 30,
+      paddingBottom: 20,
+    },
+    headerTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    headerTitle: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: colors.primary,
+      fontFamily: 'Kufam-SemiBoldItalic',
+      marginLeft: 12,
+    },
+    headerSubtitle: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      fontFamily: 'Lato-Regular',
+    },
+    createGroupCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      marginHorizontal: 20,
+      marginBottom: 20,
+    },
+    cardContent: {padding: 25},
+    createGroupHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    createGroupTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.textStrong,
+      fontFamily: 'Lato-Bold',
+    },
+    formContainer: {marginTop: 20},
+    inputContainer: {marginBottom: 15},
+    inputLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textStrong,
+      marginBottom: 8,
+      fontFamily: 'Lato-Bold',
+    },
+    textInput: {
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      paddingHorizontal: 15,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+    },
+    userCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      padding: 15,
+      borderRadius: 12,
+      marginBottom: 10,
+      elevation: Platform.OS === 'android' ? 0 : 1,
+      shadowColor: colors.shadow,
+      shadowOffset: {width: 0, height: 1},
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+    },
+    userInfo: {marginLeft: 15, flex: 1},
+    userName: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textStrong,
+      fontFamily: 'Lato-Bold',
+    },
+    userEmail: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      fontFamily: 'Lato-Regular',
+    },
+    customCheckboxIOS: {
+      width: 24,
+      height: 24,
+      borderRadius: 4,
+      borderWidth: 2,
+      borderColor: colors.textMuted,
+      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 4,
+    },
+    customCheckboxIOSSelected: {
+      backgroundColor: colors.primaryFill,
+      borderColor: colors.primaryFill,
+    },
+    selectedContainer: {marginTop: 15},
+    selectedUsersLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textStrong,
+      marginBottom: 10,
+      fontFamily: 'Lato-Bold',
+    },
+    emptySelectionText: {
+      fontSize: 14,
+      color: colors.textMuted,
+      textAlign: 'center',
+      fontStyle: 'italic',
+      fontFamily: 'Lato-Regular',
+    },
+    warningCard: {
+      backgroundColor: colors.warningSoft,
+      padding: 15,
+      borderRadius: 12,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: colors.warning,
+    },
+    warningText: {
+      fontSize: 14,
+      color: colors.warningText,
+      fontFamily: 'Lato-Regular',
+    },
+    buttonContainer: {marginTop: 20, gap: 12},
+    createGroupButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primaryFill,
+      paddingVertical: 15,
+      borderRadius: 12,
+      elevation: Platform.OS === 'android' ? 0 : 1,
+      shadowColor: colors.primaryFill,
+      shadowOffset: {width: 0, height: 1},
+      shadowOpacity: 0.15,
+      shadowRadius: 2,
+    },
+    createGroupButtonSaving: {opacity: 0.6},
+    createGroupButtonText: {
+      color: colors.onPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+      marginRight: 8,
+      fontFamily: 'Lato-Bold',
+    },
+    cancelButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      paddingVertical: 15,
+      borderRadius: 12,
+    },
+    cancelButtonText: {
+      color: colors.textSecondary,
+      fontSize: 16,
+      fontWeight: '600',
+      marginRight: 8,
+      fontFamily: 'Lato-Bold',
+    },
+    groupsSection: {paddingHorizontal: 20, paddingBottom: 30},
+    groupsHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
+    sectionTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.textStrong,
+      marginBottom: 15,
+      fontFamily: 'Kufam-SemiBoldItalic',
+    },
+    groupsSectionTitle: {marginBottom: 0, flexShrink: 1},
+    groupCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      marginBottom: 15,
+    },
+    groupCardContent: {padding: 22},
+    groupCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    groupCardLeft: {flexDirection: 'row', alignItems: 'center', flex: 1},
+    groupInfo: {marginLeft: 12, flex: 1},
+    groupName: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.textStrong,
+      fontFamily: 'Kufam-SemiBoldItalic',
+      marginBottom: 4,
+    },
+    memberCountContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 2,
+    },
+    groupMembers: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      fontFamily: 'Lato-Regular',
+      marginLeft: 4,
+    },
+    categoryIconContainer: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.primaryFill,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    groupsHeaderActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    iconActionButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: colors.primaryFill,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: 8,
+    },
+    invitationsBadge: {
+      position: 'absolute',
+      top: -6,
+      right: -6,
+      minWidth: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: colors.expenseFill,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 3,
+    },
+    invitationsBadgeText: {
+      color: colors.onPrimary,
+      fontSize: 11,
+      fontWeight: 'bold',
+    },
+    emptyStateCard: {backgroundColor: colors.surface, borderRadius: 16},
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: 40,
+      paddingHorizontal: 20,
+    },
+    emptyStateText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginTop: 15,
+      marginBottom: 5,
+      fontFamily: 'Lato-Bold',
+    },
+    emptyStateSubtext: {
+      fontSize: 14,
+      color: colors.textMuted,
+      textAlign: 'center',
+      fontFamily: 'Lato-Regular',
+    },
+    characterCount: {
+      fontSize: 12,
+      color: colors.textPlaceholder,
+      marginTop: 4,
+      textAlign: 'right',
+      fontFamily: 'Lato-Regular',
+    },
+    youLabel: {
+      fontSize: 12,
+      color: colors.primary,
+      fontStyle: 'italic',
+      marginTop: 2,
+      fontFamily: 'Lato-Regular',
+    },
+    quickAccessRow: {
+      flexDirection: 'row',
+      marginHorizontal: 20,
+      marginBottom: 15,
+      gap: 12,
+    },
+    quickAccessButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      gap: 8,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    quickAccessText: {
+      fontSize: 14,
+      color: colors.primary,
+      fontFamily: 'Lato-Bold',
+    },
+    cardAndroid: {borderWidth: 1, borderColor: colors.cardBorder},
+  });
