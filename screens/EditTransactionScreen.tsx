@@ -1,14 +1,6 @@
 import React, {useState} from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  Image,
-  TouchableOpacity,
-  Platform,
-} from 'react-native';
-import {Card, ActivityIndicator} from 'react-native-paper';
+import {View, Text} from 'react-native';
+import {ActivityIndicator} from 'react-native-paper';
 import {getAuth} from '@react-native-firebase/auth';
 import {
   Timestamp,
@@ -28,25 +20,29 @@ import {reportError} from '../src/services/ErrorReporter';
 import {receiptFields, receiptUrlOf} from '../src/utils/receipt';
 import * as PerformanceService from '../src/services/PerformanceService';
 import * as AnalyticsService from '../src/services/AnalyticsService';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import FormButton from '../components/FormButton';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {EXPENSE_CATEGORIES, INCOME_CATEGORIES} from '../utils/CategoryData';
-import {
-  PRIMARY_COLOR,
-  BACKGROUND_COLOR,
-  EXPENSE_COLOR,
-  INCOME_COLOR,
-} from '../src/constants/theme';
+import {useTheme} from '../src/theme';
 import {useTransactionForm} from '../src/hooks/useTransactionForm';
 import {editBalanceDelta, transactionMoneyFields} from '../src/utils/amounts';
 import CategorySelector from '../src/components/CategorySelector';
 import AmountInput from '../src/components/AmountInput';
 import DateInput from '../src/components/DateInput';
 import ImagePickerModal from '../src/components/ImagePickerModal';
+import {
+  FormCard,
+  FormError,
+  FormHeader,
+  FormSection,
+} from '../src/components/form/FormParts';
+import TextField from '../src/components/form/TextField';
+import ReceiptField from '../src/components/form/ReceiptField';
 import {snackbar} from '../src/utils/snackbarStore';
+
+const DISABLED_BUTTON = {opacity: 0.5} as const;
 
 const EditTransactionScreen = ({
   route,
@@ -55,6 +51,7 @@ const EditTransactionScreen = ({
   route: any;
   navigation: any;
 }) => {
+  const {colors} = useTheme();
   const {currency} = useCurrency();
   const {transaction} = route.params;
 
@@ -202,13 +199,13 @@ const EditTransactionScreen = ({
   };
 
   const accentColor =
-    transaction.type === 'expense' ? EXPENSE_COLOR : INCOME_COLOR;
+    transaction.type === 'expense' ? colors.expense : colors.income;
 
   if (uploading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-        <Text style={styles.loadingText}>
+      <View className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text className="mt-[15px] font-sans text-base text-primary">
           {transferred > 0
             ? `Uploading image... ${transferred}%`
             : 'Updating transaction...'}
@@ -219,231 +216,109 @@ const EditTransactionScreen = ({
 
   return (
     <SafeAreaProvider>
-      <View style={styles.container}>
+      <View className="flex-1 bg-background">
         <KeyboardAwareScrollView
-          style={styles.scrollView}
+          className="flex-1"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          <View style={styles.headerSection}>
-            <View style={styles.headerTitleRow}>
-              <MaterialCommunityIcons
-                name={
-                  transaction.type === 'expense' ? 'cash-minus' : 'cash-plus'
-                }
-                size={32}
-                color={accentColor}
-              />
-              <Text style={styles.headerTitle}>Edit Transaction</Text>
-            </View>
-            <Text style={styles.headerSubtitle}>
-              {transaction.type === 'expense'
+          <FormHeader
+            icon={transaction.type === 'expense' ? 'cash-minus' : 'cash-plus'}
+            iconColor={accentColor}
+            title="Edit Transaction"
+            subtitle={
+              transaction.type === 'expense'
                 ? 'Update your expense details'
-                : 'Update your income details'}
-            </Text>
-          </View>
+                : 'Update your income details'
+            }
+          />
 
-          <Card
-            style={[
-              styles.formCard,
-              Platform.OS === 'android' && styles.cardAndroid,
-            ]}
-            elevation={Platform.OS === 'android' ? 0 : 4}>
-            <View style={styles.cardContent}>
-              {errorMessage && (
-                <View style={styles.errorContainer}>
-                  <MaterialCommunityIcons
-                    name="alert-circle"
-                    size={20}
-                    color="#C62828"
-                  />
-                  <Text style={styles.errorMessage}>{errorMessage}</Text>
-                </View>
-              )}
+          <FormCard>
+            {errorMessage && <FormError message={errorMessage} />}
 
-              {/* Title */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Title</Text>
-                <View style={styles.inputWrapper}>
-                  <MaterialCommunityIcons
-                    name="text"
-                    size={20}
-                    color={PRIMARY_COLOR}
-                    style={styles.inputIcon}
-                  />
-                  <TextInput
-                    placeholder={`Enter ${transaction.type} title`}
-                    placeholderTextColor="#999"
-                    autoCorrect={false}
-                    value={title}
-                    onChangeText={setTitle}
-                    style={styles.textInput}
-                    editable={!isSubmitting}
-                    maxLength={100}
-                  />
-                </View>
-                <Text style={styles.characterCount}>{title.length}/100</Text>
-              </View>
+            <TextField
+              label="Title"
+              icon="text"
+              placeholder={`Enter ${transaction.type} title`}
+              value={title}
+              onChangeText={setTitle}
+              disabled={isSubmitting}
+              maxLength={100}
+            />
 
-              {/* Description */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>
-                  Description{' '}
-                  <Text style={styles.optionalText}>(Optional)</Text>
-                </Text>
-                <View style={styles.inputWrapper}>
-                  <MaterialCommunityIcons
-                    name="text-box"
-                    size={20}
-                    color={PRIMARY_COLOR}
-                    style={styles.inputIcon}
-                  />
-                  <TextInput
-                    placeholder="Enter description"
-                    placeholderTextColor="#999"
-                    autoCorrect={false}
-                    value={description}
-                    onChangeText={setDescription}
-                    style={styles.textInput}
-                    multiline
-                    numberOfLines={2}
-                    editable={!isSubmitting}
-                    maxLength={500}
-                  />
-                </View>
-                <Text style={styles.characterCount}>
-                  {description.length}/500
-                </Text>
-              </View>
+            <TextField
+              label="Description"
+              optional
+              icon="text-box"
+              placeholder="Enter description"
+              value={description}
+              onChangeText={setDescription}
+              disabled={isSubmitting}
+              multiline
+              numberOfLines={2}
+              maxLength={500}
+            />
 
-              {/* Category */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Category</Text>
-                <CategorySelector
-                  categories={
-                    transaction.type === 'expense'
-                      ? EXPENSE_CATEGORIES
-                      : INCOME_CATEGORIES
-                  }
-                  selectedCategory={category}
-                  onSelect={setCategory}
-                  disabled={isSubmitting}
-                  placeholder="Select category"
-                />
-              </View>
+            <FormSection label="Category">
+              <CategorySelector
+                categories={
+                  transaction.type === 'expense'
+                    ? EXPENSE_CATEGORIES
+                    : INCOME_CATEGORIES
+                }
+                selectedCategory={category}
+                onSelect={setCategory}
+                disabled={isSubmitting}
+                placeholder="Select category"
+              />
+            </FormSection>
 
-              {/* Amount */}
-              <View style={styles.inputContainer}>
-                <AmountInput
-                  value={amount}
-                  onChangeText={setAmount}
-                  currencySymbol={currency.symbol}
-                  disabled={isSubmitting}
-                  label={`Amount (${currency.symbol})`}
-                />
-              </View>
+            <FormSection>
+              <AmountInput
+                value={amount}
+                onChangeText={setAmount}
+                currencySymbol={currency.symbol}
+                disabled={isSubmitting}
+                label={`Amount (${currency.symbol})`}
+              />
+            </FormSection>
 
-              {/* Date */}
-              <View style={styles.inputContainer}>
-                <DateInput
-                  date={date}
-                  onConfirm={setDate}
-                  disabled={isSubmitting}
-                  label="Date"
-                />
-              </View>
+            <FormSection>
+              <DateInput
+                date={date}
+                onConfirm={setDate}
+                disabled={isSubmitting}
+                label="Date"
+              />
+            </FormSection>
 
-              {/* Image — only for expenses */}
-              {transaction.type === 'expense' && (
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>
-                    Receipt/Image{' '}
-                    <Text style={styles.optionalText}>(Optional)</Text>
+            {/* Receipt: only expenses have one */}
+            {transaction.type === 'expense' && (
+              <ReceiptField
+                image={image}
+                disabled={isSubmitting}
+                onPick={() => setImagePickerVisible(true)}
+                onRemove={() => setImage(null)}
+              />
+            )}
+
+            <View className="mt-5">
+              {isSubmitting ? (
+                <View className="flex-row items-center justify-center py-[15px]">
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text className="ml-2.5 font-sans text-base text-primary">
+                    Updating Transaction...
                   </Text>
-                  {image ? (
-                    <View style={styles.imageContainer}>
-                      <Image
-                        source={{uri: image}}
-                        style={styles.imagePreview}
-                      />
-                      <View style={styles.imageActions}>
-                        <TouchableOpacity
-                          style={styles.imageActionButton}
-                          onPress={() =>
-                            !isSubmitting && setImagePickerVisible(true)
-                          }
-                          disabled={isSubmitting}>
-                          <MaterialCommunityIcons
-                            name="camera-switch"
-                            size={20}
-                            color={PRIMARY_COLOR}
-                          />
-                          <Text style={styles.imageActionText}>Change</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[
-                            styles.imageActionButton,
-                            styles.removeButton,
-                          ]}
-                          onPress={() => setImage(null)}
-                          disabled={isSubmitting}>
-                          <MaterialCommunityIcons
-                            name="delete"
-                            size={20}
-                            color={EXPENSE_COLOR}
-                          />
-                          <Text
-                            style={[styles.imageActionText, styles.removeText]}>
-                            Remove
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.imageUploadButton}
-                      onPress={() =>
-                        !isSubmitting && setImagePickerVisible(true)
-                      }
-                      disabled={isSubmitting}>
-                      <MaterialCommunityIcons
-                        name="camera-plus"
-                        size={32}
-                        color={PRIMARY_COLOR}
-                      />
-                      <Text style={styles.imageUploadText}>
-                        Add Receipt Image
-                      </Text>
-                      <Text style={styles.imageUploadSubtext}>
-                        Tap to take photo or choose from gallery
-                      </Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
+              ) : (
+                <FormButton
+                  buttonTitle="Update Transaction"
+                  onPress={handleSubmit}
+                  disabled={!isFormValid()}
+                  style={!isFormValid() ? DISABLED_BUTTON : undefined}
+                />
               )}
-
-              {/* Submit */}
-              <View style={styles.buttonContainer}>
-                {isSubmitting ? (
-                  <View style={styles.submittingContainer}>
-                    <ActivityIndicator size="small" color={PRIMARY_COLOR} />
-                    <Text style={styles.submittingText}>
-                      Updating Transaction...
-                    </Text>
-                  </View>
-                ) : (
-                  <FormButton
-                    buttonTitle="Update Transaction"
-                    onPress={handleSubmit}
-                    disabled={!isFormValid()}
-                    style={[
-                      styles.submitButton,
-                      !isFormValid() && styles.disabledButton,
-                    ]}
-                  />
-                )}
-              </View>
             </View>
-          </Card>
+          </FormCard>
         </KeyboardAwareScrollView>
 
         <ImagePickerModal
@@ -457,174 +332,3 @@ const EditTransactionScreen = ({
 };
 
 export default EditTransactionScreen;
-
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  scrollView: {flex: 1},
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: BACKGROUND_COLOR,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: PRIMARY_COLOR,
-    marginTop: 15,
-    fontFamily: 'Lato-Regular',
-  },
-  headerSection: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 30,
-    paddingBottom: 20,
-  },
-  headerTitleRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 8},
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginLeft: 12,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  formCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginBottom: 40,
-  },
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-  cardContent: {padding: 30},
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFEBEE',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#F44336',
-  },
-  errorMessage: {
-    color: '#C62828',
-    fontSize: 14,
-    fontFamily: 'Lato-Regular',
-    marginLeft: 10,
-    flex: 1,
-  },
-  inputContainer: {marginBottom: 20},
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 8,
-    fontFamily: 'Lato-Bold',
-  },
-  optionalText: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: '#999',
-    fontFamily: 'Lato-Regular',
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-  },
-  inputIcon: {marginRight: 12},
-  textInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-    textAlignVertical: 'top',
-  },
-  characterCount: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-    textAlign: 'right',
-    fontFamily: 'Lato-Regular',
-  },
-  imageContainer: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    padding: 15,
-  },
-  imagePreview: {width: '100%', height: 200, borderRadius: 8, marginBottom: 15},
-  imageActions: {flexDirection: 'row', justifyContent: 'space-between'},
-  imageActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 0.48,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: PRIMARY_COLOR,
-    justifyContent: 'center',
-  },
-  removeButton: {borderColor: EXPENSE_COLOR},
-  imageActionText: {
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: '600',
-    color: PRIMARY_COLOR,
-    fontFamily: 'Lato-Bold',
-  },
-  removeText: {color: EXPENSE_COLOR},
-  imageUploadButton: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#E8EBF7',
-    borderStyle: 'dashed',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  imageUploadText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: PRIMARY_COLOR,
-    marginTop: 12,
-    fontFamily: 'Lato-Bold',
-  },
-  imageUploadSubtext: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  buttonContainer: {marginTop: 20},
-  submitButton: {backgroundColor: PRIMARY_COLOR},
-  disabledButton: {opacity: 0.5},
-  submittingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 15,
-  },
-  submittingText: {
-    fontSize: 16,
-    color: PRIMARY_COLOR,
-    marginLeft: 10,
-    fontFamily: 'Lato-Regular',
-  },
-});

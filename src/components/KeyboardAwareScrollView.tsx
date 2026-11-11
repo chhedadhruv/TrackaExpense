@@ -1,5 +1,12 @@
 import React from 'react';
+import {cssInterop} from 'nativewind';
 import {KeyboardAwareScrollView as BaseKeyboardAwareScrollView} from 'react-native-keyboard-controller';
+
+// Lets screens style the scroll view with NativeWind classes (className, contentContainerClassName).
+cssInterop(BaseKeyboardAwareScrollView, {
+  className: 'style',
+  contentContainerClassName: 'contentContainerStyle',
+});
 
 /**
  * How far above the keyboard the focused field is kept, in dp. The library's default is 0, which
@@ -9,7 +16,10 @@ import {KeyboardAwareScrollView as BaseKeyboardAwareScrollView} from 'react-nati
  */
 export const KEYBOARD_BOTTOM_OFFSET = 96;
 
-type Props = React.ComponentProps<typeof BaseKeyboardAwareScrollView>;
+type Props = React.ComponentProps<typeof BaseKeyboardAwareScrollView> & {
+  className?: string;
+  contentContainerClassName?: string;
+};
 
 /** The app's keyboard-aware scroll container. Use this instead of the library's own. */
 export const KeyboardAwareScrollView = ({
