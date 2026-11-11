@@ -3,7 +3,7 @@
   
   # TrackaExpense
   
-  ### 💰 Your Smart Personal Finance Companion
+  ### Your Smart Personal Finance Companion
   
   [![React Native](https://img.shields.io/badge/React%20Native-0.76.5-61DAFB?style=for-the-badge&logo=react&logoColor=white)](https://reactnative.dev/)
   [![Firebase](https://img.shields.io/badge/Firebase-21.6.1-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
@@ -18,39 +18,39 @@
 
 ---
 
-## 📱 About TrackaExpense
+## About TrackaExpense
 
 TrackaExpense is a modern, feature-rich expense tracking application designed to help you take control of your finances. With an intuitive interface, powerful analytics, and seamless cloud synchronization, managing your money has never been easier.
 
-### ✨ Why TrackaExpense?
+### Why TrackaExpense?
 
-- **🚀 100% Ad-Free** - Pure financial tracking experience
-- **🔒 Secure & Private** - Your data is encrypted and protected
-- **☁️ Cloud Sync** - Access your data from anywhere
-- **📊 Smart Analytics** - Visual insights into your spending patterns
-- **👥 Bill Splitting** - Split expenses with friends and groups
-- **🎯 Savings Goals** - Track and achieve your financial goals
-- **📸 Receipt Management** - Capture and store receipts
-- **🔔 Smart Reminders** - Never miss tracking your expenses
+- **100% Ad-Free** - Pure financial tracking experience
+- **Secure & Private** - Your data is encrypted and protected
+- **Cloud Sync** - Access your data from anywhere
+- **Smart Analytics** - Visual insights into your spending patterns
+- **Bill Splitting** - Split expenses with friends and groups
+- **Savings Goals** - Track and achieve your financial goals
+- **Receipt Management** - Capture and store receipts
+- **Smart Reminders** - Never miss tracking your expenses
 
 ---
 
-## ✨ Features
+## Features
 
-### 🏠 **Dashboard**
+### **Dashboard**
 - **Real-time Overview** - View total expenses, income, and balance at a glance
 - **Recent Transactions** - Quick access to your latest financial activities
 - **Time Range Filters** - View data for 7 days, 30 days, 3 months, 6 months, 1 year, or all time
 - **Quick Actions** - Fast access to add income or expense
 
-### 📊 **Statistics & Analytics**
+### **Statistics & Analytics**
 - **Interactive Charts** - Beautiful bar charts and pie charts
 - **Category Breakdown** - See spending by category with visual representations
 - **Trend Analysis** - Track income and expense patterns over time
 - **Custom Date Ranges** - Analyze specific time periods
 - **Export Data** - Share and backup your financial reports
 
-### 💵 **Transaction Management**
+### **Transaction Management**
 - **Quick Entry** - Add income or expenses in seconds
 - **Rich Categories** - Organize with pre-defined or custom categories
 - **Receipt Capture** - Take photos or upload receipt images
@@ -58,14 +58,14 @@ TrackaExpense is a modern, feature-rich expense tracking application designed to
 - **Edit & Delete** - Full control over your transaction history
 - **Search & Filter** - Easily find specific transactions
 
-### 🎯 **Savings Goals**
+### **Savings Goals**
 - **Goal Setting** - Create multiple savings goals with target amounts
 - **Progress Tracking** - Visual progress bars showing achievement
 - **Deposit & Withdraw** - Manage your savings with ease
 - **Goal History** - Track all changes to your savings
 - **Multiple Goals** - Manage various savings objectives simultaneously
 
-### 👥 **Bill Splitting**
+### **Bill Splitting**
 - **Group Management** - Create groups for different occasions
 - **Split Methods** - Split equally or by custom percentages
 - **Expense Tracking** - Keep track of who paid what
@@ -74,14 +74,14 @@ TrackaExpense is a modern, feature-rich expense tracking application designed to
 - **Group Notifications** - Stay updated on group activities
 - **Split History** - View all past splits and settlements
 
-### 🔔 **Smart Notifications**
+### **Smart Notifications**
 - **Daily Reminders** - Gentle nudges to track your expenses
 - **Fun Messages** - Motivational and engaging notification messages
 - **Split Alerts** - Get notified about group activities and settlements
 - **Customizable** - Control notification preferences
 - **Context-Aware** - Smart notifications based on your activity
 
-### 👤 **Profile & Settings**
+### **Profile & Settings**
 - **Profile Management** - Update your name, email, and profile picture
 - **Authentication Options**:
   - Email/Password sign-in
@@ -92,7 +92,7 @@ TrackaExpense is a modern, feature-rich expense tracking application designed to
 - **Contact Support** - Easy access to customer support
 - **Account Deletion** - Full control with instant account deletion
 
-### 📸 **Receipt Management**
+### **Receipt Management**
 - **Photo Capture** - Take pictures directly from the app
 - **Gallery Upload** - Select existing photos from your device
 - **Image Storage** - Securely stored in Firebase Storage
@@ -101,7 +101,7 @@ TrackaExpense is a modern, feature-rich expense tracking application designed to
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ### Provider Stack
 
@@ -177,7 +177,7 @@ All colors are defined once in `src/constants/theme.ts` and imported by every sc
 
 ---
 
-## 🛠️ Technologies Used
+## Technologies Used
 
 ### **Core Framework**
 - **React Native 0.76.5** - Cross-platform mobile development
@@ -225,7 +225,7 @@ All colors are defined once in `src/constants/theme.ts` and imported by every sc
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### Prerequisites
 
@@ -359,7 +359,7 @@ npm run start:reset
 
 ---
 
-## 🔧 Build for Production
+## Build for Production
 
 ### Android APK
 
@@ -391,7 +391,7 @@ android/app/build/outputs/bundle/release/app-release.aab
 
 ---
 
-## 🔐 Privacy & Security
+## Privacy & Security
 
 TrackaExpense takes your privacy seriously:
 
@@ -406,7 +406,7 @@ For detailed information, see our [Privacy Policy](screens/PrivacyPolicyScreen.t
 
 ---
 
-## 📝 Available Scripts
+## Available Scripts
 
 | Command | Description |
 |---------|-------------|
@@ -424,7 +424,7 @@ For detailed information, see our [Privacy Policy](screens/PrivacyPolicyScreen.t
 
 ---
 
-## 🐛 Known Issues
+## Known Issues
 
 - Apple Sign-In is only available on iOS devices
 - Some notification features may require proper Firebase configuration
@@ -432,13 +432,13 @@ For detailed information, see our [Privacy Policy](screens/PrivacyPolicyScreen.t
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🙏 Acknowledgements
+## Acknowledgements
 
 - [React Native](https://reactnative.dev/) - The amazing framework
 - [Firebase](https://firebase.google.com/) - Backend infrastructure
@@ -451,29 +451,29 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ---
 
-## 📧 Contact & Support
+## Contact & Support
 
 **Dhruv Chheda**
 
-- 🌐 Website: [dhruvchheda.com](https://dhruvchheda.com)
-- 📧 Email: me@dhruvchheda.com
-- 🐙 GitHub: [@chhedadhruv](https://github.com/chhedadhruv)
-- 💼 LinkedIn: [Dhruv Chheda](https://linkedin.com/in/dhruvchheda)
+- Website: [dhruvchheda.com](https://dhruvchheda.com)
+- Email: me@dhruvchheda.com
+- GitHub: [@chhedadhruv](https://github.com/chhedadhruv)
+- LinkedIn: [Dhruv Chheda](https://linkedin.com/in/dhruvchheda)
 
 ---
 
-## ⭐ Show Your Support
+## Show Your Support
 
 If you find TrackaExpense helpful, please consider:
-- ⭐ Starring this repository
-- 🐛 Reporting bugs
-- 💡 Suggesting new features
-- 🔀 Contributing to the code
-- 📢 Sharing with friends
+- Starring this repository
+- Reporting bugs
+- Suggesting new features
+- Contributing to the code
+- Sharing with friends
 
 ---
 
 <div align="center">
-  <p>Made with ❤️ by <a href="https://dhruvchheda.com">Dhruv Chheda</a></p>
+  <p>Made by <a href="https://dhruvchheda.com">Dhruv Chheda</a></p>
   <p>© 2025 TrackaExpense. All rights reserved.</p>
 </div>
