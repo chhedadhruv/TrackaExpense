@@ -1,9 +1,12 @@
-import React, {useContext, useEffect, useState} from 'react';
+import React, {useContext, useEffect, useMemo, useState} from 'react';
 import {
   CommonActions,
+  DefaultTheme,
   NavigationContainer,
   NavigationContainerRef,
+  type Theme,
 } from '@react-navigation/native';
+import {useTheme} from '../src/theme';
 import AuthStack from './AuthStack';
 import AppStack from './AppStack';
 import {AuthContext} from './AuthProvider';
@@ -115,6 +118,23 @@ const Routes = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const {colors, isDark} = useTheme();
+  const navigationTheme = useMemo<Theme>(
+    () => ({
+      dark: isDark,
+      colors: {
+        primary: colors.primary,
+        background: colors.background,
+        card: colors.surface,
+        text: colors.text,
+        border: colors.border,
+        notification: colors.expense,
+      },
+      fonts: DefaultTheme.fonts,
+    }),
+    [colors, isDark],
+  );
+
   if (initializing) {
     return null;
   }
@@ -122,6 +142,7 @@ const Routes = () => {
   return (
     <NavigationContainer
       ref={navigationRef}
+      theme={navigationTheme}
       linking={linking}
       onStateChange={() => {
         const routeName = navigationRef.current?.getCurrentRoute()?.name;
