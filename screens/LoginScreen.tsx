@@ -4,11 +4,9 @@ import {
   Text,
   TouchableOpacity,
   Image,
-  StyleSheet,
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import {Card} from 'react-native-paper';
 import FormInput from '../components/FormInput';
 import FormButton from '../components/FormButton';
 import {AuthContext} from '../navigation/AuthProvider';
@@ -42,7 +40,7 @@ import {
   setUserId,
 } from '@react-native-firebase/crashlytics';
 import * as AnalyticsService from '../src/services/AnalyticsService';
-import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../src/constants/theme';
+import {useTheme} from '../src/theme';
 
 interface PasswordValidation {
   length: boolean;
@@ -53,6 +51,7 @@ interface PasswordValidation {
 }
 
 const LoginScreen = ({navigation}: {navigation: any}) => {
+  const {colors} = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -251,34 +250,53 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
     }
   };
 
+  const googleButton = (
+    <TouchableOpacity
+      className="mb-2.5 flex-row items-center justify-center rounded-lg border border-border bg-surface-muted px-4 py-3"
+      onPress={handleGoogleSignIn}
+      disabled={loading}>
+      <Image
+        source={{
+          uri: 'https://developers.google.com/identity/images/g-logo.png',
+        }}
+        className="mr-3 h-5 w-5"
+      />
+      <Text className="font-sans text-base font-medium text-text">
+        Sign in with Google
+      </Text>
+    </TouchableOpacity>
+  );
+
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-background">
       <KeyboardAwareScrollView
         style={{flex: 1, width: '100%'}}
         keyboardShouldPersistTaps="always"
         showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          <View style={styles.logoContainer}>
+        <View className="flex-1 justify-center px-5 pt-10">
+          <View className="mb-[30px] items-center">
             <Image
               source={require('../assets/login-logo.png')}
-              style={styles.logo}
+              className="mb-6 h-[120px] w-[120px] rounded-[27px]"
+              resizeMode="contain"
             />
-            <Text style={styles.welcomeText}>Welcome Back!</Text>
-            <Text style={styles.subtitleText}>
+            <Text className="mb-2 font-heading text-[28px] font-bold text-primary">
+              Welcome Back!
+            </Text>
+            <Text className="text-center font-sans text-base text-text-secondary">
               Sign in to continue tracking your expenses
             </Text>
           </View>
 
-          <Card
-            style={[
-              styles.formCard,
-              Platform.OS === 'android' && styles.cardAndroid,
-            ]}
-            elevation={Platform.OS === 'android' ? 0 : 4}>
-            <View style={styles.cardContent}>
+          <View className="mb-5 rounded-[20px] border border-card-border bg-surface ios:shadow-lg">
+            <View className="p-[30px]">
               {errorMessage && (
-                <View style={styles.errorContainer}>
-                  <Text style={styles.errorMessage}>{errorMessage}</Text>
+                <View
+                  accessibilityRole="alert"
+                  className="mb-5 rounded-lg border-l-4 border-expense bg-expense-soft p-3">
+                  <Text className="font-sans text-sm text-expense-text">
+                    {errorMessage}
+                  </Text>
                 </View>
               )}
               <FormInput
@@ -290,7 +308,7 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
                 autoCapitalize="none"
                 autoCorrect={false}
               />
-              <View style={styles.passwordContainer}>
+              <View className="relative mb-2.5">
                 <FormInput
                   labelValue={password}
                   onChangeText={text => {
@@ -302,18 +320,22 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
                   secureTextEntry={!showPassword}
                 />
                 <TouchableOpacity
-                  style={styles.eyeIcon}
+                  className="absolute right-[15px] top-1/2 z-10 -translate-y-2.5"
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    showPassword ? 'Hide password' : 'Show password'
+                  }
                   onPress={() => setShowPassword(!showPassword)}>
                   <MaterialCommunityIcons
                     name={showPassword ? 'eye-off' : 'eye'}
                     size={20}
-                    color="#666"
+                    color={colors.textSecondary}
                   />
                 </TouchableOpacity>
               </View>
               {password.length > 0 && (
-                <View style={styles.validationContainer}>
-                  <Text style={styles.validationTitle}>
+                <View className="mb-[15px] rounded-lg border-l-[3px] border-primary bg-surface-muted p-3">
+                  <Text className="mb-2 font-sans-bold text-sm font-semibold text-text">
                     Password Requirements:
                   </Text>
                   {(
@@ -337,12 +359,13 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
                       ],
                     ] as [boolean, string][]
                   ).map(([met, label]) => (
-                    <View key={label} style={styles.validationItem}>
+                    <View key={label} className="mb-1">
                       <Text
-                        style={[
-                          styles.validationText,
-                          met && styles.validText,
-                        ]}>
+                        className={`font-sans text-[13px] ${
+                          met
+                            ? 'font-semibold text-income-text'
+                            : 'text-text-secondary'
+                        }`}>
                         {met ? '✓' : '○'} {label}
                       </Text>
                     </View>
@@ -352,79 +375,59 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
               {loading ? (
                 <ActivityIndicator
                   size="large"
-                  color={PRIMARY_COLOR}
-                  style={styles.loadingIndicator}
+                  color={colors.primary}
+                  className="my-5"
                 />
               ) : (
                 <FormButton buttonTitle="Sign In" onPress={handleSignIn} />
               )}
-              <View style={styles.dividerContainer}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>OR</Text>
-                <View style={styles.dividerLine} />
+              <View className="my-5 flex-row items-center">
+                <View className="h-px flex-1 bg-border" />
+                <Text className="mx-[15px] font-sans text-sm text-text-secondary">
+                  OR
+                </Text>
+                <View className="h-px flex-1 bg-border" />
               </View>
               {Platform.OS === 'ios' && isAppleSignInAvailable ? (
                 <>
                   <TouchableOpacity
-                    style={styles.appleButton}
+                    className="mb-2.5 flex-row items-center justify-center rounded-lg bg-inverse px-4 py-3"
                     onPress={handleAppleSignIn}
                     disabled={loading}>
                     <MaterialCommunityIcons
                       name="apple"
                       size={20}
-                      color="#FFFFFF"
-                      style={styles.appleIcon}
+                      color={colors.onInverse}
+                      className="mr-3"
                     />
-                    <Text style={styles.appleButtonText}>
+                    <Text className="font-sans text-base font-medium text-on-inverse">
                       Sign in with Apple
                     </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.googleButton}
-                    onPress={handleGoogleSignIn}
-                    disabled={loading}>
-                    <Image
-                      source={{
-                        uri: 'https://developers.google.com/identity/images/g-logo.png',
-                      }}
-                      style={styles.googleIcon}
-                    />
-                    <Text style={styles.googleButtonText}>
-                      Sign in with Google
-                    </Text>
-                  </TouchableOpacity>
+                  {googleButton}
                 </>
               ) : (
-                <TouchableOpacity
-                  style={styles.googleButton}
-                  onPress={handleGoogleSignIn}
-                  disabled={loading}>
-                  <Image
-                    source={{
-                      uri: 'https://developers.google.com/identity/images/g-logo.png',
-                    }}
-                    style={styles.googleIcon}
-                  />
-                  <Text style={styles.googleButtonText}>
-                    Sign in with Google
-                  </Text>
-                </TouchableOpacity>
+                googleButton
               )}
               <TouchableOpacity
-                style={styles.forgotButton}
+                className="mt-5 items-center"
                 onPress={() => navigation.navigate('ForgotPassword')}>
-                <Text style={styles.forgotButtonText}>Forgot Password?</Text>
+                <Text className="font-sans text-base font-medium text-primary">
+                  Forgot Password?
+                </Text>
               </TouchableOpacity>
             </View>
-          </Card>
+          </View>
 
-          <View style={styles.signupContainer}>
+          <View className="items-center pb-10">
             <TouchableOpacity
-              style={styles.signupButton}
+              className="p-[15px]"
               onPress={() => navigation.navigate('Signup')}>
-              <Text style={styles.signupButtonText}>
+              <Text className="text-center font-sans text-base text-text-secondary">
                 Don't have an account?{' '}
-                <Text style={styles.signupLinkText}>Create one here</Text>
+                <Text className="font-semibold text-primary">
+                  Create one here
+                </Text>
               </Text>
             </TouchableOpacity>
           </View>
@@ -435,147 +438,3 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
 };
 
 export default LoginScreen;
-
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 40,
-    justifyContent: 'center',
-  },
-  logoContainer: {alignItems: 'center', marginBottom: 30},
-  logo: {
-    height: 120,
-    width: 120,
-    borderRadius: 27,
-    resizeMode: 'contain',
-    marginBottom: 24,
-  },
-  welcomeText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginBottom: 8,
-  },
-  subtitleText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  formCard: {backgroundColor: '#FFFFFF', borderRadius: 20, marginBottom: 20},
-  cardContent: {padding: 30},
-  errorContainer: {
-    backgroundColor: '#FFEBEE',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#F44336',
-  },
-  errorMessage: {color: '#C62828', fontSize: 14, fontFamily: 'Lato-Regular'},
-  loadingIndicator: {marginVertical: 20},
-  forgotButton: {alignItems: 'center', marginTop: 20},
-  forgotButtonText: {
-    fontSize: 16,
-    color: PRIMARY_COLOR,
-    fontFamily: 'Lato-Regular',
-    fontWeight: '500',
-  },
-  signupContainer: {alignItems: 'center', paddingBottom: 40},
-  signupButton: {padding: 15},
-  signupButtonText: {
-    fontSize: 16,
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-    textAlign: 'center',
-  },
-  signupLinkText: {color: PRIMARY_COLOR, fontWeight: '600'},
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  dividerLine: {flex: 1, height: 1, backgroundColor: '#E0E0E0'},
-  dividerText: {
-    marginHorizontal: 15,
-    fontSize: 14,
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-  },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 10,
-    elevation: Platform.OS === 'android' ? 0 : 2,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  googleIcon: {width: 20, height: 20, marginRight: 12},
-  googleButtonText: {
-    fontSize: 16,
-    color: '#333',
-    fontFamily: 'Lato-Regular',
-    fontWeight: '500',
-  },
-  appleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#000000',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 10,
-    elevation: Platform.OS === 'android' ? 0 : 2,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  appleIcon: {marginRight: 12},
-  appleButtonText: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontFamily: 'Lato-Regular',
-    fontWeight: '500',
-  },
-  passwordContainer: {position: 'relative', marginBottom: 10},
-  eyeIcon: {
-    position: 'absolute',
-    right: 15,
-    top: '50%',
-    transform: [{translateY: -10}],
-    zIndex: 1,
-  },
-  validationContainer: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 15,
-    borderLeftWidth: 3,
-    borderLeftColor: PRIMARY_COLOR,
-  },
-  validationTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    fontFamily: 'Lato-Bold',
-    marginBottom: 8,
-  },
-  validationItem: {marginBottom: 4},
-  validationText: {fontSize: 13, color: '#666', fontFamily: 'Lato-Regular'},
-  validText: {color: '#4CAF50', fontWeight: '600'},
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-});
