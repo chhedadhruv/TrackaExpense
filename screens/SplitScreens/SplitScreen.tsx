@@ -44,6 +44,8 @@ import SplitNotificationService from '../../services/SplitNotificationService';
 import ReminderNotificationService from '../../services/ReminderNotificationService';
 import {getConfig} from '../../src/services/RemoteConfigService';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
+import {ErrorState, LoadingState} from '../../src/components/ScreenState';
+import {useLoadFailure} from '../../src/hooks/useLoadFailure';
 import type {McIconName} from '../../src/types/icons';
 import {snackbar} from '../../src/utils/snackbarStore';
 
@@ -106,6 +108,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
   const [category, setCategory] = useState<string | null>(null);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const {failed, succeed, fail} = useLoadFailure();
   const [saving, setSaving] = useState(false);
   const [_unregisteredName, setUnregisteredName] = useState('');
   const [_splitHistory, setSplitHistory] = useState<object[]>([]);
@@ -152,8 +155,10 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
         return {id: doc.id, ...groupData, memberDetails} as Group;
       });
       setGroups(fetchedGroups);
+      succeed();
     } catch (err) {
-      snackbar.error('Failed to fetch groups');
+      // A failed load must not read as "No groups created yet".
+      fail(err);
     } finally {
       setLoading(false);
     }
@@ -691,12 +696,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
   };
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading groups...</Text>
-      </View>
-    );
+    return <LoadingState message="Loading groups..." />;
   }
 
   return (
@@ -924,7 +924,13 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                 </TouchableOpacity>
               </View>
             </View>
-            {groups.length === 0 ? (
+            {failed ? (
+              <ErrorState
+                fill={false}
+                title="Could not load your groups"
+                onRetry={fetchGroups}
+              />
+            ) : groups.length === 0 ? (
               <Card
                 style={[
                   styles.emptyStateCard,
@@ -961,18 +967,6 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {flex: 1, backgroundColor: colors.background},
     scrollView: {flex: 1},
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.background,
-    },
-    loadingText: {
-      fontSize: 16,
-      color: colors.primary,
-      marginTop: 15,
-      fontFamily: 'Lato-Regular',
-    },
     headerSection: {
       alignItems: 'center',
       paddingHorizontal: 20,

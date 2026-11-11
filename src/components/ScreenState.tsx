@@ -32,17 +32,16 @@ interface LoadingStateProps extends BaseProps {
   message?: string;
 }
 
-export const LoadingState = ({
-  message = 'Loading...',
-  fill = true,
-}: LoadingStateProps) => {
+export const LoadingState = ({message, fill = true}: LoadingStateProps) => {
   const {colors} = useTheme();
   return (
     <View className={containerClass(fill)} accessibilityRole="progressbar">
       <ActivityIndicator size="large" color={colors.primary} />
-      <Text className="mt-[15px] font-sans text-base text-primary">
-        {message}
-      </Text>
+      {message ? (
+        <Text className="mt-[15px] font-sans text-base text-primary">
+          {message}
+        </Text>
+      ) : null}
     </View>
   );
 };
