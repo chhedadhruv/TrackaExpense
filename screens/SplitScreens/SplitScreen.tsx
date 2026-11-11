@@ -45,6 +45,7 @@ import ReminderNotificationService from '../../services/ReminderNotificationServ
 import {getConfig} from '../../src/services/RemoteConfigService';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../../src/constants/theme';
 import type {McIconName} from '../../src/types/icons';
+import {snackbar} from '../../src/utils/snackbarStore';
 
 interface UserDetail {
   email: string;
@@ -232,7 +233,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
       });
       setGroups(fetchedGroups);
     } catch (err) {
-      Alert.alert('Error', 'Failed to fetch groups');
+      snackbar.error('Failed to fetch groups');
     } finally {
       setLoading(false);
     }
@@ -341,14 +342,13 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
         setUserDetails({name: 'Not Registered', email: fallbackEmail});
       }
     } catch (_) {
-      Alert.alert('Error', 'Failed to fetch user');
+      snackbar.error('Failed to fetch user');
     }
   };
 
   const toggleUserSelection = (user: UserDetail) => {
     if (user.email === currentUser?.email) {
-      Alert.alert(
-        'Cannot Add Yourself',
+      snackbar.error(
         'You cannot add yourself to the group. You are automatically included as the group creator.',
       );
       return;
@@ -382,7 +382,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
       setIsFormVisible(true);
       setEditingGroupId(group.id);
     } catch (_) {
-      Alert.alert('Error', 'Failed to prepare group for editing');
+      snackbar.error('Failed to prepare group for editing');
     }
   };
 
@@ -409,25 +409,19 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
 
   const createGroup = async () => {
     if (!groupName.trim()) {
-      Alert.alert('Validation Error', 'Group name is required');
+      snackbar.error('Group name is required');
       return;
     }
     if (groupName.trim().length > 50) {
-      Alert.alert(
-        'Validation Error',
-        'Group name must be 50 characters or less',
-      );
+      snackbar.error('Group name must be 50 characters or less');
       return;
     }
     if (!category) {
-      Alert.alert('Validation Error', 'Please select a category');
+      snackbar.error('Please select a category');
       return;
     }
     if (selectedUsers.length === 0) {
-      Alert.alert(
-        'Validation Error',
-        'Please select at least one user to add to the group',
-      );
+      snackbar.error('Please select at least one user to add to the group');
       return;
     }
     if (saving) {
@@ -554,9 +548,8 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
             'Someone',
           {},
         ).catch(() => {});
-        Alert.alert('Success', 'Group updated successfully', [
-          {text: 'OK', onPress: resetGroupForm},
-        ]);
+        snackbar.success('Group updated successfully');
+        resetGroupForm();
       } else {
         groupData.createdAt = serverTimestamp();
         const groupRef = await addDoc(
@@ -630,12 +623,11 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
         )
           .then(() => refreshHistory())
           .catch(() => {});
-        Alert.alert('Success', 'Group created successfully', [
-          {text: 'OK', onPress: resetGroupForm},
-        ]);
+        snackbar.success('Group created successfully');
+        resetGroupForm();
       }
     } catch (err) {
-      Alert.alert('Error', 'Failed to create/update group');
+      snackbar.error('Failed to create/update group');
     } finally {
       setSaving(false);
     }
@@ -676,7 +668,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
               );
               await refreshHistory();
             } catch (_) {}
-            Alert.alert('Success', 'Group deleted successfully');
+            snackbar.success('Group deleted successfully');
           },
         },
       ],
