@@ -26,6 +26,7 @@ import {
   ref as createStorageRef,
 } from '@react-native-firebase/storage';
 import {reportError} from '../src/services/ErrorReporter';
+import {receiptFields} from '../src/utils/receipt';
 import {requestPushPermissionAfterFirstExpense} from '../src/services/PushService';
 import * as PerformanceService from '../src/services/PerformanceService';
 import * as AnalyticsService from '../src/services/AnalyticsService';
@@ -142,7 +143,8 @@ const AddExpense = ({navigation}: {navigation: any}) => {
           ...transactionMoneyFields(amount, currency.code),
           category,
           date,
-          image: imageUrl,
+          // Both fields: other screens read imageUrl, older apps and data use image.
+          ...receiptFields(imageUrl),
           createdAt: Timestamp.fromDate(new Date()),
           type: 'expense',
         };
