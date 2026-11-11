@@ -35,14 +35,8 @@ import {deleteSettlement} from '../../src/services/SettlementService';
 import {balanceEffect, majorOf} from '../../src/utils/amounts';
 import {toMajorNumber} from '../../src/utils/money';
 import {sharesMinor} from '../../src/utils/splitMath';
-import {
-  PRIMARY_COLOR,
-  BACKGROUND_COLOR,
-  EXPENSE_COLOR,
-} from '../../src/constants/theme';
+import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {snackbar} from '../../src/utils/snackbarStore';
-
-const SUCCESS_COLOR = '#25B07F';
 
 interface SplitUser {
   email: string;
@@ -82,6 +76,8 @@ const SplitDetailScreen = ({
   navigation: any;
 }) => {
   const {currency, formatAmount} = useCurrency();
+  const {colors} = useTheme();
+  const styles = useThemedStyles(createStyles);
   const {split: initialSplit, group} = route.params as {
     split: SplitData;
     group: Group;
@@ -367,7 +363,7 @@ const SplitDetailScreen = ({
               <MaterialCommunityIcons
                 name={isSettlement ? 'bank-transfer' : 'cash-multiple'}
                 size={32}
-                color={PRIMARY_COLOR}
+                color={colors.primary}
               />
               <Text style={styles.headerTitle}>
                 {isSettlement ? 'Settlement Details' : 'Split Details'}
@@ -390,7 +386,7 @@ const SplitDetailScreen = ({
                 <View style={styles.summaryIcon}>
                   <MaterialCommunityIcons
                     name={isSettlement ? 'bank-transfer' : 'cash-multiple'}
-                    color="#fff"
+                    color={colors.onPrimary}
                     size={24}
                   />
                 </View>
@@ -406,7 +402,7 @@ const SplitDetailScreen = ({
                       <MaterialCommunityIcons
                         name="repeat"
                         size={12}
-                        color="#677CD2"
+                        color={colors.primary}
                       />
                       <Text style={styles.recurringBadgeText}>
                         {split.recurring.frequency === 'weekly'
@@ -450,17 +446,9 @@ const SplitDetailScreen = ({
                   </View>
                 )}
                 {!isSettlement && split.notes ? (
-                  <View style={[styles.detailItem, {width: '100%'}]}>
+                  <View style={[styles.detailItem, styles.detailItemFull]}>
                     <Text style={styles.detailLabel}>Notes</Text>
-                    <Text
-                      style={[
-                        styles.detailValue,
-                        {
-                          fontFamily: 'Lato-Regular',
-                          fontSize: 14,
-                          fontWeight: '400',
-                        },
-                      ]}>
+                    <Text style={[styles.detailValue, styles.notesValue]}>
                       {split.notes}
                     </Text>
                   </View>
@@ -495,7 +483,11 @@ const SplitDetailScreen = ({
               onPress={() =>
                 navigation.navigate('CreateSplit', {group, split})
               }>
-              <MaterialCommunityIcons name="pencil" size={20} color="#FFFFFF" />
+              <MaterialCommunityIcons
+                name="pencil"
+                size={20}
+                color={colors.onPrimary}
+              />
               <Text style={styles.buttonText}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -504,7 +496,7 @@ const SplitDetailScreen = ({
               <MaterialCommunityIcons
                 name="trash-can"
                 size={20}
-                color="#FFFFFF"
+                color={colors.onPrimary}
               />
               <Text style={styles.buttonText}>Delete</Text>
             </TouchableOpacity>
@@ -517,192 +509,203 @@ const SplitDetailScreen = ({
 
 export default SplitDetailScreen;
 
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  scrollView: {flex: 1},
-  headerSection: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 30,
-    paddingBottom: 20,
-  },
-  headerTitleRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 8},
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginLeft: 12,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  summaryCard: {
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  cardContent: {padding: 25},
-  summaryHeader: {flexDirection: 'row', alignItems: 'center', marginBottom: 20},
-  summaryIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: PRIMARY_COLOR,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 15,
-  },
-  summaryInfo: {flex: 1},
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-    marginBottom: 4,
-  },
-  summaryAmount: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    fontFamily: 'Kufam-SemiBoldItalic',
-  },
-  detailsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  detailItem: {width: '48%', marginBottom: 15},
-  detailLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-    fontFamily: 'Lato-Regular',
-  },
-  detailValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  breakdownSection: {paddingHorizontal: 20, marginBottom: 20},
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#3A3B3E',
-    marginTop: 20,
-    marginBottom: 10,
-    marginLeft: 10,
-  },
-  transactionsCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    marginVertical: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    elevation: Platform.OS === 'android' ? 0 : 1,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-  },
-  transactionsCardImage: {borderRadius: 10},
-  transactionsCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flex: 1,
-    marginLeft: 10,
-  },
-  transactionsCardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  splitAmount: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: PRIMARY_COLOR,
-    marginTop: 4,
-    fontFamily: 'Lato-Bold',
-  },
-  positiveAmount: {color: SUCCESS_COLOR},
-  negativeAmount: {color: EXPENSE_COLOR},
-  percentageText: {fontSize: 12, color: '#959698', marginTop: 2},
-  roleText: {fontSize: 12, color: '#959698', marginTop: 2},
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 30,
-    gap: 15,
-  },
-  editButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: PRIMARY_COLOR,
-    paddingVertical: 15,
-    borderRadius: 12,
-    elevation: Platform.OS === 'android' ? 0 : 1,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-  },
-  deleteButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: EXPENSE_COLOR,
-    paddingVertical: 15,
-    borderRadius: 12,
-    elevation: Platform.OS === 'android' ? 0 : 1,
-    shadowColor: EXPENSE_COLOR,
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-    fontFamily: 'Lato-Bold',
-  },
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-  receiptSection: {paddingHorizontal: 20, marginBottom: 20},
-  receiptImage: {width: '100%', height: 200, borderRadius: 12, marginTop: 10},
-  receiptTapHint: {
-    fontSize: 12,
-    color: '#888',
-    textAlign: 'center',
-    marginTop: 6,
-    fontFamily: 'Lato-Regular',
-  },
-  recurringBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 6,
-    backgroundColor: '#EEF0FB',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  recurringBadgeText: {
-    fontSize: 11,
-    color: '#677CD2',
-    fontFamily: 'Lato-Regular',
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {flex: 1, backgroundColor: colors.background},
+    scrollView: {flex: 1},
+    headerSection: {
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: 30,
+      paddingBottom: 20,
+    },
+    headerTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    headerTitle: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: colors.primary,
+      fontFamily: 'Kufam-SemiBoldItalic',
+      marginLeft: 12,
+    },
+    headerSubtitle: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      fontFamily: 'Lato-Regular',
+    },
+    summaryCard: {
+      padding: 20,
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      marginHorizontal: 20,
+      marginBottom: 20,
+    },
+    cardContent: {padding: 25},
+    summaryHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    summaryIcon: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: colors.primaryFill,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 15,
+    },
+    summaryInfo: {flex: 1},
+    summaryTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.textStrong,
+      fontFamily: 'Lato-Bold',
+      marginBottom: 4,
+    },
+    summaryAmount: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: colors.primary,
+      fontFamily: 'Kufam-SemiBoldItalic',
+    },
+    detailsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+    },
+    detailItem: {width: '48%', marginBottom: 15},
+    detailItemFull: {width: '100%'},
+    notesValue: {fontFamily: 'Lato-Regular', fontSize: 14, fontWeight: '400'},
+    detailLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginBottom: 4,
+      fontFamily: 'Lato-Regular',
+    },
+    detailValue: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textStrong,
+      fontFamily: 'Lato-Bold',
+    },
+    breakdownSection: {paddingHorizontal: 20, marginBottom: 20},
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '500',
+      color: colors.text,
+      marginTop: 20,
+      marginBottom: 10,
+      marginLeft: 10,
+    },
+    transactionsCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 20,
+      marginVertical: 8,
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      elevation: Platform.OS === 'android' ? 0 : 1,
+      shadowColor: colors.shadow,
+      shadowOffset: {width: 0, height: 1},
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+    },
+    transactionsCardImage: {borderRadius: 10},
+    transactionsCardContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      flex: 1,
+      marginLeft: 10,
+    },
+    transactionsCardTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textStrong,
+      fontFamily: 'Lato-Bold',
+    },
+    splitAmount: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.primary,
+      marginTop: 4,
+      fontFamily: 'Lato-Bold',
+    },
+    positiveAmount: {color: colors.incomeText},
+    negativeAmount: {color: colors.expenseText},
+    percentageText: {fontSize: 12, color: colors.textMuted, marginTop: 2},
+    roleText: {fontSize: 12, color: colors.textMuted, marginTop: 2},
+    buttonContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingBottom: 30,
+      gap: 15,
+    },
+    editButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primaryFill,
+      paddingVertical: 15,
+      borderRadius: 12,
+      elevation: Platform.OS === 'android' ? 0 : 1,
+      shadowColor: colors.primaryFill,
+      shadowOffset: {width: 0, height: 1},
+      shadowOpacity: 0.15,
+      shadowRadius: 2,
+    },
+    deleteButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.expenseFill,
+      paddingVertical: 15,
+      borderRadius: 12,
+      elevation: Platform.OS === 'android' ? 0 : 1,
+      shadowColor: colors.expenseFill,
+      shadowOffset: {width: 0, height: 1},
+      shadowOpacity: 0.15,
+      shadowRadius: 2,
+    },
+    buttonText: {
+      color: colors.onPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+      marginLeft: 8,
+      fontFamily: 'Lato-Bold',
+    },
+    cardAndroid: {borderWidth: 1, borderColor: colors.cardBorder},
+    receiptSection: {paddingHorizontal: 20, marginBottom: 20},
+    receiptImage: {width: '100%', height: 200, borderRadius: 12, marginTop: 10},
+    receiptTapHint: {
+      fontSize: 12,
+      color: colors.textMuted,
+      textAlign: 'center',
+      marginTop: 6,
+      fontFamily: 'Lato-Regular',
+    },
+    recurringBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      marginTop: 6,
+      backgroundColor: colors.primarySoft,
+      alignSelf: 'flex-start',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 8,
+    },
+    recurringBadgeText: {
+      fontSize: 11,
+      color: colors.primary,
+      fontFamily: 'Lato-Regular',
+    },
+  });
