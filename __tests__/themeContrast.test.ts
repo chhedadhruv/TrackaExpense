@@ -15,11 +15,10 @@ describe.each([
   ['light', lightColors],
   ['dark', darkColors],
 ] as const)('%s palette contrast', (name, c) => {
-  // The light palette is the app's existing brand colours, kept unchanged. Green and amber are
-  // below the 3:1 UI guideline on white (green 2.8, amber 2.1), so light mode only has a floor
-  // that stops them getting worse; the new dark palette meets the full threshold.
-  const greenMin = name === 'light' ? 2.5 : AA_LARGE;
-  const amberMin = name === 'light' ? 1.8 : AA_LARGE;
+  // Both palettes meet the 3:1 UI threshold for green and amber. The light palette's green and
+  // amber were deepened from the original brand shades (2.8:1 and 2.0:1 on white) to get there.
+  const greenMin = AA_LARGE;
+  const amberMin = AA_LARGE;
 
   it.each(surfaces(c))('body text is readable on %s', (_label, bg) => {
     expect(contrastRatio(c.text, bg)).toBeGreaterThanOrEqual(AA_TEXT);
@@ -47,7 +46,6 @@ describe.each([
   });
 
   it('income and expense button text is readable on its fill', () => {
-    // Light keeps today's brand fills (green is 2.8:1 with white); dark meets the threshold.
     expect(contrastRatio(c.onPrimary, c.incomeFill)).toBeGreaterThanOrEqual(
       greenMin,
     );
