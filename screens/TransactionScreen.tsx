@@ -3,6 +3,7 @@ import {useFocusEffect} from '@react-navigation/native';
 import {
   View,
   Text,
+  FlatList,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -14,6 +15,7 @@ import {
   collection,
   getDocs,
   getFirestore,
+  limit,
   orderBy,
   query as fsQuery,
 } from '@react-native-firebase/firestore';
@@ -87,6 +89,8 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
         fsQuery(
           collection(getFirestore(), 'users', currentUser.uid, 'transactions'),
           orderBy('createdAt', 'desc'),
+          // Same newest-first rows as reading everything and slicing, with far fewer reads.
+          limit(getConfig().max_transactions_displayed),
         ),
       );
       const fetched = snapshot.docs.map(doc => ({
@@ -94,7 +98,7 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
         userId: currentUser.uid,
         ...doc.data(),
       })) as TransactionDocument[];
-      setTransactions(fetched.slice(0, getConfig().max_transactions_displayed));
+      setTransactions(fetched);
     } catch (e) {
       reportError(e as Error);
     } finally {
@@ -270,219 +274,232 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
         </View>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="px-5 pt-5">
-          <Searchbar
-            placeholder="Search by title, amount, or category..."
-            placeholderTextColor={colors.textPlaceholder}
-            onChangeText={handleSearch}
-            value={searchQuery}
-            style={searchStyles.searchBar}
-            inputStyle={searchStyles.searchInput}
-            iconColor={colors.primary}
-          />
-        </View>
-
-        <View className="px-5 pt-5">
-          <Text className="mb-2.5 font-sans-bold text-base font-semibold text-text-strong">
-            Filter by period
-          </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {FILTERS.map(f => {
-              const active = filter === f;
-              return (
-                <TouchableOpacity
-                  key={f}
-                  accessibilityRole="button"
-                  accessibilityState={{selected: active}}
-                  onPress={() => {
-                    setFilter(f);
-                    AnalyticsService.logTransactionFilterChanged(f);
-                  }}
-                  className={`mr-2.5 flex-row items-center rounded-full border px-3.5 py-2 ${
-                    active
-                      ? 'border-primary-fill bg-primary-fill'
-                      : 'border-card-border bg-surface'
-                  }`}>
+      <FlatList
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        data={filteredTransactions}
+        keyExtractor={(transaction, index) => transaction.id ?? String(index)}
+        initialNumToRender={12}
+        windowSize={7}
+        renderItem={({item: transaction}) => (
+          <View className="px-5">
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() =>
+                navigation.navigate('TransactionDetail', {transaction})
+              }
+              className="mb-3 flex-row items-center justify-between rounded-2xl border border-card-border bg-surface p-4 ios:shadow-md">
+              <View className="flex-1 flex-row items-center">
+                <View className="mr-3 h-[50px] w-[50px] items-center justify-center rounded-[14px] bg-primary-soft">
                   <MaterialCommunityIcons
-                    name={FILTER_ICONS[f]}
-                    size={16}
-                    color={active ? colors.onPrimary : colors.primary}
+                    name={getCategoryIcon(transaction.category)}
+                    size={25}
+                    color={colors.primary}
                   />
+                </View>
+                <View className="flex-1">
                   <Text
-                    className={`ml-1.5 font-sans-bold text-[13px] font-semibold ${
-                      active ? 'text-on-primary' : 'text-primary'
-                    }`}>
-                    {FILTER_LABELS[f]}
+                    className="mb-0.5 font-sans-bold text-base font-semibold text-text-strong"
+                    numberOfLines={1}>
+                    {transaction.title}
                   </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {filter === 'custom' && (
-          <View className="mx-5 mt-5 rounded-2xl border border-card-border bg-surface p-5">
-            <Text className="mb-[15px] font-sans-bold text-base font-semibold text-text-strong">
-              Select Date Range
-            </Text>
-            <View className="flex-row items-center">
-              <TouchableOpacity
-                className="flex-1 rounded-xl border border-card-border bg-surface-muted p-3"
-                accessibilityRole="button"
-                onPress={() => setStartDatePickerVisible(true)}>
-                <View className="flex-row items-center">
-                  <MaterialCommunityIcons
-                    name="calendar-start"
-                    size={20}
-                    color={colors.primary}
-                  />
-                  <Text className="ml-2 font-sans text-sm text-text">
-                    {customStartDate
-                      ? moment(customStartDate).format('MMM DD, YYYY')
-                      : 'Start Date'}
+                  <Text className="mb-1 font-sans text-[13px] text-text-secondary">
+                    {moment((transaction.createdAt as any).toDate()).format(
+                      'MMM D, YYYY',
+                    )}
                   </Text>
+                  {transaction.category ? (
+                    <View className="self-start rounded-md bg-primary-soft px-2 py-0.5">
+                      <Text className="font-sans-bold text-xs text-primary">
+                        {transaction.category}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
-              </TouchableOpacity>
-              <View className="px-2.5">
-                <Text className="font-sans text-sm text-text-secondary">
-                  to
-                </Text>
               </View>
-              <TouchableOpacity
-                className="flex-1 rounded-xl border border-card-border bg-surface-muted p-3"
-                accessibilityRole="button"
-                onPress={() => setEndDatePickerVisible(true)}>
-                <View className="flex-row items-center">
-                  <MaterialCommunityIcons
-                    name="calendar-end"
-                    size={20}
-                    color={colors.primary}
-                  />
-                  <Text className="ml-2 font-sans text-sm text-text">
-                    {customEndDate
-                      ? moment(customEndDate).format('MMM DD, YYYY')
-                      : 'End Date'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-            {customStartDate && customEndDate && (
-              <TouchableOpacity
-                className="mt-[15px] flex-row items-center justify-center rounded-xl bg-primary-fill py-3"
-                accessibilityRole="button"
-                onPress={filterTransactions}>
-                <MaterialCommunityIcons
-                  name="check"
-                  size={20}
-                  color={colors.onPrimary}
-                />
-                <Text className="ml-2 font-sans-bold text-base font-semibold text-on-primary">
-                  Apply Filter
-                </Text>
-              </TouchableOpacity>
-            )}
-            <DatePickerModal
-              locale="en"
-              mode="single"
-              visible={startDatePickerVisible}
-              onDismiss={() => setStartDatePickerVisible(false)}
-              date={customStartDate ?? undefined}
-              onConfirm={(params: any) => {
-                setStartDatePickerVisible(false);
-                setCustomStartDate(params.date);
-              }}
-              saveLabel="Confirm"
-              label="Select start date"
-              uppercase={false}
-              {...(Platform.OS === 'ios' && {presentationStyle: 'pageSheet'})}
-            />
-            <DatePickerModal
-              locale="en"
-              mode="single"
-              visible={endDatePickerVisible}
-              onDismiss={() => setEndDatePickerVisible(false)}
-              date={customEndDate ?? undefined}
-              onConfirm={(params: any) => {
-                setEndDatePickerVisible(false);
-                setCustomEndDate(params.date);
-              }}
-              saveLabel="Confirm"
-              label="Select end date"
-              uppercase={false}
-              {...(Platform.OS === 'ios' && {presentationStyle: 'pageSheet'})}
-            />
+              <Text
+                className={`ml-2 font-sans-bold text-base font-bold ${
+                  transaction.type === 'income' ? 'text-income' : 'text-expense'
+                }`}>
+                {transaction.type === 'income' ? '+ ' : '- '}
+                {formatAmount(majorOf(transaction, currency.code))}
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
-
-        <View className="px-5 pb-[30px] pt-5">
-          {filteredTransactions.length > 0 ? (
-            filteredTransactions.map(transaction => (
-              <TouchableOpacity
-                key={transaction.id}
-                accessibilityRole="button"
-                onPress={() =>
-                  navigation.navigate('TransactionDetail', {transaction})
-                }
-                className="mb-3 flex-row items-center justify-between rounded-2xl border border-card-border bg-surface p-4 ios:shadow-md">
-                <View className="flex-1 flex-row items-center">
-                  <View className="mr-3 h-[50px] w-[50px] items-center justify-center rounded-[14px] bg-primary-soft">
-                    <MaterialCommunityIcons
-                      name={getCategoryIcon(transaction.category)}
-                      size={25}
-                      color={colors.primary}
-                    />
-                  </View>
-                  <View className="flex-1">
-                    <Text
-                      className="mb-0.5 font-sans-bold text-base font-semibold text-text-strong"
-                      numberOfLines={1}>
-                      {transaction.title}
-                    </Text>
-                    <Text className="mb-1 font-sans text-[13px] text-text-secondary">
-                      {moment((transaction.createdAt as any).toDate()).format(
-                        'MMM D, YYYY',
-                      )}
-                    </Text>
-                    {transaction.category ? (
-                      <View className="self-start rounded-md bg-primary-soft px-2 py-0.5">
-                        <Text className="font-sans-bold text-xs text-primary">
-                          {transaction.category}
-                        </Text>
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
-                <Text
-                  className={`ml-2 font-sans-bold text-base font-bold ${
-                    transaction.type === 'income'
-                      ? 'text-income'
-                      : 'text-expense'
-                  }`}>
-                  {transaction.type === 'income' ? '+ ' : '- '}
-                  {formatAmount(majorOf(transaction, currency.code))}
-                </Text>
-              </TouchableOpacity>
-            ))
-          ) : (
-            <View className="items-center px-5 py-[60px]">
-              <MaterialCommunityIcons
-                name="note-text-outline"
-                size={64}
-                color={colors.iconMuted}
+        ListEmptyComponent={
+          <View className="items-center px-5 py-[60px]">
+            <MaterialCommunityIcons
+              name="note-text-outline"
+              size={64}
+              color={colors.iconMuted}
+            />
+            <Text className="mt-4 font-sans-bold text-lg font-bold text-text-strong">
+              No transactions found
+            </Text>
+            <Text className="mt-2 text-center font-sans text-sm text-text-secondary">
+              {searchQuery
+                ? 'Try adjusting your search terms'
+                : 'Transactions will appear here once you add them'}
+            </Text>
+          </View>
+        }
+        ListFooterComponent={<View className="h-[30px]" />}
+        ListHeaderComponent={
+          <>
+            <View className="px-5 pt-5">
+              <Searchbar
+                placeholder="Search by title, amount, or category..."
+                placeholderTextColor={colors.textPlaceholder}
+                onChangeText={handleSearch}
+                value={searchQuery}
+                style={searchStyles.searchBar}
+                inputStyle={searchStyles.searchInput}
+                iconColor={colors.primary}
               />
-              <Text className="mt-4 font-sans-bold text-lg font-bold text-text-strong">
-                No transactions found
-              </Text>
-              <Text className="mt-2 text-center font-sans text-sm text-text-secondary">
-                {searchQuery
-                  ? 'Try adjusting your search terms'
-                  : 'Transactions will appear here once you add them'}
-              </Text>
             </View>
-          )}
-        </View>
-      </ScrollView>
+
+            <View className="px-5 pt-5">
+              <Text className="mb-2.5 font-sans-bold text-base font-semibold text-text-strong">
+                Filter by period
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {FILTERS.map(f => {
+                  const active = filter === f;
+                  return (
+                    <TouchableOpacity
+                      key={f}
+                      accessibilityRole="button"
+                      accessibilityState={{selected: active}}
+                      onPress={() => {
+                        setFilter(f);
+                        AnalyticsService.logTransactionFilterChanged(f);
+                      }}
+                      className={`mr-2.5 flex-row items-center rounded-full border px-3.5 py-2 ${
+                        active
+                          ? 'border-primary-fill bg-primary-fill'
+                          : 'border-card-border bg-surface'
+                      }`}>
+                      <MaterialCommunityIcons
+                        name={FILTER_ICONS[f]}
+                        size={16}
+                        color={active ? colors.onPrimary : colors.primary}
+                      />
+                      <Text
+                        className={`ml-1.5 font-sans-bold text-[13px] font-semibold ${
+                          active ? 'text-on-primary' : 'text-primary'
+                        }`}>
+                        {FILTER_LABELS[f]}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {filter === 'custom' && (
+              <View className="mx-5 mt-5 rounded-2xl border border-card-border bg-surface p-5">
+                <Text className="mb-[15px] font-sans-bold text-base font-semibold text-text-strong">
+                  Select Date Range
+                </Text>
+                <View className="flex-row items-center">
+                  <TouchableOpacity
+                    className="flex-1 rounded-xl border border-card-border bg-surface-muted p-3"
+                    accessibilityRole="button"
+                    onPress={() => setStartDatePickerVisible(true)}>
+                    <View className="flex-row items-center">
+                      <MaterialCommunityIcons
+                        name="calendar-start"
+                        size={20}
+                        color={colors.primary}
+                      />
+                      <Text className="ml-2 font-sans text-sm text-text">
+                        {customStartDate
+                          ? moment(customStartDate).format('MMM DD, YYYY')
+                          : 'Start Date'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                  <View className="px-2.5">
+                    <Text className="font-sans text-sm text-text-secondary">
+                      to
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    className="flex-1 rounded-xl border border-card-border bg-surface-muted p-3"
+                    accessibilityRole="button"
+                    onPress={() => setEndDatePickerVisible(true)}>
+                    <View className="flex-row items-center">
+                      <MaterialCommunityIcons
+                        name="calendar-end"
+                        size={20}
+                        color={colors.primary}
+                      />
+                      <Text className="ml-2 font-sans text-sm text-text">
+                        {customEndDate
+                          ? moment(customEndDate).format('MMM DD, YYYY')
+                          : 'End Date'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+                {customStartDate && customEndDate && (
+                  <TouchableOpacity
+                    className="mt-[15px] flex-row items-center justify-center rounded-xl bg-primary-fill py-3"
+                    accessibilityRole="button"
+                    onPress={filterTransactions}>
+                    <MaterialCommunityIcons
+                      name="check"
+                      size={20}
+                      color={colors.onPrimary}
+                    />
+                    <Text className="ml-2 font-sans-bold text-base font-semibold text-on-primary">
+                      Apply Filter
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <DatePickerModal
+                  locale="en"
+                  mode="single"
+                  visible={startDatePickerVisible}
+                  onDismiss={() => setStartDatePickerVisible(false)}
+                  date={customStartDate ?? undefined}
+                  onConfirm={(params: any) => {
+                    setStartDatePickerVisible(false);
+                    setCustomStartDate(params.date);
+                  }}
+                  saveLabel="Confirm"
+                  label="Select start date"
+                  uppercase={false}
+                  {...(Platform.OS === 'ios' && {
+                    presentationStyle: 'pageSheet',
+                  })}
+                />
+                <DatePickerModal
+                  locale="en"
+                  mode="single"
+                  visible={endDatePickerVisible}
+                  onDismiss={() => setEndDatePickerVisible(false)}
+                  date={customEndDate ?? undefined}
+                  onConfirm={(params: any) => {
+                    setEndDatePickerVisible(false);
+                    setCustomEndDate(params.date);
+                  }}
+                  saveLabel="Confirm"
+                  label="Select end date"
+                  uppercase={false}
+                  {...(Platform.OS === 'ios' && {
+                    presentationStyle: 'pageSheet',
+                  })}
+                />
+              </View>
+            )}
+
+            <View className="h-5" />
+          </>
+        }
+      />
     </View>
   );
 };
