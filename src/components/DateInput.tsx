@@ -1,9 +1,9 @@
 import React, {useState} from 'react';
-import {View, Text, TouchableOpacity, Platform, StyleSheet} from 'react-native';
+import {View, Text, TouchableOpacity, Platform} from 'react-native';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import {PRIMARY_COLOR} from '../constants/theme';
+import {useTheme} from '../theme';
 import {formatDisplayDate} from '../utils/formatters';
 
 interface DateInputProps {
@@ -20,6 +20,7 @@ const DateInput = ({
   disabled = false,
   label,
 }: DateInputProps) => {
+  const {colors} = useTheme();
   const [open, setOpen] = useState(false);
 
   const handleConfirm = (params: any) => {
@@ -33,10 +34,16 @@ const DateInput = ({
 
   return (
     <SafeAreaProvider>
-      <View style={styles.container}>
-        {label && <Text style={styles.label}>{label}</Text>}
+      <View className="mb-2">
+        {label && (
+          <Text className="mb-1.5 font-sans-bold text-sm text-text">
+            {label}
+          </Text>
+        )}
         <TouchableOpacity
-          style={[styles.triggerButton, disabled && styles.triggerDisabled]}
+          className={`min-h-[48px] flex-row items-center rounded-[10px] border border-border px-3.5 py-[13px] ${
+            disabled ? 'bg-surface-muted' : 'bg-surface'
+          }`}
           onPress={() => !disabled && setOpen(true)}
           disabled={disabled}
           accessibilityRole="button"
@@ -44,13 +51,20 @@ const DateInput = ({
           <MaterialCommunityIcons
             name="calendar"
             size={20}
-            color={PRIMARY_COLOR}
-            style={styles.icon}
+            color={colors.primary}
+            className="mr-2.5"
           />
-          <Text style={[styles.dateText, !date && styles.placeholderText]}>
+          <Text
+            className={`flex-1 font-sans text-[15px] ${
+              date ? 'text-text' : 'text-text-placeholder'
+            }`}>
             {date ? formatDisplayDate(date) : 'Select date'}
           </Text>
-          <MaterialCommunityIcons name="chevron-down" size={20} color="#999" />
+          <MaterialCommunityIcons
+            name="chevron-down"
+            size={20}
+            color={colors.textPlaceholder}
+          />
         </TouchableOpacity>
         <DatePickerModal
           locale="en"
@@ -70,41 +84,3 @@ const DateInput = ({
 };
 
 export default DateInput;
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontFamily: 'Lato-Bold',
-    color: '#333',
-    marginBottom: 6,
-  },
-  triggerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    backgroundColor: '#FFFFFF',
-    minHeight: 48,
-  },
-  triggerDisabled: {
-    backgroundColor: '#F5F5F5',
-  },
-  icon: {
-    marginRight: 10,
-  },
-  dateText: {
-    flex: 1,
-    fontSize: 15,
-    color: '#333',
-    fontFamily: 'Lato-Regular',
-  },
-  placeholderText: {
-    color: '#999',
-  },
-});

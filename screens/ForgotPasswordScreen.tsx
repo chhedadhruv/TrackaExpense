@@ -49,7 +49,7 @@ const ForgotPasswordScreen = ({navigation}: {navigation: any}) => {
   return (
     <View className="flex-1 bg-background">
       <KeyboardAwareScrollView
-        style={{flex: 1, width: '100%'}}
+        className="w-full flex-1"
         keyboardShouldPersistTaps="always"
         showsVerticalScrollIndicator={false}>
         <View className="flex-1 px-5 pb-5 pt-10">

@@ -1,6 +1,6 @@
-import {View, StyleSheet, TextInput, Text, Platform} from 'react-native';
+import {View, Text} from 'react-native';
 import React, {useState, useEffect} from 'react';
-import {Card, ActivityIndicator} from 'react-native-paper';
+import {ActivityIndicator} from 'react-native-paper';
 import {getAuth} from '@react-native-firebase/auth';
 import {
   Timestamp,
@@ -15,23 +15,28 @@ import {reportError} from '../src/services/ErrorReporter';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import FormButton from '../components/FormButton';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {INCOME_CATEGORIES, INCOME_KEYWORD_MAP} from '../utils/CategoryData';
-import {
-  PRIMARY_COLOR,
-  BACKGROUND_COLOR,
-  INCOME_COLOR,
-} from '../src/constants/theme';
+import {useTheme} from '../src/theme';
 import {useTransactionForm} from '../src/hooks/useTransactionForm';
 import {balanceEffect, transactionMoneyFields} from '../src/utils/amounts';
 import CategorySelector from '../src/components/CategorySelector';
 import AmountInput from '../src/components/AmountInput';
 import DateInput from '../src/components/DateInput';
+import {
+  FormCard,
+  FormError,
+  FormHeader,
+  FormSection,
+} from '../src/components/form/FormParts';
+import TextField from '../src/components/form/TextField';
 import {snackbar} from '../src/utils/snackbarStore';
 
+const DISABLED_BUTTON = {opacity: 0.5} as const;
+
 const AddIncome = ({navigation}: {navigation: any}) => {
+  const {colors} = useTheme();
   const {currency} = useCurrency();
   const {
     title,
@@ -114,161 +119,102 @@ const AddIncome = ({navigation}: {navigation: any}) => {
 
   if (isSubmitting) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-        <Text style={styles.loadingText}>Adding your income...</Text>
+      <View className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text className="mt-[15px] font-sans text-base text-primary">
+          Adding your income...
+        </Text>
       </View>
     );
   }
 
   return (
     <SafeAreaProvider>
-      <View style={styles.container}>
+      <View className="flex-1 bg-background">
         <KeyboardAwareScrollView
-          style={styles.scrollView}
+          className="flex-1"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          <View style={styles.headerSection}>
-            <View style={styles.headerTitleRow}>
-              <MaterialCommunityIcons
-                name="cash-plus"
-                size={32}
-                color={INCOME_COLOR}
+          <FormHeader
+            icon="cash-plus"
+            iconColor={colors.income}
+            title="Add Income"
+            subtitle="Record your income to track your finances"
+          />
+
+          <FormCard>
+            {errorMessage && <FormError message={errorMessage} />}
+
+            <TextField
+              label="Title"
+              icon="text"
+              placeholder="Enter income title"
+              value={title}
+              onChangeText={setTitle}
+              disabled={isSubmitting}
+              maxLength={100}
+            />
+
+            <TextField
+              label="Description"
+              optional
+              icon="text-box"
+              placeholder="Enter description"
+              value={description}
+              onChangeText={setDescription}
+              disabled={isSubmitting}
+              multiline
+              numberOfLines={2}
+              maxLength={500}
+            />
+
+            <FormSection label="Category">
+              <CategorySelector
+                categories={INCOME_CATEGORIES}
+                selectedCategory={category}
+                onSelect={setCategory}
+                disabled={isSubmitting}
+                placeholder="Select income category"
               />
-              <Text style={styles.headerTitle}>Add Income</Text>
-            </View>
-            <Text style={styles.headerSubtitle}>
-              Record your income to track your finances
-            </Text>
-          </View>
+            </FormSection>
 
-          <Card
-            style={[
-              styles.formCard,
-              Platform.OS === 'android' && styles.cardAndroid,
-            ]}
-            elevation={Platform.OS === 'android' ? 0 : 4}>
-            <View style={styles.cardContent}>
-              {errorMessage && (
-                <View style={styles.errorContainer}>
-                  <MaterialCommunityIcons
-                    name="alert-circle"
-                    size={20}
-                    color="#C62828"
-                  />
-                  <Text style={styles.errorMessage}>{errorMessage}</Text>
+            <FormSection>
+              <AmountInput
+                value={amount}
+                onChangeText={setAmount}
+                currencySymbol={currency.symbol}
+                disabled={isSubmitting}
+                label={`Amount (${currency.symbol})`}
+              />
+            </FormSection>
+
+            <FormSection>
+              <DateInput
+                date={date}
+                onConfirm={setDate}
+                disabled={isSubmitting}
+                label="Date"
+              />
+            </FormSection>
+
+            <View className="mt-5">
+              {isSubmitting ? (
+                <View className="flex-row items-center justify-center py-[15px]">
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text className="ml-2.5 font-sans text-base text-primary">
+                    Adding Income...
+                  </Text>
                 </View>
+              ) : (
+                <FormButton
+                  buttonTitle="Add Income"
+                  onPress={handleSubmit}
+                  disabled={!isFormValid()}
+                  style={!isFormValid() ? DISABLED_BUTTON : undefined}
+                />
               )}
-
-              {/* Title */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Title</Text>
-                <View style={styles.inputWrapper}>
-                  <MaterialCommunityIcons
-                    name="text"
-                    size={20}
-                    color={PRIMARY_COLOR}
-                    style={styles.inputIcon}
-                  />
-                  <TextInput
-                    placeholder="Enter income title"
-                    placeholderTextColor="#999"
-                    autoCorrect={false}
-                    value={title}
-                    onChangeText={setTitle}
-                    style={styles.textInput}
-                    editable={!isSubmitting}
-                    maxLength={100}
-                  />
-                </View>
-                <Text style={styles.characterCount}>{title.length}/100</Text>
-              </View>
-
-              {/* Description */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>
-                  Description{' '}
-                  <Text style={styles.optionalText}>(Optional)</Text>
-                </Text>
-                <View style={styles.inputWrapper}>
-                  <MaterialCommunityIcons
-                    name="text-box"
-                    size={20}
-                    color={PRIMARY_COLOR}
-                    style={styles.inputIcon}
-                  />
-                  <TextInput
-                    placeholder="Enter description"
-                    placeholderTextColor="#999"
-                    autoCorrect={false}
-                    value={description}
-                    onChangeText={setDescription}
-                    style={styles.textInput}
-                    multiline
-                    numberOfLines={2}
-                    editable={!isSubmitting}
-                    maxLength={500}
-                  />
-                </View>
-                <Text style={styles.characterCount}>
-                  {description.length}/500
-                </Text>
-              </View>
-
-              {/* Category */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Category</Text>
-                <CategorySelector
-                  categories={INCOME_CATEGORIES}
-                  selectedCategory={category}
-                  onSelect={setCategory}
-                  disabled={isSubmitting}
-                  placeholder="Select income category"
-                />
-              </View>
-
-              {/* Amount */}
-              <View style={styles.inputContainer}>
-                <AmountInput
-                  value={amount}
-                  onChangeText={setAmount}
-                  currencySymbol={currency.symbol}
-                  disabled={isSubmitting}
-                  label={`Amount (${currency.symbol})`}
-                />
-              </View>
-
-              {/* Date */}
-              <View style={styles.inputContainer}>
-                <DateInput
-                  date={date}
-                  onConfirm={setDate}
-                  disabled={isSubmitting}
-                  label="Date"
-                />
-              </View>
-
-              {/* Submit */}
-              <View style={styles.buttonContainer}>
-                {isSubmitting ? (
-                  <View style={styles.submittingContainer}>
-                    <ActivityIndicator size="small" color={PRIMARY_COLOR} />
-                    <Text style={styles.submittingText}>Adding Income...</Text>
-                  </View>
-                ) : (
-                  <FormButton
-                    buttonTitle="Add Income"
-                    onPress={handleSubmit}
-                    disabled={!isFormValid()}
-                    style={[
-                      styles.submitButton,
-                      !isFormValid() && styles.disabledButton,
-                    ]}
-                  />
-                )}
-              </View>
             </View>
-          </Card>
+          </FormCard>
         </KeyboardAwareScrollView>
       </View>
     </SafeAreaProvider>
@@ -276,119 +222,3 @@ const AddIncome = ({navigation}: {navigation: any}) => {
 };
 
 export default AddIncome;
-
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  scrollView: {flex: 1},
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: BACKGROUND_COLOR,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: PRIMARY_COLOR,
-    marginTop: 15,
-    fontFamily: 'Lato-Regular',
-  },
-  headerSection: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 30,
-    paddingBottom: 20,
-  },
-  headerTitleRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 8},
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginLeft: 12,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  formCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginBottom: 40,
-  },
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-  cardContent: {padding: 30},
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFEBEE',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#F44336',
-  },
-  errorMessage: {
-    color: '#C62828',
-    fontSize: 14,
-    fontFamily: 'Lato-Regular',
-    marginLeft: 10,
-    flex: 1,
-  },
-  inputContainer: {marginBottom: 20},
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 8,
-    fontFamily: 'Lato-Bold',
-  },
-  optionalText: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: '#999',
-    fontFamily: 'Lato-Regular',
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-  },
-  inputIcon: {marginRight: 12},
-  textInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-    textAlignVertical: 'top',
-  },
-  characterCount: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-    textAlign: 'right',
-    fontFamily: 'Lato-Regular',
-  },
-  buttonContainer: {marginTop: 20},
-  submitButton: {backgroundColor: PRIMARY_COLOR},
-  disabledButton: {opacity: 0.5},
-  submittingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 15,
-  },
-  submittingText: {
-    fontSize: 16,
-    color: PRIMARY_COLOR,
-    marginLeft: 10,
-    fontFamily: 'Lato-Regular',
-  },
-});
