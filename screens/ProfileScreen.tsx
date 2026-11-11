@@ -40,6 +40,7 @@ import {
   EXPENSE_COLOR,
 } from '../src/constants/theme';
 import type {UserDocument} from '../src/types';
+import {snackbar} from '../src/utils/snackbarStore';
 
 const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
   const {logout} = useContext(AuthContext);
@@ -97,15 +98,12 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
           onPress: async () => {
             try {
               await sendPasswordResetEmail(getAuth(), user.email!);
-              Alert.alert(
-                'Email Sent',
+              snackbar.success(
                 'A password reset email has been sent to your email address.',
-                [{text: 'OK'}],
               );
             } catch (e) {
               reportError(e as Error);
-              Alert.alert(
-                'Error',
+              snackbar.error(
                 'Failed to send password reset email. Please try again later.',
               );
             }
@@ -127,25 +125,16 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
       txSnap.docs.forEach(doc => batch.delete(doc.ref));
       await batch.commit();
       await deleteUser(currentUser);
-      Alert.alert(
-        'Account Deleted',
-        'Your account has been permanently deleted.',
-        [{text: 'OK'}],
-      );
+      snackbar.success('Your account has been permanently deleted.');
     } catch (e: any) {
       reportError(e as Error);
       setLoading(false);
       if (e.code === 'auth/requires-recent-login') {
-        Alert.alert(
-          'Authentication Required',
+        snackbar.error(
           'Please log out and log back in, then try deleting your account again.',
-          [{text: 'OK'}],
         );
       } else {
-        Alert.alert(
-          'Error',
-          'Failed to delete account. Please try again later.',
-        );
+        snackbar.error('Failed to delete account. Please try again later.');
       }
     }
   };
@@ -181,10 +170,10 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
     try {
       await setCurrency(currencyCode);
       setCurrencyModalVisible(false);
-      Alert.alert('Success', 'Currency updated successfully!');
+      snackbar.success('Currency updated successfully!');
     } catch (e) {
       reportError(e as Error);
-      Alert.alert('Error', 'Failed to update currency. Please try again.');
+      snackbar.error('Failed to update currency. Please try again.');
     }
   };
 

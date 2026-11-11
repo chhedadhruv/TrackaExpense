@@ -1,11 +1,5 @@
 import React, {useEffect, useState, useCallback} from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  Platform,
-} from 'react-native';
+import {View, StyleSheet, TouchableOpacity, Platform} from 'react-native';
 import {Text, Card, ActivityIndicator} from 'react-native-paper';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
@@ -22,6 +16,7 @@ import {reportError} from '../../src/services/ErrorReporter';
 import * as AnalyticsService from '../../src/services/AnalyticsService';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../../src/constants/theme';
+import {snackbar} from '../../src/utils/snackbarStore';
 
 interface Invitation {
   id: string;
@@ -66,10 +61,10 @@ const InvitationsScreen = () => {
         // The server adds the user to the group and closes the invitation together.
         await respondToInvitation(invite.id, true);
         AnalyticsService.logAcceptInvitation();
-        Alert.alert('Joined', `You have joined ${invite.groupName}`);
+        snackbar.success(`You have joined ${invite.groupName}`);
       } catch (e) {
         reportError(e as Error);
-        Alert.alert('Error', 'Failed to accept invitation');
+        snackbar.error('Failed to accept invitation');
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,7 +78,7 @@ const InvitationsScreen = () => {
         AnalyticsService.logDeclineInvitation();
       } catch (e) {
         reportError(e as Error);
-        Alert.alert('Error', 'Failed to decline invitation');
+        snackbar.error('Failed to decline invitation');
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps

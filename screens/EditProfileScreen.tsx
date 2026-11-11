@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react';
-import {View, Alert, StyleSheet, SafeAreaView, Platform} from 'react-native';
+import {View, StyleSheet, SafeAreaView, Platform} from 'react-native';
 import {ActivityIndicator, Text, Card} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
@@ -13,6 +13,7 @@ import {
 } from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../src/constants/theme';
+import {snackbar} from '../src/utils/snackbarStore';
 
 interface ProfileData {
   name: string;
@@ -36,7 +37,7 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
       try {
         const currentUser = getAuth().currentUser;
         if (!currentUser) {
-          Alert.alert('Error', 'No user is logged in');
+          snackbar.error('No user is logged in');
           navigation.goBack();
           return;
         }
@@ -101,11 +102,8 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
         phone: userData.phone,
         balance: userData.balance,
       });
-      Alert.alert(
-        'Success! 🎉',
-        'Your profile has been updated successfully.',
-        [{text: 'OK', onPress: () => navigation.goBack()}],
-      );
+      snackbar.success('Profile updated successfully');
+      navigation.goBack();
     } catch (_) {
       setUpdating(false);
       setErrorMessage(

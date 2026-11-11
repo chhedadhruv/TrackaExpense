@@ -4,7 +4,6 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Alert,
   Platform,
 } from 'react-native';
 import {Text, Card, ActivityIndicator} from 'react-native-paper';
@@ -23,6 +22,7 @@ import {useCurrency} from '../../utils/CurrencyUtil';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../../src/constants/theme';
 import {formatInputAmount} from '../../src/utils/formatters';
 import {transactionMoneyFields} from '../../src/utils/amounts';
+import {snackbar} from '../../src/utils/snackbarStore';
 
 type Direction = 'iowe' | 'owesme';
 
@@ -38,11 +38,11 @@ const CreateIOUScreen = ({navigation}: {navigation: any}) => {
   const handleSubmit = async () => {
     const emailTrimmed = toEmail.trim().toLowerCase();
     if (!emailTrimmed || !emailTrimmed.includes('@')) {
-      Alert.alert('Validation Error', 'Please enter a valid email address');
+      snackbar.error('Please enter a valid email address');
       return;
     }
     if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
-      Alert.alert('Validation Error', 'Please enter a valid amount');
+      snackbar.error('Please enter a valid amount');
       return;
     }
     setLoading(true);
@@ -50,10 +50,7 @@ const CreateIOUScreen = ({navigation}: {navigation: any}) => {
       const currentUser = getAuth().currentUser;
       const currentEmail = currentUser?.email?.toLowerCase();
       if (emailTrimmed === currentEmail) {
-        Alert.alert(
-          'Validation Error',
-          'You cannot create an IOU with yourself',
-        );
+        snackbar.error('You cannot create an IOU with yourself');
         setLoading(false);
         return;
       }
@@ -97,7 +94,7 @@ const CreateIOUScreen = ({navigation}: {navigation: any}) => {
       await addDoc(collection(getFirestore(), 'ious'), iouData);
       navigation.goBack();
     } catch (_) {
-      Alert.alert('Error', 'Failed to create IOU');
+      snackbar.error('Failed to create IOU');
     } finally {
       setLoading(false);
     }
