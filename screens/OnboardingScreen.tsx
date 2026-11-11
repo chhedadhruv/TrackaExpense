@@ -1,8 +1,6 @@
 import React, {useRef, useState} from 'react';
 import {
   FlatList,
-  Image,
-  ImageSourcePropType,
   NativeScrollEvent,
   NativeSyntheticEvent,
   StyleSheet,
@@ -12,42 +10,21 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {PRIMARY_COLOR} from '../src/constants/theme';
-
-interface Page {
-  backgroundColor: string;
-  image: ImageSourcePropType;
-  title: string;
-  subtitle: string;
-}
-
-const PAGES: Page[] = [
-  {
-    backgroundColor: '#FCE9E4',
-    image: require('../assets/monitoring.png'),
-    title: 'Track Your Finances',
-    subtitle: 'Monitor your expenses and track your spending habits.',
-  },
-  {
-    backgroundColor: '#FDE7DC',
-    image: require('../assets/split.png'),
-    title: 'Share Expenses',
-    subtitle: 'Quickly split payments and settle up with friends.',
-  },
-  {
-    backgroundColor: '#FDE9DF',
-    image: require('../assets/savings.png'),
-    title: 'Save for What Matters',
-    subtitle:
-      'Set savings goals and build a better future, one coin at a time.',
-  },
-];
+import {useThemedStyles, type ThemeColors} from '../src/theme';
+import OnboardingArt from '../src/components/illustrations/OnboardingIllustrations';
+import {
+  ONBOARDING_PAGES,
+  type OnboardingPage,
+} from '../src/constants/onboardingContent';
 
 const OnboardingScreen = ({navigation}: {navigation: any}) => {
+  const styles = useThemedStyles(createStyles);
   const {width} = useWindowDimensions();
-  const listRef = useRef<FlatList<Page>>(null);
+  const listRef = useRef<FlatList<OnboardingPage>>(null);
   const [index, setIndex] = useState(0);
-  const isLast = index === PAGES.length - 1;
+  const isLast = index === ONBOARDING_PAGES.length - 1;
+  // Leaves room for the title, text and footer on a small phone.
+  const artSize = Math.min(300, Math.round(width * 0.78));
 
   const finish = () => navigation.replace('Login');
 
@@ -64,14 +41,10 @@ const OnboardingScreen = ({navigation}: {navigation: any}) => {
   };
 
   return (
-    <SafeAreaView
-      style={[
-        styles.container,
-        {backgroundColor: PAGES[index].backgroundColor},
-      ]}>
+    <SafeAreaView style={styles.container}>
       <FlatList
         ref={listRef}
-        data={PAGES}
+        data={ONBOARDING_PAGES}
         keyExtractor={item => item.title}
         horizontal
         pagingEnabled
@@ -80,29 +53,39 @@ const OnboardingScreen = ({navigation}: {navigation: any}) => {
         getItemLayout={(_, i) => ({length: width, offset: width * i, index: i})}
         renderItem={({item}) => (
           <View style={[styles.page, {width}]}>
-            <Image
-              source={item.image}
-              style={styles.image}
-              resizeMode="contain"
+            <OnboardingArt
+              name={item.illustration}
+              label={item.imageLabel}
+              size={artSize}
             />
-            <Text style={styles.title}>{item.title}</Text>
+            <Text style={styles.title} accessibilityRole="header">
+              {item.title}
+            </Text>
             <Text style={styles.subtitle}>{item.subtitle}</Text>
           </View>
         )}
       />
       <View style={styles.footer}>
-        <TouchableOpacity onPress={finish} hitSlop={12} disabled={isLast}>
+        <TouchableOpacity
+          onPress={finish}
+          hitSlop={12}
+          disabled={isLast}
+          accessibilityRole="button"
+          accessibilityLabel="Skip introduction">
           <Text style={[styles.skip, isLast ? styles.hidden : null]}>Skip</Text>
         </TouchableOpacity>
         <View style={styles.dots}>
-          {PAGES.map((p, i) => (
+          {ONBOARDING_PAGES.map((p, i) => (
             <View
               key={p.title}
               style={[styles.dot, i === index ? styles.dotActive : null]}
             />
           ))}
         </View>
-        <TouchableOpacity onPress={next} hitSlop={12}>
+        <TouchableOpacity
+          onPress={next}
+          hitSlop={12}
+          accessibilityRole="button">
           <Text style={styles.next}>{isLast ? 'Done' : 'Next'}</Text>
         </TouchableOpacity>
       </View>
@@ -112,35 +95,47 @@ const OnboardingScreen = ({navigation}: {navigation: any}) => {
 
 export default OnboardingScreen;
 
-const styles = StyleSheet.create({
-  container: {flex: 1},
-  page: {flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24},
-  image: {width: 300, height: 300},
-  title: {fontSize: 26, fontWeight: '700', color: '#222', marginTop: 24},
-  subtitle: {
-    fontSize: 16,
-    color: '#444',
-    textAlign: 'center',
-    marginTop: 12,
-    paddingHorizontal: 16,
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-  },
-  skip: {fontSize: 16, color: '#444'},
-  hidden: {opacity: 0},
-  next: {fontSize: 16, fontWeight: '600', color: PRIMARY_COLOR},
-  dots: {flexDirection: 'row'},
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginHorizontal: 4,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  dotActive: {backgroundColor: '#222'},
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {flex: 1, backgroundColor: colors.background},
+    page: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+    },
+    title: {
+      fontSize: 26,
+      fontWeight: '700',
+      color: colors.textStrong,
+      marginTop: 24,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontSize: 16,
+      lineHeight: 23,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginTop: 12,
+      paddingHorizontal: 16,
+    },
+    footer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 24,
+      paddingVertical: 20,
+    },
+    skip: {fontSize: 16, color: colors.textSecondary},
+    hidden: {opacity: 0},
+    next: {fontSize: 16, fontWeight: '600', color: colors.primary},
+    dots: {flexDirection: 'row'},
+    dot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginHorizontal: 4,
+      backgroundColor: colors.border,
+    },
+    dotActive: {backgroundColor: colors.primaryFill},
+  });
