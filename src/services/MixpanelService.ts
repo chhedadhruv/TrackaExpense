@@ -1,16 +1,18 @@
 import {Mixpanel} from 'mixpanel-react-native';
 import {MIXPANEL_TOKEN} from '@env';
+import {isServiceEnabled} from '../utils/serviceGate';
 
 type Properties = Record<string, string | number | boolean>;
 
 let mixpanel: Mixpanel | null = null;
 
 /**
- * Starts Mixpanel. Does nothing when no token is configured.
+ * Starts Mixpanel. Does nothing in a development build or when no token is configured: the
+ * instance stays null, so every call below is a no-op and no event leaves a dev build.
  * Privacy: events carry no email or name; the user is identified by the Firebase uid only.
  */
 export const initMixpanel = async (): Promise<void> => {
-  if (!MIXPANEL_TOKEN || mixpanel) {
+  if (!isServiceEnabled(MIXPANEL_TOKEN, __DEV__) || mixpanel) {
     return;
   }
   try {
