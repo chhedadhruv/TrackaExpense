@@ -34,11 +34,7 @@ import {
   configureAppleSignIn,
   performAppleSignIn,
 } from '../utils/AppleSignInConfig';
-import {
-  getCrashlytics,
-  setAttribute,
-  setUserId,
-} from '@react-native-firebase/crashlytics';
+import {setErrorReportingTag} from '../src/services/ErrorReporter';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import {useTheme} from '../src/theme';
 
@@ -139,8 +135,7 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
           googleCredential,
         );
         const user = userCredential.user;
-        setUserId(getCrashlytics(), user.uid);
-        setAttribute(getCrashlytics(), 'auth_method', 'google');
+        setErrorReportingTag('auth_method', 'google');
         AnalyticsService.logLogin('google');
         const userDoc = await getDoc(doc(getFirestore(), 'users', user.uid));
         if (!userDoc.exists()) {
@@ -203,8 +198,7 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
           appleCredential,
         );
         const user = userCredential.user;
-        setUserId(getCrashlytics(), user.uid);
-        setAttribute(getCrashlytics(), 'auth_method', 'apple');
+        setErrorReportingTag('auth_method', 'apple');
         AnalyticsService.logLogin('apple');
         const userDoc = await getDoc(doc(getFirestore(), 'users', user.uid));
         if (!userDoc.exists()) {

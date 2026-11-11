@@ -19,9 +19,9 @@ Guidance for working in this repository. Detail lives in `../trackaexpense-audit
 | Routing | React Navigation 7 | Expo Router |
 | Styling | StyleSheet, react-native-paper | NativeWind v4 |
 | State | Context + hooks, direct Firestore | Zustand, TanStack Query v5, MMKV |
-| Firebase | RN Firebase v21: auth, firestore, storage, messaging, analytics, crashlytics, perf, remote-config | Auth, Firestore, Storage, Functions (`asia-south1`), Remote Config |
-| Errors | Crashlytics | Sentry |
-| Analytics | Firebase Analytics | Mixpanel |
+| Firebase | RN Firebase v27: auth, firestore, storage, functions, messaging, perf, remote-config (analytics and crashlytics removed) | Auth, Firestore, Storage, Functions (`asia-south1`), Remote Config |
+| Errors | Sentry (Crashlytics removed) | Sentry |
+| Analytics | Mixpanel (Firebase Analytics removed) | Mixpanel |
 | Push | FCM token registration and OneSignal, Express server (not deployed) | OneSignal, sends from Cloud Functions only |
 | OTA | EAS Update configured (`expo-updates`, nothing published yet); CodePush removed | EAS Update |
 
@@ -102,7 +102,7 @@ Planned commands: EAS build and update scripts (Phase 1b).
 - Sentry (live in code, `src/services/ErrorReporter.ts`): user context is uid only, no email or name. Handled errors go through `reportError()` (never call `crashlytics().recordError` directly). Source map and R8 mapping upload run in EAS release builds (they need `SENTRY_AUTH_TOKEN`). Sentry does not start in development builds (`__DEV__`, see `src/utils/serviceGate.ts`): nothing is sent and `reportError()` logs to the console instead; release builds (EAS preview and production) start it when `SENTRY_DSN` is set. To test Sentry locally use a release build (`yarn android:release`).
 - Mixpanel (live in code, `src/services/MixpanelService.ts` and `src/services/AnalyticsService.ts`): only the approved event names, uid as distinct ID, `reset()` on logout. Add events only through `AnalyticsService`. Like Sentry, Mixpanel does not start in development builds (`__DEV__`), so local testing never sends events; its calls are no-ops there.
 - OneSignal (live in code, `src/services/PushService.ts`): identity is the Firebase uid (login/logout in `navigation/Routes.tsx`); the permission prompt is deferred until after the first saved expense. Push credentials (Firebase service account for Android, APNs key for iOS) must be added in the OneSignal dashboard before any push is delivered. All sends must come from Cloud Functions, never the client.
-- Still running side by side until the next release: Firebase Analytics, Crashlytics, Perf and FCM. Remove Crashlytics and Firebase Analytics once Sentry and Mixpanel are confirmed in production.
+- Crashlytics and Firebase Analytics were removed (the `@react-native-firebase/crashlytics` and `@react-native-firebase/analytics` packages, the Crashlytics config plugin and Gradle pin): errors go to Sentry only, product events to Mixpanel only. The Crashlytics user attributes became Sentry tags (`setErrorReportingTag`: `auth_method`, `currency`); the Sentry user id is set by the auth listener in `navigation/Routes.tsx`. Screen views are no longer recorded anywhere (they were Firebase Analytics only); add a Mixpanel event through `AnalyticsService` if they are wanted. Still running: Perf and FCM. This is a native change (fingerprint `c3124dc6...` for Android), so it ships only with a store build, never over the air. After the store release, remove the stale Crashlytics and Analytics data streams in the Firebase console if wanted.
 - Keys (`SENTRY_DSN`, `MIXPANEL_TOKEN`, `ONESIGNAL_APP_ID`) live in the gitignored `.env`; names are in `.env.example`. Empty values disable the service.
 
 ## 10. How to work
