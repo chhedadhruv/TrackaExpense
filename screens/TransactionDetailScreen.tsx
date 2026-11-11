@@ -27,6 +27,8 @@ import * as AnalyticsService from '../src/services/AnalyticsService';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {balanceEffect, majorOf} from '../src/utils/amounts';
 import {useTheme} from '../src/theme';
+import TagChips from '../src/components/TagChips';
+import {sanitizeTags} from '../src/utils/tags';
 import type {McIconName} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
 
@@ -67,6 +69,7 @@ const TransactionDetailScreen = ({
   const {transaction} = route.params;
   // Receipts are stored as imageUrl or the older image field; accept either.
   const receiptUrl = receiptUrlOf(transaction);
+  const tagList = sanitizeTags(transaction.tags);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -182,6 +185,12 @@ const TransactionDetailScreen = ({
                 {transaction.category}
               </Text>
             </DetailRow>
+
+            {tagList.length > 0 ? (
+              <DetailRow icon="tag-multiple" label="Tags">
+                <TagChips tags={tagList} />
+              </DetailRow>
+            ) : null}
 
             <DetailRow
               icon={isIncome ? 'plus-circle' : 'minus-circle'}

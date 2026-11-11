@@ -40,6 +40,10 @@ import {
 } from '../src/components/form/FormParts';
 import TextField from '../src/components/form/TextField';
 import ReceiptField from '../src/components/form/ReceiptField';
+import TagField from '../src/components/form/TagField';
+import {useKnownTags} from '../src/hooks/useKnownTags';
+import {recordTagUse} from '../src/services/TagService';
+import {sanitizeTags} from '../src/utils/tags';
 import {snackbar} from '../src/utils/snackbarStore';
 
 const DISABLED_BUTTON = {opacity: 0.5} as const;
@@ -62,12 +66,14 @@ const EditTransactionScreen = ({
     category,
     date,
     image,
+    tags,
     setTitle,
     setDescription,
     setAmount,
     setCategory,
     setDate,
     setImage,
+    setTags,
     errorMessage,
     setErrorMessage,
     isFormValid,
@@ -79,7 +85,9 @@ const EditTransactionScreen = ({
     category: transaction.category,
     date: transaction.date,
     image: receiptUrlOf(transaction),
+    tags: sanitizeTags(transaction.tags),
   });
+  const knownTags = useKnownTags();
 
   const [uploading, setUploading] = useState(false);
   const [transferred, setTransferred] = useState(0);
@@ -150,6 +158,8 @@ const EditTransactionScreen = ({
           ...transactionMoneyFields(amount, currency.code),
           category,
           date,
+          // Always written on an edit, so removing every tag clears the field.
+          tags,
           createdAt: Timestamp.fromDate(new Date()),
         };
         if (existing?.type === 'expense') {
@@ -185,6 +195,8 @@ const EditTransactionScreen = ({
         amount_changed:
           parseFloat(amount) !== parseFloat(transaction.amount.toString()),
       });
+      // The suggestion list is a convenience: record the tags without holding up the screen.
+      recordTagUse(uid, tags, knownTags).catch(reportError);
       snackbar.success('Transaction updated');
       navigation.navigate('Home');
     } catch (e) {
@@ -290,6 +302,13 @@ const EditTransactionScreen = ({
                 label="Date"
               />
             </FormSection>
+
+            <TagField
+              tags={tags}
+              onChange={setTags}
+              knownTags={knownTags}
+              disabled={isSubmitting}
+            />
 
             {/* Receipt: only expenses have one */}
             {transaction.type === 'expense' && (

@@ -31,6 +31,9 @@ import {
   FormSection,
 } from '../src/components/form/FormParts';
 import TextField from '../src/components/form/TextField';
+import TagField from '../src/components/form/TagField';
+import {useKnownTags} from '../src/hooks/useKnownTags';
+import {recordTagUse} from '../src/services/TagService';
 import {snackbar} from '../src/utils/snackbarStore';
 
 const DISABLED_BUTTON = {opacity: 0.5} as const;
@@ -44,16 +47,19 @@ const AddIncome = ({navigation}: {navigation: any}) => {
     amount,
     category,
     date,
+    tags,
     setTitle,
     setDescription,
     setAmount,
     setCategory,
     setDate,
+    setTags,
     errorMessage,
     setErrorMessage,
     isFormValid,
     validateForm,
   } = useTransactionForm();
+  const knownTags = useKnownTags();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -91,6 +97,8 @@ const AddIncome = ({navigation}: {navigation: any}) => {
           ...transactionMoneyFields(amount, currency.code),
           category,
           date,
+          // Only written when there are tags; documents without the field are valid.
+          ...(tags.length > 0 ? {tags} : {}),
           createdAt: Timestamp.fromDate(new Date()),
           type: 'income',
         };
@@ -105,6 +113,8 @@ const AddIncome = ({navigation}: {navigation: any}) => {
         amount_range: AnalyticsService.getAmountRange(parseFloat(amount)),
         category: category ?? 'uncategorized',
       });
+      // The suggestion list is a convenience: record the tags without holding up the screen.
+      recordTagUse(uid, tags, knownTags).catch(reportError);
       snackbar.success('Income added');
       navigation.goBack();
     } catch (e) {
@@ -196,6 +206,13 @@ const AddIncome = ({navigation}: {navigation: any}) => {
                 label="Date"
               />
             </FormSection>
+
+            <TagField
+              tags={tags}
+              onChange={setTags}
+              knownTags={knownTags}
+              disabled={isSubmitting}
+            />
 
             <View className="mt-5">
               {isSubmitting ? (
