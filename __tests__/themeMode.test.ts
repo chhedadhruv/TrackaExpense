@@ -22,8 +22,8 @@ describe('parseThemeMode', () => {
     expect(parseThemeMode(1)).toBe(DEFAULT_THEME_MODE);
   });
 
-  it('starts as light until every screen is converted', () => {
-    expect(DEFAULT_THEME_MODE).toBe('light');
+  it('follows the phone until the user picks a mode', () => {
+    expect(DEFAULT_THEME_MODE).toBe('system');
   });
 });
 
