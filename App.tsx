@@ -1,3 +1,4 @@
+import './global.css';
 import React, {useEffect, useState} from 'react';
 import {StatusBar, StyleSheet} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';

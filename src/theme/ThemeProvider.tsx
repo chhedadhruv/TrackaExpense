@@ -7,8 +7,10 @@ import React, {
   useState,
   type ReactNode,
 } from 'react';
-import {Appearance, useColorScheme} from 'react-native';
+import {Appearance, StyleSheet, View, useColorScheme} from 'react-native';
+import {vars} from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {themeVars} from './cssVars';
 import {palettes, type ThemeColors, type ThemeScheme} from './palettes';
 import {
   DEFAULT_THEME_MODE,
@@ -94,13 +96,23 @@ export const ThemeProvider = ({children}: ThemeProviderProps) => {
     [mode, scheme, setMode],
   );
 
+  // The palette as CSS variables, so NativeWind classes (bg-surface ...) use the same colours.
+  const cssVariables = useMemo(
+    () => vars(themeVars(value.colors)),
+    [value.colors],
+  );
+
   if (!loaded) {
     return null;
   }
   return (
-    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+    <ThemeContext.Provider value={value}>
+      <View style={[styles.root, cssVariables]}>{children}</View>
+    </ThemeContext.Provider>
   );
 };
+
+const styles = StyleSheet.create({root: {flex: 1}});
 
 /** Colours and mode for the current theme. */
 export const useTheme = (): ThemeContextValue => useContext(ThemeContext);
