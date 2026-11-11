@@ -1,12 +1,13 @@
-// Single source of truth for all app colors and typography.
-// Every screen must import from here — never redeclare these constants inline.
+// Typography and spacing for the app. Screens read colours from the theme tokens in `src/theme`
+// (useTheme, which follows light and dark); the colour constants below are the light palette's
+// values kept for the few places that still need a fixed colour.
 
 export const PRIMARY_COLOR = '#677CD2';
 export const BACKGROUND_COLOR = '#F4F6FA';
-export const INCOME_COLOR = '#25B07F';
+export const INCOME_COLOR = '#1E9A6D';
 export const EXPENSE_COLOR = '#F64E4E';
-export const SUCCESS_COLOR = '#25B07F';
-export const ORANGE_COLOR = '#F5A623';
+export const SUCCESS_COLOR = '#1E9A6D';
+export const ORANGE_COLOR = '#C77700';
 export const TEXT_PRIMARY = '#333333';
 export const TEXT_SECONDARY = '#666666';
 export const TEXT_DARK = '#2C2C2C';
