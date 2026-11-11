@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {StatusBar, StyleSheet} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {KeyboardProvider} from 'react-native-keyboard-controller';
-import {HEADER_BG} from './src/constants/theme';
+import {ThemeProvider, useTheme} from './src/theme';
 import {
   initErrorReporting,
   reportError,
@@ -76,26 +76,37 @@ const App: React.FC = () => {
   return (
     <SafeAreaProvider>
       <KeyboardProvider>
-        <SafeAreaView style={styles.container} edges={['top']}>
-          <StatusBar barStyle="dark-content" />
-          <ErrorBoundary>
-            {forceUpdateMessage !== null ? (
-              <ForceUpdateScreen message={forceUpdateMessage} />
-            ) : (
-              <Providers />
-            )}
-          </ErrorBoundary>
-          <SnackbarHost />
-        </SafeAreaView>
+        <ThemeProvider>
+          <Shell forceUpdateMessage={forceUpdateMessage} />
+        </ThemeProvider>
       </KeyboardProvider>
     </SafeAreaProvider>
+  );
+};
+
+/** The themed frame: status bar area, error boundary, the app and the snackbar layer. */
+const Shell = ({forceUpdateMessage}: {forceUpdateMessage: string | null}) => {
+  const {colors, isDark} = useTheme();
+  return (
+    <SafeAreaView
+      style={[styles.container, {backgroundColor: colors.headerBg}]}
+      edges={['top']}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <ErrorBoundary>
+        {forceUpdateMessage !== null ? (
+          <ForceUpdateScreen message={forceUpdateMessage} />
+        ) : (
+          <Providers />
+        )}
+      </ErrorBoundary>
+      <SnackbarHost />
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: HEADER_BG,
   },
 });
 

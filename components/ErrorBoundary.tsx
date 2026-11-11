@@ -2,7 +2,7 @@ import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 import {getCrashlytics, log} from '@react-native-firebase/crashlytics';
 import {reportError} from '../src/services/ErrorReporter';
-import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../src/constants/theme';
+import {useThemedStyles, type ThemeColors} from '../src/theme';
 
 interface Props {
   children: React.ReactNode;
@@ -13,6 +13,25 @@ interface State {
   hasError: boolean;
   error: Error | null;
 }
+
+interface FallbackProps {
+  message: string;
+  onReset: () => void;
+}
+
+/** The default error screen. A function component so it can read the theme. */
+const ErrorFallback = ({message, onReset}: FallbackProps) => {
+  const styles = useThemedStyles(createStyles);
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Something went wrong</Text>
+      <Text style={styles.subtitle}>{message}</Text>
+      <TouchableOpacity style={styles.button} onPress={onReset}>
+        <Text style={styles.buttonText}>Try Again</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
 
 class ErrorBoundary extends React.Component<Props, State> {
   state: State = {hasError: false, error: null};
@@ -34,54 +53,50 @@ class ErrorBoundary extends React.Component<Props, State> {
         return this.props.fallback;
       }
       return (
-        <View style={styles.container}>
-          <Text style={styles.title}>Something went wrong</Text>
-          <Text style={styles.subtitle}>
-            {this.state.error?.message || 'An unexpected error occurred'}
-          </Text>
-          <TouchableOpacity style={styles.button} onPress={this.handleReset}>
-            <Text style={styles.buttonText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
+        <ErrorFallback
+          message={this.state.error?.message || 'An unexpected error occurred'}
+          onReset={this.handleReset}
+        />
       );
     }
     return this.props.children;
   }
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: BACKGROUND_COLOR,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1A1A2E',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 20,
-  },
-  button: {
-    backgroundColor: PRIMARY_COLOR,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+    },
+    title: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.textStrong,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 32,
+      lineHeight: 20,
+    },
+    button: {
+      backgroundColor: colors.primaryFill,
+      paddingHorizontal: 32,
+      paddingVertical: 14,
+      borderRadius: 12,
+    },
+    buttonText: {
+      color: colors.onPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+  });
 
 export default ErrorBoundary;
