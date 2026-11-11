@@ -19,14 +19,8 @@ import CircleAlert from 'lucide-react-native/icons/circle-alert';
 import CircleCheck from 'lucide-react-native/icons/circle-check';
 import Info from 'lucide-react-native/icons/info';
 import type {LucideIcon} from 'lucide-react-native';
-import {
-  EXPENSE_COLOR,
-  FONT,
-  PRIMARY_COLOR,
-  SUCCESS_COLOR,
-  TEXT_DARK,
-  WHITE,
-} from '../constants/theme';
+import {FONT} from '../constants/theme';
+import {useTheme, useThemedStyles, type ThemeColors} from '../theme';
 import {
   dismissSnackbar,
   getSnackbarState,
@@ -42,10 +36,23 @@ const MAX_WIDTH = 560;
 // the bar clear of the gesture pill with a floor.
 const MODAL_MIN_BOTTOM_INSET = 24;
 
-const VARIANT: Record<SnackbarVariant, {Icon: LucideIcon; color: string}> = {
-  success: {Icon: CircleCheck, color: SUCCESS_COLOR},
-  error: {Icon: CircleAlert, color: EXPENSE_COLOR},
-  info: {Icon: Info, color: PRIMARY_COLOR},
+const VARIANT_ICON: Record<SnackbarVariant, LucideIcon> = {
+  success: CircleCheck,
+  error: CircleAlert,
+  info: Info,
+};
+
+const variantColor = (
+  variant: SnackbarVariant,
+  colors: ThemeColors,
+): string => {
+  if (variant === 'success') {
+    return colors.success;
+  }
+  if (variant === 'error') {
+    return colors.expense;
+  }
+  return colors.primary;
 };
 
 const useSnackbarState = () =>
@@ -57,7 +64,10 @@ interface SnackbarViewProps {
 
 /** The bar itself: icon, message, optional action. Tap anywhere to dismiss. */
 export const SnackbarView = ({item}: SnackbarViewProps) => {
-  const {Icon, color} = VARIANT[item.variant];
+  const {colors} = useTheme();
+  const styles = useThemedStyles(createBarStyles);
+  const Icon = VARIANT_ICON[item.variant];
+  const color = variantColor(item.variant, colors);
 
   useEffect(() => {
     // iOS VoiceOver does not read a view that appears; announce it. Android uses the live region.
@@ -167,46 +177,52 @@ const styles = StyleSheet.create({
     right: MARGIN,
     alignItems: 'center',
   },
-  bar: {
-    width: '100%',
-    maxWidth: MAX_WIDTH,
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingLeft: 16,
-    paddingRight: 16,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: TEXT_DARK,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  accent: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-  },
-  message: {
-    flex: 1,
-    color: WHITE,
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: FONT.regular,
-  },
-  actionButton: {
-    paddingVertical: 4,
-    paddingLeft: 8,
-  },
-  actionText: {
-    fontSize: 14,
-    fontFamily: FONT.bold,
-    textTransform: 'uppercase',
-  },
 });
+
+const createBarStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    bar: {
+      width: '100%',
+      maxWidth: MAX_WIDTH,
+      minHeight: 48,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingVertical: 12,
+      paddingLeft: 16,
+      paddingRight: 16,
+      borderRadius: 12,
+      overflow: 'hidden',
+      backgroundColor: colors.snackbarBackground,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.snackbarBorder,
+      shadowColor: colors.shadow,
+      shadowOffset: {width: 0, height: 4},
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+      elevation: 8,
+    },
+    accent: {
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      bottom: 0,
+      width: 4,
+    },
+    message: {
+      flex: 1,
+      color: colors.snackbarText,
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: FONT.regular,
+    },
+    actionButton: {
+      paddingVertical: 4,
+      paddingLeft: 8,
+    },
+    actionText: {
+      fontSize: 14,
+      fontFamily: FONT.bold,
+      textTransform: 'uppercase',
+    },
+  });

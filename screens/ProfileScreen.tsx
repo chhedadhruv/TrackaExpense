@@ -34,16 +34,31 @@ import {Avatar, ActivityIndicator, Card, Divider} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {useCurrency, CURRENCIES} from '../utils/CurrencyUtil';
 import {
-  PRIMARY_COLOR,
-  BACKGROUND_COLOR,
-  INCOME_COLOR,
-  EXPENSE_COLOR,
-} from '../src/constants/theme';
+  useTheme,
+  useThemedStyles,
+  type ThemeColors,
+  type ThemeMode,
+} from '../src/theme';
 import type {UserDocument} from '../src/types';
+import type {McIconName} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
 import {ModalSnackbar} from '../src/components/Snackbar';
 
+// Accent colours of the settings icons. Each icon circle is the accent at a low alpha, so one
+// accent reads on both the light and the dark card.
+const ACCENT = {amber: '#FFC107', blue: '#2196F3', green: '#4CAF50'} as const;
+const tint = (hex: string): string => `${hex}1F`;
+
+const APPEARANCE_OPTIONS: {mode: ThemeMode; label: string; icon: McIconName}[] =
+  [
+    {mode: 'system', label: 'System', icon: 'theme-light-dark'},
+    {mode: 'light', label: 'Light', icon: 'weather-sunny'},
+    {mode: 'dark', label: 'Dark', icon: 'weather-night'},
+  ];
+
 const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
+  const {colors, mode, setMode} = useTheme();
+  const styles = useThemedStyles(createStyles);
   const {logout} = useContext(AuthContext);
   const {currency, setCurrency} = useCurrency();
   const [userData, setUserData] = useState<UserDocument | null>(null);
@@ -142,7 +157,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      '⚠️ Delete Account',
+      'Delete Account',
       'This action is permanent and cannot be undone. All your data will be permanently deleted. Are you absolutely sure?',
       [
         {text: 'Cancel', style: 'cancel'},
@@ -181,7 +196,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -192,7 +207,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
         <MaterialCommunityIcons
           name="alert-circle-outline"
           size={48}
-          color={EXPENSE_COLOR}
+          color={colors.expense}
         />
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={getUser}>
@@ -226,7 +241,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
                 ) : (
                   <UserAvatar
                     size={80}
-                    bgColor={PRIMARY_COLOR}
+                    bgColor={colors.primaryFill}
                     name={userData?.name ?? ''}
                   />
                 )}
@@ -234,7 +249,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
                   <MaterialCommunityIcons
                     name={verified ? 'check-circle' : 'close-circle'}
                     size={20}
-                    color={verified ? INCOME_COLOR : EXPENSE_COLOR}
+                    color={verified ? colors.income : colors.expense}
                   />
                 </View>
               </View>
@@ -247,17 +262,21 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
                   <View
                     style={[
                       styles.statusBadge,
-                      {backgroundColor: verified ? '#E8F5E8' : '#FFF3E0'},
+                      {
+                        backgroundColor: verified
+                          ? tint(colors.income)
+                          : tint(colors.warning),
+                      },
                     ]}>
                     <MaterialCommunityIcons
                       name={verified ? 'shield-check' : 'shield-alert'}
                       size={14}
-                      color={verified ? INCOME_COLOR : '#FF9800'}
+                      color={verified ? colors.income : colors.warning}
                     />
                     <Text
                       style={[
                         styles.statusText,
-                        {color: verified ? INCOME_COLOR : '#FF9800'},
+                        {color: verified ? colors.income : colors.warning},
                       ]}>
                       {verified ? 'Verified' : 'Not Verified'}
                     </Text>
@@ -270,11 +289,64 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
               onPress={() =>
                 navigation.navigate('EditProfile', {user: userData})
               }>
-              <MaterialCommunityIcons name="pencil" size={20} color="#FFFFFF" />
+              <MaterialCommunityIcons
+                name="pencil"
+                size={20}
+                color={colors.onPrimary}
+              />
               <Text style={styles.editProfileButtonText}>Edit Profile</Text>
             </TouchableOpacity>
           </View>
         </Card>
+
+        <View style={styles.settingsSection}>
+          <Text style={styles.sectionHeader}>Appearance</Text>
+          <Card
+            style={[
+              styles.settingsCard,
+              Platform.OS === 'android' && styles.cardAndroid,
+            ]}
+            elevation={Platform.OS === 'android' ? 0 : 2}>
+            <View style={styles.appearanceContent}>
+              <Text style={styles.settingsItemTitle}>Theme</Text>
+              <Text style={styles.settingsItemSubtitle}>
+                Choose how TrackaExpense looks
+              </Text>
+              <View style={styles.segmentRow} accessibilityRole="radiogroup">
+                {APPEARANCE_OPTIONS.map(option => {
+                  const selected = mode === option.mode;
+                  return (
+                    <TouchableOpacity
+                      key={option.mode}
+                      accessibilityRole="radio"
+                      accessibilityLabel={`${option.label} theme`}
+                      accessibilityState={{selected}}
+                      onPress={() => setMode(option.mode)}
+                      style={[
+                        styles.segment,
+                        selected && styles.segmentSelected,
+                      ]}>
+                      <MaterialCommunityIcons
+                        name={option.icon}
+                        size={18}
+                        color={
+                          selected ? colors.onPrimary : colors.textSecondary
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.segmentText,
+                          selected && styles.segmentTextSelected,
+                        ]}>
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </Card>
+        </View>
 
         <View style={styles.settingsSection}>
           <Text style={styles.sectionHeader}>Account Settings</Text>
@@ -289,11 +361,14 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
               onPress={() => setCurrencyModalVisible(true)}>
               <View style={styles.settingsItemLeft}>
                 <View
-                  style={[styles.settingsIcon, {backgroundColor: '#FFF9E1'}]}>
+                  style={[
+                    styles.settingsIcon,
+                    {backgroundColor: tint(ACCENT.amber)},
+                  ]}>
                   <MaterialCommunityIcons
                     name="currency-usd"
                     size={24}
-                    color="#FFC107"
+                    color={ACCENT.amber}
                   />
                 </View>
                 <View style={styles.settingsTextContainer}>
@@ -306,7 +381,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
               <MaterialCommunityIcons
                 name="chevron-right"
                 size={24}
-                color="#CBD3EE"
+                color={colors.iconMuted}
               />
             </TouchableOpacity>
             <Divider style={styles.divider} />
@@ -315,11 +390,14 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
               onPress={() => navigation.navigate('ContactUs')}>
               <View style={styles.settingsItemLeft}>
                 <View
-                  style={[styles.settingsIcon, {backgroundColor: '#E3F2FD'}]}>
+                  style={[
+                    styles.settingsIcon,
+                    {backgroundColor: tint(ACCENT.blue)},
+                  ]}>
                   <MaterialCommunityIcons
                     name="account-voice"
                     size={24}
-                    color="#2196F3"
+                    color={ACCENT.blue}
                   />
                 </View>
                 <View style={styles.settingsTextContainer}>
@@ -332,7 +410,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
               <MaterialCommunityIcons
                 name="chevron-right"
                 size={24}
-                color="#CBD3EE"
+                color={colors.iconMuted}
               />
             </TouchableOpacity>
             <Divider style={styles.divider} />
@@ -341,11 +419,14 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
               onPress={() => navigation.navigate('PrivacyPolicy')}>
               <View style={styles.settingsItemLeft}>
                 <View
-                  style={[styles.settingsIcon, {backgroundColor: '#E8F5E8'}]}>
+                  style={[
+                    styles.settingsIcon,
+                    {backgroundColor: tint(ACCENT.green)},
+                  ]}>
                   <MaterialCommunityIcons
                     name="shield-check"
                     size={24}
-                    color="#4CAF50"
+                    color={ACCENT.green}
                   />
                 </View>
                 <View style={styles.settingsTextContainer}>
@@ -358,7 +439,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
               <MaterialCommunityIcons
                 name="chevron-right"
                 size={24}
-                color="#CBD3EE"
+                color={colors.iconMuted}
               />
             </TouchableOpacity>
             <Divider style={styles.divider} />
@@ -367,15 +448,19 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
               onPress={() => logout()}>
               <View style={styles.settingsItemLeft}>
                 <View
-                  style={[styles.settingsIcon, {backgroundColor: '#FFEBEE'}]}>
+                  style={[
+                    styles.settingsIcon,
+                    {backgroundColor: tint(colors.expense)},
+                  ]}>
                   <MaterialCommunityIcons
                     name="logout"
                     size={24}
-                    color="#F44336"
+                    color={colors.expense}
                   />
                 </View>
                 <View style={styles.settingsTextContainer}>
-                  <Text style={[styles.settingsItemTitle, {color: '#F44336'}]}>
+                  <Text
+                    style={[styles.settingsItemTitle, {color: colors.expense}]}>
                     Logout
                   </Text>
                   <Text style={styles.settingsItemSubtitle}>
@@ -386,7 +471,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
               <MaterialCommunityIcons
                 name="chevron-right"
                 size={24}
-                color="#CBD3EE"
+                color={colors.iconMuted}
               />
             </TouchableOpacity>
           </Card>
@@ -405,11 +490,14 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
               activeOpacity={0.7}>
               <View style={styles.settingsItemLeft}>
                 <View
-                  style={[styles.settingsIcon, {backgroundColor: '#FFF3E0'}]}>
+                  style={[
+                    styles.settingsIcon,
+                    {backgroundColor: tint(colors.warning)},
+                  ]}>
                   <MaterialCommunityIcons
                     name="shield-alert"
                     size={24}
-                    color="#FF9800"
+                    color={colors.warning}
                   />
                 </View>
                 <View style={styles.settingsTextContainer}>
@@ -424,7 +512,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
               <MaterialCommunityIcons
                 name={accountActionsExpanded ? 'chevron-up' : 'chevron-down'}
                 size={24}
-                color="#CBD3EE"
+                color={colors.iconMuted}
               />
             </TouchableOpacity>
             {accountActionsExpanded && (
@@ -437,12 +525,12 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
                     <View
                       style={[
                         styles.settingsIcon,
-                        {backgroundColor: '#E3F2FD'},
+                        {backgroundColor: tint(ACCENT.blue)},
                       ]}>
                       <MaterialCommunityIcons
                         name="lock-reset"
                         size={24}
-                        color="#2196F3"
+                        color={ACCENT.blue}
                       />
                     </View>
                     <View style={styles.settingsTextContainer}>
@@ -457,7 +545,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
                   <MaterialCommunityIcons
                     name="chevron-right"
                     size={24}
-                    color="#CBD3EE"
+                    color={colors.iconMuted}
                   />
                 </TouchableOpacity>
                 <Divider style={styles.divider} />
@@ -468,17 +556,20 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
                     <View
                       style={[
                         styles.settingsIcon,
-                        {backgroundColor: '#FFEBEE'},
+                        {backgroundColor: tint(colors.expense)},
                       ]}>
                       <MaterialCommunityIcons
                         name="account-remove"
                         size={24}
-                        color="#F44336"
+                        color={colors.expense}
                       />
                     </View>
                     <View style={styles.settingsTextContainer}>
                       <Text
-                        style={[styles.settingsItemTitle, {color: '#F44336'}]}>
+                        style={[
+                          styles.settingsItemTitle,
+                          {color: colors.expense},
+                        ]}>
                         Delete Account
                       </Text>
                       <Text style={styles.settingsItemSubtitle}>
@@ -489,14 +580,14 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
                   <MaterialCommunityIcons
                     name="chevron-right"
                     size={24}
-                    color="#CBD3EE"
+                    color={colors.iconMuted}
                   />
                 </TouchableOpacity>
                 <View style={styles.warningContainer}>
                   <MaterialCommunityIcons
                     name="alert-circle"
                     size={16}
-                    color="#FF9800"
+                    color={colors.warning}
                   />
                   <Text style={styles.warningText}>
                     These actions are sensitive and may require additional
@@ -526,7 +617,11 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Currency</Text>
               <TouchableOpacity onPress={() => setCurrencyModalVisible(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#666" />
+                <MaterialCommunityIcons
+                  name="close"
+                  size={24}
+                  color={colors.textSecondary}
+                />
               </TouchableOpacity>
             </View>
             <ScrollView
@@ -551,7 +646,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
                     <MaterialCommunityIcons
                       name="check-circle"
                       size={24}
-                      color={PRIMARY_COLOR}
+                      color={colors.primary}
                     />
                   )}
                 </TouchableOpacity>
@@ -567,262 +662,292 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
 
 export default ProfileScreen;
 
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  scrollContainer: {flex: 1},
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: BACKGROUND_COLOR,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: BACKGROUND_COLOR,
-    paddingHorizontal: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: EXPENSE_COLOR,
-    textAlign: 'center',
-    marginVertical: 15,
-    fontFamily: 'Lato-Regular',
-  },
-  retryButton: {
-    backgroundColor: PRIMARY_COLOR,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginTop: 10,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'Lato-Bold',
-  },
-  headerSection: {paddingHorizontal: 20, paddingTop: 20, paddingBottom: 15},
-  headerText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    fontFamily: 'Kufam-SemiBoldItalic',
-  },
-  subHeaderText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 4,
-    fontFamily: 'Lato-Regular',
-  },
-  profileCard: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-  },
-  profileCardContent: {padding: 24},
-  profileRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 20},
-  avatarSection: {position: 'relative', marginRight: 16},
-  verificationBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 2,
-  },
-  userInfo: {flex: 1, justifyContent: 'center'},
-  userName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    marginBottom: 4,
-    fontFamily: 'Kufam-SemiBoldItalic',
-  },
-  userEmail: {
-    fontSize: 15,
-    color: '#666',
-    marginBottom: 8,
-    fontFamily: 'Lato-Regular',
-  },
-  verificationStatus: {alignItems: 'flex-start'},
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
-    fontFamily: 'Lato-Bold',
-  },
-  editProfileButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'center',
-    backgroundColor: PRIMARY_COLOR,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 12,
-    elevation: Platform.OS === 'android' ? 0 : 3,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  editProfileButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginLeft: 8,
-    fontFamily: 'Lato-Bold',
-  },
-  settingsSection: {paddingHorizontal: 20, paddingBottom: 30},
-  sectionHeader: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    marginBottom: 15,
-    fontFamily: 'Kufam-SemiBoldItalic',
-  },
-  settingsCard: {borderRadius: 16, backgroundColor: '#FFFFFF'},
-  settingsItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  settingsItemLeft: {flexDirection: 'row', alignItems: 'center', flex: 1},
-  settingsIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  settingsTextContainer: {flex: 1},
-  settingsItemTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 2,
-    fontFamily: 'Lato-Bold',
-  },
-  settingsItemSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-  },
-  divider: {marginHorizontal: 20, backgroundColor: '#F0F0F0'},
-  collapsibleHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  collapsibleContent: {paddingBottom: 8},
-  warningContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF3E0',
-    borderRadius: 8,
-    padding: 12,
-    marginHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  warningText: {
-    fontSize: 12,
-    color: '#E65100',
-    fontFamily: 'Lato-Regular',
-    marginLeft: 8,
-    flex: 1,
-    lineHeight: 16,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContainer: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-    paddingBottom: 20,
-    height: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    fontFamily: 'Kufam-SemiBoldItalic',
-  },
-  currencyList: {paddingHorizontal: 20, paddingTop: 10},
-  currencyItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginVertical: 4,
-    backgroundColor: '#F8F9FA',
-  },
-  currencyItemSelected: {
-    backgroundColor: '#E8EBF7',
-    borderWidth: 2,
-    borderColor: PRIMARY_COLOR,
-  },
-  currencyInfo: {flexDirection: 'row', alignItems: 'center', flex: 1},
-  currencySymbol: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    marginRight: 16,
-    width: 40,
-    textAlign: 'center',
-  },
-  currencyDetails: {flex: 1},
-  currencyName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  currencyCode: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-    fontFamily: 'Lato-Regular',
-  },
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-  versionContainer: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    paddingBottom: 36,
-  },
-  versionText: {fontSize: 13, color: '#999', fontFamily: 'Lato-Regular'},
-  versionSubText: {
-    fontSize: 12,
-    color: '#BBB',
-    fontFamily: 'Lato-Regular',
-    marginTop: 2,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {flex: 1, backgroundColor: colors.background},
+    scrollContainer: {flex: 1},
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      paddingHorizontal: 20,
+    },
+    errorText: {
+      fontSize: 16,
+      color: colors.expense,
+      textAlign: 'center',
+      marginVertical: 15,
+      fontFamily: 'Lato-Regular',
+    },
+    retryButton: {
+      backgroundColor: colors.primaryFill,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 12,
+      marginTop: 10,
+    },
+    retryButtonText: {
+      color: colors.onPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+      fontFamily: 'Lato-Bold',
+    },
+    headerSection: {paddingHorizontal: 20, paddingTop: 20, paddingBottom: 15},
+    headerText: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: colors.textStrong,
+      fontFamily: 'Kufam-SemiBoldItalic',
+    },
+    subHeaderText: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      marginTop: 4,
+      fontFamily: 'Lato-Regular',
+    },
+    profileCard: {
+      marginHorizontal: 20,
+      marginBottom: 20,
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+    },
+    profileCardContent: {padding: 24},
+    profileRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 20},
+    avatarSection: {position: 'relative', marginRight: 16},
+    verificationBadge: {
+      position: 'absolute',
+      bottom: -2,
+      right: -2,
+      backgroundColor: colors.surface,
+      borderRadius: 10,
+      padding: 2,
+    },
+    userInfo: {flex: 1, justifyContent: 'center'},
+    userName: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.textStrong,
+      marginBottom: 4,
+      fontFamily: 'Kufam-SemiBoldItalic',
+    },
+    userEmail: {
+      fontSize: 15,
+      color: colors.textSecondary,
+      marginBottom: 8,
+      fontFamily: 'Lato-Regular',
+    },
+    verificationStatus: {alignItems: 'flex-start'},
+    statusBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+    },
+    statusText: {
+      fontSize: 14,
+      fontWeight: '600',
+      marginLeft: 6,
+      fontFamily: 'Lato-Bold',
+    },
+    editProfileButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'center',
+      backgroundColor: colors.primaryFill,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 12,
+      elevation: Platform.OS === 'android' ? 0 : 3,
+      shadowColor: colors.primaryFill,
+      shadowOffset: {width: 0, height: 2},
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+    },
+    editProfileButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.onPrimary,
+      marginLeft: 8,
+      fontFamily: 'Lato-Bold',
+    },
+    settingsSection: {paddingHorizontal: 20, paddingBottom: 30},
+    sectionHeader: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.textStrong,
+      marginBottom: 15,
+      fontFamily: 'Kufam-SemiBoldItalic',
+    },
+    settingsCard: {borderRadius: 16, backgroundColor: colors.surface},
+    settingsItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+    },
+    settingsItemLeft: {flexDirection: 'row', alignItems: 'center', flex: 1},
+    settingsIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 16,
+    },
+    settingsTextContainer: {flex: 1},
+    settingsItemTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textStrong,
+      marginBottom: 2,
+      fontFamily: 'Lato-Bold',
+    },
+    settingsItemSubtitle: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      fontFamily: 'Lato-Regular',
+    },
+    divider: {marginHorizontal: 20, backgroundColor: colors.divider},
+    collapsibleHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+    },
+    collapsibleContent: {paddingBottom: 8},
+    warningContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: tint(colors.warning),
+      borderRadius: 8,
+      padding: 12,
+      marginHorizontal: 20,
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    warningText: {
+      fontSize: 12,
+      color: colors.warningText,
+      fontFamily: 'Lato-Regular',
+      marginLeft: 8,
+      flex: 1,
+      lineHeight: 16,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: 'flex-end',
+    },
+    modalContainer: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: '80%',
+      paddingBottom: 20,
+      height: '80%',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.divider,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.textStrong,
+      fontFamily: 'Kufam-SemiBoldItalic',
+    },
+    currencyList: {paddingHorizontal: 20, paddingTop: 10},
+    currencyItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 16,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      marginVertical: 4,
+      backgroundColor: colors.surfaceMuted,
+    },
+    currencyItemSelected: {
+      backgroundColor: colors.primarySoft,
+      borderWidth: 2,
+      borderColor: colors.primary,
+    },
+    currencyInfo: {flexDirection: 'row', alignItems: 'center', flex: 1},
+    currencySymbol: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: colors.primary,
+      marginRight: 16,
+      width: 40,
+      textAlign: 'center',
+    },
+    currencyDetails: {flex: 1},
+    currencyName: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textStrong,
+      fontFamily: 'Lato-Bold',
+    },
+    currencyCode: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginTop: 2,
+      fontFamily: 'Lato-Regular',
+    },
+    cardAndroid: {borderWidth: 1, borderColor: colors.cardBorder},
+    versionContainer: {
+      alignItems: 'center',
+      paddingVertical: 24,
+      paddingBottom: 36,
+    },
+    versionText: {
+      fontSize: 13,
+      color: colors.textPlaceholder,
+      fontFamily: 'Lato-Regular',
+    },
+    versionSubText: {
+      fontSize: 12,
+      color: colors.textPlaceholder,
+      fontFamily: 'Lato-Regular',
+      marginTop: 2,
+    },
+    appearanceContent: {padding: 20},
+    segmentRow: {flexDirection: 'row', gap: 8, marginTop: 14},
+    segment: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      backgroundColor: colors.surfaceMuted,
+    },
+    segmentSelected: {
+      backgroundColor: colors.primaryFill,
+      borderColor: colors.primaryFill,
+    },
+    segmentText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      fontFamily: 'Lato-Bold',
+    },
+    segmentTextSelected: {color: colors.onPrimary},
+  });

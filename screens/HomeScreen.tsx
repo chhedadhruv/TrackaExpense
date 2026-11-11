@@ -27,21 +27,8 @@ import {DatePickerModal} from 'react-native-paper-dates';
 import {KeyboardAvoidingModal} from '../src/components/KeyboardAvoidingModal';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {getCategoryIcon} from '../utils/CategoryData';
-import {
-  PRIMARY_COLOR,
-  BACKGROUND_COLOR,
-  INCOME_COLOR,
-  EXPENSE_COLOR,
-  FONT,
-  SPACING,
-  WHITE,
-  TEXT_SECONDARY,
-  TEXT_DARK,
-  TEXT_MUTED,
-  TEXT_PLACEHOLDER,
-  CARD_BORDER,
-  SURFACE_COLOR,
-} from '../src/constants/theme';
+import {FONT, SPACING} from '../src/constants/theme';
+import {useTheme, useThemedStyles, type ThemeColors} from '../src/theme';
 import {formatInputAmount} from '../src/utils/formatters';
 import {majorOf, totalMajor} from '../src/utils/amounts';
 import {fromMinor, tryToMinor} from '../src/utils/money';
@@ -70,6 +57,8 @@ const TIME_RANGES: {key: TimeRange; label: string; icon: McIconName}[] = [
 const RECENT_LIMIT = 5;
 
 const HomeScreen = ({navigation}: {navigation: any}) => {
+  const {colors} = useTheme();
+  const styles = useThemedStyles(createStyles);
   const {currency, formatAmount} = useCurrency();
   const [userData, setUserData] = useState<UserDocument | null>(null);
   const [totalExpense, setTotalExpense] = useState(0);
@@ -235,7 +224,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -246,7 +235,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
         <MaterialCommunityIcons
           name="alert-circle-outline"
           size={48}
-          color={EXPENSE_COLOR}
+          color={colors.expense}
         />
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity
@@ -276,7 +265,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={PRIMARY_COLOR}
+            tintColor={colors.primary}
           />
         }>
         {/* Hero */}
@@ -309,7 +298,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
               <Text
                 style={[
                   styles.balanceHeroAmount,
-                  {color: balance >= 0 ? INCOME_COLOR : EXPENSE_COLOR},
+                  {color: balance >= 0 ? colors.income : colors.expense},
                 ]}>
                 {balance < 0
                   ? `-${formatAmount(Math.abs(balance))}`
@@ -333,7 +322,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
                 <MaterialCommunityIcons
                   name="pencil-outline"
                   size={18}
-                  color={PRIMARY_COLOR}
+                  color={colors.primary}
                 />
               </TouchableOpacity>
             </View>
@@ -354,12 +343,12 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
                   <MaterialCommunityIcons
                     name="arrow-down-bold"
                     size={20}
-                    color={INCOME_COLOR}
+                    color={colors.income}
                   />
                 </View>
                 <Text style={styles.cardTitle}>Total Income</Text>
               </View>
-              <Text style={[styles.cardAmount, {color: INCOME_COLOR}]}>
+              <Text style={[styles.cardAmount, {color: colors.income}]}>
                 {formatAmount(totalIncome)}
               </Text>
             </View>
@@ -376,12 +365,12 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
                   <MaterialCommunityIcons
                     name="arrow-up-bold"
                     size={20}
-                    color={EXPENSE_COLOR}
+                    color={colors.expense}
                   />
                 </View>
                 <Text style={styles.cardTitle}>Total Expense</Text>
               </View>
-              <Text style={[styles.cardAmount, {color: EXPENSE_COLOR}]}>
+              <Text style={[styles.cardAmount, {color: colors.expense}]}>
                 {formatAmount(totalExpense)}
               </Text>
             </View>
@@ -407,7 +396,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
                   <MaterialCommunityIcons
                     name={icon}
                     size={16}
-                    color={active ? WHITE : PRIMARY_COLOR}
+                    color={active ? colors.onPrimary : colors.primary}
                   />
                   <Text
                     style={
@@ -434,7 +423,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
                   <MaterialCommunityIcons
                     name="calendar-start"
                     size={20}
-                    color={PRIMARY_COLOR}
+                    color={colors.primary}
                   />
                   <Text
                     style={[
@@ -457,7 +446,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
                   <MaterialCommunityIcons
                     name="calendar-end"
                     size={20}
-                    color={PRIMARY_COLOR}
+                    color={colors.primary}
                   />
                   <Text
                     style={[
@@ -520,7 +509,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
               <MaterialCommunityIcons
                 name="cash-plus"
                 size={20}
-                color={WHITE}
+                color={colors.onPrimary}
               />
               <Text style={styles.quickActionText}>Add Income</Text>
             </TouchableOpacity>
@@ -530,7 +519,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
               <MaterialCommunityIcons
                 name="cash-minus"
                 size={20}
-                color={WHITE}
+                color={colors.onPrimary}
               />
               <Text style={styles.quickActionText}>Add Expense</Text>
             </TouchableOpacity>
@@ -559,7 +548,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
               <MaterialCommunityIcons
                 name="chevron-right"
                 size={18}
-                color={PRIMARY_COLOR}
+                color={colors.primary}
               />
             </TouchableOpacity>
           </View>
@@ -589,7 +578,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
                               : getCategoryIcon(transaction.category)
                           }
                           size={25}
-                          color={PRIMARY_COLOR}
+                          color={colors.primary}
                         />
                       </View>
                       <View style={styles.transactionsCardMeta}>
@@ -633,7 +622,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
                 <MaterialCommunityIcons
                   name="note-text-outline"
                   size={48}
-                  color="#CBD3EE"
+                  color={colors.iconMuted}
                 />
                 {transactions.length === 0 ? (
                   <>
@@ -679,7 +668,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
             onChangeText={text => setNewBalanceInput(text.replace(/,/g, ''))}
             keyboardType="numeric"
             placeholder="Enter balance"
-            placeholderTextColor={TEXT_PLACEHOLDER}
+            placeholderTextColor={colors.textPlaceholder}
             autoFocus
           />
           <View style={styles.modalActions}>
@@ -708,451 +697,460 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
 
 export default HomeScreen;
 
-const styles = StyleSheet.create({
-  splitRoleLabel: {
-    fontSize: 10,
-    color: PRIMARY_COLOR,
-    fontWeight: '600',
-    marginTop: 1,
-    fontFamily: FONT.bold,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: BACKGROUND_COLOR,
-  },
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  scrollContainer: {flex: 1},
-  heroSection: {
-    backgroundColor: PRIMARY_COLOR,
-    paddingHorizontal: SPACING.md + 4,
-    paddingTop: SPACING.md + 4,
-    paddingBottom: SPACING.lg + 4,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    marginBottom: SPACING.md + 4,
-  },
-  heroTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.md + 4,
-  },
-  heroGreeting: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: WHITE,
-    fontFamily: FONT.heading,
-  },
-  heroSubGreeting: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.75)',
-    marginTop: SPACING.xs,
-    fontFamily: FONT.regular,
-  },
-  heroAvatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.6)',
-  },
-  heroAvatarInitials: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.5)',
-  },
-  heroAvatarInitialsText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: WHITE,
-    fontFamily: FONT.bold,
-  },
-  balanceHeroCard: {
-    backgroundColor: WHITE,
-    borderRadius: 16,
-    paddingHorizontal: SPACING.md + 4,
-    paddingVertical: SPACING.md,
-  },
-  balanceHeroLabel: {
-    fontSize: 13,
-    color: TEXT_SECONDARY,
-    fontFamily: FONT.regular,
-    marginBottom: SPACING.sm - 2,
-  },
-  balanceHeroRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  balanceHeroAmount: {fontSize: 30, fontWeight: 'bold', fontFamily: FONT.bold},
-  balanceEditBtn: {
-    backgroundColor: SURFACE_COLOR,
-    borderRadius: 8,
-    padding: SPACING.sm,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md + 4,
-  },
-  modalCard: {
-    backgroundColor: WHITE,
-    borderRadius: 20,
-    padding: SPACING.lg,
-    width: '100%',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: TEXT_DARK,
-    fontFamily: FONT.heading,
-    marginBottom: SPACING.xs,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: TEXT_MUTED,
-    fontFamily: FONT.regular,
-    marginBottom: SPACING.md + 4,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
-    borderRadius: 12,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 12,
-    fontSize: 18,
-    color: TEXT_DARK,
-    fontFamily: FONT.regular,
-    backgroundColor: SURFACE_COLOR,
-    marginBottom: SPACING.md + 4,
-  },
-  modalActions: {flexDirection: 'row', justifyContent: 'flex-end', gap: 12},
-  modalCancelBtn: {
-    paddingHorizontal: SPACING.md + 4,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
-  },
-  modalCancelText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: TEXT_SECONDARY,
-    fontFamily: FONT.bold,
-  },
-  modalSaveBtn: {
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: PRIMARY_COLOR,
-  },
-  modalSaveBtnSuccess: {backgroundColor: INCOME_COLOR},
-  modalSaveText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: WHITE,
-    fontFamily: FONT.bold,
-  },
-  filterSection: {
-    marginHorizontal: SPACING.md + 4,
-    marginBottom: SPACING.md + 4,
-  },
-  filterScrollView: {flexGrow: 0},
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: WHITE,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
-  },
-  filterButtonActive: {
-    backgroundColor: PRIMARY_COLOR,
-    borderColor: PRIMARY_COLOR,
-  },
-  filterButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: PRIMARY_COLOR,
-    marginLeft: SPACING.sm - 2,
-    fontFamily: FONT.bold,
-  },
-  filterButtonTextActive: {
-    color: WHITE,
-    marginLeft: SPACING.sm - 2,
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: FONT.bold,
-  },
-  customDateSection: {
-    marginHorizontal: SPACING.md + 4,
-    marginBottom: SPACING.md + 4,
-    padding: SPACING.md,
-    backgroundColor: WHITE,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
-  },
-  customDateTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: TEXT_DARK,
-    marginBottom: 12,
-    fontFamily: FONT.bold,
-  },
-  customDateContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  customRangeHint: {
-    fontSize: 12,
-    color: TEXT_MUTED,
-    marginTop: SPACING.sm,
-    textAlign: 'center',
-    fontFamily: FONT.regular,
-  },
-  dateInput: {
-    flex: 1,
-    backgroundColor: SURFACE_COLOR,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
-  },
-  dateInputContent: {flexDirection: 'row', alignItems: 'center'},
-  dateInputText: {
-    fontSize: 14,
-    color: TEXT_DARK,
-    marginLeft: SPACING.sm,
-    fontFamily: FONT.regular,
-    fontWeight: '500',
-  },
-  dateInputPlaceholder: {color: TEXT_PLACEHOLDER},
-  dateSeparator: {marginHorizontal: 10},
-  dateSeparatorText: {
-    fontSize: 12,
-    color: TEXT_MUTED,
-    fontFamily: FONT.regular,
-  },
-  cardSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginHorizontal: SPACING.md + 4,
-    marginBottom: SPACING.md + 4,
-  },
-  summaryCard: {width: '48%', borderRadius: 16, backgroundColor: WHITE},
-  cardContent: {padding: SPACING.md},
-  cardHeader: {flexDirection: 'row', alignItems: 'center', marginBottom: 12},
-  cardIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: SPACING.sm,
-    backgroundColor: SURFACE_COLOR,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: SPACING.sm,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: TEXT_SECONDARY,
-    fontFamily: FONT.regular,
-  },
-  cardAmount: {fontSize: 20, fontWeight: 'bold', fontFamily: FONT.bold},
-  quickActionsSection: {
-    marginTop: SPACING.md + 4,
-    paddingHorizontal: SPACING.md + 4,
-  },
-  quickActionsTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: TEXT_DARK,
-    marginBottom: 15,
-    fontFamily: FONT.heading,
-  },
-  quickActionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  quickActionButton: {
-    flex: 0.48,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: SPACING.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addIncomeButton: {backgroundColor: INCOME_COLOR},
-  addExpenseButton: {backgroundColor: EXPENSE_COLOR},
-  quickActionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: WHITE,
-    fontFamily: FONT.bold,
-    marginLeft: SPACING.sm,
-  },
-  transactionsSection: {marginTop: 10, paddingHorizontal: SPACING.md + 4},
-  transactionsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  transactionsHeaderText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: TEXT_DARK,
-    fontFamily: FONT.heading,
-  },
-  transactionsSubHeaderText: {
-    fontSize: 14,
-    color: TEXT_SECONDARY,
-    marginTop: 2,
-    fontFamily: FONT.regular,
-  },
-  seeAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: `${PRIMARY_COLOR}1A`,
-    paddingHorizontal: 12,
-    paddingVertical: SPACING.sm,
-    borderRadius: 10,
-  },
-  seeAllText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: PRIMARY_COLOR,
-    marginRight: SPACING.xs,
-    fontFamily: FONT.bold,
-  },
-  transactionsList: {marginBottom: 30},
-  transactionsCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 18,
-    marginVertical: SPACING.sm - 2,
-    backgroundColor: WHITE,
-    borderRadius: 16,
-  },
-  transactionsCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  transactionsCardDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  transactionsCardIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 14,
-    backgroundColor: CARD_BORDER,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 15,
-  },
-  transactionsCardMeta: {flexDirection: 'column', flex: 1},
-  transactionsCardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: TEXT_DARK,
-    fontFamily: FONT.bold,
-  },
-  transactionsCardDateAndTime: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: SPACING.xs,
-  },
-  transactionsCardDate: {
-    fontSize: 13,
-    color: TEXT_MUTED,
-    fontFamily: FONT.regular,
-  },
-  transactionsCardAmount: {
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  amountIncome: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: INCOME_COLOR,
-    fontFamily: FONT.bold,
-  },
-  amountExpense: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: EXPENSE_COLOR,
-    fontFamily: FONT.bold,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: SPACING.md + 4,
-  },
-  emptyStateText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: TEXT_SECONDARY,
-    marginTop: 15,
-    fontFamily: FONT.bold,
-  },
-  emptyStateSubText: {
-    fontSize: 14,
-    color: TEXT_MUTED,
-    textAlign: 'center',
-    marginTop: SPACING.sm,
-    fontFamily: FONT.regular,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: BACKGROUND_COLOR,
-    paddingHorizontal: SPACING.md + 4,
-  },
-  errorText: {
-    fontSize: 16,
-    color: EXPENSE_COLOR,
-    textAlign: 'center',
-    fontFamily: FONT.regular,
-    marginTop: 15,
-    marginBottom: SPACING.md + 4,
-  },
-  retryButton: {
-    backgroundColor: PRIMARY_COLOR,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: 12,
-    borderRadius: 8,
-    elevation: Platform.OS === 'android' ? 0 : 2,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-  },
-  retryButtonText: {
-    color: WHITE,
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: FONT.bold,
-  },
-  cardAndroid: {borderWidth: 1, borderColor: CARD_BORDER},
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    splitRoleLabel: {
+      fontSize: 10,
+      color: colors.primary,
+      fontWeight: '600',
+      marginTop: 1,
+      fontFamily: FONT.bold,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    container: {flex: 1, backgroundColor: colors.background},
+    scrollContainer: {flex: 1},
+    heroSection: {
+      backgroundColor: colors.primaryFill,
+      paddingHorizontal: SPACING.md + 4,
+      paddingTop: SPACING.md + 4,
+      paddingBottom: SPACING.lg + 4,
+      borderBottomLeftRadius: 28,
+      borderBottomRightRadius: 28,
+      marginBottom: SPACING.md + 4,
+    },
+    heroTopRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: SPACING.md + 4,
+    },
+    heroGreeting: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: colors.onPrimary,
+      fontFamily: FONT.heading,
+    },
+    heroSubGreeting: {
+      fontSize: 14,
+      color: 'rgba(255,255,255,0.75)',
+      marginTop: SPACING.xs,
+      fontFamily: FONT.regular,
+    },
+    heroAvatar: {
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      borderWidth: 2,
+      borderColor: 'rgba(255,255,255,0.6)',
+    },
+    heroAvatarInitials: {
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      backgroundColor: 'rgba(255,255,255,0.25)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: 'rgba(255,255,255,0.5)',
+    },
+    heroAvatarInitialsText: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.onPrimary,
+      fontFamily: FONT.bold,
+    },
+    balanceHeroCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      paddingHorizontal: SPACING.md + 4,
+      paddingVertical: SPACING.md,
+    },
+    balanceHeroLabel: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      fontFamily: FONT.regular,
+      marginBottom: SPACING.sm - 2,
+    },
+    balanceHeroRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    balanceHeroAmount: {
+      fontSize: 30,
+      fontWeight: 'bold',
+      fontFamily: FONT.bold,
+    },
+    balanceEditBtn: {
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: 8,
+      padding: SPACING.sm,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: SPACING.md + 4,
+    },
+    modalCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: SPACING.lg,
+      width: '100%',
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.textStrong,
+      fontFamily: FONT.heading,
+      marginBottom: SPACING.xs,
+    },
+    modalSubtitle: {
+      fontSize: 14,
+      color: colors.textMuted,
+      fontFamily: FONT.regular,
+      marginBottom: SPACING.md + 4,
+    },
+    modalInput: {
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      borderRadius: 12,
+      paddingHorizontal: SPACING.md,
+      paddingVertical: 12,
+      fontSize: 18,
+      color: colors.textStrong,
+      fontFamily: FONT.regular,
+      backgroundColor: colors.surfaceMuted,
+      marginBottom: SPACING.md + 4,
+    },
+    modalActions: {flexDirection: 'row', justifyContent: 'flex-end', gap: 12},
+    modalCancelBtn: {
+      paddingHorizontal: SPACING.md + 4,
+      paddingVertical: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    modalCancelText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      fontFamily: FONT.bold,
+    },
+    modalSaveBtn: {
+      paddingHorizontal: SPACING.lg,
+      paddingVertical: 12,
+      borderRadius: 10,
+      backgroundColor: colors.primaryFill,
+    },
+    modalSaveBtnSuccess: {backgroundColor: colors.incomeFill},
+    modalSaveText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.onPrimary,
+      fontFamily: FONT.bold,
+    },
+    filterSection: {
+      marginHorizontal: SPACING.md + 4,
+      marginBottom: SPACING.md + 4,
+    },
+    filterScrollView: {flexGrow: 0},
+    filterButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: SPACING.md,
+      paddingVertical: 10,
+      borderRadius: 20,
+      backgroundColor: colors.surface,
+      marginRight: 10,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    filterButtonActive: {
+      backgroundColor: colors.primaryFill,
+      borderColor: colors.primaryFill,
+    },
+    filterButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.primary,
+      marginLeft: SPACING.sm - 2,
+      fontFamily: FONT.bold,
+    },
+    filterButtonTextActive: {
+      color: colors.onPrimary,
+      marginLeft: SPACING.sm - 2,
+      fontSize: 14,
+      fontWeight: '600',
+      fontFamily: FONT.bold,
+    },
+    customDateSection: {
+      marginHorizontal: SPACING.md + 4,
+      marginBottom: SPACING.md + 4,
+      padding: SPACING.md,
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    customDateTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textStrong,
+      marginBottom: 12,
+      fontFamily: FONT.bold,
+    },
+    customDateContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    customRangeHint: {
+      fontSize: 12,
+      color: colors.textMuted,
+      marginTop: SPACING.sm,
+      textAlign: 'center',
+      fontFamily: FONT.regular,
+    },
+    dateInput: {
+      flex: 1,
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: 12,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    dateInputContent: {flexDirection: 'row', alignItems: 'center'},
+    dateInputText: {
+      fontSize: 14,
+      color: colors.textStrong,
+      marginLeft: SPACING.sm,
+      fontFamily: FONT.regular,
+      fontWeight: '500',
+    },
+    dateInputPlaceholder: {color: colors.textPlaceholder},
+    dateSeparator: {marginHorizontal: 10},
+    dateSeparatorText: {
+      fontSize: 12,
+      color: colors.textMuted,
+      fontFamily: FONT.regular,
+    },
+    cardSection: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginHorizontal: SPACING.md + 4,
+      marginBottom: SPACING.md + 4,
+    },
+    summaryCard: {
+      width: '48%',
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+    },
+    cardContent: {padding: SPACING.md},
+    cardHeader: {flexDirection: 'row', alignItems: 'center', marginBottom: 12},
+    cardIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: SPACING.sm,
+      backgroundColor: colors.surfaceMuted,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: SPACING.sm,
+    },
+    cardTitle: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      fontFamily: FONT.regular,
+    },
+    cardAmount: {fontSize: 20, fontWeight: 'bold', fontFamily: FONT.bold},
+    quickActionsSection: {
+      marginTop: SPACING.md + 4,
+      paddingHorizontal: SPACING.md + 4,
+    },
+    quickActionsTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.textStrong,
+      marginBottom: 15,
+      fontFamily: FONT.heading,
+    },
+    quickActionsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 10,
+    },
+    quickActionButton: {
+      flex: 0.48,
+      borderRadius: 14,
+      paddingVertical: 14,
+      paddingHorizontal: SPACING.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    addIncomeButton: {backgroundColor: colors.incomeFill},
+    addExpenseButton: {backgroundColor: colors.expenseFill},
+    quickActionText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.onPrimary,
+      fontFamily: FONT.bold,
+      marginLeft: SPACING.sm,
+    },
+    transactionsSection: {marginTop: 10, paddingHorizontal: SPACING.md + 4},
+    transactionsHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 15,
+    },
+    transactionsHeaderText: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.textStrong,
+      fontFamily: FONT.heading,
+    },
+    transactionsSubHeaderText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginTop: 2,
+      fontFamily: FONT.regular,
+    },
+    seeAllButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.primarySoft,
+      paddingHorizontal: 12,
+      paddingVertical: SPACING.sm,
+      borderRadius: 10,
+    },
+    seeAllText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.primary,
+      marginRight: SPACING.xs,
+      fontFamily: FONT.bold,
+    },
+    transactionsList: {marginBottom: 30},
+    transactionsCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 18,
+      marginVertical: SPACING.sm - 2,
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+    },
+    transactionsCardContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      width: '100%',
+    },
+    transactionsCardDetails: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    transactionsCardIcon: {
+      width: 50,
+      height: 50,
+      borderRadius: 14,
+      backgroundColor: colors.cardBorder,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 15,
+    },
+    transactionsCardMeta: {flexDirection: 'column', flex: 1},
+    transactionsCardTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textStrong,
+      fontFamily: FONT.bold,
+    },
+    transactionsCardDateAndTime: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: SPACING.xs,
+    },
+    transactionsCardDate: {
+      fontSize: 13,
+      color: colors.textMuted,
+      fontFamily: FONT.regular,
+    },
+    transactionsCardAmount: {
+      flexDirection: 'column',
+      alignItems: 'flex-end',
+      justifyContent: 'center',
+    },
+    amountIncome: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: colors.income,
+      fontFamily: FONT.bold,
+    },
+    amountExpense: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: colors.expense,
+      fontFamily: FONT.bold,
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: 40,
+      paddingHorizontal: SPACING.md + 4,
+    },
+    emptyStateText: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginTop: 15,
+      fontFamily: FONT.bold,
+    },
+    emptyStateSubText: {
+      fontSize: 14,
+      color: colors.textMuted,
+      textAlign: 'center',
+      marginTop: SPACING.sm,
+      fontFamily: FONT.regular,
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      paddingHorizontal: SPACING.md + 4,
+    },
+    errorText: {
+      fontSize: 16,
+      color: colors.expense,
+      textAlign: 'center',
+      fontFamily: FONT.regular,
+      marginTop: 15,
+      marginBottom: SPACING.md + 4,
+    },
+    retryButton: {
+      backgroundColor: colors.primaryFill,
+      paddingHorizontal: SPACING.lg,
+      paddingVertical: 12,
+      borderRadius: 8,
+      elevation: Platform.OS === 'android' ? 0 : 2,
+      shadowColor: colors.shadow,
+      shadowOffset: {width: 0, height: 1},
+      shadowOpacity: 0.2,
+      shadowRadius: 2,
+    },
+    retryButtonText: {
+      color: colors.onPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+      fontFamily: FONT.bold,
+    },
+    cardAndroid: {borderWidth: 1, borderColor: colors.cardBorder},
+  });
