@@ -2,6 +2,7 @@ import React, {useState, useEffect, useContext} from 'react';
 import {
   View,
   Text,
+  FlatList,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -18,7 +19,6 @@ import {
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {majorOf} from '../../src/utils/amounts';
 import {fromMinor} from '../../src/utils/money';
@@ -265,255 +265,77 @@ const SplitTransactionScreen = ({
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
-        <KeyboardAwareScrollView
+        <FlatList
           style={styles.scrollView}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
-          <View style={styles.headerSection}>
-            <View style={styles.headerTitleRow}>
-              <MaterialCommunityIcons
-                name="history"
-                size={32}
-                color={colors.primary}
-              />
-              <Text style={styles.headerTitle}>All Transactions</Text>
-            </View>
-            <Text style={styles.headerSubtitle}>
-              View and search group transaction history
-            </Text>
-          </View>
-          <View style={styles.searchContainer}>
-            <Searchbar
-              placeholder="Search transactions..."
-              placeholderTextColor={colors.textPlaceholder}
-              onChangeText={handleSearch}
-              value={searchQuery}
-              style={styles.searchBar}
-              inputStyle={styles.searchInput}
-              iconColor={colors.primary}
-            />
-          </View>
-          <Card
-            style={[
-              styles.filterCard,
-              Platform.OS === 'android' && styles.cardAndroid,
-            ]}
-            elevation={Platform.OS === 'android' ? 0 : 1}>
-            <View style={styles.cardContent}>
-              <Text style={styles.filterTitle}>Filter by Date</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.filterScrollContainer}
-                contentContainerStyle={styles.filterContainer}>
-                {(['all', '7days', '30days', 'custom'] as FilterType[]).map(
-                  f => (
-                    <TouchableOpacity
-                      key={f}
-                      onPress={() => setFilter(f)}
+          showsVerticalScrollIndicator={false}
+          data={filteredTransactions}
+          keyExtractor={(transaction, index) => transaction.id ?? String(index)}
+          initialNumToRender={10}
+          windowSize={7}
+          renderItem={({item: transaction}) => {
+            const txColor = getSplitCardColor(
+              transaction,
+              currentUserEmail,
+              colors,
+            );
+            return (
+              <View style={styles.transactionsRow}>
+                <Card
+                  style={[
+                    styles.transactionsCard,
+                    Platform.OS === 'android' && styles.cardAndroid,
+                  ]}
+                  elevation={Platform.OS === 'android' ? 0 : 1}
+                  onPress={() =>
+                    navigation.navigate('SplitDetail', {
+                      group,
+                      split: transaction,
+                    })
+                  }>
+                  <View style={styles.transactionsCardContent}>
+                    <View
                       style={[
-                        styles.filterButton,
-                        filter === f && styles.filterButtonActive,
-                      ]}>
-                      <Text
-                        style={
-                          filter === f
-                            ? styles.filterButtonTextActive
-                            : styles.filterButtonText
-                        }>
-                        {f === 'all'
-                          ? 'All'
-                          : f === '7days'
-                          ? 'Last 7 Days'
-                          : f === '30days'
-                          ? 'Last 30 Days'
-                          : 'Custom Range'}
-                      </Text>
-                    </TouchableOpacity>
-                  ),
-                )}
-              </ScrollView>
-              {filter === 'custom' && (
-                <View style={styles.customDateContainer}>
-                  <Text style={styles.customRangeLabel}>Select Date Range</Text>
-                  <View style={styles.dateInputsRow}>
-                    <View style={styles.dateInputWrapper}>
-                      <Text style={styles.dateLabel}>From</Text>
-                      <TouchableOpacity
-                        style={styles.dateInput}
-                        onPress={() => setStartDatePickerVisible(true)}>
-                        <Text
-                          style={[
-                            styles.dateInputText,
-                            !customStartDate && styles.dateInputPlaceholder,
-                          ]}>
-                          {customStartDate
-                            ? moment(customStartDate).format('MMM DD, YYYY')
-                            : 'Start Date'}
-                        </Text>
-                        <MaterialCommunityIcons
-                          name="calendar"
-                          size={20}
-                          color={colors.primary}
-                        />
-                      </TouchableOpacity>
-                    </View>
-                    <View style={styles.dateInputWrapper}>
-                      <Text style={styles.dateLabel}>To</Text>
-                      <TouchableOpacity
-                        style={styles.dateInput}
-                        onPress={() => setEndDatePickerVisible(true)}>
-                        <Text
-                          style={[
-                            styles.dateInputText,
-                            !customEndDate && styles.dateInputPlaceholder,
-                          ]}>
-                          {customEndDate
-                            ? moment(customEndDate).format('MMM DD, YYYY')
-                            : 'End Date'}
-                        </Text>
-                        <MaterialCommunityIcons
-                          name="calendar"
-                          size={20}
-                          color={colors.primary}
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  <DatePickerModal
-                    locale="en"
-                    mode="single"
-                    visible={startDatePickerVisible}
-                    onDismiss={() => setStartDatePickerVisible(false)}
-                    date={customStartDate ?? undefined}
-                    onConfirm={(params: {date?: Date}) => {
-                      setStartDatePickerVisible(false);
-                      if (params.date) {
-                        setCustomStartDate(params.date);
-                      }
-                    }}
-                    saveLabel="Confirm"
-                    label="Select start date"
-                    uppercase={false}
-                    {...(Platform.OS === 'ios' && {
-                      presentationStyle: 'pageSheet',
-                    })}
-                  />
-                  <DatePickerModal
-                    locale="en"
-                    mode="single"
-                    visible={endDatePickerVisible}
-                    onDismiss={() => setEndDatePickerVisible(false)}
-                    date={customEndDate ?? undefined}
-                    onConfirm={(params: {date?: Date}) => {
-                      setEndDatePickerVisible(false);
-                      if (params.date) {
-                        setCustomEndDate(params.date);
-                      }
-                    }}
-                    saveLabel="Confirm"
-                    label="Select end date"
-                    uppercase={false}
-                    {...(Platform.OS === 'ios' && {
-                      presentationStyle: 'pageSheet',
-                    })}
-                  />
-                  <TouchableOpacity
-                    style={styles.applyButton}
-                    onPress={filterTransactions}>
-                    <MaterialCommunityIcons
-                      name="filter"
-                      size={18}
-                      color={colors.onPrimary}
+                        styles.transactionColorBar,
+                        {backgroundColor: txColor},
+                      ]}
                     />
-                    <Text style={styles.applyButtonText}>Apply Filter</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          </Card>
-          <View style={styles.transactionsSection}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={[styles.sectionTitle, styles.sectionTitleFlush]}>
-                Transactions
-              </Text>
-              {filteredTransactions.length > 0 && (
-                <TouchableOpacity
-                  onPress={handleExportCSV}
-                  style={styles.exportButton}>
-                  <MaterialCommunityIcons
-                    name="export"
-                    size={24}
-                    color={colors.primary}
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
-            {filteredTransactions.length > 0 ? (
-              filteredTransactions.map(transaction => {
-                const txColor = getSplitCardColor(
-                  transaction,
-                  currentUserEmail,
-                  colors,
-                );
-                return (
-                  <Card
-                    key={transaction.id}
-                    style={[
-                      styles.transactionsCard,
-                      Platform.OS === 'android' && styles.cardAndroid,
-                    ]}
-                    elevation={Platform.OS === 'android' ? 0 : 1}
-                    onPress={() =>
-                      navigation.navigate('SplitDetail', {
-                        group,
-                        split: transaction,
-                      })
-                    }>
-                    <View style={styles.transactionsCardContent}>
-                      <View
-                        style={[
-                          styles.transactionColorBar,
-                          {backgroundColor: txColor},
-                        ]}
-                      />
-                      <View style={styles.transactionsCardDetails}>
-                        <View style={styles.transactionsCardInfo}>
-                          <Text style={styles.transactionsCardTitle}>
-                            {transaction.title}
-                          </Text>
-                          <Text style={styles.transactionsCardSubtitle}>
-                            Paid by{' '}
-                            {transaction.paidBy?.name ||
-                              transaction.paidBy?.email}
-                          </Text>
-                          <Text style={styles.transactionsCardDate}>
-                            {moment(
-                              (transaction.date ||
-                                transaction.createdAt)!.toDate(),
-                            ).format('MMM D, YYYY')}
-                          </Text>
-                          {transaction.category && (
-                            <View style={styles.categoryTag}>
-                              <Text style={styles.categoryText}>
-                                {transaction.category}
-                              </Text>
-                            </View>
-                          )}
-                        </View>
+                    <View style={styles.transactionsCardDetails}>
+                      <View style={styles.transactionsCardInfo}>
+                        <Text style={styles.transactionsCardTitle}>
+                          {transaction.title}
+                        </Text>
+                        <Text style={styles.transactionsCardSubtitle}>
+                          Paid by{' '}
+                          {transaction.paidBy?.name ||
+                            transaction.paidBy?.email}
+                        </Text>
+                        <Text style={styles.transactionsCardDate}>
+                          {moment(
+                            (transaction.date ||
+                              transaction.createdAt)!.toDate(),
+                          ).format('MMM D, YYYY')}
+                        </Text>
+                        {transaction.category && (
+                          <View style={styles.categoryTag}>
+                            <Text style={styles.categoryText}>
+                              {transaction.category}
+                            </Text>
+                          </View>
+                        )}
                       </View>
-                      <Text
-                        style={[
-                          styles.transactionsCardAmount,
-                          {color: txColor},
-                        ]}>
-                        {formatAmount(majorOf(transaction, currency.code))}
-                      </Text>
                     </View>
-                  </Card>
-                );
-              })
-            ) : (
+                    <Text
+                      style={[styles.transactionsCardAmount, {color: txColor}]}>
+                      {formatAmount(majorOf(transaction, currency.code))}
+                    </Text>
+                  </View>
+                </Card>
+              </View>
+            );
+          }}
+          ListEmptyComponent={
+            <View style={styles.transactionsRow}>
               <Card
                 style={[
                   styles.emptyStateCard,
@@ -536,9 +358,197 @@ const SplitTransactionScreen = ({
                   </Text>
                 </View>
               </Card>
-            )}
-          </View>
-        </KeyboardAwareScrollView>
+            </View>
+          }
+          ListFooterComponent={<View style={styles.listFooter} />}
+          ListHeaderComponent={
+            <>
+              <View style={styles.headerSection}>
+                <View style={styles.headerTitleRow}>
+                  <MaterialCommunityIcons
+                    name="history"
+                    size={32}
+                    color={colors.primary}
+                  />
+                  <Text style={styles.headerTitle}>All Transactions</Text>
+                </View>
+                <Text style={styles.headerSubtitle}>
+                  View and search group transaction history
+                </Text>
+              </View>
+              <View style={styles.searchContainer}>
+                <Searchbar
+                  placeholder="Search transactions..."
+                  placeholderTextColor={colors.textPlaceholder}
+                  onChangeText={handleSearch}
+                  value={searchQuery}
+                  style={styles.searchBar}
+                  inputStyle={styles.searchInput}
+                  iconColor={colors.primary}
+                />
+              </View>
+              <Card
+                style={[
+                  styles.filterCard,
+                  Platform.OS === 'android' && styles.cardAndroid,
+                ]}
+                elevation={Platform.OS === 'android' ? 0 : 1}>
+                <View style={styles.cardContent}>
+                  <Text style={styles.filterTitle}>Filter by Date</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.filterScrollContainer}
+                    contentContainerStyle={styles.filterContainer}>
+                    {(['all', '7days', '30days', 'custom'] as FilterType[]).map(
+                      f => (
+                        <TouchableOpacity
+                          key={f}
+                          onPress={() => setFilter(f)}
+                          style={[
+                            styles.filterButton,
+                            filter === f && styles.filterButtonActive,
+                          ]}>
+                          <Text
+                            style={
+                              filter === f
+                                ? styles.filterButtonTextActive
+                                : styles.filterButtonText
+                            }>
+                            {f === 'all'
+                              ? 'All'
+                              : f === '7days'
+                              ? 'Last 7 Days'
+                              : f === '30days'
+                              ? 'Last 30 Days'
+                              : 'Custom Range'}
+                          </Text>
+                        </TouchableOpacity>
+                      ),
+                    )}
+                  </ScrollView>
+                  {filter === 'custom' && (
+                    <View style={styles.customDateContainer}>
+                      <Text style={styles.customRangeLabel}>
+                        Select Date Range
+                      </Text>
+                      <View style={styles.dateInputsRow}>
+                        <View style={styles.dateInputWrapper}>
+                          <Text style={styles.dateLabel}>From</Text>
+                          <TouchableOpacity
+                            style={styles.dateInput}
+                            onPress={() => setStartDatePickerVisible(true)}>
+                            <Text
+                              style={[
+                                styles.dateInputText,
+                                !customStartDate && styles.dateInputPlaceholder,
+                              ]}>
+                              {customStartDate
+                                ? moment(customStartDate).format('MMM DD, YYYY')
+                                : 'Start Date'}
+                            </Text>
+                            <MaterialCommunityIcons
+                              name="calendar"
+                              size={20}
+                              color={colors.primary}
+                            />
+                          </TouchableOpacity>
+                        </View>
+                        <View style={styles.dateInputWrapper}>
+                          <Text style={styles.dateLabel}>To</Text>
+                          <TouchableOpacity
+                            style={styles.dateInput}
+                            onPress={() => setEndDatePickerVisible(true)}>
+                            <Text
+                              style={[
+                                styles.dateInputText,
+                                !customEndDate && styles.dateInputPlaceholder,
+                              ]}>
+                              {customEndDate
+                                ? moment(customEndDate).format('MMM DD, YYYY')
+                                : 'End Date'}
+                            </Text>
+                            <MaterialCommunityIcons
+                              name="calendar"
+                              size={20}
+                              color={colors.primary}
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                      <DatePickerModal
+                        locale="en"
+                        mode="single"
+                        visible={startDatePickerVisible}
+                        onDismiss={() => setStartDatePickerVisible(false)}
+                        date={customStartDate ?? undefined}
+                        onConfirm={(params: {date?: Date}) => {
+                          setStartDatePickerVisible(false);
+                          if (params.date) {
+                            setCustomStartDate(params.date);
+                          }
+                        }}
+                        saveLabel="Confirm"
+                        label="Select start date"
+                        uppercase={false}
+                        {...(Platform.OS === 'ios' && {
+                          presentationStyle: 'pageSheet',
+                        })}
+                      />
+                      <DatePickerModal
+                        locale="en"
+                        mode="single"
+                        visible={endDatePickerVisible}
+                        onDismiss={() => setEndDatePickerVisible(false)}
+                        date={customEndDate ?? undefined}
+                        onConfirm={(params: {date?: Date}) => {
+                          setEndDatePickerVisible(false);
+                          if (params.date) {
+                            setCustomEndDate(params.date);
+                          }
+                        }}
+                        saveLabel="Confirm"
+                        label="Select end date"
+                        uppercase={false}
+                        {...(Platform.OS === 'ios' && {
+                          presentationStyle: 'pageSheet',
+                        })}
+                      />
+                      <TouchableOpacity
+                        style={styles.applyButton}
+                        onPress={filterTransactions}>
+                        <MaterialCommunityIcons
+                          name="filter"
+                          size={18}
+                          color={colors.onPrimary}
+                        />
+                        <Text style={styles.applyButtonText}>Apply Filter</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              </Card>
+              <View style={styles.transactionsHeader}>
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={[styles.sectionTitle, styles.sectionTitleFlush]}>
+                    Transactions
+                  </Text>
+                  {filteredTransactions.length > 0 && (
+                    <TouchableOpacity
+                      onPress={handleExportCSV}
+                      style={styles.exportButton}>
+                      <MaterialCommunityIcons
+                        name="export"
+                        size={24}
+                        color={colors.primary}
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            </>
+          }
+        />
       </View>
     </SafeAreaProvider>
   );
@@ -755,7 +765,9 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.primary,
       fontFamily: 'Lato-Regular',
     },
-    transactionsSection: {paddingHorizontal: 20, paddingBottom: 30},
+    transactionsHeader: {paddingHorizontal: 20},
+    transactionsRow: {paddingHorizontal: 20},
+    listFooter: {height: 30},
     sectionHeaderRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
