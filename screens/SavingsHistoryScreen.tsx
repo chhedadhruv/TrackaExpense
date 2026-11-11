@@ -23,12 +23,7 @@ import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import {useCurrency} from '../utils/CurrencyUtil';
-import {
-  PRIMARY_COLOR,
-  BACKGROUND_COLOR,
-  INCOME_COLOR,
-  EXPENSE_COLOR,
-} from '../src/constants/theme';
+import {useTheme, useThemedStyles, type ThemeColors} from '../src/theme';
 
 type HistoryType = 'deposit' | 'withdrawal' | 'create' | 'delete' | 'update';
 
@@ -47,6 +42,8 @@ interface GoalRef {
 }
 
 const SavingsHistoryScreen = () => {
+  const {colors} = useTheme();
+  const styles = useThemedStyles(createStyles);
   const {formatAmount} = useCurrency();
   const [loading, setLoading] = useState(true);
   const [allHistory, setAllHistory] = useState<HistoryItem[]>([]);
@@ -123,7 +120,7 @@ const SavingsHistoryScreen = () => {
           <MaterialCommunityIcons
             name="plus-circle"
             size={20}
-            color={INCOME_COLOR}
+            color={colors.income}
           />
         );
       case 'withdrawal':
@@ -131,19 +128,23 @@ const SavingsHistoryScreen = () => {
           <MaterialCommunityIcons
             name="minus-circle"
             size={20}
-            color={EXPENSE_COLOR}
+            color={colors.expense}
           />
         );
       case 'create':
         return (
-          <MaterialCommunityIcons name="plus" size={20} color={PRIMARY_COLOR} />
+          <MaterialCommunityIcons
+            name="plus"
+            size={20}
+            color={colors.primary}
+          />
         );
       case 'delete':
         return (
           <MaterialCommunityIcons
             name="delete"
             size={20}
-            color={EXPENSE_COLOR}
+            color={colors.expense}
           />
         );
       default:
@@ -151,7 +152,7 @@ const SavingsHistoryScreen = () => {
           <MaterialCommunityIcons
             name="pencil"
             size={20}
-            color={PRIMARY_COLOR}
+            color={colors.primary}
           />
         );
     }
@@ -180,7 +181,7 @@ const SavingsHistoryScreen = () => {
       <View style={styles.container}>
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Loading activity...</Text>
           </View>
         ) : (
@@ -191,8 +192,8 @@ const SavingsHistoryScreen = () => {
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={() => load(true)}
-                colors={[PRIMARY_COLOR]}
-                tintColor={PRIMARY_COLOR}
+                colors={[colors.primary]}
+                tintColor={colors.primary}
               />
             }>
             <Card
@@ -279,7 +280,7 @@ const SavingsHistoryScreen = () => {
                     <MaterialCommunityIcons
                       name="history"
                       size={48}
-                      color="#CBD3EE"
+                      color={colors.iconMuted}
                     />
                     <Text style={styles.emptyHistoryText}>No activity yet</Text>
                     <Text style={styles.emptyHistorySubtext}>
@@ -298,88 +299,89 @@ const SavingsHistoryScreen = () => {
 
 export default SavingsHistoryScreen;
 
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  scrollView: {flex: 1},
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: BACKGROUND_COLOR,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: PRIMARY_COLOR,
-    marginTop: 15,
-    fontFamily: 'Lato-Regular',
-  },
-  historyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 40,
-  },
-  cardContent: {padding: 25},
-  historyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 20,
-    fontFamily: 'Lato-Bold',
-  },
-  historyItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  historyIcon: {width: 40, alignItems: 'center'},
-  historyDetails: {flex: 1, marginLeft: 10},
-  historyDescription: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  historyAmount: {fontSize: 13, fontFamily: 'Lato-Bold', marginTop: 2},
-  positiveAmount: {color: INCOME_COLOR},
-  negativeAmount: {color: EXPENSE_COLOR},
-  historyDate: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-    fontFamily: 'Lato-Regular',
-  },
-  emptyHistory: {alignItems: 'center', paddingVertical: 40},
-  emptyHistoryText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-    marginTop: 15,
-    marginBottom: 5,
-    fontFamily: 'Lato-Bold',
-  },
-  emptyHistorySubtext: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    marginRight: 8,
-    borderRadius: 16,
-    backgroundColor: '#EEF0FB',
-  },
-  filterChipActive: {backgroundColor: PRIMARY_COLOR},
-  filterChipText: {
-    fontSize: 13,
-    color: PRIMARY_COLOR,
-    fontFamily: 'Lato-Regular',
-  },
-  filterChipTextActive: {color: '#FFFFFF', fontFamily: 'Lato-Bold'},
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {flex: 1, backgroundColor: colors.background},
+    scrollView: {flex: 1},
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    loadingText: {
+      fontSize: 16,
+      color: colors.primary,
+      marginTop: 15,
+      fontFamily: 'Lato-Regular',
+    },
+    historyCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      marginHorizontal: 20,
+      marginTop: 20,
+      marginBottom: 40,
+    },
+    cardContent: {padding: 25},
+    historyTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.textStrong,
+      marginBottom: 20,
+      fontFamily: 'Lato-Bold',
+    },
+    historyItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.divider,
+    },
+    historyIcon: {width: 40, alignItems: 'center'},
+    historyDetails: {flex: 1, marginLeft: 10},
+    historyDescription: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textStrong,
+      fontFamily: 'Lato-Bold',
+    },
+    historyAmount: {fontSize: 13, fontFamily: 'Lato-Bold', marginTop: 2},
+    positiveAmount: {color: colors.income},
+    negativeAmount: {color: colors.expense},
+    historyDate: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+      fontFamily: 'Lato-Regular',
+    },
+    emptyHistory: {alignItems: 'center', paddingVertical: 40},
+    emptyHistoryText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginTop: 15,
+      marginBottom: 5,
+      fontFamily: 'Lato-Bold',
+    },
+    emptyHistorySubtext: {
+      fontSize: 14,
+      color: colors.textMuted,
+      textAlign: 'center',
+      fontFamily: 'Lato-Regular',
+    },
+    cardAndroid: {borderWidth: 1, borderColor: colors.cardBorder},
+    filterChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      marginRight: 8,
+      borderRadius: 16,
+      backgroundColor: colors.primarySoft,
+    },
+    filterChipActive: {backgroundColor: colors.primaryFill},
+    filterChipText: {
+      fontSize: 13,
+      color: colors.primary,
+      fontFamily: 'Lato-Regular',
+    },
+    filterChipTextActive: {color: colors.onPrimary, fontFamily: 'Lato-Bold'},
+  });
