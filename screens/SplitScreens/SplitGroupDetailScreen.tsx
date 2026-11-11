@@ -34,9 +34,13 @@ import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollV
 import {AuthContext} from '../../navigation/AuthProvider';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import {useCurrency} from '../../utils/CurrencyUtil';
-import {majorOf, minorOf, totalMajor} from '../../src/utils/amounts';
+import {majorOf, minorOf} from '../../src/utils/amounts';
 import {toMajorNumber} from '../../src/utils/money';
-import {shareOfMinor, sharesMinor} from '../../src/utils/splitMath';
+import {
+  shareOfMinor,
+  sharesMinor,
+  totalSpentMajor,
+} from '../../src/utils/splitMath';
 import {
   PRIMARY_COLOR,
   BACKGROUND_COLOR,
@@ -258,7 +262,7 @@ const SplitGroupDetailScreen = ({
           const bTs = (b.date || b.createdAt)?.toMillis?.() ?? 0;
           return bTs - aTs;
         });
-      setTotalSplitAmount(totalMajor(fetched, currency.code));
+      setTotalSplitAmount(totalSpentMajor(fetched, currency.code));
       setSplits(fetched);
       hasLoadedOnce.current = true;
     } catch (err) {

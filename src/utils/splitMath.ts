@@ -1,4 +1,4 @@
-import {minorOf, type StoredMoney} from './amounts';
+import {minorOf, totalMajor, type StoredMoney} from './amounts';
 import {allocateMinor} from './money';
 
 /**
@@ -65,3 +65,21 @@ export const shareOfMinor = (
   const shares = sharesMinor(split, currencyCode);
   return shares === null ? null : shares[index];
 };
+
+/** A settlement entry in the splits list (money moved between two people, not an expense). */
+export const isSettlementEntry = (split: {
+  type?: string | null;
+  isSettlement?: boolean | null;
+}): boolean => split.type === 'settlement' || split.isSettlement === true;
+
+/** Total spent by the group: expenses only, settlement entries are left out. */
+export const totalSpentMajor = <
+  T extends StoredMoney & {type?: string | null; isSettlement?: boolean | null},
+>(
+  splits: readonly T[],
+  currencyCode: string,
+): number =>
+  totalMajor(
+    splits.filter(split => !isSettlementEntry(split)),
+    currencyCode,
+  );

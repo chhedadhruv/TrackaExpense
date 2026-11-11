@@ -1,6 +1,11 @@
 import {describe, expect, it} from '@jest/globals';
 import {sumMinor} from '../src/utils/money';
-import {shareOfMinor, sharesMinor} from '../src/utils/splitMath';
+import {
+  isSettlementEntry,
+  shareOfMinor,
+  sharesMinor,
+  totalSpentMajor,
+} from '../src/utils/splitMath';
 
 const users = (...emails: string[]) => emails.map(email => ({email}));
 
@@ -151,5 +156,27 @@ describe('shareOfMinor', () => {
         'INR',
       ),
     ).toBeNull();
+  });
+});
+
+describe('totalSpentMajor', () => {
+  it('leaves settlement entries out of the total', () => {
+    const splits = [
+      {amount: 100, amountMinor: 10000},
+      {amount: 50.5, amountMinor: 5050},
+      {amount: 80, amountMinor: 8000, type: 'settlement'},
+      {amount: 20, amountMinor: 2000, isSettlement: true},
+    ];
+    expect(totalSpentMajor(splits, 'INR')).toBe(150.5);
+  });
+
+  it('is zero when only settlements exist', () => {
+    expect(totalSpentMajor([{amount: 5, type: 'settlement'}], 'INR')).toBe(0);
+  });
+
+  it('recognises both settlement markers', () => {
+    expect(isSettlementEntry({type: 'settlement'})).toBe(true);
+    expect(isSettlementEntry({isSettlement: true})).toBe(true);
+    expect(isSettlementEntry({type: 'expense'})).toBe(false);
   });
 });
