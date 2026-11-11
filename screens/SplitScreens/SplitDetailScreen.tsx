@@ -115,8 +115,10 @@ const SplitDetailScreen = ({
 
   const confirmAndDelete = () => {
     Alert.alert(
-      'Delete Split',
-      'Are you sure you want to delete this split?',
+      isSettlement ? 'Delete Settlement' : 'Delete Split',
+      isSettlement
+        ? 'Are you sure you want to delete this settlement? Both balances will be restored.'
+        : 'Are you sure you want to delete this split?',
       [
         {text: 'Cancel', style: 'cancel'},
         {text: 'Delete', style: 'destructive', onPress: handleDeleteSplit},
@@ -240,10 +242,18 @@ const SplitDetailScreen = ({
       } catch (_) {}
 
       setMenuVisible(false);
-      Alert.alert('Deleted', 'Split deleted successfully');
+      Alert.alert(
+        'Deleted',
+        isSettlement
+          ? 'Settlement deleted successfully'
+          : 'Split deleted successfully',
+      );
       navigation.goBack();
     } catch (_) {
-      Alert.alert('Error', 'Failed to delete split');
+      Alert.alert(
+        'Error',
+        isSettlement ? 'Failed to delete settlement' : 'Failed to delete split',
+      );
     }
   };
 
