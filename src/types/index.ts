@@ -199,6 +199,7 @@ export type AuthStackParamList = {
   Login: undefined;
   Signup: undefined;
   ForgotPassword: undefined;
+  PrivacyPolicy: undefined;
 };
 
 export type HomeStackParamList = {

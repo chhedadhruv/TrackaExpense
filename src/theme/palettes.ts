@@ -54,6 +54,17 @@ export interface ThemeColors {
   warning: string;
   /** Text on a warning-tinted background (darker amber in light mode). */
   warningText: string;
+  /** Faint tints for banners and badges (error, success, warning). */
+  expenseSoft: string;
+  incomeSoft: string;
+  warningSoft: string;
+  /** Error text on expenseSoft or on a card. */
+  expenseText: string;
+  /** Success text on incomeSoft or on a card (a ticked requirement, a confirmation). */
+  incomeText: string;
+  /** A high-contrast button that inverts with the theme (Sign in with Apple). */
+  inverse: string;
+  onInverse: string;
 
   shadow: string;
   snackbarBackground: string;
@@ -90,6 +101,13 @@ export const lightColors: ThemeColors = {
   success: '#25B07F',
   warning: '#F5A623',
   warningText: '#E65100',
+  expenseSoft: 'rgba(246, 78, 78, 0.1)',
+  incomeSoft: 'rgba(37, 176, 127, 0.12)',
+  warningSoft: 'rgba(245, 166, 35, 0.15)',
+  expenseText: '#C62828',
+  incomeText: '#2E7D32',
+  inverse: '#000000',
+  onInverse: '#FFFFFF',
 
   shadow: '#000000',
   snackbarBackground: '#2C2C2C',
@@ -127,6 +145,13 @@ export const darkColors: ThemeColors = {
   success: '#34C28F',
   warning: '#F5A623',
   warningText: '#F5A623',
+  expenseSoft: 'rgba(255, 107, 107, 0.16)',
+  incomeSoft: 'rgba(52, 194, 143, 0.18)',
+  warningSoft: 'rgba(245, 166, 35, 0.18)',
+  expenseText: '#FF8A8A',
+  incomeText: '#5ED6A8',
+  inverse: '#FFFFFF',
+  onInverse: '#000000',
 
   shadow: '#000000',
   snackbarBackground: '#2F3238',
