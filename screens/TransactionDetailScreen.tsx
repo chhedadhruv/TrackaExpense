@@ -24,6 +24,7 @@ import {
   ref as createStorageRef,
 } from '@react-native-firebase/storage';
 import {reportError} from '../src/services/ErrorReporter';
+import {receiptUrlOf} from '../src/utils/receipt';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {balanceEffect, majorOf} from '../src/utils/amounts';
@@ -44,12 +45,14 @@ const TransactionDetailScreen = ({
 }) => {
   const {currency, formatAmount} = useCurrency();
   const {transaction} = route.params;
+  // Receipts are stored as imageUrl or the older image field; accept either.
+  const receiptUrl = receiptUrlOf(transaction);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const onImagePress = () => {
-    if (transaction.imageUrl) {
-      navigation.navigate('Image', {imageUrl: transaction.imageUrl});
+    if (receiptUrl) {
+      navigation.navigate('Image', {imageUrl: receiptUrl});
     }
   };
 
@@ -60,7 +63,7 @@ const TransactionDetailScreen = ({
   const deleteTransaction = async () => {
     setLoading(true);
     setError('');
-    const {userId, id, imageUrl, type} = transaction;
+    const {userId, id, type} = transaction;
     // Deleting reverses what the transaction did to the balance.
     const balanceIncrement = -balanceEffect(type, transaction, currency.code);
     try {
@@ -68,8 +71,8 @@ const TransactionDetailScreen = ({
       await updateDoc(doc(getFirestore(), 'users', userId), {
         balance: increment(balanceIncrement),
       });
-      if (imageUrl) {
-        const imageRef = createStorageRef(getStorage(), imageUrl);
+      if (receiptUrl) {
+        const imageRef = createStorageRef(getStorage(), receiptUrl);
         await deleteObject(imageRef);
       }
       AnalyticsService.logDeleteTransaction({
@@ -224,7 +227,7 @@ const TransactionDetailScreen = ({
           </View>
         </Card>
 
-        {transaction.imageUrl ? (
+        {receiptUrl ? (
           <Card
             style={[
               styles.imageCard,
@@ -235,10 +238,7 @@ const TransactionDetailScreen = ({
               onPress={onImagePress}
               style={styles.imageCardContent}>
               <View style={styles.imageContainer}>
-                <Image
-                  source={{uri: transaction.imageUrl}}
-                  style={styles.receiptImage}
-                />
+                <Image source={{uri: receiptUrl}} style={styles.receiptImage} />
               </View>
               <View style={styles.imageInfo}>
                 <Text style={styles.imageTitle}>Receipt Image</Text>

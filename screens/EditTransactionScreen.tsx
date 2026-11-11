@@ -25,6 +25,7 @@ import {
   ref as createStorageRef,
 } from '@react-native-firebase/storage';
 import {reportError} from '../src/services/ErrorReporter';
+import {receiptFields, receiptUrlOf} from '../src/utils/receipt';
 import * as PerformanceService from '../src/services/PerformanceService';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -80,7 +81,7 @@ const EditTransactionScreen = ({
     amount: transaction.amount.toString(),
     category: transaction.category,
     date: transaction.date,
-    image: transaction.imageUrl ?? null,
+    image: receiptUrlOf(transaction),
   });
 
   const [uploading, setUploading] = useState(false);
@@ -155,7 +156,8 @@ const EditTransactionScreen = ({
           createdAt: Timestamp.fromDate(new Date()),
         };
         if (existing?.type === 'expense') {
-          updatePayload.imageUrl = imageUrl;
+          // Both fields, so removing the receipt clears the legacy one too.
+          Object.assign(updatePayload, receiptFields(imageUrl));
         }
 
         txn.update(transactionRef, updatePayload);
