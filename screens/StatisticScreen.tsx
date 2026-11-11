@@ -16,6 +16,9 @@ import {
   collection,
   getDocs,
   getFirestore,
+  limit,
+  orderBy,
+  query as fsQuery,
 } from '@react-native-firebase/firestore';
 import {reportError} from '../src/services/ErrorReporter';
 import * as PerformanceService from '../src/services/PerformanceService';
@@ -118,19 +121,25 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
       setError(null);
       setLoading(true);
       const stopTrace = await PerformanceService.traceCalculateStatistics();
+      // The newest transactions, the same set Home and the Transactions screen show. This used to
+      // read every document and keep the first N in document-ID order, which is arbitrary.
       const snapshot = await getDocs(
-        collection(
-          getFirestore(),
-          'users',
-          getAuth().currentUser!.uid,
-          'transactions',
+        fsQuery(
+          collection(
+            getFirestore(),
+            'users',
+            getAuth().currentUser!.uid,
+            'transactions',
+          ),
+          orderBy('createdAt', 'desc'),
+          limit(getConfig().max_transactions_displayed),
         ),
       );
       const txns = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
       })) as unknown as TransactionDocument[];
-      setAllTransactions(txns.slice(0, getConfig().max_transactions_displayed));
+      setAllTransactions(txns);
       AnalyticsService.logViewStatistics({
         chart_type: selectedBtn.toLowerCase(),
         time_range: timeRange,
