@@ -106,7 +106,7 @@ import {PRIMARY_COLOR, BACKGROUND_COLOR, INCOME_COLOR, EXPENSE_COLOR} from '../s
 |---|---|---|
 | `PRIMARY_COLOR` | `#677CD2` | Buttons, active states, brand accents |
 | `BACKGROUND_COLOR` | `#F4F6FA` | Screen backgrounds |
-| `INCOME_COLOR` | `#25B07F` | Positive/income values (aliased as `SUCCESS_COLOR` in split screens) |
+| `INCOME_COLOR` | `#1E9A6D` | Positive/income values (aliased as `SUCCESS_COLOR` in split screens) |
 | `EXPENSE_COLOR` | `#F64E4E` | Negative/expense values |
 
 Split screens alias income green: `import {INCOME_COLOR as SUCCESS_COLOR} from '../../src/constants/theme'`
