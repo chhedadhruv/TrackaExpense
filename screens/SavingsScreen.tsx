@@ -1208,7 +1208,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
                           </Text>
                           {progress >= 100 ? (
                             <Text style={styles.monthsText}>
-                              Goal achieved! 🎉
+                              Goal achieved!
                             </Text>
                           ) : requiredMonthly ? (
                             <Text style={styles.monthsText}>

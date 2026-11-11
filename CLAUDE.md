@@ -177,7 +177,7 @@ Release 1.4.0 (versionCode 26111009): built with the EAS production profile on 2
 - Group membership and invitations are keyed by email, and clients query `users` by email and phone: `screens/SplitScreens/SplitScreen.tsx`.
 - Single FCM token per user in `users/{uid}.fcmToken`, and the client reads other users' tokens: `services/NotificationService.ts`.
 - The notification server is not deployed, so server-created split transactions for other members do not happen today: `server/notification-server.js`.
-- Emojis remain in: `services/FunNotificationService.ts`, `services/ReminderNotificationService.ts`, `services/SplitNotificationService.ts`, `server/notification-server.js`, and one line each in several screens.
+- Emojis were removed from the app, the three notification services and `server/notification-server.js`; the `icon` field the services used to send is gone (the `sendPush` callable and `PushSender` still accept an optional `icon`, but nothing reads it). `README.md` still has emoji headings (owner's call). The typographic arrows (`→`) in a few labels and code comments are text, not emoji. Password-rule markers on Login and Sign up are lucide icons, not text glyphs.
 - No list virtualisation anywhere; screens map arrays inside ScrollView.
 - The old hand-made iOS project had deployment target 26.0 on the app target; the generated project takes its target from Expo SDK 58 (iOS 16.4 or newer). Check the live minimum in App Store Connect before the first iOS build.
 - The old Podfile workarounds (Xcode 26 `fmt` consteval patch, deployment-target floor) were dropped with the regeneration; if `pod install` or the build fails on a new Xcode, add them back as a config plugin. `yarn ios` fails where `Simulator.app` is missing from the Xcode path.

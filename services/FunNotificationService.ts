@@ -42,86 +42,86 @@ class FunNotificationService {
     this.notificationService = NotificationService;
     this.funMessages = {
       morning: [
-        'Good morning! 🌅 Your wallet is calling - time to track those expenses!',
-        "Rise and shine! ☀️ Don't let your money slip through your fingers today!",
-        "Morning! 🌸 Your financial future is waiting for you to log today's activities!",
-        'Hey there! 🌺 Start your day right by tracking your finances!',
-        'Good morning! 🌻 Your budget misses you - give it some attention today!',
+        'Good morning! Your wallet is calling - time to track those expenses!',
+        "Rise and shine! Don't let your money slip through your fingers today!",
+        "Morning! Your financial future is waiting for you to log today's activities!",
+        'Hey there! Start your day right by tracking your finances!',
+        'Good morning! Your budget misses you - give it some attention today!',
       ],
       afternoon: [
-        "Afternoon check-in! 🌞 How's your spending looking today?",
-        "Hey! 🌤️ Don't forget to log that lunch expense!",
-        'Afternoon vibes! 🌈 Your expenses are waiting to be recorded!',
-        'Hi there! 🌸 Time for a quick financial check-in!',
-        'Afternoon! 🌺 Your wallet needs some love - log those expenses!',
+        "Afternoon check-in! How's your spending looking today?",
+        "Hey! Don't forget to log that lunch expense!",
+        'Afternoon vibes! Your expenses are waiting to be recorded!',
+        'Hi there! Time for a quick financial check-in!',
+        'Afternoon! Your wallet needs some love - log those expenses!',
       ],
       evening: [
-        'Evening! 🌆 Time to wrap up your day with some financial tracking!',
-        "Good evening! 🌅 Your expenses are calling - don't keep them waiting!",
-        'Evening check-in! 🌇 How did your money behave today?',
-        "Hey! 🌆 Don't let today's expenses slip away - log them now!",
-        "Good evening! 🌅 Your financial diary is waiting for today's entry!",
+        'Evening! Time to wrap up your day with some financial tracking!',
+        "Good evening! Your expenses are calling - don't keep them waiting!",
+        'Evening check-in! How did your money behave today?',
+        "Hey! Don't let today's expenses slip away - log them now!",
+        "Good evening! Your financial diary is waiting for today's entry!",
       ],
       weekend: [
-        "Weekend vibes! 🎉 But your expenses don't take weekends off!",
-        'Happy weekend! 🌈 Time to catch up on your financial tracking!',
-        'Weekend mode! 🎊 Your budget still needs your attention!',
-        "Hey! 🎈 Weekend expenses count too - don't forget to log them!",
-        'Weekend! 🎉 Your financial goals are still working hard for you!',
+        "Weekend vibes! But your expenses don't take weekends off!",
+        'Happy weekend! Time to catch up on your financial tracking!',
+        'Weekend mode! Your budget still needs your attention!',
+        "Hey! Weekend expenses count too - don't forget to log them!",
+        'Weekend! Your financial goals are still working hard for you!',
       ],
       motivational: [
-        "You're doing amazing! 💪 Every expense you track is a step towards financial freedom!",
-        'Keep going! 🚀 Your financial discipline is inspiring!',
-        "You're on fire! 🔥 Your money management skills are getting stronger!",
-        "Amazing work! ⭐ You're building wealth one transaction at a time!",
-        "You're unstoppable! 💎 Your financial future is in great hands!",
+        "You're doing amazing! Every expense you track is a step towards financial freedom!",
+        'Keep going! Your financial discipline is inspiring!',
+        "You're on fire! Your money management skills are getting stronger!",
+        "Amazing work! You're building wealth one transaction at a time!",
+        "You're unstoppable! Your financial future is in great hands!",
       ],
       funny: [
-        'Your expenses are like your ex - they keep coming back! 😂 Time to track them!',
-        'Money talks, but yours is probably saying "Why don\'t you track me?" 💬',
-        "Your wallet is like a good friend - it's always there, but you should check on it! 👛",
-        'Expenses are like calories - they add up whether you count them or not! 🍕',
-        'Your budget is like a plant - it needs regular attention to grow! 🌱',
-        "Money doesn't grow on trees, but it does grow when you track it! 🌳",
-        'Your expenses are like your inbox - they never stop coming! 📧',
-        'Budgeting is like dieting - easier when you track everything! 🥗',
-        'Your wallet is like your phone - you should check it regularly! 📱',
-        "Expenses are like your weight - they're easier to manage when you track them! ⚖️",
+        'Your expenses are like your ex - they keep coming back! Time to track them!',
+        'Money talks, but yours is probably saying "Why don\'t you track me?"',
+        "Your wallet is like a good friend - it's always there, but you should check on it!",
+        'Expenses are like calories - they add up whether you count them or not!',
+        'Your budget is like a plant - it needs regular attention to grow!',
+        "Money doesn't grow on trees, but it does grow when you track it!",
+        'Your expenses are like your inbox - they never stop coming!',
+        'Budgeting is like dieting - easier when you track everything!',
+        'Your wallet is like your phone - you should check it regularly!',
+        "Expenses are like your weight - they're easier to manage when you track them!",
       ],
       playful: [
-        'Aapko dekh ke toh humara dil melt ho gaya, ab bas expenses track kar lo! 💕',
-        "You're the main course, but your expenses are the side dish! 🍽️",
-        'Aapka financial health humara priority hai! Track karo aur healthy raho! 💚',
-        "Your money is like biryani - it's better when you know what's in it! 🍛",
-        'Aapke paise ko dekh ke humara mood ban gaya! Track karo aur khush raho! 😊',
-        "You're the chef of your financial kitchen - time to track those ingredients! 👨‍🍳",
-        'Aapka budget humara favorite dish hai! Keep it updated! 🍜',
-        'Your expenses are like your favorite restaurant - they deserve attention! 🍕',
-        'Aapke financial goals ko dekh ke humara heart skip ho gaya! 💓',
-        "You're the star of your financial story - keep writing those chapters! ⭐",
+        'Aapko dekh ke toh humara dil melt ho gaya, ab bas expenses track kar lo!',
+        "You're the main course, but your expenses are the side dish!",
+        'Aapka financial health humara priority hai! Track karo aur healthy raho!',
+        "Your money is like biryani - it's better when you know what's in it!",
+        'Aapke paise ko dekh ke humara mood ban gaya! Track karo aur khush raho!',
+        "You're the chef of your financial kitchen - time to track those ingredients!",
+        'Aapka budget humara favorite dish hai! Keep it updated!',
+        'Your expenses are like your favorite restaurant - they deserve attention!',
+        'Aapke financial goals ko dekh ke humara heart skip ho gaya!',
+        "You're the star of your financial story - keep writing those chapters!",
       ],
       achievement: [
-        "Congratulations! 🎉 You've been tracking expenses for a week!",
-        "Amazing! 🏆 You're building a strong financial foundation!",
-        'Well done! 🎊 Your financial discipline is paying off!',
-        "Fantastic! 🎈 You're on the right track to financial success!",
-        'Excellent! 🎯 Your money management skills are improving!',
+        "Congratulations! You've been tracking expenses for a week!",
+        "Amazing! You're building a strong financial foundation!",
+        'Well done! Your financial discipline is paying off!',
+        "Fantastic! You're on the right track to financial success!",
+        'Excellent! Your money management skills are improving!',
       ],
       seasonal: {
         winter: [
-          'Winter is coming! ❄️ But your expenses are already here - track them!',
-          'Cold weather, hot expenses! 🔥 Time to log those winter bills!',
-          'Winter vibes! ⛄ Your budget needs some warmth - track your expenses!',
+          'Winter is coming! But your expenses are already here - track them!',
+          'Cold weather, hot expenses! Time to log those winter bills!',
+          'Winter vibes! Your budget needs some warmth - track your expenses!',
         ],
         summer: [
-          'Summer heat! ☀️ But your expenses are hotter - track them!',
-          'Hot weather, cool expenses! 🧊 Time to log those summer spends!',
-          'Summer vibes! 🌞 Your budget is melting - track your expenses!',
+          'Summer heat! But your expenses are hotter - track them!',
+          'Hot weather, cool expenses! Time to log those summer spends!',
+          'Summer vibes! Your budget is melting - track your expenses!',
         ],
         monsoon: [
-          'Monsoon mood! 🌧️ But your expenses are pouring in - track them!',
-          'Rainy day, sunny expenses! ☔ Time to log those monsoon bills!',
-          'Monsoon vibes! 🌦️ Your budget is getting wet - track your expenses!',
+          'Monsoon mood! But your expenses are pouring in - track them!',
+          'Rainy day, sunny expenses! Time to log those monsoon bills!',
+          'Monsoon vibes! Your budget is getting wet - track your expenses!',
         ],
       },
     };
@@ -155,7 +155,7 @@ class FunNotificationService {
       const message = this.getFunMessage(context);
       await this.notificationService.sendNotificationToUsers([userEmail], {
         type: 'fun_notification',
-        title: 'Hey there! 👋',
+        title: 'Hey there!',
         body: message,
         data: {
           type: 'fun_notification',
@@ -163,7 +163,6 @@ class FunNotificationService {
           action: 'view_dashboard',
           url: 'trackaexpense://home',
         },
-        icon: '😊',
         priority: 'low',
       });
       await this.logFunNotificationSent(currentUser.uid, today, context);
@@ -240,7 +239,7 @@ class FunNotificationService {
         messages[Math.floor(Math.random() * messages.length)];
       await this.notificationService.sendNotificationToUsers([userEmail], {
         type: 'achievement',
-        title: 'Achievement Unlocked! 🏆',
+        title: 'Achievement Unlocked!',
         body: randomMessage,
         data: {
           type: 'achievement',
@@ -248,7 +247,6 @@ class FunNotificationService {
           action: 'view_achievements',
           url: 'trackaexpense://statistic',
         },
-        icon: '🏆',
         priority: 'normal',
       });
     } catch (error) {
@@ -263,14 +261,13 @@ class FunNotificationService {
         messages[Math.floor(Math.random() * messages.length)];
       await this.notificationService.sendNotificationToUsers([userEmail], {
         type: 'motivational',
-        title: "You're Amazing! 💪",
+        title: "You're Amazing!",
         body: randomMessage,
         data: {
           type: 'motivational',
           action: 'view_dashboard',
           url: 'trackaexpense://home',
         },
-        icon: '💪',
         priority: 'low',
       });
     } catch (error) {
@@ -285,14 +282,13 @@ class FunNotificationService {
         messages[Math.floor(Math.random() * messages.length)];
       await this.notificationService.sendNotificationToUsers([userEmail], {
         type: 'funny',
-        title: 'LOL! 😂',
+        title: 'LOL!',
         body: randomMessage,
         data: {
           type: 'funny',
           action: 'view_dashboard',
           url: 'trackaexpense://home',
         },
-        icon: '😂',
         priority: 'low',
       });
     } catch (error) {
@@ -307,14 +303,13 @@ class FunNotificationService {
         messages[Math.floor(Math.random() * messages.length)];
       await this.notificationService.sendNotificationToUsers([userEmail], {
         type: 'playful',
-        title: 'Aapka favorite app! 🍕',
+        title: 'Aapka favorite app!',
         body: randomMessage,
         data: {
           type: 'playful',
           action: 'view_dashboard',
           url: 'trackaexpense://home',
         },
-        icon: '🍕',
         priority: 'low',
       });
     } catch (error) {
@@ -329,14 +324,13 @@ class FunNotificationService {
         messages[Math.floor(Math.random() * messages.length)];
       await this.notificationService.sendNotificationToUsers([userEmail], {
         type: 'seasonal',
-        title: 'Seasonal Vibes! 🌟',
+        title: 'Seasonal Vibes!',
         body: randomMessage,
         data: {
           type: 'seasonal',
           action: 'view_dashboard',
           url: 'trackaexpense://home',
         },
-        icon: '🌟',
         priority: 'low',
       });
     } catch (error) {

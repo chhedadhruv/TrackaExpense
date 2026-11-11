@@ -50,32 +50,32 @@ class ReminderNotificationService {
     this.notificationService = NotificationService;
     this.reminderMessages = {
       income: [
-        "💰 Time to log today's income! Your future self will thank you.",
-        "💵 Don't forget to add your income for today. Every rupee counts!",
-        "📈 Track your earnings today - it's the first step to financial freedom!",
-        '💎 Your income deserves to be recorded. Add it now!',
-        "🌟 Today's income is waiting to be logged. Don't keep it waiting!",
+        "Time to log today's income! Your future self will thank you.",
+        "Don't forget to add your income for today. Every rupee counts!",
+        "Track your earnings today - it's the first step to financial freedom!",
+        'Your income deserves to be recorded. Add it now!',
+        "Today's income is waiting to be logged. Don't keep it waiting!",
       ],
       expense: [
-        "💸 Time to log today's expenses! Stay on top of your spending.",
-        "🛒 Don't forget to add your expenses for today. Knowledge is power!",
-        '📊 Track your spending today - awareness leads to better decisions!',
-        "💳 Every expense tells a story. What's yours today?",
-        '🎯 Log your expenses now and stay in control of your finances!',
+        "Time to log today's expenses! Stay on top of your spending.",
+        "Don't forget to add your expenses for today. Knowledge is power!",
+        'Track your spending today - awareness leads to better decisions!',
+        "Every expense tells a story. What's yours today?",
+        'Log your expenses now and stay in control of your finances!',
       ],
       savings: [
-        '🏦 Time to add your savings! Building wealth one day at a time.',
-        "💰 Don't forget to log your savings for today. Small steps, big dreams!",
-        '📈 Every rupee saved is a step closer to your goals!',
-        '💎 Your savings deserve recognition. Add them now!',
-        "🌟 Today's savings are tomorrow's opportunities!",
+        'Time to add your savings! Building wealth one day at a time.',
+        "Don't forget to log your savings for today. Small steps, big dreams!",
+        'Every rupee saved is a step closer to your goals!',
+        'Your savings deserve recognition. Add them now!',
+        "Today's savings are tomorrow's opportunities!",
       ],
       general: [
-        "📱 Hey! Don't forget to update your financial records today.",
-        '💡 Quick reminder: Log your financial activities for today.',
-        '🎯 Stay on track with your financial goals. Update your records now!',
-        "📊 Your financial journey continues. Add today's activities!",
-        '💪 Consistency is key! Update your financial records today.',
+        "Hey! Don't forget to update your financial records today.",
+        'Quick reminder: Log your financial activities for today.',
+        'Stay on track with your financial goals. Update your records now!',
+        "Your financial journey continues. Add today's activities!",
+        'Consistency is key! Update your financial records today.',
       ],
     };
   }
@@ -188,7 +188,7 @@ class ReminderNotificationService {
         messages[Math.floor(Math.random() * messages.length)];
       await this.notificationService.sendNotificationToUsers([userEmail], {
         type: 'reminder',
-        title: `${this.getReminderEmoji(reminderType)} Daily Reminder`,
+        title: 'Daily Reminder',
         body: randomMessage,
         data: {
           type: 'reminder',
@@ -203,7 +203,6 @@ class ReminderNotificationService {
               ? 'trackaexpense://savings'
               : 'trackaexpense://home',
         },
-        icon: this.getReminderEmoji(reminderType),
         priority: 'normal',
       });
     } catch (error) {
@@ -214,39 +213,28 @@ class ReminderNotificationService {
   async sendPositiveReminder(userEmail: string): Promise<void> {
     try {
       const positiveMessages = [
-        "🎉 Great job! You're staying on top of your finances today!",
-        "👏 You're doing amazing! Keep up the good work with your financial tracking!",
-        "🌟 Consistency is key! You're building great financial habits!",
-        "💪 You're on fire! Your financial discipline is impressive!",
-        "🏆 Well done! You're taking control of your financial future!",
+        "Great job! You're staying on top of your finances today!",
+        "You're doing amazing! Keep up the good work with your financial tracking!",
+        "Consistency is key! You're building great financial habits!",
+        "You're on fire! Your financial discipline is impressive!",
+        "Well done! You're taking control of your financial future!",
       ];
       const randomMessage =
         positiveMessages[Math.floor(Math.random() * positiveMessages.length)];
       await this.notificationService.sendNotificationToUsers([userEmail], {
         type: 'positive_reminder',
-        title: '🎉 Great Job!',
+        title: 'Great Job!',
         body: randomMessage,
         data: {
           type: 'positive_reminder',
           action: 'view_dashboard',
           url: 'trackaexpense://home',
         },
-        icon: '🎉',
         priority: 'low',
       });
     } catch (error) {
       console.error('Failed to send positive reminder:', error);
     }
-  }
-
-  getReminderEmoji(reminderType: string): string {
-    const emojis: Record<string, string> = {
-      income: '💰',
-      expense: '💸',
-      savings: '🏦',
-      general: '📱',
-    };
-    return emojis[reminderType] ?? '📱';
   }
 
   async logReminderSent(
@@ -292,7 +280,7 @@ class ReminderNotificationService {
       );
       await this.notificationService.sendNotificationToUsers([userEmail], {
         type: 'weekly_summary',
-        title: '📊 Weekly Summary',
+        title: 'Weekly Summary',
         body: `This week: ${weeklyActivity.incomeCount} income, ${weeklyActivity.expenseCount} expenses, ${weeklyActivity.savingsCount} savings`,
         data: {
           type: 'weekly_summary',
@@ -301,7 +289,6 @@ class ReminderNotificationService {
           activity: weeklyActivity,
           url: 'trackaexpense://statistic',
         },
-        icon: '📊',
         priority: 'normal',
       });
       await setDoc(
@@ -389,7 +376,7 @@ class ReminderNotificationService {
       }
       await this.notificationService.sendNotificationToUsers([userEmail], {
         type: 'monthly_goal',
-        title: '🎯 Monthly Goal Check',
+        title: 'Monthly Goal Check',
         body: 'How are you doing with your monthly financial goals? Time to review and adjust!',
         data: {
           type: 'monthly_goal',
@@ -398,7 +385,6 @@ class ReminderNotificationService {
           action: 'view_goals',
           url: 'trackaexpense://statistic',
         },
-        icon: '🎯',
         priority: 'normal',
       });
       await setDoc(
@@ -447,7 +433,7 @@ class ReminderNotificationService {
       const userEmail = currentUser.email!;
       await this.notificationService.sendNotificationToUsers([userEmail], {
         type: 'savings_reminder',
-        title: `💰 ${goal.name} reminder`,
+        title: `${goal.name} reminder`,
         body: `You've saved ${progress.toFixed(0)}% of your goal. Keep it up!`,
         data: {
           type: 'savings_reminder',
@@ -455,7 +441,6 @@ class ReminderNotificationService {
           action: 'view_savings',
           url: 'trackaexpense://savings',
         },
-        icon: '💰',
         priority: 'normal',
       });
       await setDoc(
