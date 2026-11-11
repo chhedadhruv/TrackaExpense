@@ -15,12 +15,7 @@ import {
   getFirestore,
   setDoc,
 } from '@react-native-firebase/firestore';
-import {
-  getCrashlytics,
-  setAttribute,
-  setUserId,
-} from '@react-native-firebase/crashlytics';
-import {reportError} from '../src/services/ErrorReporter';
+import {reportError, setErrorReportingTag} from '../src/services/ErrorReporter';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import type {User as FirebaseUser} from '@react-native-firebase/auth';
 import {snackbar} from '../src/utils/snackbarStore';
@@ -133,8 +128,7 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
               password,
             );
             const currentUser = userCredential.user;
-            setUserId(getCrashlytics(), currentUser.uid);
-            setAttribute(getCrashlytics(), 'auth_method', 'email');
+            setErrorReportingTag('auth_method', 'email');
             AnalyticsService.logLogin('email');
             if (!currentUser.emailVerified) {
               await signOutOfFirebase(getAuth());
@@ -203,8 +197,7 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
               userImg: null,
               balance: 0,
             });
-            setUserId(getCrashlytics(), newUser.uid);
-            setAttribute(getCrashlytics(), 'auth_method', 'email');
+            setErrorReportingTag('auth_method', 'email');
             AnalyticsService.logSignUp('email', currency);
             await signOutOfFirebase(getAuth());
             Alert.alert(
@@ -220,7 +213,6 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
         logout: async () => {
           try {
             await signOutOfFirebase(getAuth());
-            setUserId(getCrashlytics(), '');
           } catch (_) {
             snackbar.error('Failed to log out. Please try again.');
           }

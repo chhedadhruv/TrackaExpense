@@ -1,28 +1,11 @@
 import {
-  getAnalytics,
-  logEvent as logFirebaseAnalyticsEvent,
-  logLogin as logFirebaseLogin,
-  setUserProperty as setFirebaseUserProperty,
-} from '@react-native-firebase/analytics';
-import {
   setUserProperties as setMixpanelUserProperties,
   track,
 } from './MixpanelService';
 
-// Events go to Firebase Analytics (kept for this release) and to Mixpanel (approved event names).
-// Error events are not sent to Mixpanel; errors go to Sentry through ErrorReporter.
-
-const safe = (fn: () => Promise<void>): void => {
-  fn().catch(() => {});
-};
-
-// Sends one event to Firebase Analytics (the modular API needs the analytics instance each time).
-const logFirebaseEvent = async (
-  name: string,
-  params: Record<string, string | number>,
-): Promise<void> => {
-  logFirebaseAnalyticsEvent(getAnalytics(), name, params);
-};
+// Product analytics go to Mixpanel only (approved event names). Errors go to Sentry through
+// ErrorReporter, never through here. Firebase Analytics was removed.
+// In a development build Mixpanel does not start, so every call here is a no-op.
 
 // ─── Utility ────────────────────────────────────────────────────────────────
 
@@ -45,32 +28,6 @@ export const setUserProperties = (props: {
   has_splits?: string;
   has_savings_goals?: string;
 }): void => {
-  safe(async () => {
-    const a = getAnalytics();
-    if (props.currency !== undefined) {
-      await setFirebaseUserProperty(a, 'currency', props.currency);
-    }
-    if (props.auth_method !== undefined) {
-      await setFirebaseUserProperty(a, 'auth_method', props.auth_method);
-    }
-    if (props.transaction_count !== undefined) {
-      await setFirebaseUserProperty(
-        a,
-        'transaction_count',
-        props.transaction_count,
-      );
-    }
-    if (props.has_splits !== undefined) {
-      await setFirebaseUserProperty(a, 'has_splits', props.has_splits);
-    }
-    if (props.has_savings_goals !== undefined) {
-      await setFirebaseUserProperty(
-        a,
-        'has_savings_goals',
-        props.has_savings_goals,
-      );
-    }
-  });
   const definedProps = Object.fromEntries(
     Object.entries(props).filter(([, value]) => value !== undefined),
   ) as Record<string, string>;
@@ -82,7 +39,6 @@ export const setUserProperties = (props: {
 // ─── Auth Events ─────────────────────────────────────────────────────────────
 
 export const logLogin = (method: 'email' | 'google' | 'apple'): void => {
-  safe(() => logFirebaseLogin(getAnalytics(), {method}));
   track('User Logged In', {method});
 };
 
@@ -90,12 +46,10 @@ export const logSignUp = (
   method: 'email' | 'google' | 'apple',
   currency_selected: string,
 ): void => {
-  safe(() => logFirebaseEvent('sign_up', {method, currency_selected}));
   track('User Signed Up', {method, currency_selected});
 };
 
 export const logPasswordResetRequested = (): void => {
-  safe(() => logFirebaseEvent('password_reset_requested', {}));
   track('Password Reset Requested');
 };
 
@@ -107,13 +61,6 @@ export const logAddExpense = (params: {
   has_image: boolean;
   has_description: boolean;
 }): void => {
-  safe(() =>
-    logFirebaseEvent('add_expense', {
-      ...params,
-      has_image: String(params.has_image),
-      has_description: String(params.has_description),
-    }),
-  );
   track('Expense Added', params);
 };
 
@@ -121,7 +68,6 @@ export const logAddIncome = (params: {
   amount_range: string;
   category: string;
 }): void => {
-  safe(() => logFirebaseEvent('add_income', params));
   track('Income Added', params);
 };
 
@@ -130,12 +76,6 @@ export const logEditTransaction = (params: {
   category: string;
   amount_changed: boolean;
 }): void => {
-  safe(() =>
-    logFirebaseEvent('edit_transaction', {
-      ...params,
-      amount_changed: String(params.amount_changed),
-    }),
-  );
   track('Transaction Edited', params);
 };
 
@@ -143,17 +83,14 @@ export const logDeleteTransaction = (params: {
   type: string;
   category: string;
 }): void => {
-  safe(() => logFirebaseEvent('delete_transaction', params));
   track('Transaction Deleted', params);
 };
 
 export const logTransactionSearch = (query_length: number): void => {
-  safe(() => logFirebaseEvent('transaction_search', {query_length}));
   track('Transactions Searched', {query_length});
 };
 
 export const logTransactionFilterChanged = (filter_type: string): void => {
-  safe(() => logFirebaseEvent('transaction_filter_changed', {filter_type}));
   track('Transaction Filter Changed', {filter_type});
 };
 
@@ -163,24 +100,20 @@ export const logViewStatistics = (params: {
   chart_type: string;
   time_range: string;
 }): void => {
-  safe(() => logFirebaseEvent('view_statistics', params));
   track('Statistics Viewed', params);
 };
 
 export const logStatisticsTimeRangeChanged = (range: string): void => {
-  safe(() => logFirebaseEvent('statistics_time_range_changed', {range}));
   track('Statistics Range Changed', {range});
 };
 
 // ─── Split Events ─────────────────────────────────────────────────────────────
 
 export const logCreateGroup = (category: string): void => {
-  safe(() => logFirebaseEvent('create_group', {category}));
   track('Group Created', {category});
 };
 
 export const logInviteMember = (group_id: string): void => {
-  safe(() => logFirebaseEvent('invite_member', {group_id}));
   track('Group Member Invited', {group_id});
 };
 
@@ -190,28 +123,18 @@ export const logCreateSplit = (params: {
   category: string;
   member_count: number;
 }): void => {
-  safe(() =>
-    logFirebaseEvent('create_split', {
-      ...params,
-      is_recurring: String(params.is_recurring),
-      member_count: String(params.member_count),
-    }),
-  );
   track('Split Created', params);
 };
 
 export const logSettleUp = (amount_range: string): void => {
-  safe(() => logFirebaseEvent('settle_up', {amount_range}));
   track('Split Settled', {amount_range});
 };
 
 export const logAcceptInvitation = (): void => {
-  safe(() => logFirebaseEvent('accept_invitation', {}));
   track('Invitation Accepted');
 };
 
 export const logDeclineInvitation = (): void => {
-  safe(() => logFirebaseEvent('decline_invitation', {}));
   track('Invitation Declined');
 };
 
@@ -222,13 +145,6 @@ export const logCreateSavingsGoal = (params: {
   has_target_date: boolean;
   has_monthly_target: boolean;
 }): void => {
-  safe(() =>
-    logFirebaseEvent('create_savings_goal', {
-      ...params,
-      has_target_date: String(params.has_target_date),
-      has_monthly_target: String(params.has_monthly_target),
-    }),
-  );
   track('Savings Goal Created', params);
 };
 
@@ -236,17 +152,14 @@ export const logAddFundsToGoal = (params: {
   amount_range: string;
   goal_category: string;
 }): void => {
-  safe(() => logFirebaseEvent('add_funds_to_goal', params));
   track('Savings Goal Funded', params);
 };
 
 export const logWithdrawFromGoal = (params: {amount_range: string}): void => {
-  safe(() => logFirebaseEvent('withdraw_from_goal', params));
   track('Savings Goal Withdrawn', params);
 };
 
 export const logDeleteSavingsGoal = (): void => {
-  safe(() => logFirebaseEvent('delete_savings_goal', {}));
   track('Savings Goal Deleted');
 };
 
@@ -254,19 +167,5 @@ export const logSavingsGoalCompleted = (params: {
   category: string;
   time_to_complete_days: number;
 }): void => {
-  safe(() =>
-    logFirebaseEvent('savings_goal_completed', {
-      ...params,
-      time_to_complete_days: String(params.time_to_complete_days),
-    }),
-  );
   track('Savings Goal Completed', params);
 };
-
-// ─── Error Event ──────────────────────────────────────────────────────────────
-
-export const logError = (params: {
-  error_type: string;
-  screen_name: string;
-  error_message: string;
-}): void => safe(() => logFirebaseEvent('error_occurred', params));
