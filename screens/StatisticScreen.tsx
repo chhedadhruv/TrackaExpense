@@ -2,13 +2,12 @@ import {
   View,
   Text,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
   Dimensions,
   Platform,
 } from 'react-native';
 import React, {useState, useEffect, useCallback, useMemo, useRef} from 'react';
-import {Card, ActivityIndicator} from 'react-native-paper';
+import {ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {BarChart, PieChart} from 'react-native-gifted-charts';
 import {compactAxisLabel, niceAxisMax} from '../src/utils/chartAxis';
@@ -25,12 +24,7 @@ import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {getCategoryIcon} from '../utils/CategoryData';
-import {
-  PRIMARY_COLOR,
-  BACKGROUND_COLOR,
-  INCOME_COLOR,
-  EXPENSE_COLOR,
-} from '../src/constants/theme';
+import {useTheme} from '../src/theme';
 import {formatDisplayDate} from '../src/utils/formatters';
 import {majorOf, minorOf, totalMajor} from '../src/utils/amounts';
 import {toMajorNumber} from '../src/utils/money';
@@ -66,6 +60,8 @@ interface BarEntry {
   showLabel?: boolean;
 }
 
+// Slice colours for the category chart. Data colours, the same in both themes; each is mid-tone
+// so it reads on the light card and on the charcoal one.
 const PIE_PALETTE = [
   '#677CD2',
   '#E98852',
@@ -90,6 +86,7 @@ const TIME_RANGES: {key: TimeRange; label: string; icon: McIconName}[] = [
 const Y_AXIS_SECTIONS = 3;
 
 const StatisticScreen = ({navigation}: {navigation: any}) => {
+  const {colors} = useTheme();
   const {currency, formatAmount} = useCurrency();
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedBar, setSelectedBar] = useState<BarEntry | null>(null);
@@ -324,7 +321,7 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
         built.push({
           value: toMajorNumber(item.income, currency.code),
           label: '',
-          frontColor: PRIMARY_COLOR,
+          frontColor: colors.primary,
           spacing: 2,
         });
       }
@@ -332,7 +329,7 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
         built.push({
           value: toMajorNumber(item.expense, currency.code),
           label: '',
-          frontColor: EXPENSE_COLOR,
+          frontColor: colors.expense,
           spacing: 2,
         });
       }
@@ -345,7 +342,13 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
       });
     });
     setBarData(built);
-  }, [filteredTransactions, timeRange, currency.code]);
+  }, [
+    filteredTransactions,
+    timeRange,
+    currency.code,
+    colors.primary,
+    colors.expense,
+  ]);
 
   useEffect(() => {
     handleBarData();
@@ -397,78 +400,111 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
     return Math.max(base, groups * 70);
   }, [barData]);
 
+  // The chart library takes style objects for its axis labels, so they follow the theme here.
+  const axisTextStyles = useMemo(
+    () => ({
+      y: {color: colors.textMuted, fontFamily: 'Lato-Regular'},
+      x: {
+        color: colors.textMuted,
+        fontSize: 10,
+        textAlign: 'center' as const,
+        width: 46,
+        marginTop: 10,
+        marginHorizontal: 2,
+        fontFamily: 'Lato-Regular',
+      },
+    }),
+    [colors.textMuted],
+  );
+
   const getTimeRangeLabel = () =>
     TIME_RANGES.find(r => r.key === timeRange)?.label ?? 'Selected Period';
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.centeredState]}>
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-        <Text style={styles.loadingText}>Loading your statistics…</Text>
+      <View className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text className="mt-[15px] font-sans text-base text-primary">
+          Loading your statistics…
+        </Text>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={[styles.container, styles.centeredState]}>
+      <View className="flex-1 items-center justify-center bg-background px-5">
         <MaterialCommunityIcons
           name="cloud-off-outline"
           size={56}
-          color="#CBD3EE"
+          color={colors.iconMuted}
         />
-        <Text style={styles.errorText}>{error}</Text>
+        <Text
+          accessibilityRole="alert"
+          className="my-4 text-center font-sans text-base text-expense-text">
+          {error}
+        </Text>
         <TouchableOpacity
-          style={styles.retryButton}
+          className="rounded-xl bg-primary-fill px-6 py-3"
+          accessibilityRole="button"
           onPress={fetchTransactions}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+          <Text className="font-sans-bold text-base font-semibold text-on-primary">
+            Retry
+          </Text>
         </TouchableOpacity>
       </View>
     );
   }
 
+  const typeKey = selectedBtn === 'Income' ? 'income' : 'expense';
+  const visibleTransactions = filteredTransactions
+    .filter(t => t.type === typeKey)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const shownTransactions = visibleTransactions.slice(0, visibleCount);
+  const hasBars = barData.filter(item => item.value > 0).length > 0;
+
   return (
-    <View style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        style={styles.scrollContainer}>
-        <View style={styles.headerSection}>
-          <Text style={styles.headerText}>Statistics</Text>
-          <Text style={styles.subHeaderText}>
+    <View className="flex-1 bg-background">
+      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+        <View className="px-5 pb-[15px] pt-5">
+          <Text
+            accessibilityRole="header"
+            className="font-heading text-2xl font-bold text-text-strong">
+            Statistics
+          </Text>
+          <Text className="mt-1 font-sans text-base text-text-secondary">
             Track your financial insights
           </Text>
         </View>
 
         {/* Time Range Filter */}
-        <View style={styles.filterSection}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.filterScrollView}>
+        <View className="px-5 pb-[15px]">
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {TIME_RANGES.map(({key, label, icon}) => {
               const active = timeRange === key;
               return (
                 <TouchableOpacity
                   key={key}
+                  accessibilityRole="button"
+                  accessibilityState={{selected: active}}
                   onPress={() => {
                     setTimeRange(key);
                     AnalyticsService.logStatisticsTimeRangeChanged(key);
                   }}
-                  style={[
-                    styles.filterButton,
-                    active && styles.filterButtonActive,
-                  ]}>
+                  className={`mr-2.5 flex-row items-center rounded-full border px-3.5 py-2 ${
+                    active
+                      ? 'border-primary-fill bg-primary-fill'
+                      : 'border-card-border bg-surface'
+                  }`}>
                   <MaterialCommunityIcons
                     name={icon}
                     size={16}
-                    color={active ? '#FFFFFF' : PRIMARY_COLOR}
+                    color={active ? colors.onPrimary : colors.primary}
                   />
                   <Text
-                    style={
-                      active
-                        ? styles.filterButtonTextActive
-                        : styles.filterButtonText
-                    }>
+                    className={`ml-1.5 font-sans-bold text-[13px] font-semibold ${
+                      active ? 'text-on-primary' : 'text-primary'
+                    }`}>
                     {label}
                   </Text>
                 </TouchableOpacity>
@@ -478,51 +514,57 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
         </View>
 
         {timeRange === 'custom' && (
-          <View style={styles.customDateSection}>
-            <Text style={styles.customDateTitle}>Select Date Range</Text>
-            <View style={styles.customDateContainer}>
+          <View className="mx-5 mb-[15px] rounded-2xl border border-card-border bg-surface p-5">
+            <Text className="mb-[15px] font-sans-bold text-base font-semibold text-text-strong">
+              Select Date Range
+            </Text>
+            <View className="flex-row items-center">
               <TouchableOpacity
-                style={styles.dateInput}
+                className="flex-1 rounded-xl border border-card-border bg-surface-muted p-3"
+                accessibilityRole="button"
                 onPress={() => setStartDatePickerVisible(true)}>
-                <View style={styles.dateInputContent}>
+                <View className="flex-row items-center">
                   <MaterialCommunityIcons
                     name="calendar-start"
                     size={20}
-                    color={PRIMARY_COLOR}
+                    color={colors.primary}
                   />
                   <Text
-                    style={[
-                      styles.dateInputText,
-                      !customStartDate && styles.dateInputPlaceholder,
-                    ]}>
+                    className={`ml-2 font-sans text-sm ${
+                      customStartDate ? 'text-text' : 'text-text-placeholder'
+                    }`}>
                     {customStartDate
                       ? moment(customStartDate).format('MMM DD, YYYY')
                       : 'Start Date'}
                   </Text>
                 </View>
               </TouchableOpacity>
-              <View style={styles.dateSeparator}>
-                <Text style={styles.dateSeparatorText}>to</Text>
+              <View className="px-2.5">
+                <Text className="font-sans text-sm text-text-secondary">
+                  to
+                </Text>
               </View>
               <TouchableOpacity
-                style={[
-                  styles.dateInput,
-                  !customStartDate && styles.dateInputDisabled,
-                ]}
+                className={`flex-1 rounded-xl border border-card-border bg-surface-muted p-3 ${
+                  customStartDate ? '' : 'opacity-50'
+                }`}
+                accessibilityRole="button"
+                accessibilityState={{disabled: !customStartDate}}
                 onPress={() =>
                   customStartDate && setEndDatePickerVisible(true)
                 }>
-                <View style={styles.dateInputContent}>
+                <View className="flex-row items-center">
                   <MaterialCommunityIcons
                     name="calendar-end"
                     size={20}
-                    color={customStartDate ? PRIMARY_COLOR : '#CCC'}
+                    color={
+                      customStartDate ? colors.primary : colors.textPlaceholder
+                    }
                   />
                   <Text
-                    style={[
-                      styles.dateInputText,
-                      !customEndDate && styles.dateInputPlaceholder,
-                    ]}>
+                    className={`ml-2 font-sans text-sm ${
+                      customEndDate ? 'text-text' : 'text-text-placeholder'
+                    }`}>
                     {customEndDate
                       ? moment(customEndDate).format('MMM DD, YYYY')
                       : 'End Date'}
@@ -531,12 +573,16 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
               </TouchableOpacity>
             </View>
             {dateRangeError && (
-              <Text style={styles.dateRangeErrorText}>{dateRangeError}</Text>
+              <Text
+                accessibilityRole="alert"
+                className="mt-2.5 font-sans text-[13px] text-expense-text">
+                {dateRangeError}
+              </Text>
             )}
             {timeRange === 'custom' &&
               (!customStartDate || !customEndDate) &&
               !dateRangeError && (
-                <Text style={styles.dateRangeHintText}>
+                <Text className="mt-2.5 text-center font-sans text-[13px] text-text-secondary">
                   Select both dates to filter transactions.
                 </Text>
               )}
@@ -575,87 +621,68 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
         />
 
         {/* Summary Cards */}
-        <View style={styles.cardSection}>
-          <Card
-            style={[
-              styles.summaryCard,
-              Platform.OS === 'android' && styles.cardAndroid,
-            ]}
-            elevation={Platform.OS === 'android' ? 0 : 2}>
-            <View style={styles.cardContent}>
-              <View style={styles.cardHeader}>
-                <View style={styles.cardIcon}>
-                  <MaterialCommunityIcons
-                    name="arrow-down"
-                    size={20}
-                    color={INCOME_COLOR}
-                  />
-                </View>
-                <Text style={styles.cardTitle}>Total Income</Text>
+        <View className="mb-5 flex-row justify-between px-5">
+          <View className="w-[48%] rounded-2xl border border-card-border bg-surface p-4 ios:shadow-md">
+            <View className="mb-2.5 flex-row items-center">
+              <View className="mr-2 h-8 w-8 items-center justify-center rounded-lg bg-surface-muted">
+                <MaterialCommunityIcons
+                  name="arrow-down"
+                  size={20}
+                  color={colors.income}
+                />
               </View>
-              <Text style={[styles.cardAmount, {color: INCOME_COLOR}]}>
-                {formatAmount(totalIncome)}
+              <Text className="font-sans text-sm text-text-secondary">
+                Total Income
               </Text>
             </View>
-          </Card>
-          <Card
-            style={[
-              styles.summaryCard,
-              Platform.OS === 'android' && styles.cardAndroid,
-            ]}
-            elevation={Platform.OS === 'android' ? 0 : 2}>
-            <View style={styles.cardContent}>
-              <View style={styles.cardHeader}>
-                <View style={styles.cardIcon}>
-                  <MaterialCommunityIcons
-                    name="arrow-up"
-                    size={20}
-                    color={EXPENSE_COLOR}
-                  />
-                </View>
-                <Text style={styles.cardTitle}>Total Expense</Text>
+            <Text className="font-sans-bold text-[22px] font-bold text-income">
+              {formatAmount(totalIncome)}
+            </Text>
+          </View>
+          <View className="w-[48%] rounded-2xl border border-card-border bg-surface p-4 ios:shadow-md">
+            <View className="mb-2.5 flex-row items-center">
+              <View className="mr-2 h-8 w-8 items-center justify-center rounded-lg bg-surface-muted">
+                <MaterialCommunityIcons
+                  name="arrow-up"
+                  size={20}
+                  color={colors.expense}
+                />
               </View>
-              <Text style={[styles.cardAmount, {color: EXPENSE_COLOR}]}>
-                {formatAmount(totalExpense)}
+              <Text className="font-sans text-sm text-text-secondary">
+                Total Expense
               </Text>
             </View>
-          </Card>
+            <Text className="font-sans-bold text-[22px] font-bold text-expense">
+              {formatAmount(totalExpense)}
+            </Text>
+          </View>
         </View>
 
         {/* Bar Chart */}
-        <Card
-          style={[
-            styles.statisticCard,
-            Platform.OS === 'android' && styles.cardAndroid,
-          ]}
-          elevation={Platform.OS === 'android' ? 0 : 3}>
-          <View style={styles.statisticHeader}>
-            <Text style={styles.statisticHeaderText}>Financial Overview</Text>
-            <Text style={styles.statisticHeaderSubText}>
+        <View className="mx-5 mb-5 rounded-[20px] border border-card-border bg-surface ios:shadow-lg">
+          <View className="px-5 pb-2.5 pt-5">
+            <Text className="font-sans-bold text-lg font-bold text-text-strong">
+              Financial Overview
+            </Text>
+            <Text className="mt-0.5 font-sans text-[13px] text-text-secondary">
               {getTimeRangeLabel()}
             </Text>
           </View>
-          <View style={styles.chartContainer}>
-            {barData.filter(item => item.value > 0).length > 0 ? (
+          <View className="px-5 pb-5">
+            {hasBars ? (
               <>
-                <View style={styles.barLegend}>
-                  <View style={styles.barLegendItem}>
-                    <View
-                      style={[
-                        styles.barLegendDot,
-                        {backgroundColor: PRIMARY_COLOR},
-                      ]}
-                    />
-                    <Text style={styles.barLegendLabel}>Income</Text>
+                <View className="mb-2.5 flex-row justify-center">
+                  <View className="mx-2.5 flex-row items-center">
+                    <View className="mr-1.5 h-2.5 w-2.5 rounded-full bg-primary" />
+                    <Text className="font-sans text-xs text-text-secondary">
+                      Income
+                    </Text>
                   </View>
-                  <View style={styles.barLegendItem}>
-                    <View
-                      style={[
-                        styles.barLegendDot,
-                        {backgroundColor: EXPENSE_COLOR},
-                      ]}
-                    />
-                    <Text style={styles.barLegendLabel}>Expense</Text>
+                  <View className="mx-2.5 flex-row items-center">
+                    <View className="mr-1.5 h-2.5 w-2.5 rounded-full bg-expense" />
+                    <Text className="font-sans text-xs text-text-secondary">
+                      Expense
+                    </Text>
                   </View>
                 </View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -667,16 +694,8 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
                     roundedTop
                     xAxisThickness={0}
                     yAxisThickness={0}
-                    yAxisTextStyle={{color: '#888', fontFamily: 'Lato-Regular'}}
-                    xAxisLabelTextStyle={{
-                      color: '#888',
-                      fontSize: 10,
-                      textAlign: 'center',
-                      width: 46,
-                      marginTop: 10,
-                      marginHorizontal: 2,
-                      fontFamily: 'Lato-Regular',
-                    }}
+                    yAxisTextStyle={axisTextStyles.y}
+                    xAxisLabelTextStyle={axisTextStyles.x}
                     noOfSections={Y_AXIS_SECTIONS}
                     showFractionalValues
                     isAnimated
@@ -687,7 +706,7 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
                     }
                     width={chartWidth}
                     xAxisLabelsHeight={32}
-                    rulesColor="#ECECEC"
+                    rulesColor={colors.divider}
                     maxValue={niceAxisMax(
                       Math.max(0, ...barData.map(i => i.value)),
                       Y_AXIS_SECTIONS,
@@ -699,9 +718,9 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
                   />
                 </ScrollView>
                 {selectedBar && (
-                  <View style={styles.selectedBarContainer}>
-                    <Text style={styles.selectedBarText}>
-                      {selectedBar.frontColor === PRIMARY_COLOR
+                  <View className="mt-2.5 self-center rounded-lg bg-primary-soft px-3.5 py-2">
+                    <Text className="font-sans-bold text-sm text-text-strong">
+                      {selectedBar.frontColor === colors.primary
                         ? 'Income'
                         : 'Expense'}
                       : {formatAmount(selectedBar.value)}
@@ -710,89 +729,80 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
                 )}
               </>
             ) : (
-              <View style={styles.emptyState}>
+              <View className="items-center px-5 py-10">
                 <MaterialCommunityIcons
                   name="chart-bar"
                   size={48}
-                  color="#CBD3EE"
+                  color={colors.iconMuted}
                 />
-                <Text style={styles.emptyStateText}>No data available</Text>
-                <Text style={styles.emptyStateSubText}>
+                <Text className="mt-3 font-sans-bold text-base font-semibold text-text-strong">
+                  No data available
+                </Text>
+                <Text className="mt-1.5 text-center font-sans text-sm text-text-secondary">
                   No transactions found in this time period.{'\n'}Try changing
                   the date range above.
                 </Text>
               </View>
             )}
           </View>
-        </Card>
+        </View>
 
         {/* Category Pie with Income/Expense toggle in header */}
-        <Card
-          style={[
-            styles.statisticCard,
-            Platform.OS === 'android' && styles.cardAndroid,
-          ]}
-          elevation={Platform.OS === 'android' ? 0 : 3}>
-          <View style={styles.pieCardHeader}>
-            <View>
-              <Text style={styles.statisticHeaderText}>
+        <View className="mx-5 mb-5 rounded-[20px] border border-card-border bg-surface ios:shadow-lg">
+          <View className="flex-row items-center justify-between px-5 pb-2.5 pt-5">
+            <View className="flex-1">
+              <Text className="font-sans-bold text-lg font-bold text-text-strong">
                 {selectedBtn === 'Income'
                   ? 'Income by Category'
                   : 'Spending by Category'}
               </Text>
-              <Text style={styles.statisticHeaderSubText}>
+              <Text className="mt-0.5 font-sans text-[13px] text-text-secondary">
                 {selectedBtn === 'Income'
                   ? 'Income distribution'
                   : 'Expenses distribution'}
               </Text>
             </View>
-            <View style={styles.pieToggleRow}>
-              {(['Income', 'Expense'] as ChartBtn[]).map(btn => (
-                <TouchableOpacity
-                  key={btn}
-                  style={[
-                    styles.pieToggleBtn,
-                    selectedBtn === btn && styles.pieToggleBtnActive,
-                  ]}
-                  onPress={() => setSelectedBtn(btn)}>
-                  <Text
-                    style={[
-                      styles.pieToggleBtnText,
-                      selectedBtn === btn && styles.pieToggleBtnTextActive,
-                    ]}>
-                    {btn}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <View className="ml-2.5 flex-row rounded-[10px] bg-surface-muted p-[3px]">
+              {(['Income', 'Expense'] as ChartBtn[]).map(btn => {
+                const active = selectedBtn === btn;
+                return (
+                  <TouchableOpacity
+                    key={btn}
+                    accessibilityRole="radio"
+                    accessibilityState={{selected: active}}
+                    className={`rounded-lg px-3 py-1.5 ${
+                      active ? 'bg-primary-fill' : ''
+                    }`}
+                    onPress={() => setSelectedBtn(btn)}>
+                    <Text
+                      className={`font-sans-bold text-xs font-semibold ${
+                        active ? 'text-on-primary' : 'text-text-secondary'
+                      }`}>
+                      {btn}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
-          <View style={[styles.chartContainer, {alignItems: 'center'}]}>
+          <View className="items-center px-5 pb-5">
             {categoryPieData.length > 0 ? (
               <PieChart
                 donut
                 innerRadius={70}
                 radius={100}
+                innerCircleColor={colors.surface}
                 focusOnPress
                 showText={false}
                 data={categoryPieData}
                 centerLabelComponent={() => (
-                  <View style={{alignItems: 'center'}}>
-                    <Text
-                      style={{
-                        fontFamily: 'Lato-Bold',
-                        fontSize: 16,
-                        color: '#2C2C2C',
-                      }}>
+                  <View className="items-center">
+                    <Text className="font-sans-bold text-base text-text-strong">
                       {formatAmount(
                         selectedBtn === 'Income' ? totalIncome : totalExpense,
                       )}
                     </Text>
-                    <Text
-                      style={{
-                        fontFamily: 'Lato-Regular',
-                        fontSize: 12,
-                        color: '#666',
-                      }}>
+                    <Text className="font-sans text-xs text-text-secondary">
                       {selectedBtn === 'Income'
                         ? 'Total Income'
                         : 'Total Expense'}
@@ -801,32 +811,37 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
                 )}
               />
             ) : (
-              <View style={styles.emptyState}>
+              <View className="items-center px-5 py-10">
                 <MaterialCommunityIcons
                   name="chart-pie"
                   size={48}
-                  color="#CBD3EE"
+                  color={colors.iconMuted}
                 />
-                <Text style={styles.emptyStateText}>
+                <Text className="mt-3 font-sans-bold text-base font-semibold text-text-strong">
                   No {selectedBtn.toLowerCase()} data available
                 </Text>
-                <Text style={styles.emptyStateSubText}>
+                <Text className="mt-1.5 text-center font-sans text-sm text-text-secondary">
                   No {selectedBtn.toLowerCase()}s found in this time period.
                   {'\n'}Try changing the date range above.
                 </Text>
               </View>
             )}
             {categoryPieData.length > 0 && (
-              <View style={styles.legendContainer}>
+              <View className="mt-5 w-full">
                 {categoryPieData.map(item => (
-                  <View key={item.label} style={styles.legendRow}>
+                  <View
+                    key={item.label}
+                    className="mb-2.5 flex-row items-center">
                     <View
-                      style={[styles.legendDot, {backgroundColor: item.color}]}
+                      className="mr-2.5 h-3 w-3 rounded-full"
+                      style={{backgroundColor: item.color}}
                     />
-                    <Text style={styles.legendLabel} numberOfLines={1}>
+                    <Text
+                      className="flex-1 font-sans text-sm text-text"
+                      numberOfLines={1}>
                       {item.label}
                     </Text>
-                    <Text style={styles.legendValue}>
+                    <Text className="font-sans-bold text-[13px] text-text-secondary">
                       {item.percent}% · {formatAmount(Math.round(item.amount))}
                     </Text>
                   </View>
@@ -834,111 +849,91 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
               </View>
             )}
           </View>
-        </Card>
+        </View>
 
         {/* Transaction list */}
-        <View style={styles.transactionsSection}>
-          {(() => {
-            const typeKey = selectedBtn === 'Income' ? 'income' : 'expense';
-            const visible = filteredTransactions
-              .filter(t => t.type === typeKey)
-              .sort(
-                (a, b) =>
-                  new Date(b.date).getTime() - new Date(a.date).getTime(),
-              );
-            const shown = visible.slice(0, visibleCount);
-            return (
-              <>
-                <Text style={styles.transactionsHeaderText}>
-                  {selectedBtn} Transactions
-                </Text>
-                <Text style={styles.transactionsSubHeaderText}>
-                  {visible.length} transaction{visible.length !== 1 ? 's' : ''}
-                </Text>
-                <View style={styles.transactionsList}>
-                  {shown.length > 0 ? (
-                    shown.map(transaction => (
-                      <Card
-                        key={transaction.id}
-                        style={[
-                          styles.transactionsCard,
-                          Platform.OS === 'android' && styles.cardAndroid,
-                        ]}
-                        elevation={Platform.OS === 'android' ? 0 : 2}
-                        onPress={() =>
-                          navigation.navigate('TransactionDetail', {
-                            transaction,
-                          })
-                        }>
-                        <View style={styles.transactionsCardContent}>
-                          <View style={styles.transactionsCardDetails}>
-                            <View style={styles.transactionsCardIcon}>
-                              <MaterialCommunityIcons
-                                name={getCategoryIcon(transaction.category)}
-                                size={24}
-                                color={PRIMARY_COLOR}
-                              />
-                            </View>
-                            <View style={styles.transactionsCardInfo}>
-                              <Text
-                                style={styles.transactionsCardTitle}
-                                numberOfLines={1}
-                                ellipsizeMode="tail">
-                                {transaction.title}
-                              </Text>
-                              <Text style={styles.transactionsCardCategory}>
-                                {transaction.category}
-                              </Text>
-                              <Text style={styles.transactionsCardDate}>
-                                {formatDisplayDate(transaction.date)}
-                              </Text>
-                            </View>
-                          </View>
-                          <View style={styles.transactionsCardAmount}>
-                            <Text
-                              style={
-                                transaction.type === 'income'
-                                  ? styles.amountIncome
-                                  : styles.amountExpense
-                              }>
-                              {transaction.type === 'income' ? '+ ' : '- '}
-                              {formatAmount(
-                                majorOf(transaction, currency.code),
-                              )}
-                            </Text>
-                          </View>
-                        </View>
-                      </Card>
-                    ))
-                  ) : (
-                    <View style={styles.emptyState}>
+        <View className="px-5 pb-[30px]">
+          <Text
+            accessibilityRole="header"
+            className="font-sans-bold text-lg font-bold text-text-strong">
+            {selectedBtn} Transactions
+          </Text>
+          <Text className="mb-[15px] mt-0.5 font-sans text-[13px] text-text-secondary">
+            {visibleTransactions.length} transaction
+            {visibleTransactions.length !== 1 ? 's' : ''}
+          </Text>
+          <View>
+            {shownTransactions.length > 0 ? (
+              shownTransactions.map(transaction => (
+                <TouchableOpacity
+                  key={transaction.id}
+                  accessibilityRole="button"
+                  onPress={() =>
+                    navigation.navigate('TransactionDetail', {transaction})
+                  }
+                  className="mb-3 flex-row items-center justify-between rounded-2xl border border-card-border bg-surface p-4 ios:shadow-md">
+                  <View className="flex-1 flex-row items-center">
+                    <View className="mr-3 h-[50px] w-[50px] items-center justify-center rounded-[14px] bg-primary-soft">
                       <MaterialCommunityIcons
-                        name="chart-line"
-                        size={48}
-                        color="#CBD3EE"
+                        name={getCategoryIcon(transaction.category)}
+                        size={24}
+                        color={colors.primary}
                       />
-                      <Text style={styles.emptyStateText}>
-                        No {selectedBtn.toLowerCase()} transactions
+                    </View>
+                    <View className="flex-1">
+                      <Text
+                        className="mb-0.5 font-sans-bold text-base font-semibold text-text-strong"
+                        numberOfLines={1}
+                        ellipsizeMode="tail">
+                        {transaction.title}
                       </Text>
-                      <Text style={styles.emptyStateSubText}>
-                        No {selectedBtn.toLowerCase()} data available for the
-                        selected period.{'\n'}Try changing the date range above.
+                      <Text className="mb-0.5 font-sans text-[13px] text-primary">
+                        {transaction.category}
+                      </Text>
+                      <Text className="font-sans text-xs text-text-secondary">
+                        {formatDisplayDate(transaction.date)}
                       </Text>
                     </View>
-                  )}
-                  {visible.length > visibleCount && (
-                    <TouchableOpacity
-                      style={styles.showMoreButton}
-                      onPress={() => setVisibleCount(c => c + 10)}>
-                      <Text style={styles.showMoreButtonText}>
-                        Show More ({visible.length - visibleCount} remaining)
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </>
-            );
-          })()}
+                  </View>
+                  <Text
+                    className={`ml-2 font-sans-bold text-base font-bold ${
+                      transaction.type === 'income'
+                        ? 'text-income'
+                        : 'text-expense'
+                    }`}>
+                    {transaction.type === 'income' ? '+ ' : '- '}
+                    {formatAmount(majorOf(transaction, currency.code))}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View className="items-center px-5 py-10">
+                <MaterialCommunityIcons
+                  name="chart-line"
+                  size={48}
+                  color={colors.iconMuted}
+                />
+                <Text className="mt-3 font-sans-bold text-base font-semibold text-text-strong">
+                  No {selectedBtn.toLowerCase()} transactions
+                </Text>
+                <Text className="mt-1.5 text-center font-sans text-sm text-text-secondary">
+                  No {selectedBtn.toLowerCase()} data available for the selected
+                  period.{'\n'}Try changing the date range above.
+                </Text>
+              </View>
+            )}
+            {visibleTransactions.length > visibleCount && (
+              <TouchableOpacity
+                className="mt-1 items-center rounded-xl border border-primary-fill bg-surface py-3"
+                accessibilityRole="button"
+                onPress={() => setVisibleCount(c => c + 10)}>
+                <Text className="font-sans-bold text-sm font-semibold text-primary">
+                  Show More ({visibleTransactions.length - visibleCount}{' '}
+                  remaining)
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -946,335 +941,3 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
 };
 
 export default StatisticScreen;
-
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  scrollContainer: {flex: 1},
-  centeredState: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 15,
-    color: '#888',
-    fontFamily: 'Lato-Regular',
-  },
-  errorText: {
-    marginTop: 16,
-    fontSize: 15,
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: 20,
-    backgroundColor: PRIMARY_COLOR,
-    borderRadius: 12,
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-  },
-  retryButtonText: {color: '#FFFFFF', fontFamily: 'Lato-Bold', fontSize: 15},
-  headerSection: {paddingHorizontal: 20, paddingTop: 20, paddingBottom: 15},
-  headerText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    fontFamily: 'Kufam-SemiBoldItalic',
-  },
-  subHeaderText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 4,
-    fontFamily: 'Lato-Regular',
-  },
-  filterSection: {marginHorizontal: 20, marginBottom: 20},
-  filterScrollView: {flexGrow: 0},
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-  },
-  filterButtonActive: {
-    backgroundColor: PRIMARY_COLOR,
-    borderColor: PRIMARY_COLOR,
-  },
-  filterButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: PRIMARY_COLOR,
-    marginLeft: 6,
-    fontFamily: 'Lato-Bold',
-  },
-  filterButtonTextActive: {
-    color: '#FFFFFF',
-    marginLeft: 6,
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'Lato-Bold',
-  },
-  customDateSection: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-  },
-  customDateTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 12,
-    fontFamily: 'Lato-Bold',
-  },
-  customDateContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  dateInput: {
-    flex: 1,
-    backgroundColor: '#F4F6FA',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-  },
-  dateInputDisabled: {opacity: 0.5},
-  dateInputContent: {flexDirection: 'row', alignItems: 'center'},
-  dateInputText: {
-    fontSize: 14,
-    color: '#2C2C2C',
-    marginLeft: 8,
-    fontFamily: 'Lato-Regular',
-    fontWeight: '500',
-  },
-  dateInputPlaceholder: {color: '#999'},
-  dateSeparator: {marginHorizontal: 10},
-  dateSeparatorText: {fontSize: 12, color: '#999', fontFamily: 'Lato-Regular'},
-  dateRangeErrorText: {
-    marginTop: 10,
-    fontSize: 13,
-    color: EXPENSE_COLOR,
-    fontFamily: 'Lato-Regular',
-  },
-  dateRangeHintText: {
-    marginTop: 10,
-    fontSize: 13,
-    color: '#999',
-    fontFamily: 'Lato-Regular',
-  },
-  cardSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  summaryCard: {width: '48%', borderRadius: 16, backgroundColor: '#FFFFFF'},
-  cardContent: {padding: 16},
-  cardHeader: {flexDirection: 'row', alignItems: 'center', marginBottom: 12},
-  cardIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: '#F4F6FA',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-  },
-  cardAmount: {fontSize: 20, fontWeight: 'bold', fontFamily: 'Lato-Bold'},
-  statisticCard: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-  },
-  statisticHeader: {padding: 20, paddingBottom: 10},
-  statisticHeaderText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    fontFamily: 'Kufam-SemiBoldItalic',
-  },
-  statisticHeaderSubText: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
-    fontFamily: 'Lato-Regular',
-  },
-  chartContainer: {paddingHorizontal: 20, paddingBottom: 20},
-  barLegend: {flexDirection: 'row', marginBottom: 12, gap: 16},
-  barLegendItem: {flexDirection: 'row', alignItems: 'center'},
-  barLegendDot: {width: 10, height: 10, borderRadius: 5, marginRight: 6},
-  barLegendLabel: {fontSize: 13, color: '#666', fontFamily: 'Lato-Regular'},
-  selectedBarContainer: {marginTop: 10, alignItems: 'center'},
-  selectedBarText: {
-    fontSize: 14,
-    color: '#2C2C2C',
-    fontWeight: '600',
-    fontFamily: 'Lato-Bold',
-  },
-  pieCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    padding: 20,
-    paddingBottom: 10,
-  },
-  pieToggleRow: {
-    flexDirection: 'row',
-    borderRadius: 10,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-  },
-  pieToggleBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#FFFFFF',
-  },
-  pieToggleBtnActive: {backgroundColor: PRIMARY_COLOR},
-  pieToggleBtnText: {fontSize: 13, fontFamily: 'Lato-Bold', color: '#666'},
-  pieToggleBtnTextActive: {color: '#FFFFFF'},
-  transactionsSection: {marginHorizontal: 20, marginBottom: 30},
-  transactionsHeaderText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    fontFamily: 'Kufam-SemiBoldItalic',
-  },
-  transactionsSubHeaderText: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-    marginBottom: 15,
-    fontFamily: 'Lato-Regular',
-  },
-  transactionsList: {},
-  transactionsCard: {
-    marginVertical: 6,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-  },
-  transactionsCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 18,
-  },
-  transactionsCardDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  transactionsCardIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 14,
-    backgroundColor: '#E8EBF7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 15,
-  },
-  transactionsCardInfo: {flex: 1},
-  transactionsCardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 2,
-    fontFamily: 'Lato-Bold',
-  },
-  transactionsCardCategory: {
-    fontSize: 12,
-    color: PRIMARY_COLOR,
-    fontFamily: 'Lato-Regular',
-    marginBottom: 2,
-  },
-  transactionsCardDate: {
-    fontSize: 13,
-    color: '#888',
-    fontFamily: 'Lato-Regular',
-  },
-  transactionsCardAmount: {alignItems: 'flex-end'},
-  amountIncome: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: INCOME_COLOR,
-    fontFamily: 'Lato-Bold',
-  },
-  amountExpense: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: EXPENSE_COLOR,
-    fontFamily: 'Lato-Bold',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-  },
-  emptyStateText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#666',
-    marginTop: 15,
-    fontFamily: 'Lato-Bold',
-  },
-  emptyStateSubText: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-    marginTop: 8,
-    fontFamily: 'Lato-Regular',
-  },
-  legendContainer: {width: '100%', marginTop: 16},
-  legendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-  },
-  legendDot: {width: 10, height: 10, borderRadius: 5, marginRight: 10},
-  legendLabel: {
-    flex: 1,
-    fontSize: 14,
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-  },
-  legendValue: {
-    fontSize: 13,
-    color: '#666',
-    marginLeft: 10,
-    fontFamily: 'Lato-Regular',
-  },
-  showMoreButton: {
-    marginTop: 12,
-    paddingVertical: 14,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    alignItems: 'center',
-  },
-  showMoreButtonText: {
-    fontSize: 14,
-    color: PRIMARY_COLOR,
-    fontFamily: 'Lato-Bold',
-  },
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-});
