@@ -116,6 +116,31 @@ export const unknownTags = (
   return selected.filter(t => !knownKeys.has(tagKey(t)));
 };
 
+/**
+ * The distinct tags on a set of transactions with how many transactions carry each, most used
+ * first (ties alphabetical). The first spelling met is the one shown. Used to offer only tags that
+ * would actually return rows.
+ */
+export const collectTags = (
+  transactions: readonly {tags?: unknown}[],
+): {tag: string; count: number}[] => {
+  const byKey = new Map<string, {tag: string; count: number}>();
+  transactions.forEach(transaction => {
+    sanitizeTags(transaction.tags).forEach(tag => {
+      const key = tagKey(tag);
+      const entry = byKey.get(key);
+      if (entry) {
+        entry.count += 1;
+      } else {
+        byKey.set(key, {tag, count: 1});
+      }
+    });
+  });
+  return [...byKey.values()].sort(
+    (a, b) => b.count - a.count || a.tag.localeCompare(b.tag),
+  );
+};
+
 /** Whether a transaction carries a tag (ignoring case); used by the list filter. */
 export const hasTag = (transaction: {tags?: unknown}, tag: string): boolean => {
   const key = tagKey(tag);

@@ -4,6 +4,7 @@ import {
   MAX_TAG_LENGTH,
   addTag,
   cleanTag,
+  collectTags,
   hasTag,
   removeTag,
   sanitizeTags,
@@ -138,6 +139,27 @@ describe('unknownTags', () => {
     expect(unknownTags(['Trip', 'New', 'WORK'], ['trip', 'work'])).toEqual([
       'New',
     ]);
+  });
+});
+
+describe('collectTags', () => {
+  it('counts distinct tags ignoring case, most used first then alphabetical', () => {
+    const result = collectTags([
+      {tags: ['Goa Trip', 'work']},
+      {tags: ['goa trip']},
+      {tags: ['Gift', 'Work']},
+      {},
+      {tags: 'oops'},
+    ]);
+    expect(result).toEqual([
+      {tag: 'Goa Trip', count: 2},
+      {tag: 'work', count: 2},
+      {tag: 'Gift', count: 1},
+    ]);
+  });
+
+  it('returns nothing when no transaction has tags', () => {
+    expect(collectTags([{}, {tags: []}])).toEqual([]);
   });
 });
 
