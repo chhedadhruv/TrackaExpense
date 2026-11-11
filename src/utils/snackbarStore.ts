@@ -38,6 +38,11 @@ export interface SnackbarState {
   current: SnackbarItem | null;
   /** Height of whatever the snackbar must float above (the tab bar), in dp. 0 when none. */
   bottomOffset: number;
+  /**
+   * How many modals are open. A React Native Modal is its own window and covers the root host, so
+   * while one is open the root host hides and the modal's own host draws the message.
+   */
+  modalDepth: number;
 }
 
 export const DEFAULT_DURATION = {
@@ -59,7 +64,7 @@ export const durationFor = (
 
 type Listener = () => void;
 
-let state: SnackbarState = {current: null, bottomOffset: 0};
+let state: SnackbarState = {current: null, bottomOffset: 0, modalDepth: 0};
 let nextId = 1;
 let timer: ReturnType<typeof setTimeout> | null = null;
 const listeners = new Set<Listener>();
@@ -137,10 +142,25 @@ export const setSnackbarBottomOffset = (offset: number): void => {
   emit();
 };
 
+/** A modal calls this while it is mounted. Returns the function that unregisters it. */
+export const registerSnackbarModal = (): (() => void) => {
+  state = {...state, modalDepth: state.modalDepth + 1};
+  emit();
+  let released = false;
+  return () => {
+    if (released) {
+      return;
+    }
+    released = true;
+    state = {...state, modalDepth: Math.max(0, state.modalDepth - 1)};
+    emit();
+  };
+};
+
 /** Test helper: back to the initial state with no timer running. */
 export const resetSnackbarForTests = (): void => {
   clearTimer();
-  state = {current: null, bottomOffset: 0};
+  state = {current: null, bottomOffset: 0, modalDepth: 0};
   nextId = 1;
   listeners.clear();
 };

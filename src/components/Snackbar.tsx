@@ -14,12 +14,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import {useReanimatedKeyboardAnimation} from 'react-native-keyboard-controller';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {
-  CircleAlert,
-  CircleCheck,
-  Info,
-  type LucideIcon,
-} from 'lucide-react-native';
+// Deep imports: the package barrel would pull every icon (about 4,700 modules) into the bundle.
+import CircleAlert from 'lucide-react-native/icons/circle-alert';
+import CircleCheck from 'lucide-react-native/icons/circle-check';
+import Info from 'lucide-react-native/icons/info';
+import type {LucideIcon} from 'lucide-react-native';
 import {
   EXPENSE_COLOR,
   FONT,
@@ -31,6 +30,7 @@ import {
 import {
   dismissSnackbar,
   getSnackbarState,
+  registerSnackbarModal,
   subscribeSnackbar,
   type SnackbarItem,
   type SnackbarVariant,
@@ -38,6 +38,9 @@ import {
 
 const MARGIN = 12;
 const MAX_WIDTH = 560;
+// An edge-to-edge modal window reports a bottom inset of 0 even with gesture navigation, so keep
+// the bar clear of the gesture pill with a floor.
+const MODAL_MIN_BOTTOM_INSET = 24;
 
 const VARIANT: Record<SnackbarVariant, {Icon: LucideIcon; color: string}> = {
   success: {Icon: CircleCheck, color: SUCCESS_COLOR},
@@ -97,31 +100,45 @@ export const SnackbarView = ({item}: SnackbarViewProps) => {
 };
 
 /**
- * Mount once, near the root (App.tsx), after the navigators so it draws on top. It floats above
- * the tab bar (reported through setSnackbarBottomOffset) and lifts above the keyboard.
+ * Draws the current snackbar. Mount it once near the root (App.tsx), after the navigators so it
+ * draws on top: it floats above the tab bar (reported through setSnackbarBottomOffset) and lifts
+ * above the keyboard.
  *
- * It lives in the main window: a React Native Modal is a separate window and hides it, so show a
- * snackbar after the modal has closed.
+ * A React Native Modal is a separate window that covers the root host, so every Modal also
+ * renders <ModalSnackbar />; while any modal is open only that host draws.
  */
-export const SnackbarHost = () => {
-  const {current, bottomOffset} = useSnackbarState();
+interface SnackbarHostProps {
+  /** True for the host inside a modal: it ignores the tab bar and the root host's keyboard lift. */
+  inModal?: boolean;
+}
+
+export const SnackbarHost = ({inModal = false}: SnackbarHostProps) => {
+  const {current, bottomOffset, modalDepth} = useSnackbarState();
   const insets = useSafeAreaInsets();
   const keyboard = useReanimatedKeyboardAnimation();
 
-  // With a tab bar the offset already includes the bottom inset; without one add it here.
-  const base = (bottomOffset > 0 ? bottomOffset : insets.bottom) + MARGIN;
+  // With a tab bar the offset already includes the bottom inset; without one add it here. A modal
+  // covers the tab bar, so inside one only the inset counts.
+  const bottomInset = inModal
+    ? Math.max(insets.bottom, MODAL_MIN_BOTTOM_INSET)
+    : insets.bottom;
+  const base =
+    (!inModal && bottomOffset > 0 ? bottomOffset : bottomInset) + MARGIN;
 
   const liftStyle = useAnimatedStyle(() => {
-    // keyboard.height is negative while the keyboard is open (minus its height).
-    const lift = Math.max(0, -keyboard.height.value - base);
+    // keyboard.height is negative while the keyboard is open (minus its height). A modal built on
+    // KeyboardAvoidingModal already moves its content above the keyboard, so it needs no lift.
+    const lift = inModal ? 0 : Math.max(0, -keyboard.height.value - base);
     return {transform: [{translateY: -lift}]};
-  }, [base]);
+  }, [base, inModal]);
 
+  // Exactly one host draws: the root one while no modal is open, the modal's own otherwise.
+  const visible = inModal ? modalDepth > 0 : modalDepth === 0;
   const positionStyle: ViewStyle = {bottom: base};
 
   return (
     <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-      {current ? (
+      {current && visible ? (
         <Animated.View
           key={current.id}
           entering={FadeInDown.duration(200)}
@@ -132,6 +149,15 @@ export const SnackbarHost = () => {
       ) : null}
     </View>
   );
+};
+
+/**
+ * Put this as the last child of the root view inside every React Native Modal so the snackbar is
+ * visible while the modal is open (the root host sits in another window, behind the modal).
+ */
+export const ModalSnackbar = () => {
+  useEffect(() => registerSnackbarModal(), []);
+  return <SnackbarHost inModal />;
 };
 
 const styles = StyleSheet.create({

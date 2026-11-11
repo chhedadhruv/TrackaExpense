@@ -3,6 +3,7 @@ import {View, Text, TouchableOpacity, Modal, StyleSheet} from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {PRIMARY_COLOR} from '../constants/theme';
 import type {Category} from '../types';
+import {ModalSnackbar} from './Snackbar';
 
 interface CategorySelectorProps {
   categories: readonly Category[];
@@ -99,6 +100,7 @@ const CategorySelector = ({
             </View>
           </View>
         </TouchableOpacity>
+        <ModalSnackbar />
       </Modal>
     </View>
   );
