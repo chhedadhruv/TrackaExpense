@@ -33,31 +33,19 @@ import {
 import {Avatar, ActivityIndicator, Card, Divider} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {useCurrency, CURRENCIES} from '../utils/CurrencyUtil';
-import {
-  useTheme,
-  useThemedStyles,
-  type ThemeColors,
-  type ThemeMode,
-} from '../src/theme';
+import {useTheme, useThemedStyles, type ThemeColors} from '../src/theme';
 import type {UserDocument} from '../src/types';
-import type {McIconName} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
 import {ModalSnackbar} from '../src/components/Snackbar';
+import AppearanceSetting from '../src/components/AppearanceSetting';
 
 // Accent colours of the settings icons. Each icon circle is the accent at a low alpha, so one
 // accent reads on both the light and the dark card.
 const ACCENT = {amber: '#FFC107', blue: '#2196F3', green: '#4CAF50'} as const;
 const tint = (hex: string): string => `${hex}1F`;
 
-const APPEARANCE_OPTIONS: {mode: ThemeMode; label: string; icon: McIconName}[] =
-  [
-    {mode: 'system', label: 'System', icon: 'theme-light-dark'},
-    {mode: 'light', label: 'Light', icon: 'weather-sunny'},
-    {mode: 'dark', label: 'Dark', icon: 'weather-night'},
-  ];
-
 const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
-  const {colors, mode, setMode} = useTheme();
+  const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
   const {logout} = useContext(AuthContext);
   const {currency, setCurrency} = useCurrency();
@@ -307,44 +295,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
               Platform.OS === 'android' && styles.cardAndroid,
             ]}
             elevation={Platform.OS === 'android' ? 0 : 2}>
-            <View style={styles.appearanceContent}>
-              <Text style={styles.settingsItemTitle}>Theme</Text>
-              <Text style={styles.settingsItemSubtitle}>
-                Choose how TrackaExpense looks
-              </Text>
-              <View style={styles.segmentRow} accessibilityRole="radiogroup">
-                {APPEARANCE_OPTIONS.map(option => {
-                  const selected = mode === option.mode;
-                  return (
-                    <TouchableOpacity
-                      key={option.mode}
-                      accessibilityRole="radio"
-                      accessibilityLabel={`${option.label} theme`}
-                      accessibilityState={{selected}}
-                      onPress={() => setMode(option.mode)}
-                      style={[
-                        styles.segment,
-                        selected && styles.segmentSelected,
-                      ]}>
-                      <MaterialCommunityIcons
-                        name={option.icon}
-                        size={18}
-                        color={
-                          selected ? colors.onPrimary : colors.textSecondary
-                        }
-                      />
-                      <Text
-                        style={[
-                          styles.segmentText,
-                          selected && styles.segmentTextSelected,
-                        ]}>
-                        {option.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
+            <AppearanceSetting />
           </Card>
         </View>
 
@@ -925,29 +876,4 @@ const createStyles = (colors: ThemeColors) =>
       fontFamily: 'Lato-Regular',
       marginTop: 2,
     },
-    appearanceContent: {padding: 20},
-    segmentRow: {flexDirection: 'row', gap: 8, marginTop: 14},
-    segment: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      paddingVertical: 12,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
-      backgroundColor: colors.surfaceMuted,
-    },
-    segmentSelected: {
-      backgroundColor: colors.primaryFill,
-      borderColor: colors.primaryFill,
-    },
-    segmentText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.textSecondary,
-      fontFamily: 'Lato-Bold',
-    },
-    segmentTextSelected: {color: colors.onPrimary},
   });
