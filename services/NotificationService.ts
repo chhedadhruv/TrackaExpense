@@ -2,7 +2,7 @@ import {
   AuthorizationStatus,
   getMessaging,
   getToken,
-  requestPermission,
+  hasPermission,
 } from '@react-native-firebase/messaging';
 import {
   collection,
@@ -19,7 +19,6 @@ import {
 import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../src/services/ErrorReporter';
 import {sendPush} from '../src/services/PushSender';
-import {Platform, PermissionsAndroid} from 'react-native';
 import type {NotificationData} from './NotificationNavigation';
 
 interface NotificationPayload {
@@ -46,7 +45,9 @@ class NotificationService {
 
   async initialize(): Promise<void> {
     try {
-      await this.requestPermission();
+      if (!(await this.isPermissionGranted())) {
+        return;
+      }
       await this.getFCMToken();
       await this.saveTokenToFirestore();
       this.isInitialized = true;
@@ -56,34 +57,17 @@ class NotificationService {
     }
   }
 
-  async requestPermission(): Promise<void> {
-    if (Platform.OS === 'android') {
-      try {
-        const permission = PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS;
-        if (permission) {
-          const alreadyGranted = await PermissionsAndroid.check(permission);
-          if (!alreadyGranted) {
-            await PermissionsAndroid.request(permission, {
-              title: 'Notification Permission',
-              message:
-                'TrackaExpense needs notification permission to send you updates about splits and reminders.',
-              buttonNeutral: 'Ask Me Later',
-              buttonNegative: 'Cancel',
-              buttonPositive: 'OK',
-            });
-          }
-        }
-      } catch (_) {
-        // Activity not yet attached or permission API unavailable — skip
-      }
-    }
-    const authStatus = await requestPermission(getMessaging());
-    const enabled =
+  /**
+   * Reads the notification permission without asking for it. The only permission prompt is the
+   * OneSignal one, shown after the first saved expense (src/services/PushService.ts); asking here
+   * as well showed a second dialog at every start, and its Cancel still led to the system prompt.
+   */
+  async isPermissionGranted(): Promise<boolean> {
+    const authStatus = await hasPermission(getMessaging());
+    return (
       authStatus === AuthorizationStatus.AUTHORIZED ||
-      authStatus === AuthorizationStatus.PROVISIONAL;
-    if (!enabled) {
-      throw new Error('Notification permission not granted');
-    }
+      authStatus === AuthorizationStatus.PROVISIONAL
+    );
   }
 
   async getFCMToken(): Promise<string | null> {
