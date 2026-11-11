@@ -148,7 +148,7 @@ All colors are defined once in `src/constants/theme.ts` and imported by every sc
 |---|---|---|
 | `PRIMARY_COLOR` | `#677CD2` | Buttons, active states, brand accents |
 | `BACKGROUND_COLOR` | `#F4F6FA` | Screen backgrounds |
-| `INCOME_COLOR` | `#25B07F` | Positive / income values |
+| `INCOME_COLOR` | `#1E9A6D` | Positive / income values |
 | `EXPENSE_COLOR` | `#F64E4E` | Negative / expense values |
 
 ### Custom Hooks
