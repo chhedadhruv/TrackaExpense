@@ -1,4 +1,10 @@
-import React, {useState, useEffect, useContext, useCallback} from 'react';
+import React, {
+  useState,
+  useEffect,
+  useContext,
+  useCallback,
+  type ReactNode,
+} from 'react';
 import UserAvatar from '../src/components/Avatar';
 import {AuthContext} from '../navigation/AuthProvider';
 import {
@@ -23,30 +29,95 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
   ScrollView,
   SafeAreaView,
   Alert,
-  Modal,
-  Platform,
 } from 'react-native';
-import {Avatar, ActivityIndicator, Card, Divider} from 'react-native-paper';
+import {Avatar, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import {useCurrency, CURRENCIES} from '../utils/CurrencyUtil';
-import {useTheme, useThemedStyles, type ThemeColors} from '../src/theme';
+import {useCurrency} from '../utils/CurrencyUtil';
+import {useTheme} from '../src/theme';
 import type {UserDocument} from '../src/types';
+import type {McIconName} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
-import {ModalSnackbar} from '../src/components/Snackbar';
 import AppearanceSetting from '../src/components/AppearanceSetting';
+import CurrencyPickerModal from '../src/components/CurrencyPickerModal';
 
 // Accent colours of the settings icons. Each icon circle is the accent at a low alpha, so one
 // accent reads on both the light and the dark card.
 const ACCENT = {amber: '#FFC107', blue: '#2196F3', green: '#4CAF50'} as const;
 const tint = (hex: string): string => `${hex}1F`;
 
+interface SettingsRowProps {
+  icon: McIconName;
+  /** Icon colour; the circle behind it is the same colour at a low alpha. */
+  accent: string;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+  /** Colours the title (for destructive rows). */
+  danger?: boolean;
+  /** Trailing icon, a chevron by default. */
+  trailing?: McIconName;
+  accessibilityState?: {expanded: boolean};
+}
+
+/** One tappable row of a settings card. */
+const SettingsRow = ({
+  icon,
+  accent,
+  title,
+  subtitle,
+  onPress,
+  danger = false,
+  trailing = 'chevron-right',
+  accessibilityState,
+}: SettingsRowProps) => {
+  const {colors} = useTheme();
+  return (
+    <TouchableOpacity
+      className="flex-row items-center justify-between px-5 py-4"
+      accessibilityRole="button"
+      accessibilityState={accessibilityState}
+      onPress={onPress}
+      activeOpacity={0.7}>
+      <View className="flex-1 flex-row items-center">
+        <View
+          className="mr-4 h-12 w-12 items-center justify-center rounded-xl"
+          style={{backgroundColor: tint(accent)}}>
+          <MaterialCommunityIcons name={icon} size={24} color={accent} />
+        </View>
+        <View className="flex-1">
+          <Text
+            className={`mb-0.5 font-sans-bold text-base font-semibold ${
+              danger ? 'text-expense-text' : 'text-text-strong'
+            }`}>
+            {title}
+          </Text>
+          <Text className="font-sans text-sm text-text-secondary">
+            {subtitle}
+          </Text>
+        </View>
+      </View>
+      <MaterialCommunityIcons
+        name={trailing}
+        size={24}
+        color={colors.iconMuted}
+      />
+    </TouchableOpacity>
+  );
+};
+
+const RowDivider = () => <View className="mx-5 h-px bg-divider" />;
+
+const SettingsCard = ({children}: {children: ReactNode}) => (
+  <View className="rounded-2xl border border-card-border bg-surface ios:shadow-md">
+    {children}
+  </View>
+);
+
 const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
   const {colors} = useTheme();
-  const styles = useThemedStyles(createStyles);
   const {logout} = useContext(AuthContext);
   const {currency, setCurrency} = useCurrency();
   const [userData, setUserData] = useState<UserDocument | null>(null);
@@ -183,7 +254,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View className="flex-1 items-center justify-center bg-background">
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -191,39 +262,47 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
 
   if (error) {
     return (
-      <View style={styles.errorContainer}>
+      <View className="flex-1 items-center justify-center bg-background px-5">
         <MaterialCommunityIcons
           name="alert-circle-outline"
           size={48}
           color={colors.expense}
         />
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={getUser}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+        <Text
+          accessibilityRole="alert"
+          className="my-[15px] text-center font-sans text-base text-expense-text">
+          {error}
+        </Text>
+        <TouchableOpacity
+          className="mt-2.5 rounded-xl bg-primary-fill px-6 py-3"
+          accessibilityRole="button"
+          onPress={getUser}>
+          <Text className="font-sans-bold text-base font-semibold text-on-primary">
+            Retry
+          </Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        style={styles.scrollContainer}>
-        <View style={styles.headerSection}>
-          <Text style={styles.headerText}>Profile</Text>
-          <Text style={styles.subHeaderText}>Manage your account settings</Text>
+    <SafeAreaView className="flex-1 bg-background">
+      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+        <View className="px-5 pb-[15px] pt-5">
+          <Text
+            accessibilityRole="header"
+            className="font-heading text-2xl font-bold text-text-strong">
+            Profile
+          </Text>
+          <Text className="mt-1 font-sans text-base text-text-secondary">
+            Manage your account settings
+          </Text>
         </View>
 
-        <Card
-          style={[
-            styles.profileCard,
-            Platform.OS === 'android' && styles.cardAndroid,
-          ]}
-          elevation={Platform.OS === 'android' ? 0 : 2}>
-          <View style={styles.profileCardContent}>
-            <View style={styles.profileRow}>
-              <View style={styles.avatarSection}>
+        <View className="mx-5 mb-5 rounded-2xl border border-card-border bg-surface ios:shadow-md">
+          <View className="p-6">
+            <View className="flex-row items-center">
+              <View className="relative mr-4">
                 {userData?.userImg ? (
                   <Avatar.Image source={{uri: userData.userImg}} size={80} />
                 ) : (
@@ -233,7 +312,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
                     name={userData?.name ?? ''}
                   />
                 )}
-                <View style={styles.verificationBadge}>
+                <View className="absolute -bottom-0.5 -right-0.5 rounded-[10px] bg-surface p-0.5">
                   <MaterialCommunityIcons
                     name={verified ? 'check-circle' : 'close-circle'}
                     size={20}
@@ -241,639 +320,174 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
                   />
                 </View>
               </View>
-              <View style={styles.userInfo}>
-                <Text style={styles.userName}>{userData?.name ?? 'User'}</Text>
-                <Text style={styles.userEmail}>
+              <View className="flex-1 justify-center">
+                <Text className="mb-1 font-heading text-xl font-bold text-text-strong">
+                  {userData?.name ?? 'User'}
+                </Text>
+                <Text className="mb-2 font-sans text-[15px] text-text-secondary">
                   {userData?.email ?? 'user@example.com'}
                 </Text>
-                <View style={styles.verificationStatus}>
+                <View className="items-start">
                   <View
-                    style={[
-                      styles.statusBadge,
-                      {
-                        backgroundColor: verified
-                          ? tint(colors.income)
-                          : tint(colors.warning),
-                      },
-                    ]}>
+                    className="flex-row items-center rounded-full px-3 py-1.5"
+                    style={{
+                      backgroundColor: verified
+                        ? tint(colors.income)
+                        : tint(colors.warning),
+                    }}>
                     <MaterialCommunityIcons
                       name={verified ? 'shield-check' : 'shield-alert'}
                       size={14}
                       color={verified ? colors.income : colors.warning}
                     />
                     <Text
-                      style={[
-                        styles.statusText,
-                        {color: verified ? colors.income : colors.warning},
-                      ]}>
+                      className={`ml-1.5 font-sans-bold text-sm font-semibold ${
+                        verified ? 'text-income' : 'text-warning'
+                      }`}>
                       {verified ? 'Verified' : 'Not Verified'}
                     </Text>
                   </View>
                 </View>
               </View>
+              <TouchableOpacity
+                className="ml-3 h-11 w-11 items-center justify-center rounded-full bg-primary-soft"
+                accessibilityRole="button"
+                accessibilityLabel="Edit profile"
+                hitSlop={8}
+                onPress={() =>
+                  navigation.navigate('EditProfile', {user: userData})
+                }>
+                <MaterialCommunityIcons
+                  name="pencil"
+                  size={20}
+                  color={colors.primary}
+                />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.editProfileButton}
-              onPress={() =>
-                navigation.navigate('EditProfile', {user: userData})
-              }>
-              <MaterialCommunityIcons
-                name="pencil"
-                size={20}
-                color={colors.onPrimary}
-              />
-              <Text style={styles.editProfileButtonText}>Edit Profile</Text>
-            </TouchableOpacity>
           </View>
-        </Card>
+        </View>
 
-        <View style={styles.settingsSection}>
-          <Text style={styles.sectionHeader}>Appearance</Text>
-          <Card
-            style={[
-              styles.settingsCard,
-              Platform.OS === 'android' && styles.cardAndroid,
-            ]}
-            elevation={Platform.OS === 'android' ? 0 : 2}>
+        <View className="px-5 pb-[30px]">
+          <Text
+            accessibilityRole="header"
+            className="mb-[15px] font-heading text-xl font-bold text-text-strong">
+            Appearance
+          </Text>
+          <SettingsCard>
             <AppearanceSetting />
-          </Card>
+          </SettingsCard>
         </View>
 
-        <View style={styles.settingsSection}>
-          <Text style={styles.sectionHeader}>Account Settings</Text>
-          <Card
-            style={[
-              styles.settingsCard,
-              Platform.OS === 'android' && styles.cardAndroid,
-            ]}
-            elevation={Platform.OS === 'android' ? 0 : 2}>
-            <TouchableOpacity
-              style={styles.settingsItem}
-              onPress={() => setCurrencyModalVisible(true)}>
-              <View style={styles.settingsItemLeft}>
-                <View
-                  style={[
-                    styles.settingsIcon,
-                    {backgroundColor: tint(ACCENT.amber)},
-                  ]}>
-                  <MaterialCommunityIcons
-                    name="currency-usd"
-                    size={24}
-                    color={ACCENT.amber}
-                  />
-                </View>
-                <View style={styles.settingsTextContainer}>
-                  <Text style={styles.settingsItemTitle}>Currency</Text>
-                  <Text style={styles.settingsItemSubtitle}>
-                    {currency.name} ({currency.symbol})
-                  </Text>
-                </View>
-              </View>
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={24}
-                color={colors.iconMuted}
-              />
-            </TouchableOpacity>
-            <Divider style={styles.divider} />
-            <TouchableOpacity
-              style={styles.settingsItem}
-              onPress={() => navigation.navigate('ContactUs')}>
-              <View style={styles.settingsItemLeft}>
-                <View
-                  style={[
-                    styles.settingsIcon,
-                    {backgroundColor: tint(ACCENT.blue)},
-                  ]}>
-                  <MaterialCommunityIcons
-                    name="account-voice"
-                    size={24}
-                    color={ACCENT.blue}
-                  />
-                </View>
-                <View style={styles.settingsTextContainer}>
-                  <Text style={styles.settingsItemTitle}>Contact Us</Text>
-                  <Text style={styles.settingsItemSubtitle}>
-                    Get help and share feedback
-                  </Text>
-                </View>
-              </View>
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={24}
-                color={colors.iconMuted}
-              />
-            </TouchableOpacity>
-            <Divider style={styles.divider} />
-            <TouchableOpacity
-              style={styles.settingsItem}
-              onPress={() => navigation.navigate('PrivacyPolicy')}>
-              <View style={styles.settingsItemLeft}>
-                <View
-                  style={[
-                    styles.settingsIcon,
-                    {backgroundColor: tint(ACCENT.green)},
-                  ]}>
-                  <MaterialCommunityIcons
-                    name="shield-check"
-                    size={24}
-                    color={ACCENT.green}
-                  />
-                </View>
-                <View style={styles.settingsTextContainer}>
-                  <Text style={styles.settingsItemTitle}>Privacy Policy</Text>
-                  <Text style={styles.settingsItemSubtitle}>
-                    Learn how we protect your data
-                  </Text>
-                </View>
-              </View>
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={24}
-                color={colors.iconMuted}
-              />
-            </TouchableOpacity>
-            <Divider style={styles.divider} />
-            <TouchableOpacity
-              style={styles.settingsItem}
-              onPress={() => logout()}>
-              <View style={styles.settingsItemLeft}>
-                <View
-                  style={[
-                    styles.settingsIcon,
-                    {backgroundColor: tint(colors.expense)},
-                  ]}>
-                  <MaterialCommunityIcons
-                    name="logout"
-                    size={24}
-                    color={colors.expense}
-                  />
-                </View>
-                <View style={styles.settingsTextContainer}>
-                  <Text
-                    style={[styles.settingsItemTitle, {color: colors.expense}]}>
-                    Logout
-                  </Text>
-                  <Text style={styles.settingsItemSubtitle}>
-                    Sign out of your account
-                  </Text>
-                </View>
-              </View>
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={24}
-                color={colors.iconMuted}
-              />
-            </TouchableOpacity>
-          </Card>
+        <View className="px-5 pb-[30px]">
+          <Text
+            accessibilityRole="header"
+            className="mb-[15px] font-heading text-xl font-bold text-text-strong">
+            Account Settings
+          </Text>
+          <SettingsCard>
+            <SettingsRow
+              icon="currency-usd"
+              accent={ACCENT.amber}
+              title="Currency"
+              subtitle={`${currency.name} (${currency.symbol})`}
+              onPress={() => setCurrencyModalVisible(true)}
+            />
+            <RowDivider />
+            <SettingsRow
+              icon="account-voice"
+              accent={ACCENT.blue}
+              title="Contact Us"
+              subtitle="Get help and share feedback"
+              onPress={() => navigation.navigate('ContactUs')}
+            />
+            <RowDivider />
+            <SettingsRow
+              icon="shield-check"
+              accent={ACCENT.green}
+              title="Privacy Policy"
+              subtitle="Learn how we protect your data"
+              onPress={() => navigation.navigate('PrivacyPolicy')}
+            />
+            <RowDivider />
+            <SettingsRow
+              icon="logout"
+              accent={colors.expense}
+              title="Logout"
+              subtitle="Sign out of your account"
+              danger
+              onPress={() => logout()}
+            />
+          </SettingsCard>
         </View>
 
-        <View style={styles.settingsSection}>
-          <Card
-            style={[
-              styles.settingsCard,
-              Platform.OS === 'android' && styles.cardAndroid,
-            ]}
-            elevation={Platform.OS === 'android' ? 0 : 2}>
-            <TouchableOpacity
-              style={styles.collapsibleHeader}
+        <View className="px-5 pb-[30px]">
+          <SettingsCard>
+            <SettingsRow
+              icon="shield-alert"
+              accent={colors.warning}
+              title="Account Actions"
+              subtitle={
+                accountActionsExpanded
+                  ? 'Hide sensitive options'
+                  : 'Password, deletion, and other actions'
+              }
+              trailing={accountActionsExpanded ? 'chevron-up' : 'chevron-down'}
+              accessibilityState={{expanded: accountActionsExpanded}}
               onPress={() => setAccountActionsExpanded(!accountActionsExpanded)}
-              activeOpacity={0.7}>
-              <View style={styles.settingsItemLeft}>
-                <View
-                  style={[
-                    styles.settingsIcon,
-                    {backgroundColor: tint(colors.warning)},
-                  ]}>
-                  <MaterialCommunityIcons
-                    name="shield-alert"
-                    size={24}
-                    color={colors.warning}
-                  />
-                </View>
-                <View style={styles.settingsTextContainer}>
-                  <Text style={styles.settingsItemTitle}>Account Actions</Text>
-                  <Text style={styles.settingsItemSubtitle}>
-                    {accountActionsExpanded
-                      ? 'Hide sensitive options'
-                      : 'Password, deletion, and other actions'}
-                  </Text>
-                </View>
-              </View>
-              <MaterialCommunityIcons
-                name={accountActionsExpanded ? 'chevron-up' : 'chevron-down'}
-                size={24}
-                color={colors.iconMuted}
-              />
-            </TouchableOpacity>
+            />
             {accountActionsExpanded && (
-              <View style={styles.collapsibleContent}>
-                <Divider style={styles.divider} />
-                <TouchableOpacity
-                  style={styles.settingsItem}
-                  onPress={handleChangePassword}>
-                  <View style={styles.settingsItemLeft}>
-                    <View
-                      style={[
-                        styles.settingsIcon,
-                        {backgroundColor: tint(ACCENT.blue)},
-                      ]}>
-                      <MaterialCommunityIcons
-                        name="lock-reset"
-                        size={24}
-                        color={ACCENT.blue}
-                      />
-                    </View>
-                    <View style={styles.settingsTextContainer}>
-                      <Text style={styles.settingsItemTitle}>
-                        Change Password
-                      </Text>
-                      <Text style={styles.settingsItemSubtitle}>
-                        Reset your password via email
-                      </Text>
-                    </View>
-                  </View>
-                  <MaterialCommunityIcons
-                    name="chevron-right"
-                    size={24}
-                    color={colors.iconMuted}
-                  />
-                </TouchableOpacity>
-                <Divider style={styles.divider} />
-                <TouchableOpacity
-                  style={styles.settingsItem}
-                  onPress={handleDeleteAccount}>
-                  <View style={styles.settingsItemLeft}>
-                    <View
-                      style={[
-                        styles.settingsIcon,
-                        {backgroundColor: tint(colors.expense)},
-                      ]}>
-                      <MaterialCommunityIcons
-                        name="account-remove"
-                        size={24}
-                        color={colors.expense}
-                      />
-                    </View>
-                    <View style={styles.settingsTextContainer}>
-                      <Text
-                        style={[
-                          styles.settingsItemTitle,
-                          {color: colors.expense},
-                        ]}>
-                        Delete Account
-                      </Text>
-                      <Text style={styles.settingsItemSubtitle}>
-                        Permanently delete your account and data
-                      </Text>
-                    </View>
-                  </View>
-                  <MaterialCommunityIcons
-                    name="chevron-right"
-                    size={24}
-                    color={colors.iconMuted}
-                  />
-                </TouchableOpacity>
-                <View style={styles.warningContainer}>
+              <View className="pb-2">
+                <RowDivider />
+                <SettingsRow
+                  icon="lock-reset"
+                  accent={ACCENT.blue}
+                  title="Change Password"
+                  subtitle="Reset your password via email"
+                  onPress={handleChangePassword}
+                />
+                <RowDivider />
+                <SettingsRow
+                  icon="account-remove"
+                  accent={colors.expense}
+                  title="Delete Account"
+                  subtitle="Permanently delete your account and data"
+                  danger
+                  onPress={handleDeleteAccount}
+                />
+                <View className="mx-5 mb-2 mt-4 flex-row items-center rounded-lg bg-warning-soft p-3">
                   <MaterialCommunityIcons
                     name="alert-circle"
                     size={16}
                     color={colors.warning}
                   />
-                  <Text style={styles.warningText}>
+                  <Text className="ml-2 flex-1 font-sans text-xs leading-4 text-warning-text">
                     These actions are sensitive and may require additional
                     verification.
                   </Text>
                 </View>
               </View>
             )}
-          </Card>
+          </SettingsCard>
         </View>
 
-        <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>TrackaExpense v{appVersion}</Text>
-          <Text style={styles.versionSubText}>
+        <View className="items-center pb-9 pt-6">
+          <Text className="font-sans text-[13px] text-text-placeholder">
+            TrackaExpense v{appVersion}
+          </Text>
+          <Text className="mt-0.5 font-sans text-xs text-text-placeholder">
             Build {Application.nativeBuildVersion ?? appVersion}
           </Text>
         </View>
       </ScrollView>
 
-      <Modal
+      <CurrencyPickerModal
         visible={currencyModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setCurrencyModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Currency</Text>
-              <TouchableOpacity onPress={() => setCurrencyModalVisible(false)}>
-                <MaterialCommunityIcons
-                  name="close"
-                  size={24}
-                  color={colors.textSecondary}
-                />
-              </TouchableOpacity>
-            </View>
-            <ScrollView
-              style={styles.currencyList}
-              showsVerticalScrollIndicator={false}>
-              {CURRENCIES.map(curr => (
-                <TouchableOpacity
-                  key={curr.code}
-                  style={[
-                    styles.currencyItem,
-                    currency.code === curr.code && styles.currencyItemSelected,
-                  ]}
-                  onPress={() => handleCurrencyChange(curr.code)}>
-                  <View style={styles.currencyInfo}>
-                    <Text style={styles.currencySymbol}>{curr.symbol}</Text>
-                    <View style={styles.currencyDetails}>
-                      <Text style={styles.currencyName}>{curr.name}</Text>
-                      <Text style={styles.currencyCode}>{curr.code}</Text>
-                    </View>
-                  </View>
-                  {currency.code === curr.code && (
-                    <MaterialCommunityIcons
-                      name="check-circle"
-                      size={24}
-                      color={colors.primary}
-                    />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-        <ModalSnackbar />
-      </Modal>
+        selectedCode={currency.code}
+        onSelect={handleCurrencyChange}
+        onClose={() => setCurrencyModalVisible(false)}
+      />
     </SafeAreaView>
   );
 };
 
 export default ProfileScreen;
-
-const createStyles = (colors: ThemeColors) =>
-  StyleSheet.create({
-    container: {flex: 1, backgroundColor: colors.background},
-    scrollContainer: {flex: 1},
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.background,
-    },
-    errorContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.background,
-      paddingHorizontal: 20,
-    },
-    errorText: {
-      fontSize: 16,
-      color: colors.expense,
-      textAlign: 'center',
-      marginVertical: 15,
-      fontFamily: 'Lato-Regular',
-    },
-    retryButton: {
-      backgroundColor: colors.primaryFill,
-      paddingHorizontal: 24,
-      paddingVertical: 12,
-      borderRadius: 12,
-      marginTop: 10,
-    },
-    retryButtonText: {
-      color: colors.onPrimary,
-      fontSize: 16,
-      fontWeight: '600',
-      fontFamily: 'Lato-Bold',
-    },
-    headerSection: {paddingHorizontal: 20, paddingTop: 20, paddingBottom: 15},
-    headerText: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      color: colors.textStrong,
-      fontFamily: 'Kufam-SemiBoldItalic',
-    },
-    subHeaderText: {
-      fontSize: 16,
-      color: colors.textSecondary,
-      marginTop: 4,
-      fontFamily: 'Lato-Regular',
-    },
-    profileCard: {
-      marginHorizontal: 20,
-      marginBottom: 20,
-      borderRadius: 16,
-      backgroundColor: colors.surface,
-    },
-    profileCardContent: {padding: 24},
-    profileRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 20},
-    avatarSection: {position: 'relative', marginRight: 16},
-    verificationBadge: {
-      position: 'absolute',
-      bottom: -2,
-      right: -2,
-      backgroundColor: colors.surface,
-      borderRadius: 10,
-      padding: 2,
-    },
-    userInfo: {flex: 1, justifyContent: 'center'},
-    userName: {
-      fontSize: 20,
-      fontWeight: 'bold',
-      color: colors.textStrong,
-      marginBottom: 4,
-      fontFamily: 'Kufam-SemiBoldItalic',
-    },
-    userEmail: {
-      fontSize: 15,
-      color: colors.textSecondary,
-      marginBottom: 8,
-      fontFamily: 'Lato-Regular',
-    },
-    verificationStatus: {alignItems: 'flex-start'},
-    statusBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 20,
-    },
-    statusText: {
-      fontSize: 14,
-      fontWeight: '600',
-      marginLeft: 6,
-      fontFamily: 'Lato-Bold',
-    },
-    editProfileButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      alignSelf: 'center',
-      backgroundColor: colors.primaryFill,
-      paddingHorizontal: 20,
-      paddingVertical: 10,
-      borderRadius: 12,
-      elevation: Platform.OS === 'android' ? 0 : 3,
-      shadowColor: colors.primaryFill,
-      shadowOffset: {width: 0, height: 2},
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
-    },
-    editProfileButtonText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.onPrimary,
-      marginLeft: 8,
-      fontFamily: 'Lato-Bold',
-    },
-    settingsSection: {paddingHorizontal: 20, paddingBottom: 30},
-    sectionHeader: {
-      fontSize: 20,
-      fontWeight: 'bold',
-      color: colors.textStrong,
-      marginBottom: 15,
-      fontFamily: 'Kufam-SemiBoldItalic',
-    },
-    settingsCard: {borderRadius: 16, backgroundColor: colors.surface},
-    settingsItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 20,
-      paddingVertical: 16,
-    },
-    settingsItemLeft: {flexDirection: 'row', alignItems: 'center', flex: 1},
-    settingsIcon: {
-      width: 48,
-      height: 48,
-      borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginRight: 16,
-    },
-    settingsTextContainer: {flex: 1},
-    settingsItemTitle: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.textStrong,
-      marginBottom: 2,
-      fontFamily: 'Lato-Bold',
-    },
-    settingsItemSubtitle: {
-      fontSize: 14,
-      color: colors.textSecondary,
-      fontFamily: 'Lato-Regular',
-    },
-    divider: {marginHorizontal: 20, backgroundColor: colors.divider},
-    collapsibleHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 20,
-      paddingVertical: 16,
-    },
-    collapsibleContent: {paddingBottom: 8},
-    warningContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: tint(colors.warning),
-      borderRadius: 8,
-      padding: 12,
-      marginHorizontal: 20,
-      marginTop: 16,
-      marginBottom: 8,
-    },
-    warningText: {
-      fontSize: 12,
-      color: colors.warningText,
-      fontFamily: 'Lato-Regular',
-      marginLeft: 8,
-      flex: 1,
-      lineHeight: 16,
-    },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: colors.overlay,
-      justifyContent: 'flex-end',
-    },
-    modalContainer: {
-      backgroundColor: colors.surface,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      maxHeight: '80%',
-      paddingBottom: 20,
-      height: '80%',
-    },
-    modalHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: 20,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.divider,
-    },
-    modalTitle: {
-      fontSize: 20,
-      fontWeight: 'bold',
-      color: colors.textStrong,
-      fontFamily: 'Kufam-SemiBoldItalic',
-    },
-    currencyList: {paddingHorizontal: 20, paddingTop: 10},
-    currencyItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingVertical: 16,
-      paddingHorizontal: 16,
-      borderRadius: 12,
-      marginVertical: 4,
-      backgroundColor: colors.surfaceMuted,
-    },
-    currencyItemSelected: {
-      backgroundColor: colors.primarySoft,
-      borderWidth: 2,
-      borderColor: colors.primary,
-    },
-    currencyInfo: {flexDirection: 'row', alignItems: 'center', flex: 1},
-    currencySymbol: {
-      fontSize: 28,
-      fontWeight: 'bold',
-      color: colors.primary,
-      marginRight: 16,
-      width: 40,
-      textAlign: 'center',
-    },
-    currencyDetails: {flex: 1},
-    currencyName: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.textStrong,
-      fontFamily: 'Lato-Bold',
-    },
-    currencyCode: {
-      fontSize: 14,
-      color: colors.textSecondary,
-      marginTop: 2,
-      fontFamily: 'Lato-Regular',
-    },
-    cardAndroid: {borderWidth: 1, borderColor: colors.cardBorder},
-    versionContainer: {
-      alignItems: 'center',
-      paddingVertical: 24,
-      paddingBottom: 36,
-    },
-    versionText: {
-      fontSize: 13,
-      color: colors.textPlaceholder,
-      fontFamily: 'Lato-Regular',
-    },
-    versionSubText: {
-      fontSize: 12,
-      color: colors.textPlaceholder,
-      fontFamily: 'Lato-Regular',
-      marginTop: 2,
-    },
-  });
