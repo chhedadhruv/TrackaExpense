@@ -30,12 +30,7 @@ import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollV
 import {useFocusEffect} from '@react-navigation/native';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {majorOf, transactionMoneyFields} from '../../src/utils/amounts';
-import {
-  PRIMARY_COLOR,
-  BACKGROUND_COLOR,
-  INCOME_COLOR as SUCCESS_COLOR,
-  EXPENSE_COLOR,
-} from '../../src/constants/theme';
+import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {
   NOTIFICATION_SERVER_URL,
   EXPO_PUBLIC_NOTIFICATION_SERVER_URL,
@@ -58,6 +53,8 @@ type Tab = 'iowe' | 'owedtome';
 
 const IOUScreen = ({navigation}: {navigation: any}) => {
   const {currency, formatAmount} = useCurrency();
+  const {colors} = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [tab, setTab] = useState<Tab>('iowe');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -233,7 +230,7 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
     const name = isDebtor
       ? iou.toName || iou.toEmail
       : iou.fromName || iou.fromEmail;
-    const color = isDebtor ? EXPENSE_COLOR : SUCCESS_COLOR;
+    const color = isDebtor ? colors.expenseText : colors.incomeText;
     const labelPrefix = isDebtor ? 'To' : 'From';
     const date = iou.createdAt?.toDate?.()?.toLocaleDateString() || '';
     return (
@@ -267,7 +264,7 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
               disabled={settlingId === iou.id}
               style={styles.settleButton}>
               {settlingId === iou.id ? (
-                <ActivityIndicator size={16} color="#fff" />
+                <ActivityIndicator size={16} color={colors.onPrimary} />
               ) : (
                 <Text style={styles.settleButtonText}>Settle</Text>
               )}
@@ -284,7 +281,7 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading IOUs...</Text>
       </View>
     );
@@ -300,8 +297,8 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => loadIOUs(true)}
-              colors={[PRIMARY_COLOR]}
-              tintColor={PRIMARY_COLOR}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }>
           <View style={styles.headerSection}>
@@ -309,7 +306,7 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
               <MaterialCommunityIcons
                 name="handshake"
                 size={32}
-                color={PRIMARY_COLOR}
+                color={colors.primary}
               />
               <Text style={styles.headerTitle}>IOUs</Text>
             </View>
@@ -352,7 +349,7 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
                 <MaterialCommunityIcons
                   name="handshake"
                   size={64}
-                  color="#CBD3EE"
+                  color={colors.iconMuted}
                 />
                 <Text style={styles.emptyTitle}>
                   {tab === 'iowe' ? 'You owe nothing!' : 'Nobody owes you'}
@@ -365,12 +362,16 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
           ) : (
             activeList.map(iou => renderIOU(iou, isDebtor))
           )}
-          <View style={{height: 80}} />
+          <View style={styles.listSpacer} />
         </KeyboardAwareScrollView>
         <TouchableOpacity
           style={styles.fab}
           onPress={() => navigation.navigate('CreateIOU')}>
-          <MaterialCommunityIcons name="plus" size={28} color="#fff" />
+          <MaterialCommunityIcons
+            name="plus"
+            size={28}
+            color={colors.onPrimary}
+          />
         </TouchableOpacity>
       </View>
     </SafeAreaProvider>
@@ -379,137 +380,152 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
 
 export default IOUScreen;
 
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  scrollView: {flex: 1},
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: BACKGROUND_COLOR,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: PRIMARY_COLOR,
-    marginTop: 15,
-    fontFamily: 'Lato-Regular',
-  },
-  headerSection: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 30,
-    paddingBottom: 20,
-  },
-  headerTitleRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 8},
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginLeft: 12,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  tabRow: {
-    flexDirection: 'row',
-    marginHorizontal: 20,
-    marginBottom: 15,
-    backgroundColor: '#E8EBF7',
-    borderRadius: 12,
-    padding: 4,
-  },
-  tab: {flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10},
-  tabActive: {backgroundColor: PRIMARY_COLOR},
-  tabText: {fontSize: 14, color: PRIMARY_COLOR, fontFamily: 'Lato-Bold'},
-  tabTextActive: {color: '#FFFFFF'},
-  iouCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginHorizontal: 20,
-    marginBottom: 12,
-  },
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-  iouCardContent: {flexDirection: 'row', alignItems: 'center', padding: 16},
-  iouInfo: {flex: 1, marginLeft: 14},
-  iouName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  iouLabel: {
-    fontSize: 12,
-    color: '#888',
-    fontFamily: 'Lato-Regular',
-    marginTop: 1,
-  },
-  iouNotes: {
-    fontSize: 13,
-    color: '#555',
-    fontFamily: 'Lato-Regular',
-    marginTop: 3,
-  },
-  iouDate: {
-    fontSize: 11,
-    color: '#aaa',
-    fontFamily: 'Lato-Regular',
-    marginTop: 2,
-  },
-  iouRight: {alignItems: 'flex-end'},
-  iouAmount: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    fontFamily: 'Kufam-SemiBoldItalic',
-  },
-  settleButton: {
-    marginTop: 8,
-    backgroundColor: SUCCESS_COLOR,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  settleButtonText: {fontSize: 12, color: '#fff', fontFamily: 'Lato-Bold'},
-  emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginTop: 20,
-  },
-  emptyState: {alignItems: 'center', paddingVertical: 50},
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#666',
-    marginTop: 15,
-    fontFamily: 'Lato-Bold',
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-    marginTop: 5,
-    fontFamily: 'Lato-Regular',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: PRIMARY_COLOR,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: Platform.OS === 'android' ? 0 : 4,
-    ...(Platform.OS !== 'android' && {
-      shadowColor: '#000',
-      shadowOffset: {width: 0, height: 2},
-      shadowOpacity: 0.25,
-      shadowRadius: 4,
-    }),
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {flex: 1, backgroundColor: colors.background},
+    scrollView: {flex: 1},
+    listSpacer: {height: 80},
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    loadingText: {
+      fontSize: 16,
+      color: colors.primary,
+      marginTop: 15,
+      fontFamily: 'Lato-Regular',
+    },
+    headerSection: {
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: 30,
+      paddingBottom: 20,
+    },
+    headerTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    headerTitle: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: colors.primary,
+      fontFamily: 'Kufam-SemiBoldItalic',
+      marginLeft: 12,
+    },
+    headerSubtitle: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      fontFamily: 'Lato-Regular',
+    },
+    tabRow: {
+      flexDirection: 'row',
+      marginHorizontal: 20,
+      marginBottom: 15,
+      backgroundColor: colors.primarySoft,
+      borderRadius: 12,
+      padding: 4,
+    },
+    tab: {
+      flex: 1,
+      paddingVertical: 10,
+      alignItems: 'center',
+      borderRadius: 10,
+    },
+    tabActive: {backgroundColor: colors.primaryFill},
+    tabText: {fontSize: 14, color: colors.primary, fontFamily: 'Lato-Bold'},
+    tabTextActive: {color: colors.onPrimary},
+    iouCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      marginHorizontal: 20,
+      marginBottom: 12,
+    },
+    cardAndroid: {borderWidth: 1, borderColor: colors.cardBorder},
+    iouCardContent: {flexDirection: 'row', alignItems: 'center', padding: 16},
+    iouInfo: {flex: 1, marginLeft: 14},
+    iouName: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textStrong,
+      fontFamily: 'Lato-Bold',
+    },
+    iouLabel: {
+      fontSize: 12,
+      color: colors.textMuted,
+      fontFamily: 'Lato-Regular',
+      marginTop: 1,
+    },
+    iouNotes: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      fontFamily: 'Lato-Regular',
+      marginTop: 3,
+    },
+    iouDate: {
+      fontSize: 11,
+      color: colors.textPlaceholder,
+      fontFamily: 'Lato-Regular',
+      marginTop: 2,
+    },
+    iouRight: {alignItems: 'flex-end'},
+    iouAmount: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      fontFamily: 'Kufam-SemiBoldItalic',
+    },
+    settleButton: {
+      marginTop: 8,
+      backgroundColor: colors.incomeFill,
+      paddingHorizontal: 12,
+      paddingVertical: 5,
+      borderRadius: 8,
+    },
+    settleButtonText: {
+      fontSize: 12,
+      color: colors.onPrimary,
+      fontFamily: 'Lato-Bold',
+    },
+    emptyCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      marginHorizontal: 20,
+      marginTop: 20,
+    },
+    emptyState: {alignItems: 'center', paddingVertical: 50},
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginTop: 15,
+      fontFamily: 'Lato-Bold',
+    },
+    emptySubtitle: {
+      fontSize: 14,
+      color: colors.textMuted,
+      textAlign: 'center',
+      marginTop: 5,
+      fontFamily: 'Lato-Regular',
+    },
+    fab: {
+      position: 'absolute',
+      bottom: 24,
+      right: 24,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.primaryFill,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: Platform.OS === 'android' ? 0 : 4,
+      ...(Platform.OS !== 'android' && {
+        shadowColor: colors.shadow,
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+      }),
+    },
+  });
