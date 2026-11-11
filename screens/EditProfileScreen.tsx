@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from 'react';
-import {View, StyleSheet, SafeAreaView, Platform} from 'react-native';
-import {ActivityIndicator, Text, Card} from 'react-native-paper';
+import {View, Text, SafeAreaView} from 'react-native';
+import {ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import FormButton from '../components/FormButton';
@@ -12,7 +12,8 @@ import {
   updateDoc,
 } from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
-import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../src/constants/theme';
+import {useTheme} from '../src/theme';
+import {FormError} from '../src/components/form/FormParts';
 import {snackbar} from '../src/utils/snackbarStore';
 
 interface ProfileData {
@@ -23,6 +24,7 @@ interface ProfileData {
 }
 
 const EditProfileScreen = ({navigation}: {navigation: any}) => {
+  const {colors} = useTheme();
   const [userData, setUserData] = useState<ProfileData>({
     name: '',
     email: '',
@@ -114,53 +116,47 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-        <Text style={styles.loadingText}>Loading your profile...</Text>
+      <View className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text className="mt-3 font-sans text-base text-text-secondary">
+          Loading your profile...
+        </Text>
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-background">
       <KeyboardAwareScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        className="flex-1"
+        contentContainerClassName="p-5 pb-10"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        <View style={styles.headerSection}>
-          <View style={styles.iconContainer}>
+        <View className="mb-[30px] items-center pt-5">
+          <View className="mb-5 h-20 w-20 items-center justify-center rounded-full bg-primary-soft">
             <MaterialCommunityIcons
               name="account-edit"
               size={48}
-              color={PRIMARY_COLOR}
+              color={colors.primary}
             />
           </View>
-          <Text style={styles.titleText}>Edit Profile</Text>
-          <Text style={styles.subtitleText}>
+          <Text
+            accessibilityRole="header"
+            className="mb-2 text-center font-heading text-[28px] font-bold text-text-strong">
+            Edit Profile
+          </Text>
+          <Text className="text-center font-sans text-base text-text-secondary">
             Update your personal information
           </Text>
         </View>
 
-        <Card
-          style={[
-            styles.formCard,
-            Platform.OS === 'android' && styles.cardAndroid,
-          ]}
-          elevation={Platform.OS === 'android' ? 0 : 4}>
-          <View style={styles.cardContent}>
-            {errorMessage ? (
-              <View style={styles.errorContainer}>
-                <MaterialCommunityIcons
-                  name="alert-circle"
-                  size={20}
-                  color="#C62828"
-                />
-                <Text style={styles.errorMessage}>{errorMessage}</Text>
-              </View>
-            ) : null}
-            <View style={styles.inputSection}>
-              <Text style={styles.sectionTitle}>Personal Information</Text>
+        <View className="mb-5 rounded-[20px] border border-card-border bg-surface ios:shadow-lg">
+          <View className="p-[30px]">
+            {errorMessage ? <FormError message={errorMessage} /> : null}
+            <View className="mb-[25px]">
+              <Text className="mb-5 font-sans-bold text-lg font-semibold text-text-strong">
+                Personal Information
+              </Text>
               <FormInput
                 labelValue={userData.name}
                 onChangeText={(name: string) => {
@@ -204,34 +200,36 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
               />
             </View>
             {updating ? (
-              <View style={styles.updatingContainer}>
-                <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-                <Text style={styles.loadingText}>Updating your profile...</Text>
+              <View className="items-center justify-center py-5">
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text className="mt-3 font-sans text-base text-text-secondary">
+                  Updating your profile...
+                </Text>
               </View>
             ) : (
               <FormButton buttonTitle="Update Profile" onPress={handleUpdate} />
             )}
           </View>
-        </Card>
+        </View>
 
-        <View style={styles.infoSection}>
-          <View style={styles.infoItem}>
+        <View className="rounded-2xl border border-card-border bg-surface p-5 ios:shadow-md">
+          <View className="mb-3 flex-row items-center">
             <MaterialCommunityIcons
               name="shield-check"
               size={20}
-              color={PRIMARY_COLOR}
+              color={colors.primary}
             />
-            <Text style={styles.infoText}>
+            <Text className="ml-3 flex-1 font-sans text-sm text-text-secondary">
               Your information is secure and encrypted
             </Text>
           </View>
-          <View style={styles.infoItem}>
+          <View className="flex-row items-center">
             <MaterialCommunityIcons
               name="sync"
               size={20}
-              color={PRIMARY_COLOR}
+              color={colors.primary}
             />
-            <Text style={styles.infoText}>
+            <Text className="ml-3 flex-1 font-sans text-sm text-text-secondary">
               Changes will sync across all your devices
             </Text>
           </View>
@@ -242,96 +240,3 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
 };
 
 export default EditProfileScreen;
-
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  scrollView: {flex: 1},
-  scrollContent: {padding: 20, paddingBottom: 40},
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: BACKGROUND_COLOR,
-  },
-  updatingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-    marginTop: 12,
-  },
-  headerSection: {alignItems: 'center', marginBottom: 30, paddingTop: 20},
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#E8EBF7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  titleText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitleText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  formCard: {backgroundColor: '#FFFFFF', borderRadius: 20, marginBottom: 20},
-  cardContent: {padding: 30},
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFEBEE',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#F44336',
-  },
-  errorMessage: {
-    color: '#C62828',
-    fontSize: 14,
-    fontFamily: 'Lato-Regular',
-    marginLeft: 8,
-    flex: 1,
-  },
-  inputSection: {marginBottom: 25},
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-    marginBottom: 20,
-  },
-  infoSection: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    elevation: Platform.OS === 'android' ? 0 : 3,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-  },
-  infoItem: {flexDirection: 'row', alignItems: 'center', marginBottom: 12},
-  infoText: {
-    fontSize: 14,
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-    marginLeft: 12,
-    flex: 1,
-  },
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-});
