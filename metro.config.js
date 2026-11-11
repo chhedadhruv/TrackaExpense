@@ -1,4 +1,5 @@
 const {getDefaultConfig} = require('expo/metro-config');
+const {withNativeWind} = require('nativewind/metro');
 const path = require('path');
 
 /**
@@ -29,18 +30,21 @@ const config = {
 
 const defaults = getDefaultConfig(__dirname);
 
-module.exports = {
-  ...defaults,
-  watchFolders: [...(defaults.watchFolders || []), ...config.watchFolders],
-  resolver: {
-    ...defaults.resolver,
-    blockList: [
-      ...[].concat(defaults.resolver.blockList || []),
-      ...config.resolver.blockList,
-    ],
-    extraNodeModules: {
-      ...defaults.resolver.extraNodeModules,
-      ...config.resolver.extraNodeModules,
+module.exports = withNativeWind(
+  {
+    ...defaults,
+    watchFolders: [...(defaults.watchFolders || []), ...config.watchFolders],
+    resolver: {
+      ...defaults.resolver,
+      blockList: [
+        ...[].concat(defaults.resolver.blockList || []),
+        ...config.resolver.blockList,
+      ],
+      extraNodeModules: {
+        ...defaults.resolver.extraNodeModules,
+        ...config.resolver.extraNodeModules,
+      },
     },
   },
-};
+  {input: './global.css'},
+);
