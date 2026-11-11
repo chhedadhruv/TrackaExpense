@@ -24,12 +24,7 @@ import {useCurrency} from '../../utils/CurrencyUtil';
 import {minorOf} from '../../src/utils/amounts';
 import {toMajorNumber} from '../../src/utils/money';
 import {sharesMinor} from '../../src/utils/splitMath';
-import {
-  PRIMARY_COLOR,
-  BACKGROUND_COLOR,
-  INCOME_COLOR as SUCCESS_COLOR,
-  EXPENSE_COLOR,
-} from '../../src/constants/theme';
+import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import {snackbar} from '../../src/utils/snackbarStore';
 
@@ -54,6 +49,8 @@ interface SplitDoc {
 
 const FriendsBalanceScreen = () => {
   const {currency} = useCurrency();
+  const {colors} = useTheme();
+  const styles = useThemedStyles(createStyles);
   const fmtAmt = (amount: number) => {
     const num = Math.abs(parseFloat(String(amount)) || 0);
     const formatted = num.toLocaleString(currency.locale, {
@@ -297,7 +294,7 @@ const FriendsBalanceScreen = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading balances...</Text>
       </View>
     );
@@ -322,8 +319,8 @@ const FriendsBalanceScreen = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => loadBalances(true)}
-              colors={[PRIMARY_COLOR]}
-              tintColor={PRIMARY_COLOR}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }>
           <View style={styles.headerSection}>
@@ -331,7 +328,7 @@ const FriendsBalanceScreen = () => {
               <MaterialCommunityIcons
                 name="account-multiple"
                 size={32}
-                color={PRIMARY_COLOR}
+                color={colors.primary}
               />
               <Text style={styles.headerTitle}>Friends & Balances</Text>
             </View>
@@ -349,13 +346,14 @@ const FriendsBalanceScreen = () => {
               <View style={styles.totalCardContent}>
                 <View style={styles.totalRow}>
                   <Text style={styles.totalLabel}>Overall you receive</Text>
-                  <Text style={[styles.totalValue, {color: SUCCESS_COLOR}]}>
+                  <Text style={[styles.totalValue, {color: colors.incomeText}]}>
                     {fmtAmt(totalOwed)}
                   </Text>
                 </View>
                 <View style={styles.totalRow}>
                   <Text style={styles.totalLabel}>Overall you owe</Text>
-                  <Text style={[styles.totalValue, {color: EXPENSE_COLOR}]}>
+                  <Text
+                    style={[styles.totalValue, {color: colors.expenseText}]}>
                     {fmtAmt(totalOwe)}
                   </Text>
                 </View>
@@ -365,7 +363,11 @@ const FriendsBalanceScreen = () => {
                   <Text
                     style={[
                       styles.totalNetValue,
-                      {color: isPositive ? SUCCESS_COLOR : EXPENSE_COLOR},
+                      {
+                        color: isPositive
+                          ? colors.incomeText
+                          : colors.expenseText,
+                      },
                     ]}>
                     {isPositive ? '+ ' : '- '}
                     {fmtAmt(Math.abs(net))}
@@ -385,7 +387,7 @@ const FriendsBalanceScreen = () => {
                 <MaterialCommunityIcons
                   name="account-check"
                   size={64}
-                  color="#CBD3EE"
+                  color={colors.iconMuted}
                 />
                 <Text style={styles.emptyTitle}>All settled up!</Text>
                 <Text style={styles.emptySubtitle}>
@@ -396,7 +398,7 @@ const FriendsBalanceScreen = () => {
           ) : (
             balances.map(b => {
               const owesYou = b.net > 0;
-              const color = owesYou ? SUCCESS_COLOR : EXPENSE_COLOR;
+              const color = owesYou ? colors.incomeText : colors.expenseText;
               const label = owesYou ? 'owes you' : 'you owe';
               return (
                 <Card
@@ -434,7 +436,7 @@ const FriendsBalanceScreen = () => {
                           {remindingEmail === b.email ? (
                             <ActivityIndicator
                               size={14}
-                              color={PRIMARY_COLOR}
+                              color={colors.primary}
                             />
                           ) : (
                             <Text style={styles.remindButtonText}>Remind</Text>
@@ -455,128 +457,145 @@ const FriendsBalanceScreen = () => {
 
 export default FriendsBalanceScreen;
 
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  scrollView: {flex: 1},
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: BACKGROUND_COLOR,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: PRIMARY_COLOR,
-    marginTop: 15,
-    fontFamily: 'Lato-Regular',
-  },
-  headerSection: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 30,
-    paddingBottom: 20,
-  },
-  headerTitleRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 8},
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginLeft: 12,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginTop: 20,
-  },
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-  emptyState: {alignItems: 'center', paddingVertical: 50},
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#666',
-    marginTop: 15,
-    fontFamily: 'Lato-Bold',
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-    marginTop: 5,
-    fontFamily: 'Lato-Regular',
-  },
-  totalCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginHorizontal: 20,
-    marginBottom: 16,
-  },
-  totalCardContent: {padding: 16},
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  totalLabel: {fontSize: 14, color: '#666', fontFamily: 'Lato-Regular'},
-  totalValue: {fontSize: 14, fontWeight: '600', fontFamily: 'Lato-Bold'},
-  totalDivider: {height: 1, backgroundColor: '#E8EBF7', marginVertical: 8},
-  totalNetLabel: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  totalNetValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: 'Kufam-SemiBoldItalic',
-  },
-  balanceCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginHorizontal: 20,
-    marginBottom: 12,
-  },
-  balanceCardContent: {flexDirection: 'row', alignItems: 'center', padding: 16},
-  balanceInfo: {flex: 1, marginLeft: 14},
-  balanceName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  balanceLabel: {fontSize: 13, fontFamily: 'Lato-Regular', marginTop: 2},
-  groupBreakdown: {
-    fontSize: 11,
-    color: '#888',
-    fontFamily: 'Lato-Regular',
-    marginTop: 1,
-  },
-  balanceRight: {alignItems: 'flex-end'},
-  balanceAmount: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    fontFamily: 'Kufam-SemiBoldItalic',
-  },
-  remindButton: {
-    marginTop: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 14,
-    backgroundColor: '#EEF0FB',
-  },
-  remindButtonText: {
-    fontSize: 12,
-    color: PRIMARY_COLOR,
-    fontFamily: 'Lato-Bold',
-    fontWeight: '600',
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {flex: 1, backgroundColor: colors.background},
+    scrollView: {flex: 1},
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    loadingText: {
+      fontSize: 16,
+      color: colors.primary,
+      marginTop: 15,
+      fontFamily: 'Lato-Regular',
+    },
+    headerSection: {
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: 30,
+      paddingBottom: 20,
+    },
+    headerTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    headerTitle: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: colors.primary,
+      fontFamily: 'Kufam-SemiBoldItalic',
+      marginLeft: 12,
+    },
+    headerSubtitle: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      fontFamily: 'Lato-Regular',
+    },
+    emptyCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      marginHorizontal: 20,
+      marginTop: 20,
+    },
+    cardAndroid: {borderWidth: 1, borderColor: colors.cardBorder},
+    emptyState: {alignItems: 'center', paddingVertical: 50},
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginTop: 15,
+      fontFamily: 'Lato-Bold',
+    },
+    emptySubtitle: {
+      fontSize: 14,
+      color: colors.textMuted,
+      textAlign: 'center',
+      marginTop: 5,
+      fontFamily: 'Lato-Regular',
+    },
+    totalCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      marginHorizontal: 20,
+      marginBottom: 16,
+    },
+    totalCardContent: {padding: 16},
+    totalRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 4,
+    },
+    totalLabel: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      fontFamily: 'Lato-Regular',
+    },
+    totalValue: {fontSize: 14, fontWeight: '600', fontFamily: 'Lato-Bold'},
+    totalDivider: {
+      height: 1,
+      backgroundColor: colors.cardBorder,
+      marginVertical: 8,
+    },
+    totalNetLabel: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.textStrong,
+      fontFamily: 'Lato-Bold',
+    },
+    totalNetValue: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      fontFamily: 'Kufam-SemiBoldItalic',
+    },
+    balanceCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      marginHorizontal: 20,
+      marginBottom: 12,
+    },
+    balanceCardContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16,
+    },
+    balanceInfo: {flex: 1, marginLeft: 14},
+    balanceName: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textStrong,
+      fontFamily: 'Lato-Bold',
+    },
+    balanceLabel: {fontSize: 13, fontFamily: 'Lato-Regular', marginTop: 2},
+    groupBreakdown: {
+      fontSize: 11,
+      color: colors.textMuted,
+      fontFamily: 'Lato-Regular',
+      marginTop: 1,
+    },
+    balanceRight: {alignItems: 'flex-end'},
+    balanceAmount: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      fontFamily: 'Kufam-SemiBoldItalic',
+    },
+    remindButton: {
+      marginTop: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 5,
+      borderRadius: 14,
+      backgroundColor: colors.primarySoft,
+    },
+    remindButtonText: {
+      fontSize: 12,
+      color: colors.primary,
+      fontFamily: 'Lato-Bold',
+      fontWeight: '600',
+    },
+  });
