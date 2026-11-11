@@ -40,6 +40,7 @@ import {
   LoadingState,
 } from '../src/components/ScreenState';
 import {useLoadFailure} from '../src/hooks/useLoadFailure';
+import TagChips from '../src/components/TagChips';
 
 type FilterType = 'all' | '7days' | '30days' | 'custom';
 
@@ -330,6 +331,7 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
                       </Text>
                     </View>
                   ) : null}
+                  <TagChips tags={transaction.tags} max={3} className="mt-1" />
                 </View>
               </View>
               <Text

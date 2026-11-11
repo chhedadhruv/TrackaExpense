@@ -48,6 +48,11 @@ export interface TransactionDocument {
   imageUrl?: string | null;
   /** Alias used by some legacy writes */
   image?: string | null;
+  /**
+   * Free-text tags (at most 5, 24 characters each, distinct ignoring case). Missing on every
+   * document written before tags existed; read through `sanitizeTags` in `src/utils/tags.ts`.
+   */
+  tags?: string[];
   createdAt: Timestamp;
   /** Firestore document ID (also available as `id` after client-side mapping) */
   id?: string;
