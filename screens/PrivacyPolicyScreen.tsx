@@ -3,19 +3,15 @@ import {
   View,
   Text,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
   SafeAreaView,
   Linking,
-  Platform,
 } from 'react-native';
-import {Card, Divider} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../src/constants/theme';
+import {version as appVersion} from '../package.json';
+import {useTheme} from '../src/theme';
 import type {McIconName} from '../src/types/icons';
 
-const TEXT_COLOR = '#2C2C2C';
-const SUBTITLE_COLOR = '#666';
 // Change this date whenever the policy text changes (it used to show today's date every time).
 const LAST_UPDATED = '10 November 2026';
 
@@ -91,43 +87,51 @@ const ExpandableSection = ({
   section: PolicySection;
   expanded: boolean;
   onToggle: () => void;
-}) => (
-  <Card
-    style={[
-      styles.sectionCard,
-      Platform.OS === 'android' && styles.cardAndroid,
-    ]}
-    elevation={Platform.OS === 'android' ? 0 : 2}>
-    <TouchableOpacity
-      style={styles.sectionHeader}
-      onPress={onToggle}
-      activeOpacity={0.7}>
-      <View style={styles.sectionHeaderLeft}>
-        <View style={styles.iconContainer}>
-          <MaterialCommunityIcons
-            name={section.icon}
-            size={24}
-            color={PRIMARY_COLOR}
-          />
+}) => {
+  const {colors} = useTheme();
+  return (
+    <View className="mb-3 rounded-xl border border-card-border bg-surface ios:shadow-md">
+      <TouchableOpacity
+        className="flex-row items-center justify-between p-4"
+        onPress={onToggle}
+        accessibilityRole="button"
+        accessibilityState={{expanded}}
+        activeOpacity={0.7}>
+        <View className="flex-1 flex-row items-center">
+          <View className="mr-3 h-10 w-10 items-center justify-center rounded-[10px] bg-primary-soft">
+            <MaterialCommunityIcons
+              name={section.icon}
+              size={24}
+              color={colors.primary}
+            />
+          </View>
+          <Text className="flex-1 font-sans-bold text-base font-semibold text-text-strong">
+            {section.title}
+          </Text>
         </View>
-        <Text style={styles.sectionTitle}>{section.title}</Text>
-      </View>
-      <MaterialCommunityIcons
-        name={expanded ? 'chevron-up' : 'chevron-down'}
-        size={24}
-        color={SUBTITLE_COLOR}
-      />
-    </TouchableOpacity>
-    {expanded && (
-      <View style={styles.sectionContent}>
-        <Divider style={styles.divider} />
-        <Text style={styles.contentText}>{section.content}</Text>
-      </View>
-    )}
-  </Card>
-);
+        <MaterialCommunityIcons
+          name={expanded ? 'chevron-up' : 'chevron-down'}
+          size={24}
+          color={colors.textSecondary}
+        />
+      </TouchableOpacity>
+      {expanded && (
+        <View className="pb-4">
+          <View className="mx-4 mb-4 h-px bg-divider" />
+          <Text className="px-4 font-sans text-sm leading-5 text-text-strong">
+            {section.content}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+};
 
 const PrivacyPolicyScreen = ({navigation}: {navigation: any}) => {
+  const {colors} = useTheme();
+  // Contact Us only exists after sign-in; before it (from Sign up) the button would go nowhere.
+  const canContactSupport: boolean =
+    navigation.getState?.()?.routeNames?.includes('ContactUs') ?? false;
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >({});
@@ -136,35 +140,36 @@ const PrivacyPolicyScreen = ({navigation}: {navigation: any}) => {
     setExpandedSections(prev => ({...prev, [id]: !prev[id]}));
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-background">
       <ScrollView
-        style={styles.scrollView}
+        className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}>
-        <View style={styles.headerSection}>
-          <View style={styles.headerIcon}>
+        contentContainerClassName="pb-[30px]">
+        <View className="items-center px-5 pb-[25px] pt-5">
+          <View className="mb-[15px]">
             <MaterialCommunityIcons
               name="shield-check"
               size={48}
-              color={PRIMARY_COLOR}
+              color={colors.primary}
             />
           </View>
-          <Text style={styles.headerTitle}>Privacy Policy</Text>
-          <Text style={styles.headerSubtitle}>
+          <Text
+            accessibilityRole="header"
+            className="mb-2 font-heading text-[28px] font-bold text-text-strong">
+            Privacy Policy
+          </Text>
+          <Text className="text-center font-sans text-base leading-[22px] text-text-secondary">
             Your privacy matters to us. Learn how we collect, use, and protect
             your data.
           </Text>
         </View>
 
-        <Card
-          style={[
-            styles.summaryCard,
-            Platform.OS === 'android' && styles.cardAndroid,
-          ]}
-          elevation={Platform.OS === 'android' ? 0 : 3}>
-          <View style={styles.summaryContent}>
-            <Text style={styles.summaryTitle}>Quick Summary</Text>
-            <Text style={styles.summaryText}>
+        <View className="mx-5 mb-5 rounded-2xl bg-primary-fill ios:shadow-lg">
+          <View className="p-5">
+            <Text className="mb-2.5 font-heading text-lg font-bold text-on-primary">
+              Quick Summary
+            </Text>
+            <Text className="font-sans text-sm leading-5 text-on-primary opacity-90">
               TrackaExpense collects only the data necessary to provide expense
               tracking services. We use secure Firebase infrastructure with
               Google Sign-In support, don't sell your data, and give you full
@@ -172,9 +177,9 @@ const PrivacyPolicyScreen = ({navigation}: {navigation: any}) => {
               information.
             </Text>
           </View>
-        </Card>
+        </View>
 
-        <View style={styles.sectionsContainer}>
+        <View className="px-5">
           {PRIVACY_SECTIONS.map(section => (
             <ExpandableSection
               key={section.id}
@@ -185,19 +190,25 @@ const PrivacyPolicyScreen = ({navigation}: {navigation: any}) => {
           ))}
         </View>
 
-        <View style={styles.actionButtons}>
+        <View className="gap-3 px-5 pt-5">
+          {canContactSupport && (
+            <TouchableOpacity
+              className="flex-row items-center justify-center rounded-xl bg-primary-fill py-[15px] ios:shadow-md"
+              accessibilityRole="button"
+              onPress={() => navigation.navigate('ContactUs')}>
+              <MaterialCommunityIcons
+                name="message-text"
+                size={20}
+                color={colors.onPrimary}
+              />
+              <Text className="ml-2 font-sans-bold text-base font-semibold text-on-primary">
+                Contact Support
+              </Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => navigation.navigate('ContactUs')}>
-            <MaterialCommunityIcons
-              name="message-text"
-              size={20}
-              color="#FFFFFF"
-            />
-            <Text style={styles.primaryButtonText}>Contact Support</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.secondaryButton}
+            className="flex-row items-center justify-center rounded-xl border border-primary bg-surface py-[15px]"
+            accessibilityRole="link"
             onPress={() =>
               Linking.openURL(
                 'https://firebase.google.com/support/privacy',
@@ -206,19 +217,21 @@ const PrivacyPolicyScreen = ({navigation}: {navigation: any}) => {
             <MaterialCommunityIcons
               name="open-in-new"
               size={20}
-              color={PRIMARY_COLOR}
+              color={colors.primary}
             />
-            <Text style={styles.secondaryButtonText}>
+            <Text className="ml-2 font-sans-bold text-base font-semibold text-primary">
               Firebase Privacy Policy
             </Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Last updated: {new Date().toLocaleDateString()}
+        <View className="items-center px-5 pt-[30px]">
+          <Text className="mb-1 font-sans text-xs text-text-secondary">
+            Last updated: {LAST_UPDATED}
           </Text>
-          <Text style={styles.footerText}>TrackaExpense v1.2.8</Text>
+          <Text className="mb-1 font-sans text-xs text-text-secondary">
+            TrackaExpense v{appVersion}
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -226,130 +239,3 @@ const PrivacyPolicyScreen = ({navigation}: {navigation: any}) => {
 };
 
 export default PrivacyPolicyScreen;
-
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  scrollView: {flex: 1},
-  scrollContent: {paddingBottom: 30},
-  headerSection: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 25,
-  },
-  headerIcon: {marginBottom: 15},
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: TEXT_COLOR,
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginBottom: 8,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: SUBTITLE_COLOR,
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-    lineHeight: 22,
-  },
-  summaryCard: {
-    backgroundColor: PRIMARY_COLOR,
-    borderRadius: 16,
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  summaryContent: {padding: 20},
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginBottom: 10,
-  },
-  summaryText: {
-    fontSize: 14,
-    color: '#E8EBF7',
-    fontFamily: 'Lato-Regular',
-    lineHeight: 20,
-  },
-  sectionsContainer: {paddingHorizontal: 20},
-  sectionCard: {backgroundColor: '#FFFFFF', borderRadius: 12, marginBottom: 12},
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-  },
-  sectionHeaderLeft: {flexDirection: 'row', alignItems: 'center', flex: 1},
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: '#E8EBF7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: TEXT_COLOR,
-    fontFamily: 'Lato-Bold',
-    flex: 1,
-  },
-  sectionContent: {paddingBottom: 16},
-  divider: {marginHorizontal: 16, marginBottom: 16, backgroundColor: '#F0F0F0'},
-  contentText: {
-    fontSize: 14,
-    color: TEXT_COLOR,
-    fontFamily: 'Lato-Regular',
-    lineHeight: 20,
-    paddingHorizontal: 16,
-  },
-  actionButtons: {paddingHorizontal: 20, paddingTop: 20, gap: 12},
-  primaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: PRIMARY_COLOR,
-    paddingVertical: 15,
-    borderRadius: 12,
-    elevation: Platform.OS === 'android' ? 0 : 3,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-    fontFamily: 'Lato-Bold',
-  },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: PRIMARY_COLOR,
-    paddingVertical: 15,
-    borderRadius: 12,
-  },
-  secondaryButtonText: {
-    color: PRIMARY_COLOR,
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-    fontFamily: 'Lato-Bold',
-  },
-  footer: {alignItems: 'center', paddingTop: 30, paddingHorizontal: 20},
-  footerText: {
-    fontSize: 12,
-    color: SUBTITLE_COLOR,
-    fontFamily: 'Lato-Regular',
-    marginBottom: 4,
-  },
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-});

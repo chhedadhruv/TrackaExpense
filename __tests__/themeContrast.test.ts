@@ -56,6 +56,20 @@ describe.each([
     );
   });
 
+  it.each(surfaces(c))(
+    'error and success text are readable on %s',
+    (_label, bg) => {
+      expect(contrastRatio(c.expenseText, bg)).toBeGreaterThanOrEqual(AA_TEXT);
+      expect(contrastRatio(c.incomeText, bg)).toBeGreaterThanOrEqual(AA_TEXT);
+    },
+  );
+
+  it('the inverse button text is readable on its fill', () => {
+    expect(contrastRatio(c.onInverse, c.inverse)).toBeGreaterThanOrEqual(
+      AA_TEXT,
+    );
+  });
+
   it('snackbar text and accents are readable on the snackbar', () => {
     expect(
       contrastRatio(c.snackbarText, c.snackbarBackground),

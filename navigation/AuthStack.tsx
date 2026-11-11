@@ -10,25 +10,29 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import type {StackNavigationProp} from '@react-navigation/stack';
 import type {AuthStackParamList} from '../src/types';
+import {useTheme, type ThemeColors} from '../src/theme';
 
 const Stack = createStackNavigator<AuthStackParamList>();
 
 const renderHeaderLeft = (
   navigation: StackNavigationProp<AuthStackParamList>,
   targetScreen: keyof AuthStackParamList,
+  colors: ThemeColors,
 ) => (
   <View style={{marginLeft: 10}}>
     <FontAwesome.Button
       name="long-arrow-left"
       size={25}
-      backgroundColor="#f9fafd"
-      color="#333"
+      backgroundColor={colors.background}
+      color={colors.text}
+      accessibilityLabel="Back"
       onPress={() => navigation.navigate(targetScreen as never)}
     />
   </View>
 );
 
 const AuthStack = () => {
+  const {colors} = useTheme();
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -69,11 +73,12 @@ const AuthStack = () => {
           headerStatusBarHeight: 0,
           title: '',
           headerStyle: {
-            backgroundColor: '#f9fafd',
-            shadowColor: '#f9fafd',
+            backgroundColor: colors.background,
+            shadowColor: colors.background,
             elevation: 0,
           },
-          headerLeft: () => renderHeaderLeft(navigation as any, 'Login'),
+          headerLeft: () =>
+            renderHeaderLeft(navigation as any, 'Login', colors),
         })}
       />
       <Stack.Screen
@@ -83,11 +88,28 @@ const AuthStack = () => {
           headerStatusBarHeight: 0,
           title: '',
           headerStyle: {
-            backgroundColor: '#f9fafd',
-            shadowColor: '#f9fafd',
+            backgroundColor: colors.background,
+            shadowColor: colors.background,
             elevation: 0,
           },
-          headerLeft: () => renderHeaderLeft(navigation as any, 'Login'),
+          headerLeft: () =>
+            renderHeaderLeft(navigation as any, 'Login', colors),
+        })}
+      />
+      {/* Signup links to the policy, which was imported here but never registered. */}
+      <Stack.Screen
+        name="PrivacyPolicy"
+        component={PrivacyPolicyScreen}
+        options={({navigation}) => ({
+          headerStatusBarHeight: 0,
+          title: '',
+          headerStyle: {
+            backgroundColor: colors.background,
+            shadowColor: colors.background,
+            elevation: 0,
+          },
+          headerLeft: () =>
+            renderHeaderLeft(navigation as any, 'Signup', colors),
         })}
       />
     </Stack.Navigator>

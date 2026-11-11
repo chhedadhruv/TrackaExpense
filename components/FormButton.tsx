@@ -1,7 +1,12 @@
 import React, {useState} from 'react';
-import {Text, TouchableOpacity, StyleSheet, StyleProp, ViewStyle, TextStyle} from 'react-native';
+import {
+  Text,
+  TouchableOpacity,
+  StyleProp,
+  ViewStyle,
+  TextStyle,
+} from 'react-native';
 import {windowHeight} from '../utils/Dimentions';
-import {PRIMARY_COLOR} from '../src/constants/theme';
 
 interface FormButtonProps {
   buttonTitle: string;
@@ -12,48 +17,35 @@ interface FormButtonProps {
   [key: string]: any;
 }
 
-const FormButton = ({buttonTitle, style, textStyle, ...rest}: FormButtonProps) => {
+const BUTTON_HEIGHT = windowHeight / 15;
+
+/** The primary full-width button. Colours come from the theme (primary-fill, on-primary). */
+const FormButton = ({
+  buttonTitle,
+  style,
+  textStyle,
+  ...rest
+}: FormButtonProps) => {
   const [isPressed, setIsPressed] = useState(false);
 
   return (
     <TouchableOpacity
-      style={[styles.buttonContainer, isPressed && styles.pressed, style]}
+      className={`mt-2.5 w-full items-center justify-center rounded-xl bg-primary-fill p-2.5 shadow-md ${
+        isPressed ? 'scale-[0.98] opacity-80' : ''
+      }`}
+      style={[{height: BUTTON_HEIGHT}, style]}
       onPressIn={() => setIsPressed(true)}
       onPressOut={() => setIsPressed(false)}
       {...rest}
       accessibilityRole="button"
       accessible>
-      <Text style={[styles.buttonText, textStyle]}>{buttonTitle}</Text>
+      <Text
+        className="font-sans-bold text-lg font-bold text-on-primary"
+        style={textStyle}>
+        {buttonTitle}
+      </Text>
     </TouchableOpacity>
   );
 };
 
 export default FormButton;
-
-const styles = StyleSheet.create({
-  buttonContainer: {
-    marginTop: 10,
-    width: '100%',
-    height: windowHeight / 15,
-    backgroundColor: PRIMARY_COLOR,
-    padding: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    elevation: 4,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-  },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    fontFamily: 'Lato-Bold',
-  },
-  pressed: {
-    opacity: 0.8,
-    transform: [{scale: 0.98}],
-  },
-});
