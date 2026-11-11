@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import React, {useState, useEffect, useCallback, useRef} from 'react';
-import {ActivityIndicator, Card} from 'react-native-paper';
+import {Card} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {getAuth} from '@react-native-firebase/auth';
 import {
@@ -29,6 +29,7 @@ import {useCurrency} from '../utils/CurrencyUtil';
 import {getCategoryIcon} from '../utils/CategoryData';
 import {FONT, SPACING} from '../src/constants/theme';
 import {useTheme, useThemedStyles, type ThemeColors} from '../src/theme';
+import {ErrorState, LoadingState} from '../src/components/ScreenState';
 import {formatInputAmount} from '../src/utils/formatters';
 import {majorOf, totalMajor} from '../src/utils/amounts';
 import {fromMinor, tryToMinor} from '../src/utils/money';
@@ -222,31 +223,19 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
   const loading = userLoading || txLoading;
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
+    return <LoadingState />;
   }
 
   if (error) {
     return (
-      <View style={styles.errorContainer}>
-        <MaterialCommunityIcons
-          name="alert-circle-outline"
-          size={48}
-          color={colors.expense}
-        />
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity
-          style={styles.retryButton}
-          onPress={() => {
-            setError(null);
-            setRetryKey(k => k + 1);
-          }}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
+      <ErrorState
+        title="Could not load your data"
+        message={error}
+        onRetry={() => {
+          setError(null);
+          setRetryKey(k => k + 1);
+        }}
+      />
     );
   }
 
@@ -706,12 +695,6 @@ const createStyles = (colors: ThemeColors) =>
       marginTop: 1,
       fontFamily: FONT.bold,
     },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.background,
-    },
     container: {flex: 1, backgroundColor: colors.background},
     scrollContainer: {flex: 1},
     heroSection: {
@@ -1119,38 +1102,6 @@ const createStyles = (colors: ThemeColors) =>
       textAlign: 'center',
       marginTop: SPACING.sm,
       fontFamily: FONT.regular,
-    },
-    errorContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.background,
-      paddingHorizontal: SPACING.md + 4,
-    },
-    errorText: {
-      fontSize: 16,
-      color: colors.expense,
-      textAlign: 'center',
-      fontFamily: FONT.regular,
-      marginTop: 15,
-      marginBottom: SPACING.md + 4,
-    },
-    retryButton: {
-      backgroundColor: colors.primaryFill,
-      paddingHorizontal: SPACING.lg,
-      paddingVertical: 12,
-      borderRadius: 8,
-      elevation: Platform.OS === 'android' ? 0 : 2,
-      shadowColor: colors.shadow,
-      shadowOffset: {width: 0, height: 1},
-      shadowOpacity: 0.2,
-      shadowRadius: 2,
-    },
-    retryButtonText: {
-      color: colors.onPrimary,
-      fontSize: 16,
-      fontWeight: '600',
-      fontFamily: FONT.bold,
     },
     cardAndroid: {borderWidth: 1, borderColor: colors.cardBorder},
   });
