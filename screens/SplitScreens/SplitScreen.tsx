@@ -36,6 +36,7 @@ import {
 import {getAuth} from '@react-native-firebase/auth';
 import {useFocusEffect} from '@react-navigation/native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import TriangleAlert from 'lucide-react-native/icons/triangle-alert';
 import UserAvatar from '../../src/components/Avatar';
 import SelectModal from '../../src/components/SelectModal';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
@@ -818,8 +819,9 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                     renderUserCard(userDetails, true)}
                   {userDetails && userDetails.email === currentUser?.email && (
                     <View style={styles.warningCard}>
+                      <TriangleAlert size={18} color={colors.warningText} />
                       <Text style={styles.warningText}>
-                        ⚠️ You cannot add yourself to the group. You are
+                        You cannot add yourself to the group. You are
                         automatically included.
                       </Text>
                     </View>
@@ -1085,6 +1087,9 @@ const createStyles = (colors: ThemeColors) =>
       fontFamily: 'Lato-Regular',
     },
     warningCard: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 10,
       backgroundColor: colors.warningSoft,
       padding: 15,
       borderRadius: 12,
@@ -1093,6 +1098,7 @@ const createStyles = (colors: ThemeColors) =>
       borderColor: colors.warning,
     },
     warningText: {
+      flex: 1,
       fontSize: 14,
       color: colors.warningText,
       fontFamily: 'Lato-Regular',

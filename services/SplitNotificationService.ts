@@ -45,7 +45,7 @@ class SplitNotificationService {
       }
       await this.notificationService.sendNotificationToUsers(usersToNotify, {
         type: 'split_created',
-        title: 'New Split Created! 💰',
+        title: 'New Split Created!',
         body: `${creatorName} created a new split "${splitData.title}" in ${groupData.name}`,
         data: {
           type: 'split_created',
@@ -59,7 +59,6 @@ class SplitNotificationService {
             groupData.id
           }?groupName=${encodeURIComponent(groupData.name)}`,
         },
-        icon: '💰',
         priority: 'high',
       });
     } catch (error) {
@@ -82,7 +81,7 @@ class SplitNotificationService {
       }
       await this.notificationService.sendNotificationToUsers(usersToNotify, {
         type: 'split_updated',
-        title: 'Split Updated! ✏️',
+        title: 'Split Updated!',
         body: `${updaterName} updated the split "${splitData.title}" in ${groupData.name}`,
         data: {
           type: 'split_updated',
@@ -97,7 +96,6 @@ class SplitNotificationService {
             groupData.id
           }?groupName=${encodeURIComponent(groupData.name)}`,
         },
-        icon: '✏️',
         priority: 'normal',
       });
     } catch (error) {
@@ -119,7 +117,7 @@ class SplitNotificationService {
       }
       await this.notificationService.sendNotificationToUsers(usersToNotify, {
         type: 'split_deleted',
-        title: 'Split Deleted! 🗑️',
+        title: 'Split Deleted!',
         body: `${deleterName} deleted the split "${splitData.title}" from ${groupData.name}`,
         data: {
           type: 'split_deleted',
@@ -133,7 +131,6 @@ class SplitNotificationService {
             groupData.id
           }?groupName=${encodeURIComponent(groupData.name)}`,
         },
-        icon: '🗑️',
         priority: 'high',
       });
     } catch (error) {
@@ -149,7 +146,7 @@ class SplitNotificationService {
     try {
       await this.notificationService.sendNotificationToUsers([inviteeEmail], {
         type: 'split_invite',
-        title: "You're Invited to a Split Group! 🎉",
+        title: "You're Invited to a Split Group!",
         body: `${inviterName} invited you to join "${groupData.name}" split group`,
         data: {
           type: 'split_invite',
@@ -160,7 +157,6 @@ class SplitNotificationService {
           inviteeEmail,
           url: 'trackaexpense://split/invitations',
         },
-        icon: '🎉',
         priority: 'high',
       });
     } catch (error) {
@@ -181,7 +177,7 @@ class SplitNotificationService {
       }
       await this.notificationService.sendNotificationToUsers(usersToNotify, {
         type: 'user_joined_group',
-        title: 'New Member Joined! 👋',
+        title: 'New Member Joined!',
         body: `${joinerName} joined "${groupData.name}" split group`,
         data: {
           type: 'user_joined_group',
@@ -192,7 +188,6 @@ class SplitNotificationService {
             groupData.id
           }?groupName=${encodeURIComponent(groupData.name)}`,
         },
-        icon: '👋',
         priority: 'normal',
       });
     } catch (error) {
@@ -213,7 +208,7 @@ class SplitNotificationService {
       }
       await this.notificationService.sendNotificationToUsers(usersToNotify, {
         type: 'user_left_group',
-        title: 'Member Left Group 👋',
+        title: 'Member Left Group',
         body: `${leaverName} left "${groupData.name}" split group`,
         data: {
           type: 'user_left_group',
@@ -224,7 +219,6 @@ class SplitNotificationService {
             groupData.id
           }?groupName=${encodeURIComponent(groupData.name)}`,
         },
-        icon: '👋',
         priority: 'normal',
       });
     } catch (error) {
@@ -246,7 +240,7 @@ class SplitNotificationService {
       }
       await this.notificationService.sendNotificationToUsers(usersToNotify, {
         type: 'settlement_made',
-        title: 'Settlement Made! ✅',
+        title: 'Settlement Made!',
         body: `${settlerName} settled up ₹${settlementData.amount} in "${groupData.name}"`,
         data: {
           type: 'settlement_made',
@@ -259,7 +253,6 @@ class SplitNotificationService {
             groupData.id
           }?groupName=${encodeURIComponent(groupData.name)}`,
         },
-        icon: '✅',
         priority: 'high',
       });
     } catch (error) {
@@ -278,7 +271,7 @@ class SplitNotificationService {
       }
       await this.notificationService.sendNotificationToUsers(pendingInvites, {
         type: 'group_created',
-        title: 'New Split Group Created! 🎉',
+        title: 'New Split Group Created!',
         body: `${creatorName} created "${groupData.name}" split group and invited you`,
         data: {
           type: 'group_created',
@@ -288,7 +281,6 @@ class SplitNotificationService {
           creatorName,
           url: 'trackaexpense://split/invitations',
         },
-        icon: '🎉',
         priority: 'high',
       });
     } catch (error) {
@@ -310,7 +302,7 @@ class SplitNotificationService {
       }
       await this.notificationService.sendNotificationToUsers(usersToNotify, {
         type: 'group_updated',
-        title: 'Group Updated! ✏️',
+        title: 'Group Updated!',
         body: `${updaterName} updated "${groupData.name}" split group`,
         data: {
           type: 'group_updated',
@@ -322,7 +314,6 @@ class SplitNotificationService {
             groupData.id
           }?groupName=${encodeURIComponent(groupData.name)}`,
         },
-        icon: '✏️',
         priority: 'normal',
       });
     } catch (error) {
@@ -343,7 +334,7 @@ class SplitNotificationService {
       }
       await this.notificationService.sendNotificationToUsers(usersToNotify, {
         type: 'group_deleted',
-        title: 'Group Deleted! 🗑️',
+        title: 'Group Deleted!',
         body: `${deleterName} deleted "${groupData.name}" split group`,
         data: {
           type: 'group_deleted',
@@ -352,7 +343,6 @@ class SplitNotificationService {
           deleterName,
           url: 'trackaexpense://split',
         },
-        icon: '🗑️',
         priority: 'normal',
       });
     } catch (error) {
@@ -387,7 +377,7 @@ class SplitNotificationService {
       });
       await this.notificationService.sendNotificationToUsers([borrower.email], {
         type: 'payment_reminder',
-        title: 'Payment Reminder 💸',
+        title: 'Payment Reminder',
         body: `${lender.name} is reminding you to pay ${amount} for "${group.name}"`,
         data: {
           type: 'payment_reminder',
@@ -399,7 +389,6 @@ class SplitNotificationService {
             group.id
           }?groupName=${encodeURIComponent(group.name)}`,
         },
-        icon: '💸',
         priority: 'high',
       });
       return {success: true};
