@@ -1,9 +1,12 @@
 import React from 'react';
-import {View, Text, TouchableOpacity, StyleSheet, Platform} from 'react-native';
+import {View, Text, TouchableOpacity} from 'react-native';
 import {Modal, Portal} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {pickImageFromCamera, pickImageFromLibrary} from '../utils/imagePicker';
-import {PRIMARY_COLOR, EXPENSE_COLOR} from '../constants/theme';
+import {useTheme} from '../theme';
+
+// The Paper Modal draws its own container; the card inside carries the colours.
+const SHEET_CONTAINER = {margin: 20, backgroundColor: 'transparent'} as const;
 
 interface ImagePickerModalProps {
   visible: boolean;
@@ -16,6 +19,8 @@ const ImagePickerModal = ({
   onDismiss,
   onImageSelected,
 }: ImagePickerModalProps) => {
+  const {colors} = useTheme();
+
   const handleTakePhoto = async () => {
     const uri = await pickImageFromCamera();
     if (uri) {
@@ -36,95 +41,57 @@ const ImagePickerModal = ({
     <Portal>
       <Modal
         visible={visible}
-        contentContainerStyle={styles.container}
+        contentContainerStyle={SHEET_CONTAINER}
         onDismiss={onDismiss}>
-        <View style={styles.header}>
-          <MaterialCommunityIcons
-            name="camera"
-            size={32}
-            color={PRIMARY_COLOR}
-          />
-          <Text style={styles.title}>Add Receipt Image</Text>
+        <View className="rounded-2xl bg-surface p-5 shadow-lg">
+          <View className="mb-5 items-center gap-2">
+            <MaterialCommunityIcons
+              name="camera"
+              size={32}
+              color={colors.primary}
+            />
+            <Text
+              accessibilityRole="header"
+              className="font-sans-bold text-lg text-text">
+              Add Receipt Image
+            </Text>
+          </View>
+          <TouchableOpacity
+            className="mb-2.5 flex-row items-center gap-3 rounded-[10px] border border-border p-3.5"
+            accessibilityRole="button"
+            onPress={handleTakePhoto}>
+            <MaterialCommunityIcons
+              name="camera"
+              size={24}
+              color={colors.primary}
+            />
+            <Text className="font-sans text-base text-text">Take Photo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            className="mb-2.5 flex-row items-center gap-3 rounded-[10px] border border-border p-3.5"
+            accessibilityRole="button"
+            onPress={handleChooseFromLibrary}>
+            <MaterialCommunityIcons
+              name="image-multiple"
+              size={24}
+              color={colors.primary}
+            />
+            <Text className="font-sans text-base text-text">
+              Choose from Gallery
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            className="mb-2.5 mt-1 flex-row items-center justify-center gap-3 rounded-[10px] border border-expense p-3.5"
+            accessibilityRole="button"
+            onPress={onDismiss}>
+            <Text className="font-sans-bold text-base text-expense-text">
+              Cancel
+            </Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.button} onPress={handleTakePhoto}>
-          <MaterialCommunityIcons
-            name="camera"
-            size={24}
-            color={PRIMARY_COLOR}
-          />
-          <Text style={styles.buttonText}>Take Photo</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleChooseFromLibrary}>
-          <MaterialCommunityIcons
-            name="image-multiple"
-            size={24}
-            color={PRIMARY_COLOR}
-          />
-          <Text style={styles.buttonText}>Choose from Gallery</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.cancelButton]}
-          onPress={onDismiss}>
-          <Text style={styles.cancelText}>Cancel</Text>
-        </TouchableOpacity>
       </Modal>
     </Portal>
   );
 };
 
 export default ImagePickerModal;
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: 'white',
-    margin: 20,
-    borderRadius: 16,
-    padding: 20,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 4},
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-      },
-      android: {elevation: 8},
-    }),
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 20,
-    gap: 8,
-  },
-  title: {
-    fontSize: 18,
-    fontFamily: 'Lato-Bold',
-    color: '#333',
-  },
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    marginBottom: 10,
-    gap: 12,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontFamily: 'Lato-Regular',
-    color: '#333',
-  },
-  cancelButton: {
-    borderColor: EXPENSE_COLOR,
-    justifyContent: 'center',
-    marginTop: 4,
-  },
-  cancelText: {
-    fontSize: 16,
-    fontFamily: 'Lato-Bold',
-    color: EXPENSE_COLOR,
-  },
-});

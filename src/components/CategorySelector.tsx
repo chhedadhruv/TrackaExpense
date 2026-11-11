@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
-import {View, Text, TouchableOpacity, Modal, StyleSheet} from 'react-native';
+import {View, Text, TouchableOpacity, Modal, ScrollView} from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import {PRIMARY_COLOR} from '../constants/theme';
+import {useTheme} from '../theme';
 import type {Category} from '../types';
 import {ModalSnackbar} from './Snackbar';
 
@@ -22,15 +22,18 @@ const CategorySelector = ({
   placeholder = 'Select category',
   label,
 }: CategorySelectorProps) => {
+  const {colors} = useTheme();
   const [visible, setVisible] = useState(false);
 
   const selected = categories.find(c => c.value === selectedCategory);
 
   return (
-    <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+    <View className="mb-2">
+      {label && (
+        <Text className="mb-1.5 font-sans-bold text-sm text-text">{label}</Text>
+      )}
       <TouchableOpacity
-        style={styles.triggerButton}
+        className="min-h-[48px] flex-row items-center rounded-[10px] border border-border bg-surface px-3.5 py-[13px]"
         onPress={() => !disabled && setVisible(true)}
         disabled={disabled}
         accessibilityRole="button"
@@ -40,18 +43,22 @@ const CategorySelector = ({
             <MaterialCommunityIcons
               name={selected.icon}
               size={20}
-              color={PRIMARY_COLOR}
+              color={colors.primary}
             />
-            <Text style={styles.triggerText}>{selected.label}</Text>
+            <Text className="ml-2.5 flex-1 font-sans text-[15px] text-text">
+              {selected.label}
+            </Text>
           </>
         ) : (
-          <Text style={styles.triggerPlaceholder}>{placeholder}</Text>
+          <Text className="flex-1 font-sans text-[15px] text-text-placeholder">
+            {placeholder}
+          </Text>
         )}
         <MaterialCommunityIcons
           name="chevron-down"
           size={20}
-          color="#999"
-          style={styles.chevron}
+          color={colors.textPlaceholder}
+          className="ml-1"
         />
       </TouchableOpacity>
 
@@ -61,43 +68,59 @@ const CategorySelector = ({
         animationType="slide"
         onRequestClose={() => setVisible(false)}>
         <TouchableOpacity
-          style={styles.overlay}
+          className="flex-1 justify-end bg-overlay"
           activeOpacity={1}
           onPress={() => setVisible(false)}>
-          <View style={styles.sheet}>
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Select Category</Text>
-              <TouchableOpacity onPress={() => setVisible(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#666" />
+          <View className="max-h-[70%] rounded-t-[20px] bg-surface px-4 pb-8">
+            <View className="mb-3 flex-row items-center justify-between border-b border-divider py-4">
+              <Text
+                accessibilityRole="header"
+                className="font-sans-bold text-[17px] text-text">
+                Select Category
+              </Text>
+              <TouchableOpacity
+                onPress={() => setVisible(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Close">
+                <MaterialCommunityIcons
+                  name="close"
+                  size={24}
+                  color={colors.textSecondary}
+                />
               </TouchableOpacity>
             </View>
-            <View style={styles.grid}>
-              {categories.map(cat => {
-                const isSelected = selectedCategory === cat.value;
-                return (
-                  <TouchableOpacity
-                    key={cat.value}
-                    style={[styles.chip, isSelected && styles.chipSelected]}
-                    onPress={() => {
-                      onSelect(cat.value);
-                      setVisible(false);
-                    }}>
-                    <MaterialCommunityIcons
-                      name={cat.icon}
-                      size={22}
-                      color={isSelected ? '#FFFFFF' : PRIMARY_COLOR}
-                    />
-                    <Text
-                      style={[
-                        styles.chipText,
-                        isSelected && styles.chipTextSelected,
-                      ]}>
-                      {cat.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View className="flex-row flex-wrap gap-2.5">
+                {categories.map(cat => {
+                  const isSelected = selectedCategory === cat.value;
+                  return (
+                    <TouchableOpacity
+                      key={cat.value}
+                      accessibilityRole="radio"
+                      accessibilityState={{selected: isSelected}}
+                      className={`flex-row items-center gap-1.5 rounded-full border-[1.5px] border-primary-fill px-3.5 py-2.5 ${
+                        isSelected ? 'bg-primary-fill' : 'bg-surface'
+                      }`}
+                      onPress={() => {
+                        onSelect(cat.value);
+                        setVisible(false);
+                      }}>
+                      <MaterialCommunityIcons
+                        name={cat.icon}
+                        size={22}
+                        color={isSelected ? colors.onPrimary : colors.primary}
+                      />
+                      <Text
+                        className={`font-sans-bold text-[13px] ${
+                          isSelected ? 'text-on-primary' : 'text-primary'
+                        }`}>
+                        {cat.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
           </View>
         </TouchableOpacity>
         <ModalSnackbar />
@@ -107,97 +130,3 @@ const CategorySelector = ({
 };
 
 export default CategorySelector;
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontFamily: 'Lato-Bold',
-    color: '#333',
-    marginBottom: 6,
-  },
-  triggerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    backgroundColor: '#FFFFFF',
-    minHeight: 48,
-  },
-  triggerText: {
-    flex: 1,
-    marginLeft: 10,
-    fontSize: 15,
-    color: '#333',
-    fontFamily: 'Lato-Regular',
-  },
-  triggerPlaceholder: {
-    flex: 1,
-    fontSize: 15,
-    color: '#999',
-    fontFamily: 'Lato-Regular',
-  },
-  chevron: {
-    marginLeft: 4,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 16,
-    paddingBottom: 32,
-    maxHeight: '70%',
-  },
-  sheetHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    marginBottom: 12,
-  },
-  sheetTitle: {
-    fontSize: 17,
-    fontFamily: 'Lato-Bold',
-    color: '#333',
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: PRIMARY_COLOR,
-    backgroundColor: '#FFFFFF',
-    gap: 6,
-  },
-  chipSelected: {
-    backgroundColor: PRIMARY_COLOR,
-    borderColor: PRIMARY_COLOR,
-  },
-  chipText: {
-    fontSize: 13,
-    color: PRIMARY_COLOR,
-    fontFamily: 'Lato-Bold',
-  },
-  chipTextSelected: {
-    color: '#FFFFFF',
-  },
-});

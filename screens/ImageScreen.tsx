@@ -1,26 +1,46 @@
 import React, {useState} from 'react';
-import {View, Text, ImageBackground, ActivityIndicator, StyleSheet, SafeAreaView} from 'react-native';
-import {PRIMARY_COLOR} from '../src/constants/theme';
+import {
+  View,
+  Text,
+  ImageBackground,
+  ActivityIndicator,
+  SafeAreaView,
+} from 'react-native';
+import {useTheme} from '../src/theme';
 
 const ImageScreen = ({route}: {route: any}) => {
+  const {colors} = useTheme();
   const {imageUrl} = route.params;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   return (
-    <SafeAreaView style={{flex: 1}}>
-      <View style={{flex: 1}}>
-        {loading && !error && <ActivityIndicator size="large" color={PRIMARY_COLOR} style={styles.loadingIndicator} />}
+    <SafeAreaView className="flex-1 bg-background">
+      <View className="flex-1">
+        {loading && !error && (
+          <ActivityIndicator
+            size="large"
+            color={colors.primary}
+            className="absolute left-1/2 top-1/2 -ml-[18px] -mt-[18px]"
+          />
+        )}
         {error ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>Failed to load image</Text>
+          <View className="flex-1 items-center justify-center">
+            <Text className="text-center font-sans text-lg text-expense-text">
+              Failed to load image
+            </Text>
           </View>
         ) : (
           <ImageBackground
             source={{uri: imageUrl}}
-            style={{width: '100%', height: '100%'}}
+            className="h-full w-full"
+            resizeMode="contain"
+            accessibilityLabel="Receipt image"
             onLoad={() => setLoading(false)}
-            onError={() => { setError(true); setLoading(false); }}
+            onError={() => {
+              setError(true);
+              setLoading(false);
+            }}
           />
         )}
       </View>
@@ -29,9 +49,3 @@ const ImageScreen = ({route}: {route: any}) => {
 };
 
 export default ImageScreen;
-
-const styles = StyleSheet.create({
-  loadingIndicator: {position: 'absolute', top: '50%', left: '50%', transform: [{translateX: -25}, {translateY: -25}]},
-  errorContainer: {flex: 1, justifyContent: 'center', alignItems: 'center'},
-  errorText: {fontSize: 18, color: '#F64E4E', textAlign: 'center'},
-});
