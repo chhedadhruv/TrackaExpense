@@ -3,6 +3,7 @@ import {
   DEFAULT_DURATION,
   durationFor,
   getSnackbarState,
+  registerSnackbarModal,
   resetSnackbarForTests,
   setSnackbarBottomOffset,
   snackbar,
@@ -116,5 +117,22 @@ describe('snackbarStore', () => {
     expect(getSnackbarState().bottomOffset).toBe(0);
     setSnackbarBottomOffset(-5);
     expect(getSnackbarState().bottomOffset).toBe(0);
+  });
+});
+
+describe('snackbar modal registration', () => {
+  beforeEach(() => {
+    resetSnackbarForTests();
+  });
+
+  it('counts open modals and releases each only once', () => {
+    const releaseA = registerSnackbarModal();
+    const releaseB = registerSnackbarModal();
+    expect(getSnackbarState().modalDepth).toBe(2);
+    releaseA();
+    releaseA();
+    expect(getSnackbarState().modalDepth).toBe(1);
+    releaseB();
+    expect(getSnackbarState().modalDepth).toBe(0);
   });
 });
