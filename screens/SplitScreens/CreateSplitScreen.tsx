@@ -65,6 +65,7 @@ import {
 import {tryToMinor} from '../../src/utils/money';
 import {lookupUsersByEmail} from '../../src/services/UserLookup';
 import {snackbar} from '../../src/utils/snackbarStore';
+import {ModalSnackbar} from '../../src/components/Snackbar';
 
 type SplitType = 'equal' | 'percentage';
 type RecurringFrequency = 'weekly' | 'monthly';
@@ -1443,6 +1444,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                 </View>
               </View>
             </TouchableOpacity>
+            <ModalSnackbar />
           </Modal>
 
           <Modal
@@ -1485,6 +1487,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
+            <ModalSnackbar />
           </Modal>
         </KeyboardAwareScrollView>
       </View>

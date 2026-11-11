@@ -45,6 +45,7 @@ import {
 import type {SavingsGoal} from '../src/types';
 import type {McIconName} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
+import {ModalSnackbar} from '../src/components/Snackbar';
 
 const SUCCESS_COLOR = '#25B07F';
 const ORANGE_COLOR = '#F5A623';
@@ -1527,6 +1528,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
               </View>
             </View>
           </View>
+          <ModalSnackbar />
         </Modal>
 
         {/* Reminder Frequency Modal */}
@@ -1599,6 +1601,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
               </TouchableOpacity>
             </View>
           </View>
+          <ModalSnackbar />
         </Modal>
 
         <DatePickerModal
@@ -1664,6 +1667,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
               </View>
             </View>
           </View>
+          <ModalSnackbar />
         </Modal>
       </View>
     </SafeAreaProvider>

@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -45,6 +45,7 @@ import CategorySelector from '../src/components/CategorySelector';
 import AmountInput from '../src/components/AmountInput';
 import DateInput from '../src/components/DateInput';
 import ImagePickerModal from '../src/components/ImagePickerModal';
+import {snackbar} from '../src/utils/snackbarStore';
 
 const EditTransactionScreen = ({
   route,
@@ -86,17 +87,6 @@ const EditTransactionScreen = ({
   const [transferred, setTransferred] = useState(0);
   const [imagePickerVisible, setImagePickerVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const navTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(
-    () => () => {
-      if (navTimeoutRef.current) {
-        clearTimeout(navTimeoutRef.current);
-      }
-    },
-    [],
-  );
 
   const getUid = (): string => getAuth().currentUser!.uid;
 
@@ -196,11 +186,8 @@ const EditTransactionScreen = ({
         amount_changed:
           parseFloat(amount) !== parseFloat(transaction.amount.toString()),
       });
-      setSuccessMessage('Transaction updated successfully!');
-      navTimeoutRef.current = setTimeout(
-        () => navigation.navigate('Home'),
-        1500,
-      );
+      snackbar.success('Transaction updated');
+      navigation.navigate('Home');
     } catch (e) {
       reportError(e as Error);
       setErrorMessage(
@@ -268,16 +255,6 @@ const EditTransactionScreen = ({
                     color="#C62828"
                   />
                   <Text style={styles.errorMessage}>{errorMessage}</Text>
-                </View>
-              )}
-              {successMessage && (
-                <View style={styles.successContainer}>
-                  <MaterialCommunityIcons
-                    name="check-circle"
-                    size={20}
-                    color={accentColor}
-                  />
-                  <Text style={styles.successMessage}>{successMessage}</Text>
                 </View>
               )}
 
@@ -538,23 +515,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Lato-Regular',
     marginLeft: 10,
     flex: 1,
-  },
-  successContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF3E0',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: EXPENSE_COLOR,
-  },
-  successMessage: {
-    fontSize: 14,
-    fontFamily: 'Lato-Regular',
-    marginLeft: 10,
-    flex: 1,
-    color: '#333',
   },
   inputContainer: {marginBottom: 20},
   inputLabel: {

@@ -41,6 +41,7 @@ import {
 } from '../src/constants/theme';
 import type {UserDocument} from '../src/types';
 import {snackbar} from '../src/utils/snackbarStore';
+import {ModalSnackbar} from '../src/components/Snackbar';
 
 const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
   const {logout} = useContext(AuthContext);
@@ -558,6 +559,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
             </ScrollView>
           </View>
         </View>
+        <ModalSnackbar />
       </Modal>
     </SafeAreaView>
   );

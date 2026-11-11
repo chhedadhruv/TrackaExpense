@@ -1,5 +1,5 @@
 import {View, StyleSheet, TextInput, Text, Platform} from 'react-native';
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect} from 'react';
 import {Card, ActivityIndicator} from 'react-native-paper';
 import {getAuth} from '@react-native-firebase/auth';
 import {
@@ -29,6 +29,7 @@ import {balanceEffect, transactionMoneyFields} from '../src/utils/amounts';
 import CategorySelector from '../src/components/CategorySelector';
 import AmountInput from '../src/components/AmountInput';
 import DateInput from '../src/components/DateInput';
+import {snackbar} from '../src/utils/snackbarStore';
 
 const AddIncome = ({navigation}: {navigation: any}) => {
   const {currency} = useCurrency();
@@ -50,17 +51,6 @@ const AddIncome = ({navigation}: {navigation: any}) => {
   } = useTransactionForm();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const navTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(
-    () => () => {
-      if (navTimeoutRef.current) {
-        clearTimeout(navTimeoutRef.current);
-      }
-    },
-    [],
-  );
 
   useEffect(() => {
     if (title.trim().length < 3 || category) {
@@ -110,8 +100,8 @@ const AddIncome = ({navigation}: {navigation: any}) => {
         amount_range: AnalyticsService.getAmountRange(parseFloat(amount)),
         category: category ?? 'uncategorized',
       });
-      setSuccessMessage('Income added successfully!');
-      navTimeoutRef.current = setTimeout(() => navigation.goBack(), 1500);
+      snackbar.success('Income added');
+      navigation.goBack();
     } catch (e) {
       reportError(e as Error);
       setErrorMessage(
@@ -122,7 +112,7 @@ const AddIncome = ({navigation}: {navigation: any}) => {
     }
   };
 
-  if (isSubmitting && !successMessage) {
+  if (isSubmitting) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={PRIMARY_COLOR} />
@@ -167,16 +157,6 @@ const AddIncome = ({navigation}: {navigation: any}) => {
                     color="#C62828"
                   />
                   <Text style={styles.errorMessage}>{errorMessage}</Text>
-                </View>
-              )}
-              {successMessage && (
-                <View style={styles.successContainer}>
-                  <MaterialCommunityIcons
-                    name="check-circle"
-                    size={20}
-                    color={INCOME_COLOR}
-                  />
-                  <Text style={styles.successMessage}>{successMessage}</Text>
                 </View>
               )}
 
@@ -352,23 +332,6 @@ const styles = StyleSheet.create({
   },
   errorMessage: {
     color: '#C62828',
-    fontSize: 14,
-    fontFamily: 'Lato-Regular',
-    marginLeft: 10,
-    flex: 1,
-  },
-  successContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8F5E8',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: INCOME_COLOR,
-  },
-  successMessage: {
-    color: INCOME_COLOR,
     fontSize: 14,
     fontFamily: 'Lato-Regular',
     marginLeft: 10,
