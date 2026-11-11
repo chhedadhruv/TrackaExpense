@@ -6,11 +6,10 @@ export type ThemeMode = 'system' | 'light' | 'dark';
 export const THEME_MODES: readonly ThemeMode[] = ['system', 'light', 'dark'];
 
 /**
- * Light until every screen has been converted to the tokens: with 'system' a phone in dark mode
- * would show a dark shell around light screens. Change this to 'system' when the Phase 3 screens
- * are done (the setting offers all three either way).
+ * Follow the phone until the user picks Light or Dark in the setting. Every screen now reads the
+ * theme tokens, so a phone in dark mode no longer shows a dark shell around light screens.
  */
-export const DEFAULT_THEME_MODE: ThemeMode = 'light';
+export const DEFAULT_THEME_MODE: ThemeMode = 'system';
 
 export const THEME_STORAGE_KEY = 'theme.mode';
 
