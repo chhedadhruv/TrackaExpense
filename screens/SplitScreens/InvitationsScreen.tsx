@@ -15,7 +15,7 @@ import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../../src/services/ErrorReporter';
 import * as AnalyticsService from '../../src/services/AnalyticsService';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../../src/constants/theme';
+import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {snackbar} from '../../src/utils/snackbarStore';
 
 interface Invitation {
@@ -29,6 +29,8 @@ interface Invitation {
 }
 
 const InvitationsScreen = () => {
+  const {colors} = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [loading, setLoading] = useState(true);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const currentUser = getAuth().currentUser;
@@ -92,10 +94,7 @@ const InvitationsScreen = () => {
           <View style={styles.placeholderContainer}>
             <Text style={styles.placeholderTitle}>Invitations</Text>
             {loading ? (
-              <ActivityIndicator
-                style={{marginTop: 20}}
-                color={PRIMARY_COLOR}
-              />
+              <ActivityIndicator style={styles.loader} color={colors.primary} />
             ) : invitations.length === 0 ? (
               <Text style={styles.placeholderSubtitle}>No invitations yet</Text>
             ) : (
@@ -114,7 +113,7 @@ const InvitationsScreen = () => {
                           <MaterialCommunityIcons
                             name="account-group"
                             size={22}
-                            color="#fff"
+                            color={colors.onPrimary}
                           />
                         </View>
                         <View style={styles.inviteTextContainer}>
@@ -134,7 +133,7 @@ const InvitationsScreen = () => {
                           <MaterialCommunityIcons
                             name="check"
                             size={18}
-                            color="#fff"
+                            color={colors.onPrimary}
                           />
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -143,7 +142,7 @@ const InvitationsScreen = () => {
                           <MaterialCommunityIcons
                             name="close"
                             size={18}
-                            color="#FF3B30"
+                            color={colors.expense}
                           />
                         </TouchableOpacity>
                       </View>
@@ -161,58 +160,64 @@ const InvitationsScreen = () => {
 
 export default InvitationsScreen;
 
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  scrollView: {flex: 1},
-  placeholderContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 40,
-  },
-  listContainer: {width: '100%', paddingHorizontal: 16, marginTop: 12},
-  inviteCard: {backgroundColor: '#FFFFFF', borderRadius: 12, marginBottom: 12},
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-  inviteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-  },
-  inviteLeft: {flexDirection: 'row', alignItems: 'center', flex: 1},
-  inviteIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: PRIMARY_COLOR,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  inviteTextContainer: {marginLeft: 12, flex: 1},
-  inviteTitle: {fontSize: 16, fontWeight: '600', color: PRIMARY_COLOR},
-  inviteSubtitle: {fontSize: 12, color: '#666', marginTop: 2},
-  inviteActions: {flexDirection: 'row', alignItems: 'center', marginLeft: 8},
-  acceptBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: PRIMARY_COLOR,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: 8,
-  },
-  declineBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFF0F0',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-  },
-  placeholderTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    marginBottom: 8,
-  },
-  placeholderSubtitle: {fontSize: 14, color: '#666'},
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {flex: 1, backgroundColor: colors.background},
+    scrollView: {flex: 1},
+    loader: {marginTop: 20},
+    placeholderContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: 40,
+    },
+    listContainer: {width: '100%', paddingHorizontal: 16, marginTop: 12},
+    inviteCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      marginBottom: 12,
+    },
+    cardAndroid: {borderWidth: 1, borderColor: colors.cardBorder},
+    inviteRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 16,
+    },
+    inviteLeft: {flexDirection: 'row', alignItems: 'center', flex: 1},
+    inviteIconWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.primaryFill,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    inviteTextContainer: {marginLeft: 12, flex: 1},
+    inviteTitle: {fontSize: 16, fontWeight: '600', color: colors.primary},
+    inviteSubtitle: {fontSize: 12, color: colors.textSecondary, marginTop: 2},
+    inviteActions: {flexDirection: 'row', alignItems: 'center', marginLeft: 8},
+    acceptBtn: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primaryFill,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      marginRight: 8,
+    },
+    declineBtn: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.expenseSoft,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+    },
+    placeholderTitle: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: colors.primary,
+      marginBottom: 8,
+    },
+    placeholderSubtitle: {fontSize: 14, color: colors.textSecondary},
+  });

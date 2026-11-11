@@ -27,12 +27,7 @@ import SplitNotificationService from '../../services/SplitNotificationService';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
 import {useCurrency} from '../../utils/CurrencyUtil';
-import {
-  PRIMARY_COLOR,
-  BACKGROUND_COLOR,
-  INCOME_COLOR as SUCCESS_COLOR,
-  EXPENSE_COLOR,
-} from '../../src/constants/theme';
+import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {formatInputAmount} from '../../src/utils/formatters';
 import {toMajorNumber, tryToMinor} from '../../src/utils/money';
 import {snackbar} from '../../src/utils/snackbarStore';
@@ -58,6 +53,8 @@ interface Group {
 
 const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
   const {currency, formatAmount} = useCurrency();
+  const {colors} = useTheme();
+  const styles = useThemedStyles(createStyles);
   const {group, lendingDetails, preselect} = route.params as {
     group: Group;
     lendingDetails?: LendingDetail[];
@@ -265,8 +262,8 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
                     style={styles.userAvatar}
                     bgColor={
                       selectedUser?.email === u.email
-                        ? PRIMARY_COLOR
-                        : '#CBD3EE'
+                        ? colors.primaryFill
+                        : colors.iconMuted
                     }
                   />
                   <Text
@@ -281,7 +278,7 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
                     <MaterialCommunityIcons
                       name="check-circle"
                       size={20}
-                      color={PRIMARY_COLOR}
+                      color={colors.primary}
                       style={styles.checkIcon}
                     />
                   )}
@@ -305,7 +302,7 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
               <MaterialCommunityIcons
                 name="handshake"
                 size={32}
-                color={SUCCESS_COLOR}
+                color={colors.success}
               />
               <Text style={styles.headerTitle}>Settle Up</Text>
             </View>
@@ -402,7 +399,7 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
                 onChangeText={text => setAmount(text.replace(/,/g, ''))}
                 keyboardType="numeric"
                 placeholder={`${currency.symbol}0`}
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textPlaceholder}
               />
             </View>
           </Card>
@@ -419,7 +416,7 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
                 value={note}
                 onChangeText={setNote}
                 placeholder="Add a note for this settlement"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textPlaceholder}
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
@@ -445,7 +442,7 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
                 <Switch
                   value={includeInTransactions}
                   onValueChange={setIncludeInTransactions}
-                  color={PRIMARY_COLOR}
+                  color={colors.primaryFill}
                 />
               </View>
             </View>
@@ -464,18 +461,18 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
                     <UserAvatar
                       size={40}
                       name={selectedBorrower.name}
-                      bgColor={EXPENSE_COLOR}
+                      bgColor={colors.expenseFill}
                     />
                     <MaterialCommunityIcons
                       name="arrow-right"
                       size={24}
-                      color="#666"
+                      color={colors.textSecondary}
                       style={styles.arrowIcon}
                     />
                     <UserAvatar
                       size={40}
                       name={selectedLender.name}
-                      bgColor={SUCCESS_COLOR}
+                      bgColor={colors.incomeFill}
                     />
                   </View>
                   <Text style={styles.summaryText}>
@@ -500,7 +497,7 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
               <MaterialCommunityIcons
                 name="handshake"
                 size={20}
-                color="#FFFFFF"
+                color={colors.onPrimary}
               />
               <Text style={styles.settleButtonText}>
                 {loading ? 'Processing...' : 'Settle Up'}
@@ -515,194 +512,211 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
 
 export default SettleUpScreen;
 
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  scrollView: {flex: 1},
-  headerSection: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 30,
-    paddingBottom: 20,
-  },
-  headerTitleRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 8},
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: SUCCESS_COLOR,
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginLeft: 12,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  sectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginHorizontal: 20,
-    marginBottom: 15,
-  },
-  cardContent: {padding: 20},
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 15,
-    fontFamily: 'Lato-Bold',
-  },
-  userList: {flexDirection: 'row', paddingVertical: 8},
-  userItem: {
-    alignItems: 'center',
-    marginRight: 16,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    backgroundColor: '#F8F9FA',
-    width: 90,
-    position: 'relative',
-  },
-  selectedUserItem: {
-    backgroundColor: PRIMARY_COLOR + '15',
-    borderColor: PRIMARY_COLOR,
-    borderWidth: 2,
-  },
-  userAvatar: {marginBottom: 8},
-  userName: {
-    fontSize: 12,
-    textAlign: 'center',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-    fontWeight: '500',
-  },
-  selectedUserName: {
-    color: PRIMARY_COLOR,
-    fontWeight: '600',
-    fontFamily: 'Lato-Bold',
-  },
-  checkIcon: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 2,
-    elevation: Platform.OS === 'android' ? 0 : 1,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-  },
-  textInput: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-  },
-  multilineInput: {height: 80, paddingTop: 12},
-  summaryContent: {alignItems: 'center'},
-  summaryRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 15},
-  summaryText: {
-    fontSize: 16,
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  arrowIcon: {marginHorizontal: 15},
-  buttonContainer: {paddingHorizontal: 20, paddingBottom: 30},
-  settleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: SUCCESS_COLOR,
-    paddingVertical: 15,
-    borderRadius: 12,
-    elevation: Platform.OS === 'android' ? 0 : 1,
-    shadowColor: SUCCESS_COLOR,
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-  },
-  disabledButton: {backgroundColor: '#CBD3EE', elevation: 0, shadowOpacity: 0},
-  settleButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-    fontFamily: 'Lato-Bold',
-  },
-  characterCount: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-    textAlign: 'right',
-    fontFamily: 'Lato-Regular',
-  },
-  suggestionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 10,
-  },
-  suggestionCardActive: {
-    backgroundColor: PRIMARY_COLOR + '15',
-    borderColor: PRIMARY_COLOR,
-    borderWidth: 2,
-  },
-  suggestionLeft: {flex: 1, gap: 4},
-  suggestionText: {fontSize: 14, color: '#2C2C2C', fontFamily: 'Lato-Regular'},
-  suggestionTextActive: {color: PRIMARY_COLOR, fontFamily: 'Lato-Bold'},
-  suggestionAmount: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: EXPENSE_COLOR,
-    fontFamily: 'Lato-Bold',
-    marginLeft: 12,
-  },
-  suggestionAmountActive: {color: PRIMARY_COLOR},
-  youPayBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: EXPENSE_COLOR + '20',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  youPayText: {
-    fontSize: 11,
-    color: EXPENSE_COLOR,
-    fontFamily: 'Lato-Bold',
-    fontWeight: '700',
-  },
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-  toggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  toggleLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  toggleSubtext: {
-    fontSize: 12,
-    color: '#888',
-    fontFamily: 'Lato-Regular',
-    marginTop: 2,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {flex: 1, backgroundColor: colors.background},
+    scrollView: {flex: 1},
+    headerSection: {
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: 30,
+      paddingBottom: 20,
+    },
+    headerTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    headerTitle: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: colors.success,
+      fontFamily: 'Kufam-SemiBoldItalic',
+      marginLeft: 12,
+    },
+    headerSubtitle: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      fontFamily: 'Lato-Regular',
+    },
+    sectionCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      marginHorizontal: 20,
+      marginBottom: 15,
+    },
+    cardContent: {padding: 20},
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.textStrong,
+      marginBottom: 15,
+      fontFamily: 'Lato-Bold',
+    },
+    userList: {flexDirection: 'row', paddingVertical: 8},
+    userItem: {
+      alignItems: 'center',
+      marginRight: 16,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      backgroundColor: colors.surfaceMuted,
+      width: 90,
+      position: 'relative',
+    },
+    selectedUserItem: {
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primary,
+      borderWidth: 2,
+    },
+    userAvatar: {marginBottom: 8},
+    userName: {
+      fontSize: 12,
+      textAlign: 'center',
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+      fontWeight: '500',
+    },
+    selectedUserName: {
+      color: colors.primary,
+      fontWeight: '600',
+      fontFamily: 'Lato-Bold',
+    },
+    checkIcon: {
+      position: 'absolute',
+      top: -5,
+      right: -5,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 2,
+      elevation: Platform.OS === 'android' ? 0 : 1,
+      shadowColor: colors.shadow,
+      shadowOffset: {width: 0, height: 1},
+      shadowOpacity: 0.1,
+      shadowRadius: 1,
+    },
+    textInput: {
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      paddingHorizontal: 15,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+    },
+    multilineInput: {height: 80, paddingTop: 12},
+    summaryContent: {alignItems: 'center'},
+    summaryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 15,
+    },
+    summaryText: {
+      fontSize: 16,
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+      textAlign: 'center',
+      lineHeight: 24,
+    },
+    arrowIcon: {marginHorizontal: 15},
+    buttonContainer: {paddingHorizontal: 20, paddingBottom: 30},
+    settleButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.incomeFill,
+      paddingVertical: 15,
+      borderRadius: 12,
+      elevation: Platform.OS === 'android' ? 0 : 1,
+      shadowColor: colors.incomeFill,
+      shadowOffset: {width: 0, height: 1},
+      shadowOpacity: 0.15,
+      shadowRadius: 2,
+    },
+    disabledButton: {
+      backgroundColor: colors.iconMuted,
+      elevation: 0,
+      shadowOpacity: 0,
+    },
+    settleButtonText: {
+      color: colors.onPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+      marginLeft: 8,
+      fontFamily: 'Lato-Bold',
+    },
+    characterCount: {
+      fontSize: 12,
+      color: colors.textPlaceholder,
+      marginTop: 4,
+      textAlign: 'right',
+      fontFamily: 'Lato-Regular',
+    },
+    suggestionCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      marginBottom: 10,
+    },
+    suggestionCardActive: {
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primary,
+      borderWidth: 2,
+    },
+    suggestionLeft: {flex: 1, gap: 4},
+    suggestionText: {
+      fontSize: 14,
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+    },
+    suggestionTextActive: {color: colors.primary, fontFamily: 'Lato-Bold'},
+    suggestionAmount: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.expenseText,
+      fontFamily: 'Lato-Bold',
+      marginLeft: 12,
+    },
+    suggestionAmountActive: {color: colors.primary},
+    youPayBadge: {
+      alignSelf: 'flex-start',
+      backgroundColor: colors.expenseSoft,
+      borderRadius: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+    },
+    youPayText: {
+      fontSize: 11,
+      color: colors.expenseText,
+      fontFamily: 'Lato-Bold',
+      fontWeight: '700',
+    },
+    cardAndroid: {borderWidth: 1, borderColor: colors.cardBorder},
+    toggleRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    toggleLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textStrong,
+      fontFamily: 'Lato-Bold',
+    },
+    toggleSubtext: {
+      fontSize: 12,
+      color: colors.textMuted,
+      fontFamily: 'Lato-Regular',
+      marginTop: 2,
+    },
+  });

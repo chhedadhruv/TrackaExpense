@@ -19,7 +19,7 @@ import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
 import {useCurrency} from '../../utils/CurrencyUtil';
-import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../../src/constants/theme';
+import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {formatInputAmount} from '../../src/utils/formatters';
 import {transactionMoneyFields} from '../../src/utils/amounts';
 import {snackbar} from '../../src/utils/snackbarStore';
@@ -28,6 +28,8 @@ type Direction = 'iowe' | 'owesme';
 
 const CreateIOUScreen = ({navigation}: {navigation: any}) => {
   const {currency} = useCurrency();
+  const {colors} = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [toEmail, setToEmail] = useState('');
   const [toName] = useState('');
   const [amount, setAmount] = useState('');
@@ -112,7 +114,7 @@ const CreateIOUScreen = ({navigation}: {navigation: any}) => {
               <MaterialCommunityIcons
                 name="handshake"
                 size={32}
-                color={PRIMARY_COLOR}
+                color={colors.primary}
               />
               <Text style={styles.headerTitle}>New IOU</Text>
             </View>
@@ -163,7 +165,7 @@ const CreateIOUScreen = ({navigation}: {navigation: any}) => {
                 <TextInput
                   style={styles.textInput}
                   placeholder="Enter their email address"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textPlaceholder}
                   value={toEmail}
                   onChangeText={setToEmail}
                   keyboardType="email-address"
@@ -179,7 +181,7 @@ const CreateIOUScreen = ({navigation}: {navigation: any}) => {
                   <TextInput
                     style={styles.amountInput}
                     placeholder="0.00"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={colors.textPlaceholder}
                     value={formatInputAmount(amount)}
                     onChangeText={text => setAmount(text.replace(/,/g, ''))}
                     keyboardType="numeric"
@@ -191,7 +193,7 @@ const CreateIOUScreen = ({navigation}: {navigation: any}) => {
                 <TextInput
                   style={[styles.textInput, styles.notesInput]}
                   placeholder="What's this for?"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textPlaceholder}
                   value={notes}
                   onChangeText={setNotes}
                   multiline
@@ -207,14 +209,14 @@ const CreateIOUScreen = ({navigation}: {navigation: any}) => {
               onPress={handleSubmit}
               disabled={loading}>
               {loading ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <ActivityIndicator color={colors.onPrimary} size="small" />
               ) : (
                 <>
                   <Text style={styles.submitButtonText}>Create IOU</Text>
                   <MaterialCommunityIcons
                     name="check"
                     size={20}
-                    color="#FFFFFF"
+                    color={colors.onPrimary}
                   />
                 </>
               )}
@@ -228,112 +230,117 @@ const CreateIOUScreen = ({navigation}: {navigation: any}) => {
 
 export default CreateIOUScreen;
 
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  scrollView: {flex: 1},
-  headerSection: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 30,
-    paddingBottom: 20,
-  },
-  headerTitleRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 8},
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginLeft: 12,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  formCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-  cardContent: {padding: 20},
-  sectionLabel: {
-    fontSize: 14,
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-    marginBottom: 8,
-  },
-  directionRow: {
-    flexDirection: 'row',
-    marginBottom: 20,
-    backgroundColor: '#E8EBF7',
-    borderRadius: 12,
-    padding: 4,
-  },
-  dirBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 10,
-  },
-  dirBtnActive: {backgroundColor: PRIMARY_COLOR},
-  dirBtnText: {fontSize: 13, color: PRIMARY_COLOR, fontFamily: 'Lato-Bold'},
-  dirBtnTextActive: {color: '#FFFFFF'},
-  inputContainer: {marginBottom: 15},
-  inputLabel: {
-    fontSize: 14,
-    color: '#555',
-    fontFamily: 'Lato-Regular',
-    marginBottom: 6,
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: '#E0E4F0',
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 16,
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-    backgroundColor: '#F9FAFF',
-  },
-  notesInput: {minHeight: 70, textAlignVertical: 'top', paddingTop: 10},
-  amountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E4F0',
-    borderRadius: 12,
-    backgroundColor: '#F9FAFF',
-  },
-  currencySymbol: {
-    fontSize: 18,
-    color: PRIMARY_COLOR,
-    paddingLeft: 14,
-    fontFamily: 'Lato-Bold',
-  },
-  amountInput: {
-    flex: 1,
-    padding: 14,
-    fontSize: 16,
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Regular',
-  },
-  buttonContainer: {marginHorizontal: 20, marginBottom: 40},
-  submitButton: {
-    backgroundColor: PRIMARY_COLOR,
-    borderRadius: 16,
-    padding: 18,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    fontFamily: 'Lato-Bold',
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {flex: 1, backgroundColor: colors.background},
+    scrollView: {flex: 1},
+    headerSection: {
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: 30,
+      paddingBottom: 20,
+    },
+    headerTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    headerTitle: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: colors.primary,
+      fontFamily: 'Kufam-SemiBoldItalic',
+      marginLeft: 12,
+    },
+    headerSubtitle: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      fontFamily: 'Lato-Regular',
+    },
+    formCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      marginHorizontal: 20,
+      marginBottom: 20,
+    },
+    cardAndroid: {borderWidth: 1, borderColor: colors.cardBorder},
+    cardContent: {padding: 20},
+    sectionLabel: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      fontFamily: 'Lato-Regular',
+      marginBottom: 8,
+    },
+    directionRow: {
+      flexDirection: 'row',
+      marginBottom: 20,
+      backgroundColor: colors.primarySoft,
+      borderRadius: 12,
+      padding: 4,
+    },
+    dirBtn: {
+      flex: 1,
+      paddingVertical: 10,
+      alignItems: 'center',
+      borderRadius: 10,
+    },
+    dirBtnActive: {backgroundColor: colors.primaryFill},
+    dirBtnText: {fontSize: 13, color: colors.primary, fontFamily: 'Lato-Bold'},
+    dirBtnTextActive: {color: colors.onPrimary},
+    inputContainer: {marginBottom: 15},
+    inputLabel: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      fontFamily: 'Lato-Regular',
+      marginBottom: 6,
+    },
+    textInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      padding: 14,
+      fontSize: 16,
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+      backgroundColor: colors.surfaceMuted,
+    },
+    notesInput: {minHeight: 70, textAlignVertical: 'top', paddingTop: 10},
+    amountRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      backgroundColor: colors.surfaceMuted,
+    },
+    currencySymbol: {
+      fontSize: 18,
+      color: colors.primary,
+      paddingLeft: 14,
+      fontFamily: 'Lato-Bold',
+    },
+    amountInput: {
+      flex: 1,
+      padding: 14,
+      fontSize: 16,
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+    },
+    buttonContainer: {marginHorizontal: 20, marginBottom: 40},
+    submitButton: {
+      backgroundColor: colors.primaryFill,
+      borderRadius: 16,
+      padding: 18,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 8,
+    },
+    submitButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.onPrimary,
+      fontFamily: 'Lato-Bold',
+    },
+  });
