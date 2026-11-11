@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect} from 'react';
 import {Card, ActivityIndicator} from 'react-native-paper';
 import {getAuth} from '@react-native-firebase/auth';
 import {
@@ -46,6 +46,7 @@ import CategorySelector from '../src/components/CategorySelector';
 import AmountInput from '../src/components/AmountInput';
 import DateInput from '../src/components/DateInput';
 import ImagePickerModal from '../src/components/ImagePickerModal';
+import {snackbar} from '../src/utils/snackbarStore';
 
 const AddExpense = ({navigation}: {navigation: any}) => {
   const {currency} = useCurrency();
@@ -72,17 +73,6 @@ const AddExpense = ({navigation}: {navigation: any}) => {
   const [transferred, setTransferred] = useState(0);
   const [imagePickerVisible, setImagePickerVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const navTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(
-    () => () => {
-      if (navTimeoutRef.current) {
-        clearTimeout(navTimeoutRef.current);
-      }
-    },
-    [],
-  );
 
   // Auto-suggest category from title keywords
   useEffect(() => {
@@ -171,8 +161,8 @@ const AddExpense = ({navigation}: {navigation: any}) => {
       });
       // Deferred notification prompt: asked once, right after a saved expense.
       requestPushPermissionAfterFirstExpense();
-      setSuccessMessage('Expense added successfully!');
-      navTimeoutRef.current = setTimeout(() => navigation.goBack(), 1500);
+      snackbar.success('Expense added');
+      navigation.goBack();
     } catch (e) {
       reportError(e as Error);
       setErrorMessage(
@@ -233,16 +223,6 @@ const AddExpense = ({navigation}: {navigation: any}) => {
                     color="#C62828"
                   />
                   <Text style={styles.errorMessage}>{errorMessage}</Text>
-                </View>
-              )}
-              {successMessage && (
-                <View style={styles.successContainer}>
-                  <MaterialCommunityIcons
-                    name="check-circle"
-                    size={20}
-                    color={EXPENSE_COLOR}
-                  />
-                  <Text style={styles.successMessage}>{successMessage}</Text>
                 </View>
               )}
 
@@ -483,23 +463,6 @@ const styles = StyleSheet.create({
   },
   errorMessage: {
     color: '#C62828',
-    fontSize: 14,
-    fontFamily: 'Lato-Regular',
-    marginLeft: 10,
-    flex: 1,
-  },
-  successContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF3E0',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: EXPENSE_COLOR,
-  },
-  successMessage: {
-    color: EXPENSE_COLOR,
     fontSize: 14,
     fontFamily: 'Lato-Regular',
     marginLeft: 10,
