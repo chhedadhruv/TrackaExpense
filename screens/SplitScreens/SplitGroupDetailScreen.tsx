@@ -41,12 +41,7 @@ import {
   sharesMinor,
   totalSpentMajor,
 } from '../../src/utils/splitMath';
-import {
-  PRIMARY_COLOR,
-  BACKGROUND_COLOR,
-  INCOME_COLOR as SUCCESS_COLOR,
-  EXPENSE_COLOR,
-} from '../../src/constants/theme';
+import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {snackbar} from '../../src/utils/snackbarStore';
 
 interface GroupMember {
@@ -91,12 +86,17 @@ interface Group {
 
 const RECENT_SPLITS_LIMIT = 3;
 
+// The deeper brand shade of the delete button on the group card, which is brand-coloured in
+// both themes.
+const GROUP_CARD_DELETE_FILL = '#2E3E8B';
+
 const getSplitCardColor = (
   split: SplitItem,
   currentEmail: string | undefined,
+  colors: ThemeColors,
 ): string => {
   if (!currentEmail) {
-    return PRIMARY_COLOR;
+    return colors.primary;
   }
   if (split.type === 'settlement' || split.isSettlement) {
     const payerEmail = split.paidBy?.email?.toLowerCase();
@@ -104,12 +104,12 @@ const getSplitCardColor = (
       split.splitUsers?.some(u => u.email?.toLowerCase() === currentEmail) &&
       payerEmail !== currentEmail;
     if (isReceiver) {
-      return SUCCESS_COLOR;
+      return colors.incomeText;
     }
     if (payerEmail === currentEmail) {
-      return EXPENSE_COLOR;
+      return colors.expenseText;
     }
-    return PRIMARY_COLOR;
+    return colors.primary;
   }
   const isPayer = split.paidBy?.email?.toLowerCase() === currentEmail;
   const isInSplitUsers = split.splitUsers?.some(
@@ -120,12 +120,12 @@ const getSplitCardColor = (
     (split.splitUsers?.some(u => u.email?.toLowerCase() !== currentEmail) ??
       false);
   if (payerOwedByOthers) {
-    return SUCCESS_COLOR;
+    return colors.incomeText;
   }
   if (!isPayer && isInSplitUsers) {
-    return EXPENSE_COLOR;
+    return colors.expenseText;
   }
-  return PRIMARY_COLOR;
+  return colors.primary;
 };
 
 const SplitGroupDetailScreen = ({
@@ -136,6 +136,8 @@ const SplitGroupDetailScreen = ({
   navigation: any;
 }) => {
   const {currency, formatAmount} = useCurrency();
+  const {colors} = useTheme();
+  const styles = useThemedStyles(createStyles);
   const rawGroup = route.params?.group;
   const group: Group | null =
     rawGroup ||
@@ -519,7 +521,7 @@ const SplitGroupDetailScreen = ({
                   <MaterialCommunityIcons
                     name="email-fast-outline"
                     size={16}
-                    color="#fff"
+                    color={colors.onPrimary}
                   />
                   <Text style={styles.resendText}>Resend</Text>
                 </TouchableOpacity>
@@ -536,7 +538,7 @@ const SplitGroupDetailScreen = ({
             <MaterialCommunityIcons
               name="pencil"
               size={24}
-              color={PRIMARY_COLOR}
+              color={colors.primary}
             />
           </TouchableOpacity>
           <TouchableOpacity
@@ -579,7 +581,7 @@ const SplitGroupDetailScreen = ({
             <MaterialCommunityIcons
               name="exit-to-app"
               size={24}
-              color={EXPENSE_COLOR}
+              color={colors.expense}
             />
           </TouchableOpacity>
           <TouchableOpacity
@@ -623,7 +625,7 @@ const SplitGroupDetailScreen = ({
             <MaterialCommunityIcons
               name="delete-outline"
               size={24}
-              color="#fff"
+              color={colors.onPrimary}
             />
           </TouchableOpacity>
         </View>
@@ -654,16 +656,16 @@ const SplitGroupDetailScreen = ({
             <View
               style={[
                 styles.statIconCircle,
-                {backgroundColor: PRIMARY_COLOR + '18'},
+                {backgroundColor: colors.primarySoft},
               ]}>
               <MaterialCommunityIcons
                 name="receipt"
                 size={18}
-                color={PRIMARY_COLOR}
+                color={colors.primary}
               />
             </View>
             <Text style={styles.statCardLabel}>Total Spent</Text>
-            <Text style={[styles.statCardValue, {color: PRIMARY_COLOR}]}>
+            <Text style={[styles.statCardValue, {color: colors.primary}]}>
               {formatAmount(totalSplitAmount)}
             </Text>
           </View>
@@ -678,16 +680,16 @@ const SplitGroupDetailScreen = ({
             <View
               style={[
                 styles.statIconCircle,
-                {backgroundColor: EXPENSE_COLOR + '18'},
+                {backgroundColor: colors.expenseSoft},
               ]}>
               <MaterialCommunityIcons
                 name="account-cash"
                 size={18}
-                color={EXPENSE_COLOR}
+                color={colors.expense}
               />
             </View>
             <Text style={styles.statCardLabel}>Your Share</Text>
-            <Text style={[styles.statCardValue, {color: EXPENSE_COLOR}]}>
+            <Text style={[styles.statCardValue, {color: colors.expenseText}]}>
               {formatAmount(myShare)}
             </Text>
           </View>
@@ -731,7 +733,7 @@ const SplitGroupDetailScreen = ({
                   <MaterialCommunityIcons
                     name="arrow-right"
                     size={20}
-                    color="#959698"
+                    color={colors.textMuted}
                     style={styles.arrowIcon}
                   />
                   <UserAvatar size={40} name={detail.lender.name} />
@@ -740,7 +742,10 @@ const SplitGroupDetailScreen = ({
                   <Text style={styles.lendingDetailText}>
                     You pay {detail.lender.name}{' '}
                     <Text
-                      style={[styles.amountStrongText, {color: EXPENSE_COLOR}]}>
+                      style={[
+                        styles.amountStrongText,
+                        {color: colors.expenseText},
+                      ]}>
                       {amountStr}
                     </Text>
                   </Text>
@@ -751,7 +756,7 @@ const SplitGroupDetailScreen = ({
                       <Text
                         style={[
                           styles.amountStrongText,
-                          {color: SUCCESS_COLOR},
+                          {color: colors.incomeText},
                         ]}>
                         {amountStr}
                       </Text>{' '}
@@ -792,7 +797,7 @@ const SplitGroupDetailScreen = ({
                       <MaterialCommunityIcons
                         name="bell-outline"
                         size={18}
-                        color={PRIMARY_COLOR}
+                        color={colors.primary}
                       />
                     </TouchableOpacity>
                   </>
@@ -811,7 +816,7 @@ const SplitGroupDetailScreen = ({
             mode="contained"
             onPress={() => handleSettleUp()}
             style={styles.settleAllButton}
-            textColor="#fff">
+            textColor={colors.onPrimary}>
             Settle Up
           </Button>
         )}
@@ -827,7 +832,7 @@ const SplitGroupDetailScreen = ({
         {filteredSplits.length > 0 ? (
           <>
             {splitsToShow.map(split => {
-              const splitColor = getSplitCardColor(split, currentEmail);
+              const splitColor = getSplitCardColor(split, currentEmail, colors);
               return (
                 <Card
                   key={split.id}
@@ -869,7 +874,7 @@ const SplitGroupDetailScreen = ({
                           <MaterialCommunityIcons
                             name="repeat"
                             size={11}
-                            color="#677CD2"
+                            color={colors.primary}
                           />
                           <Text style={styles.recurringTagText}>
                             {split.recurring.frequency === 'weekly'
@@ -896,7 +901,7 @@ const SplitGroupDetailScreen = ({
                 <MaterialCommunityIcons
                   name="chevron-right"
                   size={20}
-                  color={PRIMARY_COLOR}
+                  color={colors.primary}
                 />
               </TouchableOpacity>
             )}
@@ -915,7 +920,7 @@ const SplitGroupDetailScreen = ({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading group details...</Text>
       </View>
     );
@@ -943,7 +948,11 @@ const SplitGroupDetailScreen = ({
           onPress={() => navigation.navigate('CreateSplit', {group})}
           accessibilityLabel="Add split"
           accessibilityRole="button">
-          <MaterialCommunityIcons name="plus" size={28} color="#fff" />
+          <MaterialCommunityIcons
+            name="plus"
+            size={28}
+            color={colors.onPrimary}
+          />
         </TouchableOpacity>
       </View>
     </SafeAreaProvider>
@@ -952,259 +961,277 @@ const SplitGroupDetailScreen = ({
 
 export default SplitGroupDetailScreen;
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: BACKGROUND_COLOR,
-    paddingHorizontal: 20,
-  },
-  scrollView: {flex: 1},
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: BACKGROUND_COLOR,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: PRIMARY_COLOR,
-    marginTop: 15,
-    fontFamily: 'Lato-Regular',
-  },
-  splitsSection: {paddingBottom: 30},
-  groupSummaryCard: {
-    backgroundColor: PRIMARY_COLOR,
-    padding: 20,
-    marginTop: 20,
-    marginBottom: 15,
-  },
-  cardContent: {alignItems: 'center'},
-  titleText: {fontSize: 24, color: '#fff', marginBottom: 10, fontWeight: '600'},
-  balanceText: {fontSize: 22, fontWeight: '500', color: '#fff'},
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 15,
-  },
-  sectionHeaderText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    fontFamily: 'Kufam-SemiBoldItalic',
-  },
-  splitsList: {marginBottom: 30},
-  splitCard: {marginBottom: 10, backgroundColor: '#fff', overflow: 'hidden'},
-  splitCardContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'stretch',
-  },
-  splitColorBar: {width: 4, alignSelf: 'stretch'},
-  splitCardDetails: {flex: 1, paddingVertical: 12, paddingHorizontal: 12},
-  splitTitle: {fontSize: 16, fontWeight: '500', color: '#3A3B3E'},
-  splitSubtitle: {fontSize: 12, color: '#959698', marginTop: 4},
-  showAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    marginTop: 5,
-  },
-  showAllText: {
-    color: PRIMARY_COLOR,
-    fontSize: 14,
-    fontWeight: '500',
-    marginRight: 5,
-  },
-  splitAmount: {fontSize: 16, fontWeight: '500', color: PRIMARY_COLOR},
-  noSplitsText: {textAlign: 'center', color: '#959698', marginTop: 20},
-  backButton: {
-    marginTop: 20,
-    padding: 10,
-    backgroundColor: PRIMARY_COLOR,
-    borderRadius: 5,
-  },
-  lendingSummaryContainer: {marginTop: 15},
-  lendingSummaryCard: {
-    marginVertical: 10,
-    padding: 15,
-    backgroundColor: '#fff',
-  },
-  lendingDetailText: {fontSize: 14, color: '#3A3B3E', marginBottom: 5},
-  amountStrongText: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginLeft: 6,
-    color: '#2C2C2C',
-  },
-  groupMemberAvatars: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  groupMemberAvatar: {borderWidth: 2, borderColor: '#fff'},
-  memberWrapper: {alignItems: 'center', width: 64, marginHorizontal: 4},
-  memberName: {
-    color: '#fff',
-    fontSize: 10,
-    marginTop: 4,
-    maxWidth: 56,
-    textAlign: 'center',
-  },
-  extraMembersAvatar: {
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  extraMembersText: {color: '#fff', fontSize: 12},
-  splitCardRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingRight: 12,
-  },
-  lendingSummaryContent: {
-    alignItems: 'center',
-    padding: 15,
-    position: 'relative',
-  },
-  actionButtonsRow: {
-    flexDirection: 'row',
-    width: '100%',
-    justifyContent: 'center',
-    marginTop: 10,
-    gap: 20,
-  },
-  iconButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  editButton: {backgroundColor: '#fff'},
-  leaveButton: {backgroundColor: '#fff'},
-  deleteButton: {backgroundColor: '#2E3E8B'},
-  lendingUserContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  arrowIcon: {marginHorizontal: 10},
-  splitDate: {fontSize: 12, color: '#959698', marginTop: 2},
-  categoryTag: {
-    backgroundColor: PRIMARY_COLOR + '20',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    marginTop: 5,
-    alignSelf: 'flex-start',
-  },
-  categoryText: {fontSize: 12, color: PRIMARY_COLOR},
-  settleAllButton: {marginTop: 10, backgroundColor: PRIMARY_COLOR},
-  fab: {
-    position: 'absolute',
-    right: 24,
-    bottom: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: PRIMARY_COLOR,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: Platform.OS === 'android' ? 0 : 3,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-  },
-  remindIconButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    padding: 6,
-    borderRadius: 20,
-    backgroundColor: '#EEF0FB',
-  },
-  recurringTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: '#EEF0FB',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 8,
-    marginTop: 4,
-    alignSelf: 'flex-start',
-  },
-  recurringTagText: {
-    fontSize: 11,
-    color: '#677CD2',
-    fontFamily: 'Lato-Regular',
-  },
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-  statsRow: {flexDirection: 'row', marginBottom: 15, gap: 12},
-  statCard: {
-    flex: 1,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    overflow: 'hidden',
-  },
-  statCardContent: {
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 10,
-  },
-  statIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
-  statCardLabel: {
-    fontSize: 11,
-    color: '#888',
-    marginBottom: 3,
-    fontFamily: 'Lato-Regular',
-    textAlign: 'center',
-  },
-  statCardValue: {
-    fontSize: 15,
-    fontWeight: '700',
-    fontFamily: 'Lato-Bold',
-    textAlign: 'center',
-  },
-  pendingInvitesContainer: {
-    width: '100%',
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.2)',
-  },
-  pendingInvitesLabel: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 12,
-    marginBottom: 6,
-    fontWeight: '600',
-  },
-  pendingInviteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-    gap: 6,
-  },
-  pendingInviteEmail: {flex: 1, color: 'rgba(255,255,255,0.9)', fontSize: 12},
-  resendButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  resendText: {color: '#fff', fontSize: 12},
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingHorizontal: 20,
+    },
+    scrollView: {flex: 1},
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    loadingText: {
+      fontSize: 16,
+      color: colors.primary,
+      marginTop: 15,
+      fontFamily: 'Lato-Regular',
+    },
+    splitsSection: {paddingBottom: 30},
+    groupSummaryCard: {
+      backgroundColor: colors.primaryFill,
+      padding: 20,
+      marginTop: 20,
+      marginBottom: 15,
+    },
+    cardContent: {alignItems: 'center'},
+    titleText: {
+      fontSize: 24,
+      color: colors.onPrimary,
+      marginBottom: 10,
+      fontWeight: '600',
+    },
+    balanceText: {fontSize: 22, fontWeight: '500', color: colors.onPrimary},
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginVertical: 15,
+    },
+    sectionHeaderText: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.textStrong,
+      fontFamily: 'Kufam-SemiBoldItalic',
+    },
+    splitsList: {marginBottom: 30},
+    splitCard: {
+      marginBottom: 10,
+      backgroundColor: colors.surface,
+      overflow: 'hidden',
+    },
+    splitCardContent: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'stretch',
+    },
+    splitColorBar: {width: 4, alignSelf: 'stretch'},
+    splitCardDetails: {flex: 1, paddingVertical: 12, paddingHorizontal: 12},
+    splitTitle: {fontSize: 16, fontWeight: '500', color: colors.text},
+    splitSubtitle: {fontSize: 12, color: colors.textMuted, marginTop: 4},
+    showAllButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 10,
+      marginTop: 5,
+    },
+    showAllText: {
+      color: colors.primary,
+      fontSize: 14,
+      fontWeight: '500',
+      marginRight: 5,
+    },
+    splitAmount: {fontSize: 16, fontWeight: '500', color: colors.primary},
+    noSplitsText: {
+      textAlign: 'center',
+      color: colors.textMuted,
+      marginTop: 20,
+    },
+    backButton: {
+      marginTop: 20,
+      padding: 10,
+      backgroundColor: colors.primaryFill,
+      borderRadius: 5,
+    },
+    lendingSummaryContainer: {marginTop: 15},
+    lendingSummaryCard: {
+      marginVertical: 10,
+      padding: 15,
+      backgroundColor: colors.surface,
+    },
+    lendingDetailText: {fontSize: 14, color: colors.text, marginBottom: 5},
+    amountStrongText: {
+      fontSize: 14,
+      fontWeight: '700',
+      marginLeft: 6,
+      color: colors.textStrong,
+    },
+    groupMemberAvatars: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      marginBottom: 10,
+    },
+    groupMemberAvatar: {borderWidth: 2, borderColor: colors.onPrimary},
+    memberWrapper: {alignItems: 'center', width: 64, marginHorizontal: 4},
+    memberName: {
+      color: colors.onPrimary,
+      fontSize: 10,
+      marginTop: 4,
+      maxWidth: 56,
+      textAlign: 'center',
+    },
+    extraMembersAvatar: {
+      backgroundColor: 'rgba(255,255,255,0.3)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    extraMembersText: {color: colors.onPrimary, fontSize: 12},
+    splitCardRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingRight: 12,
+    },
+    lendingSummaryContent: {
+      alignItems: 'center',
+      padding: 15,
+      position: 'relative',
+    },
+    actionButtonsRow: {
+      flexDirection: 'row',
+      width: '100%',
+      justifyContent: 'center',
+      marginTop: 10,
+      gap: 20,
+    },
+    iconButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    editButton: {backgroundColor: colors.surface},
+    leaveButton: {backgroundColor: colors.surface},
+    deleteButton: {backgroundColor: GROUP_CARD_DELETE_FILL},
+    lendingUserContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    arrowIcon: {marginHorizontal: 10},
+    splitDate: {fontSize: 12, color: colors.textMuted, marginTop: 2},
+    categoryTag: {
+      backgroundColor: colors.primarySoft,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 12,
+      marginTop: 5,
+      alignSelf: 'flex-start',
+    },
+    categoryText: {fontSize: 12, color: colors.primary},
+    settleAllButton: {marginTop: 10, backgroundColor: colors.primaryFill},
+    fab: {
+      position: 'absolute',
+      right: 24,
+      bottom: 24,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.primaryFill,
+      alignItems: 'center',
+      justifyContent: 'center',
+      elevation: Platform.OS === 'android' ? 0 : 3,
+      shadowColor: colors.primaryFill,
+      shadowOffset: {width: 0, height: 2},
+      shadowOpacity: 0.15,
+      shadowRadius: 3,
+    },
+    remindIconButton: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      padding: 6,
+      borderRadius: 20,
+      backgroundColor: colors.primarySoft,
+    },
+    recurringTag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      backgroundColor: colors.primarySoft,
+      paddingHorizontal: 7,
+      paddingVertical: 3,
+      borderRadius: 8,
+      marginTop: 4,
+      alignSelf: 'flex-start',
+    },
+    recurringTagText: {
+      fontSize: 11,
+      color: colors.primary,
+      fontFamily: 'Lato-Regular',
+    },
+    cardAndroid: {borderWidth: 1, borderColor: colors.cardBorder},
+    statsRow: {flexDirection: 'row', marginBottom: 15, gap: 12},
+    statCard: {
+      flex: 1,
+      borderRadius: 12,
+      backgroundColor: colors.surface,
+      overflow: 'hidden',
+    },
+    statCardContent: {
+      alignItems: 'center',
+      paddingVertical: 14,
+      paddingHorizontal: 10,
+    },
+    statIconCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 6,
+    },
+    statCardLabel: {
+      fontSize: 11,
+      color: colors.textMuted,
+      marginBottom: 3,
+      fontFamily: 'Lato-Regular',
+      textAlign: 'center',
+    },
+    statCardValue: {
+      fontSize: 15,
+      fontWeight: '700',
+      fontFamily: 'Lato-Bold',
+      textAlign: 'center',
+    },
+    pendingInvitesContainer: {
+      width: '100%',
+      marginTop: 10,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: 'rgba(255,255,255,0.2)',
+    },
+    pendingInvitesLabel: {
+      color: 'rgba(255,255,255,0.8)',
+      fontSize: 12,
+      marginBottom: 6,
+      fontWeight: '600',
+    },
+    pendingInviteRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 6,
+      gap: 6,
+    },
+    pendingInviteEmail: {
+      flex: 1,
+      color: 'rgba(255,255,255,0.9)',
+      fontSize: 12,
+    },
+    resendButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    resendText: {color: colors.onPrimary, fontSize: 12},
+  });
