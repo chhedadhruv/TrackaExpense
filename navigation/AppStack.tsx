@@ -1,10 +1,16 @@
 import React from 'react';
 import {createStackNavigator} from '@react-navigation/stack';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {
+  BottomTabBar,
+  createBottomTabNavigator,
+  type BottomTabBarProps,
+} from '@react-navigation/bottom-tabs';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import FeatherIcons from '@expo/vector-icons/Feather';
+import {View} from 'react-native';
+import {setSnackbarBottomOffset} from '../src/utils/snackbarStore';
 
 import HomeScreen from '../screens/HomeScreen';
 import TransactionScreen from '../screens/TransactionScreen';
@@ -197,8 +203,27 @@ const SplitStack = () =>
     {name: 'CreateIOU', component: CreateIOUScreen, title: 'New IOU'},
   ]);
 
+// Reports the tab bar height so the snackbar floats just above it.
+const MeasuredTabBar = (props: BottomTabBarProps) => {
+  React.useEffect(() => () => setSnackbarBottomOffset(0), []);
+  return (
+    <View
+      onLayout={event =>
+        setSnackbarBottomOffset(event.nativeEvent.layout.height)
+      }>
+      <BottomTabBar {...props} />
+    </View>
+  );
+};
+
+const renderTabBar = (props: BottomTabBarProps) => (
+  <MeasuredTabBar {...props} />
+);
+
 const AppStack = () => (
-  <Tab.Navigator screenOptions={{activeTintColor: PRIMARY_COLOR} as any}>
+  <Tab.Navigator
+    tabBar={renderTabBar}
+    screenOptions={{activeTintColor: PRIMARY_COLOR} as any}>
     <Tab.Screen
       name="Home"
       component={HomeStack}

@@ -17,6 +17,7 @@ import UpdateService from './services/UpdateService';
 import ErrorBoundary from './components/ErrorBoundary';
 import * as Application from 'expo-application';
 import ForceUpdateScreen from './components/ForceUpdateScreen';
+import {SnackbarHost} from './src/components/Snackbar';
 import {getConfig, initRemoteConfig} from './src/services/RemoteConfigService';
 import {isVersionBelow} from './src/utils/version';
 
@@ -84,6 +85,7 @@ const App: React.FC = () => {
               <Providers />
             )}
           </ErrorBoundary>
+          <SnackbarHost />
         </SafeAreaView>
       </KeyboardProvider>
     </SafeAreaProvider>

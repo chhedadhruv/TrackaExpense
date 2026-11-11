@@ -40,6 +40,7 @@ import {
 } from '../utils/AppleSignInConfig';
 import {CURRENCIES} from '../utils/CurrencyUtil';
 import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../src/constants/theme';
+import {ModalSnackbar} from '../src/components/Snackbar';
 
 interface PasswordValidation {
   length: boolean;
@@ -575,6 +576,7 @@ const SignupScreen = ({navigation}: {navigation: any}) => {
             </ScrollView>
           </View>
         </View>
+        <ModalSnackbar />
       </Modal>
     </View>
   );

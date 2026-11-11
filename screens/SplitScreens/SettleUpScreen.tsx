@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   TextInput,
   Platform,
 } from 'react-native';
@@ -36,6 +35,7 @@ import {
 } from '../../src/constants/theme';
 import {formatInputAmount} from '../../src/utils/formatters';
 import {toMajorNumber, tryToMinor} from '../../src/utils/money';
+import {snackbar} from '../../src/utils/snackbarStore';
 
 interface GroupMember {
   email: string;
@@ -113,27 +113,27 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
       return;
     }
     if (!selectedLender || !selectedBorrower || !amount) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      snackbar.error('Please fill in all required fields');
       return;
     }
     if (note.trim().length > 200) {
-      Alert.alert('Error', 'Note must be 200 characters or less');
+      snackbar.error('Note must be 200 characters or less');
       return;
     }
     const typedAmount = parseFloat(amount);
     if (isNaN(typedAmount) || typedAmount <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      snackbar.error('Please enter a valid amount');
       return;
     }
     if (typedAmount > 999999999) {
-      Alert.alert('Error', 'Amount must be less than 999,999,999');
+      snackbar.error('Amount must be less than 999,999,999');
       return;
     }
     // Everything below uses the amount rounded to the currency's minor unit, so the documents,
     // the transactions and both balance changes agree to the paisa.
     const settlementMinor = tryToMinor(amount, currency.code);
     if (settlementMinor === null || settlementMinor <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      snackbar.error('Please enter a valid amount');
       return;
     }
     const settlementAmount = toMajorNumber(settlementMinor, currency.code);
@@ -219,11 +219,11 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
         AnalyticsService.getAmountRange(settlementAmount),
       );
       requestIdRef.current = null;
-      Alert.alert('Success', 'Settlement recorded successfully');
+      snackbar.success('Settlement recorded successfully');
       navigation.goBack();
     } catch (e) {
       reportError(e as Error);
-      Alert.alert('Error', 'Failed to record settlement');
+      snackbar.error('Failed to record settlement');
     } finally {
       setLoading(false);
     }
