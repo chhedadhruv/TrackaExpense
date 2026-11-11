@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  Alert,
   TouchableOpacity,
   Platform,
   Image,
@@ -65,6 +64,8 @@ import {
 } from '../../src/utils/amounts';
 import {tryToMinor} from '../../src/utils/money';
 import {lookupUsersByEmail} from '../../src/services/UserLookup';
+import {snackbar} from '../../src/utils/snackbarStore';
+import {ModalSnackbar} from '../../src/components/Snackbar';
 
 type SplitType = 'equal' | 'percentage';
 type RecurringFrequency = 'weekly' | 'monthly';
@@ -160,7 +161,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
 
   useEffect(() => {
     if (!group || !group.id) {
-      Alert.alert('Error', 'Group information is missing');
+      snackbar.error('Group information is missing');
       navigation.goBack();
       return;
     }
@@ -247,7 +248,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       setLoading(false);
     } catch (error) {
       reportError(error as Error);
-      Alert.alert('Error', 'Failed to load group members');
+      snackbar.error('Failed to load group members');
       navigation.goBack();
     }
   };
@@ -307,10 +308,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       currentlySelected[0] === userEmail &&
       selectedUsers[userEmail]
     ) {
-      Alert.alert(
-        'Error',
-        'At least one person must be included in the split.',
-      );
+      snackbar.error('At least one person must be included in the split.');
       return;
     }
     const newSelectedUsers = {
@@ -341,31 +339,31 @@ const CreateSplitScreen = ({route, navigation}: any) => {
 
   const handleSubmit = async () => {
     if (!title) {
-      Alert.alert('Validation Error', 'Please enter a split title');
+      snackbar.error('Please enter a split title');
       return;
     }
     if (title.trim().length > 100) {
-      Alert.alert('Validation Error', 'Title must be 100 characters or less');
+      snackbar.error('Title must be 100 characters or less');
       return;
     }
     if (!amount || isNaN(parseFloat(amount))) {
-      Alert.alert('Validation Error', 'Please enter a valid amount');
+      snackbar.error('Please enter a valid amount');
       return;
     }
     if (parseFloat(amount) <= 0) {
-      Alert.alert('Validation Error', 'Amount must be greater than 0');
+      snackbar.error('Amount must be greater than 0');
       return;
     }
     if (parseFloat(amount) > 999999999) {
-      Alert.alert('Validation Error', 'Amount must be less than 999,999,999');
+      snackbar.error('Amount must be less than 999,999,999');
       return;
     }
     if (!paidBy) {
-      Alert.alert('Validation Error', 'Please select who paid for this split');
+      snackbar.error('Please select who paid for this split');
       return;
     }
     if (!category) {
-      Alert.alert('Validation Error', 'Please select a category');
+      snackbar.error('Please select a category');
       return;
     }
 
@@ -375,10 +373,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       .filter((m): m is GroupMember => !!m);
 
     if (selectedUsersList.length === 0) {
-      Alert.alert(
-        'Validation Error',
-        'Please select at least one user to split with',
-      );
+      snackbar.error('Please select at least one user to split with');
       return;
     }
 
@@ -387,10 +382,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         return total + parseFloat(selectedPercentages[user.email] || '0');
       }, 0);
       if (percentageTotal !== 100) {
-        Alert.alert(
-          'Validation Error',
-          'Total percentage must equal 100% for selected users',
-        );
+        snackbar.error('Total percentage must equal 100% for selected users');
         return;
       }
     }
@@ -726,21 +718,19 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       }
       setLoading(false);
       if (isEditMode) {
-        Alert.alert('Success', 'Split updated successfully', [
-          {text: 'OK', onPress: () => navigation.goBack()},
-        ]);
+        snackbar.success('Split updated successfully');
+        navigation.goBack();
       } else {
         navigation.navigate('SplitGroupDetail', {
           group,
           newSplit: newSplitId ? {id: newSplitId, ...splitData} : undefined,
-          showSuccessToast: true,
         });
+        snackbar.success('Split added successfully');
       }
     } catch (error) {
       reportError(error as Error);
       setLoading(false);
-      Alert.alert(
-        'Error',
+      snackbar.error(
         `Failed to ${
           isEditMode ? 'update' : 'create'
         } split. Please try again.`,
@@ -970,8 +960,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
 
     const handleCardPress = () => {
       if (isCurrentUser && !isSelected) {
-        Alert.alert(
-          'Cannot Add Yourself',
+        snackbar.error(
           'You cannot add yourself to the split. You are the one creating/paying for this expense.',
         );
         return;
@@ -980,10 +969,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
       if (!isSelected || selectedCount > 1) {
         toggleUserSelection(member.email);
       } else {
-        Alert.alert(
-          'Error',
-          'At least one person must be included in the split.',
-        );
+        snackbar.error('At least one person must be included in the split.');
       }
     };
 
@@ -1458,6 +1444,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                 </View>
               </View>
             </TouchableOpacity>
+            <ModalSnackbar />
           </Modal>
 
           <Modal
@@ -1500,6 +1487,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
+            <ModalSnackbar />
           </Modal>
         </KeyboardAwareScrollView>
       </View>

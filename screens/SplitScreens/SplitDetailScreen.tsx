@@ -40,6 +40,7 @@ import {
   BACKGROUND_COLOR,
   EXPENSE_COLOR,
 } from '../../src/constants/theme';
+import {snackbar} from '../../src/utils/snackbarStore';
 
 const SUCCESS_COLOR = '#25B07F';
 
@@ -242,16 +243,14 @@ const SplitDetailScreen = ({
       } catch (_) {}
 
       setMenuVisible(false);
-      Alert.alert(
-        'Deleted',
+      snackbar.success(
         isSettlement
           ? 'Settlement deleted successfully'
           : 'Split deleted successfully',
       );
       navigation.goBack();
     } catch (_) {
-      Alert.alert(
-        'Error',
+      snackbar.error(
         isSettlement ? 'Failed to delete settlement' : 'Failed to delete split',
       );
     }

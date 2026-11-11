@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   Platform,
 } from 'react-native';
 import {Card, Searchbar, ActivityIndicator} from 'react-native-paper';
@@ -36,6 +35,7 @@ import {getConfig} from '../src/services/RemoteConfigService';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import type {TransactionDocument} from '../src/types';
 import type {McIconName} from '../src/types/icons';
+import {snackbar} from '../src/utils/snackbarStore';
 
 type FilterType = 'all' | '7days' | '30days' | 'custom';
 
@@ -141,7 +141,7 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
 
   const generateCSV = (): string | undefined => {
     if (filteredTransactions.length === 0) {
-      Alert.alert('No Data', 'No transactions to export');
+      snackbar.info('No transactions to export');
       return;
     }
     const headers = [
@@ -179,7 +179,7 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
       file.create({overwrite: true});
       file.write(csvContent);
       if (!file.exists) {
-        Alert.alert('Error', 'Failed to create CSV file');
+        snackbar.error('Failed to create CSV file');
         return;
       }
       try {
@@ -194,11 +194,11 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
           shareError.message !== 'User did not share' &&
           shareError.message !== 'User cancelled'
         ) {
-          Alert.alert('Error', 'Failed to share file');
+          snackbar.error('Failed to share file');
         }
       }
     } catch (_) {
-      Alert.alert('Error', 'Failed to export transactions. Please try again.');
+      snackbar.error('Failed to export transactions. Please try again.');
     }
   };
 

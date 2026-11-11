@@ -7,6 +7,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import {KeyboardAvoidingView} from 'react-native-keyboard-controller';
+import {ModalSnackbar} from './Snackbar';
 
 type Props = ModalProps & {
   /** Style of the full-screen layer inside the modal (the dimmed overlay, or the page). */
@@ -30,6 +31,7 @@ export const KeyboardAvoidingModal = ({
       behavior="padding"
       style={[styles.fill, overlayStyle]}>
       {children}
+      <ModalSnackbar />
     </KeyboardAvoidingView>
   </Modal>
 );

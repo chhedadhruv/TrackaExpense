@@ -5,7 +5,6 @@ import {
   RefreshControl,
   Platform,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import {Text, Card, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -32,6 +31,7 @@ import {
   EXPENSE_COLOR,
 } from '../../src/constants/theme';
 import SplitNotificationService from '../../services/SplitNotificationService';
+import {snackbar} from '../../src/utils/snackbarStore';
 
 interface Balance {
   email: string;
@@ -283,14 +283,11 @@ const FriendsBalanceScreen = () => {
         r => !r.success && r.reason === 'cooldown',
       ).length;
       if (sent > 0) {
-        Alert.alert('Reminder Sent', `${b.name} has been reminded to pay you.`);
+        snackbar.success(`${b.name} has been reminded to pay you.`);
       } else if (cooled > 0) {
-        Alert.alert(
-          'Already Reminded',
-          'You already reminded them in the last 24 hours.',
-        );
+        snackbar.error('You already reminded them in the last 24 hours.');
       } else {
-        Alert.alert('Error', 'Failed to send reminder.');
+        snackbar.error('Failed to send reminder.');
       }
     } finally {
       setRemindingEmail(null);
