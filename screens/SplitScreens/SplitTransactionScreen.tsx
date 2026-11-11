@@ -24,12 +24,7 @@ import {majorOf} from '../../src/utils/amounts';
 import {fromMinor} from '../../src/utils/money';
 import {shareOfMinor} from '../../src/utils/splitMath';
 import {AuthContext} from '../../navigation/AuthProvider';
-import {
-  PRIMARY_COLOR,
-  BACKGROUND_COLOR,
-  INCOME_COLOR as SUCCESS_COLOR,
-  EXPENSE_COLOR,
-} from '../../src/constants/theme';
+import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 
 interface SplitUser {
   email?: string;
@@ -61,9 +56,10 @@ type FilterType = 'all' | '7days' | '30days' | 'custom';
 const getSplitCardColor = (
   split: SplitItem,
   currentEmail: string | undefined,
+  colors: ThemeColors,
 ): string => {
   if (!currentEmail) {
-    return PRIMARY_COLOR;
+    return colors.primary;
   }
   if (split.type === 'settlement' || split.isSettlement) {
     const payerEmail = split.paidBy?.email?.toLowerCase();
@@ -71,24 +67,24 @@ const getSplitCardColor = (
       split.splitUsers?.some(u => u.email?.toLowerCase() === currentEmail) &&
       payerEmail !== currentEmail;
     if (isReceiver) {
-      return SUCCESS_COLOR;
+      return colors.incomeText;
     }
     if (payerEmail === currentEmail) {
-      return EXPENSE_COLOR;
+      return colors.expenseText;
     }
-    return PRIMARY_COLOR;
+    return colors.primary;
   }
   const isPayer = split.paidBy?.email?.toLowerCase() === currentEmail;
   const isInSplitUsers = split.splitUsers?.some(
     u => u.email?.toLowerCase() === currentEmail,
   );
   if (isPayer && (split.splitUsers?.length ?? 0) > 1) {
-    return SUCCESS_COLOR;
+    return colors.incomeText;
   }
   if (!isPayer && isInSplitUsers) {
-    return EXPENSE_COLOR;
+    return colors.expenseText;
   }
-  return PRIMARY_COLOR;
+  return colors.primary;
 };
 
 const SplitTransactionScreen = ({
@@ -99,6 +95,8 @@ const SplitTransactionScreen = ({
   navigation: any;
 }) => {
   const {currency, formatAmount} = useCurrency();
+  const {colors} = useTheme();
+  const styles = useThemedStyles(createStyles);
   const {user} = useContext(AuthContext);
   const currentUserEmail = user?.email?.toLowerCase();
   const {group} = route.params as {group: Group};
@@ -258,7 +256,7 @@ const SplitTransactionScreen = ({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading transactions...</Text>
       </View>
     );
@@ -276,7 +274,7 @@ const SplitTransactionScreen = ({
               <MaterialCommunityIcons
                 name="history"
                 size={32}
-                color={PRIMARY_COLOR}
+                color={colors.primary}
               />
               <Text style={styles.headerTitle}>All Transactions</Text>
             </View>
@@ -287,12 +285,12 @@ const SplitTransactionScreen = ({
           <View style={styles.searchContainer}>
             <Searchbar
               placeholder="Search transactions..."
-              placeholderTextColor="#000"
+              placeholderTextColor={colors.textPlaceholder}
               onChangeText={handleSearch}
               value={searchQuery}
               style={styles.searchBar}
               inputStyle={styles.searchInput}
-              iconColor={PRIMARY_COLOR}
+              iconColor={colors.primary}
             />
           </View>
           <Card
@@ -356,7 +354,7 @@ const SplitTransactionScreen = ({
                         <MaterialCommunityIcons
                           name="calendar"
                           size={20}
-                          color={PRIMARY_COLOR}
+                          color={colors.primary}
                         />
                       </TouchableOpacity>
                     </View>
@@ -377,7 +375,7 @@ const SplitTransactionScreen = ({
                         <MaterialCommunityIcons
                           name="calendar"
                           size={20}
-                          color={PRIMARY_COLOR}
+                          color={colors.primary}
                         />
                       </TouchableOpacity>
                     </View>
@@ -426,7 +424,7 @@ const SplitTransactionScreen = ({
                     <MaterialCommunityIcons
                       name="filter"
                       size={18}
-                      color="#FFFFFF"
+                      color={colors.onPrimary}
                     />
                     <Text style={styles.applyButtonText}>Apply Filter</Text>
                   </TouchableOpacity>
@@ -435,24 +433,18 @@ const SplitTransactionScreen = ({
             </View>
           </Card>
           <View style={styles.transactionsSection}>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: 15,
-              }}>
-              <Text style={[styles.sectionTitle, {marginBottom: 0}]}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={[styles.sectionTitle, styles.sectionTitleFlush]}>
                 Transactions
               </Text>
               {filteredTransactions.length > 0 && (
                 <TouchableOpacity
                   onPress={handleExportCSV}
-                  style={{padding: 4}}>
+                  style={styles.exportButton}>
                   <MaterialCommunityIcons
                     name="export"
                     size={24}
-                    color={PRIMARY_COLOR}
+                    color={colors.primary}
                   />
                 </TouchableOpacity>
               )}
@@ -462,6 +454,7 @@ const SplitTransactionScreen = ({
                 const txColor = getSplitCardColor(
                   transaction,
                   currentUserEmail,
+                  colors,
                 );
                 return (
                   <Card
@@ -531,7 +524,7 @@ const SplitTransactionScreen = ({
                   <MaterialCommunityIcons
                     name="history"
                     size={64}
-                    color="#CBD3EE"
+                    color={colors.iconMuted}
                   />
                   <Text style={styles.emptyStateText}>
                     No transactions found
@@ -553,221 +546,250 @@ const SplitTransactionScreen = ({
 
 export default SplitTransactionScreen;
 
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  scrollView: {flex: 1},
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: BACKGROUND_COLOR,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: PRIMARY_COLOR,
-    marginTop: 15,
-    fontFamily: 'Lato-Regular',
-  },
-  headerSection: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 30,
-    paddingBottom: 20,
-  },
-  headerTitleRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 8},
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginLeft: 12,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  searchContainer: {paddingHorizontal: 20, marginBottom: 20},
-  filterCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  cardContent: {padding: 20},
-  filterTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 15,
-    fontFamily: 'Lato-Bold',
-  },
-  searchBar: {
-    marginBottom: 15,
-    backgroundColor: '#FFFFFF',
-    elevation: Platform.OS === 'android' ? 0 : 1,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    borderRadius: 12,
-    fontFamily: 'Lato-Regular',
-    fontSize: 16,
-  },
-  searchInput: {color: '#000000', fontFamily: 'Lato-Regular', fontSize: 16},
-  filterScrollContainer: {marginBottom: 15},
-  filterContainer: {flexDirection: 'row', paddingHorizontal: 5},
-  filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginRight: 12,
-    borderRadius: 20,
-    backgroundColor: '#F8F9FA',
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-  },
-  filterButtonActive: {
-    backgroundColor: PRIMARY_COLOR + '15',
-    borderColor: PRIMARY_COLOR,
-  },
-  filterButtonText: {
-    color: '#666',
-    fontSize: 14,
-    fontFamily: 'Lato-Regular',
-    textAlign: 'center',
-  },
-  filterButtonTextActive: {
-    color: PRIMARY_COLOR,
-    fontWeight: 'bold',
-    fontFamily: 'Lato-Bold',
-  },
-  customDateContainer: {
-    marginTop: 10,
-    paddingTop: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#E8EBF7',
-  },
-  customRangeLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 15,
-    fontFamily: 'Lato-Bold',
-  },
-  dateInputsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  dateInputWrapper: {flex: 1, marginHorizontal: 5},
-  dateLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#666',
-    marginBottom: 8,
-    fontFamily: 'Lato-Regular',
-  },
-  dateInput: {
-    backgroundColor: '#F8F9FA',
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-    borderRadius: 12,
-    padding: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  dateInputText: {fontSize: 14, color: '#2C2C2C', fontFamily: 'Lato-Regular'},
-  dateInputPlaceholder: {color: '#999'},
-  applyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: PRIMARY_COLOR,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    elevation: Platform.OS === 'android' ? 0 : 1,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-  },
-  applyButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
-    fontFamily: 'Lato-Bold',
-  },
-  transactionsCard: {
-    marginBottom: 10,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  transactionsCardContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'stretch',
-  },
-  transactionColorBar: {width: 4, alignSelf: 'stretch'},
-  transactionsCardDetails: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-  },
-  transactionsCardInfo: {flexDirection: 'column'},
-  transactionsCardTitle: {fontSize: 16, fontWeight: '500', color: '#3A3B3E'},
-  transactionsCardSubtitle: {fontSize: 12, color: '#959698', marginTop: 2},
-  transactionsCardDate: {fontSize: 12, color: '#959698'},
-  transactionsCardAmount: {
-    fontSize: 16,
-    fontWeight: '500',
-    paddingRight: 12,
-    alignSelf: 'center',
-  },
-  categoryTag: {
-    backgroundColor: PRIMARY_COLOR + '20',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    marginTop: 5,
-    alignSelf: 'flex-start',
-  },
-  categoryText: {
-    fontSize: 12,
-    color: PRIMARY_COLOR,
-    fontFamily: 'Lato-Regular',
-  },
-  transactionsSection: {paddingHorizontal: 20, paddingBottom: 30},
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    marginBottom: 15,
-    fontFamily: 'Kufam-SemiBoldItalic',
-  },
-  emptyStateCard: {backgroundColor: '#FFFFFF', borderRadius: 16},
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-    marginTop: 15,
-    marginBottom: 5,
-    fontFamily: 'Lato-Bold',
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {flex: 1, backgroundColor: colors.background},
+    scrollView: {flex: 1},
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    loadingText: {
+      fontSize: 16,
+      color: colors.primary,
+      marginTop: 15,
+      fontFamily: 'Lato-Regular',
+    },
+    headerSection: {
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: 30,
+      paddingBottom: 20,
+    },
+    headerTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    headerTitle: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: colors.primary,
+      fontFamily: 'Kufam-SemiBoldItalic',
+      marginLeft: 12,
+    },
+    headerSubtitle: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      fontFamily: 'Lato-Regular',
+    },
+    searchContainer: {paddingHorizontal: 20, marginBottom: 20},
+    filterCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      marginHorizontal: 20,
+      marginBottom: 20,
+    },
+    cardContent: {padding: 20},
+    filterTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.textStrong,
+      marginBottom: 15,
+      fontFamily: 'Lato-Bold',
+    },
+    searchBar: {
+      marginBottom: 15,
+      backgroundColor: colors.surface,
+      elevation: Platform.OS === 'android' ? 0 : 1,
+      shadowColor: colors.shadow,
+      shadowOffset: {width: 0, height: 1},
+      shadowOpacity: 0.05,
+      shadowRadius: 1,
+      borderRadius: 12,
+      fontFamily: 'Lato-Regular',
+      fontSize: 16,
+    },
+    searchInput: {
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+      fontSize: 16,
+    },
+    filterScrollContainer: {marginBottom: 15},
+    filterContainer: {flexDirection: 'row', paddingHorizontal: 5},
+    filterButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      marginRight: 12,
+      borderRadius: 20,
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    filterButtonActive: {
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primary,
+    },
+    filterButtonText: {
+      color: colors.textSecondary,
+      fontSize: 14,
+      fontFamily: 'Lato-Regular',
+      textAlign: 'center',
+    },
+    filterButtonTextActive: {
+      color: colors.primary,
+      fontWeight: 'bold',
+      fontFamily: 'Lato-Bold',
+    },
+    customDateContainer: {
+      marginTop: 10,
+      paddingTop: 15,
+      borderTopWidth: 1,
+      borderTopColor: colors.cardBorder,
+    },
+    customRangeLabel: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textStrong,
+      marginBottom: 15,
+      fontFamily: 'Lato-Bold',
+    },
+    dateInputsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 20,
+    },
+    dateInputWrapper: {flex: 1, marginHorizontal: 5},
+    dateLabel: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      marginBottom: 8,
+      fontFamily: 'Lato-Regular',
+    },
+    dateInput: {
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      borderRadius: 12,
+      padding: 12,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    dateInputText: {
+      fontSize: 14,
+      color: colors.textStrong,
+      fontFamily: 'Lato-Regular',
+    },
+    dateInputPlaceholder: {color: colors.textPlaceholder},
+    applyButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primaryFill,
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 12,
+      elevation: Platform.OS === 'android' ? 0 : 1,
+      shadowColor: colors.primaryFill,
+      shadowOffset: {width: 0, height: 1},
+      shadowOpacity: 0.15,
+      shadowRadius: 2,
+    },
+    applyButtonText: {
+      color: colors.onPrimary,
+      fontSize: 14,
+      fontWeight: '600',
+      marginLeft: 8,
+      fontFamily: 'Lato-Bold',
+    },
+    transactionsCard: {
+      marginBottom: 10,
+      backgroundColor: colors.surface,
+      borderRadius: 10,
+      overflow: 'hidden',
+    },
+    transactionsCardContent: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'stretch',
+    },
+    transactionColorBar: {width: 4, alignSelf: 'stretch'},
+    transactionsCardDetails: {
+      flex: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+    },
+    transactionsCardInfo: {flexDirection: 'column'},
+    transactionsCardTitle: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    transactionsCardSubtitle: {
+      fontSize: 12,
+      color: colors.textMuted,
+      marginTop: 2,
+    },
+    transactionsCardDate: {fontSize: 12, color: colors.textMuted},
+    transactionsCardAmount: {
+      fontSize: 16,
+      fontWeight: '500',
+      paddingRight: 12,
+      alignSelf: 'center',
+    },
+    categoryTag: {
+      backgroundColor: colors.primarySoft,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 12,
+      marginTop: 5,
+      alignSelf: 'flex-start',
+    },
+    categoryText: {
+      fontSize: 12,
+      color: colors.primary,
+      fontFamily: 'Lato-Regular',
+    },
+    transactionsSection: {paddingHorizontal: 20, paddingBottom: 30},
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 15,
+    },
+    exportButton: {padding: 4},
+    sectionTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.textStrong,
+      marginBottom: 15,
+      fontFamily: 'Kufam-SemiBoldItalic',
+    },
+    sectionTitleFlush: {marginBottom: 0},
+    emptyStateCard: {backgroundColor: colors.surface, borderRadius: 16},
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: 40,
+      paddingHorizontal: 20,
+    },
+    emptyStateText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginTop: 15,
+      marginBottom: 5,
+      fontFamily: 'Lato-Bold',
+    },
+    emptyStateSubtext: {
+      fontSize: 14,
+      color: colors.textMuted,
+      textAlign: 'center',
+      fontFamily: 'Lato-Regular',
+    },
+    cardAndroid: {borderWidth: 1, borderColor: colors.cardBorder},
+  });
