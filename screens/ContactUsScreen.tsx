@@ -1,14 +1,13 @@
 import React, {useState, useEffect} from 'react';
 import {
   View,
-  StyleSheet,
+  Text,
   TextInput,
   SafeAreaView,
   TouchableOpacity,
   Linking,
-  Platform,
 } from 'react-native';
-import {Card, Text, ActivityIndicator, Divider} from 'react-native-paper';
+import {ActivityIndicator} from 'react-native-paper';
 import {
   Timestamp,
   addDoc,
@@ -19,11 +18,15 @@ import {getAuth} from '@react-native-firebase/auth';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import FormButton from '../components/FormButton';
-import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../src/constants/theme';
+import {useTheme} from '../src/theme';
+import {FormError} from '../src/components/form/FormParts';
 import type {McIconName} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
 
-const SUCCESS_COLOR = '#25B07F';
+// Accent colours of the quick-contact icons. Each circle is the accent at a low alpha, so one
+// accent reads on both the light and the dark card.
+const ACCENT = {blue: '#2196F3', green: '#4CAF50'} as const;
+const tint = (hex: string): string => `${hex}1F`;
 
 interface ContactCategory {
   id: string;
@@ -60,6 +63,7 @@ const CONTACT_CATEGORIES: ContactCategory[] = [
 ];
 
 const ContactUsScreen = ({navigation}: {navigation: any}) => {
+  const {colors} = useTheme();
   const [feedbackText, setFeedbackText] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('feedback');
   const [loading, setLoading] = useState(false);
@@ -120,53 +124,56 @@ const ContactUsScreen = ({navigation}: {navigation: any}) => {
     CONTACT_CATEGORIES[0];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-background">
       <KeyboardAwareScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        className="flex-1"
+        contentContainerClassName="p-5 pb-10"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        <View style={styles.headerSection}>
-          <View style={styles.iconContainer}>
+        <View className="mb-[25px] items-center pt-5">
+          <View className="mb-5 h-20 w-20 items-center justify-center rounded-full bg-primary-soft">
             <MaterialCommunityIcons
               name="account-voice"
               size={48}
-              color={PRIMARY_COLOR}
+              color={colors.primary}
             />
           </View>
-          <Text style={styles.titleText}>Contact Us</Text>
-          <Text style={styles.subtitleText}>
+          <Text
+            accessibilityRole="header"
+            className="mb-2 text-center font-heading text-[28px] font-bold text-text-strong">
+            Contact Us
+          </Text>
+          <Text className="px-2.5 text-center font-sans text-base leading-[22px] text-text-secondary">
             We're here to help! Get in touch with our support team
           </Text>
         </View>
 
-        <Card
-          style={[
-            styles.quickContactCard,
-            Platform.OS === 'android' && styles.cardAndroid,
-          ]}
-          elevation={Platform.OS === 'android' ? 0 : 2}>
-          <View style={styles.cardContent}>
-            <Text style={styles.sectionTitle}>Quick Contact</Text>
+        <View className="mb-5 rounded-2xl border border-card-border bg-surface ios:shadow-md">
+          <View className="p-6">
+            <Text className="mb-5 font-heading text-xl font-bold text-text-strong">
+              Quick Contact
+            </Text>
             <TouchableOpacity
-              style={styles.quickContactItem}
+              className="flex-row items-center justify-between py-4"
+              accessibilityRole="link"
+              accessibilityLabel="Email support"
               onPress={() => handleQuickContact('email')}
               activeOpacity={0.7}>
-              <View style={styles.quickContactLeft}>
+              <View className="flex-1 flex-row items-center">
                 <View
-                  style={[
-                    styles.quickContactIcon,
-                    {backgroundColor: '#E3F2FD'},
-                  ]}>
+                  className="mr-4 h-12 w-12 items-center justify-center rounded-xl"
+                  style={{backgroundColor: tint(ACCENT.blue)}}>
                   <MaterialCommunityIcons
                     name="email"
                     size={24}
-                    color="#2196F3"
+                    color={ACCENT.blue}
                   />
                 </View>
                 <View>
-                  <Text style={styles.quickContactTitle}>Email Support</Text>
-                  <Text style={styles.quickContactSubtitle}>
+                  <Text className="font-sans-bold text-base font-semibold text-text-strong">
+                    Email Support
+                  </Text>
+                  <Text className="mt-0.5 font-sans text-sm text-text-secondary">
                     me@dhruvchheda.com
                   </Text>
                 </View>
@@ -174,29 +181,30 @@ const ContactUsScreen = ({navigation}: {navigation: any}) => {
               <MaterialCommunityIcons
                 name="open-in-new"
                 size={20}
-                color="#666"
+                color={colors.textSecondary}
               />
             </TouchableOpacity>
-            <Divider style={styles.divider} />
+            <View className="my-2 h-px bg-divider" />
             <TouchableOpacity
-              style={styles.quickContactItem}
+              className="flex-row items-center justify-between py-4"
+              accessibilityRole="button"
               onPress={() => handleQuickContact('privacy')}
               activeOpacity={0.7}>
-              <View style={styles.quickContactLeft}>
+              <View className="flex-1 flex-row items-center">
                 <View
-                  style={[
-                    styles.quickContactIcon,
-                    {backgroundColor: '#E8F5E8'},
-                  ]}>
+                  className="mr-4 h-12 w-12 items-center justify-center rounded-xl"
+                  style={{backgroundColor: tint(ACCENT.green)}}>
                   <MaterialCommunityIcons
                     name="shield-check"
                     size={24}
-                    color="#4CAF50"
+                    color={ACCENT.green}
                   />
                 </View>
                 <View>
-                  <Text style={styles.quickContactTitle}>Privacy Policy</Text>
-                  <Text style={styles.quickContactSubtitle}>
+                  <Text className="font-sans-bold text-base font-semibold text-text-strong">
+                    Privacy Policy
+                  </Text>
+                  <Text className="mt-0.5 font-sans text-sm text-text-secondary">
                     Learn about data protection
                   </Text>
                 </View>
@@ -204,74 +212,63 @@ const ContactUsScreen = ({navigation}: {navigation: any}) => {
               <MaterialCommunityIcons
                 name="chevron-right"
                 size={20}
-                color="#666"
+                color={colors.textSecondary}
               />
             </TouchableOpacity>
           </View>
-        </Card>
+        </View>
 
-        <Card
-          style={[
-            styles.formCard,
-            Platform.OS === 'android' && styles.cardAndroid,
-          ]}
-          elevation={Platform.OS === 'android' ? 0 : 3}>
-          <View style={styles.cardContent}>
-            <Text style={styles.sectionTitle}>Send us a Message</Text>
-            {errorMessage && (
-              <View style={styles.errorContainer}>
-                <MaterialCommunityIcons
-                  name="alert-circle"
-                  size={20}
-                  color="#C62828"
-                />
-                <Text style={styles.errorMessage}>{errorMessage}</Text>
-              </View>
-            )}
-            <View style={styles.categorySection}>
-              <Text style={styles.inputLabel}>What can we help you with?</Text>
-              <View style={styles.categoryGrid}>
-                {CONTACT_CATEGORIES.map(category => (
-                  <TouchableOpacity
-                    key={category.id}
-                    style={[
-                      styles.categoryOption,
-                      selectedCategory === category.id &&
-                        styles.categoryOptionSelected,
-                    ]}
-                    onPress={() => setSelectedCategory(category.id)}
-                    activeOpacity={0.7}>
-                    <MaterialCommunityIcons
-                      name={category.icon}
-                      size={24}
-                      color={
-                        selectedCategory === category.id
-                          ? '#FFFFFF'
-                          : PRIMARY_COLOR
-                      }
-                    />
-                    <Text
-                      style={[
-                        styles.categoryTitle,
-                        selectedCategory === category.id &&
-                          styles.categoryTitleSelected,
-                      ]}>
-                      {category.title}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.categoryDescription,
-                        selectedCategory === category.id &&
-                          styles.categoryDescriptionSelected,
-                      ]}>
-                      {category.description}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+        <View className="mb-5 rounded-[20px] border border-card-border bg-surface ios:shadow-lg">
+          <View className="p-6">
+            <Text className="mb-5 font-heading text-xl font-bold text-text-strong">
+              Send us a Message
+            </Text>
+            {errorMessage && <FormError message={errorMessage} />}
+            <View className="mb-[25px]">
+              <Text className="mb-3 font-sans-bold text-base font-semibold text-text-strong">
+                What can we help you with?
+              </Text>
+              <View className="flex-row flex-wrap justify-between gap-2.5">
+                {CONTACT_CATEGORIES.map(category => {
+                  const selected = selectedCategory === category.id;
+                  return (
+                    <TouchableOpacity
+                      key={category.id}
+                      accessibilityRole="radio"
+                      accessibilityState={{selected}}
+                      className={`min-h-[100px] w-[48%] items-center rounded-xl border-2 p-4 ${
+                        selected
+                          ? 'border-primary-fill bg-primary-fill'
+                          : 'border-card-border bg-surface-muted'
+                      }`}
+                      onPress={() => setSelectedCategory(category.id)}
+                      activeOpacity={0.7}>
+                      <MaterialCommunityIcons
+                        name={category.icon}
+                        size={24}
+                        color={selected ? colors.onPrimary : colors.primary}
+                      />
+                      <Text
+                        className={`mt-2 text-center font-sans-bold text-sm font-semibold ${
+                          selected ? 'text-on-primary' : 'text-text-strong'
+                        }`}>
+                        {category.title}
+                      </Text>
+                      <Text
+                        className={`mt-1 text-center font-sans text-xs ${
+                          selected
+                            ? 'text-on-primary opacity-85'
+                            : 'text-text-secondary'
+                        }`}>
+                        {category.description}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
-            <View style={styles.inputSection}>
-              <Text style={styles.inputLabel}>
+            <View className="mb-[25px]">
+              <Text className="mb-3 font-sans-bold text-base font-semibold text-text-strong">
                 {getCategoryInfo(selectedCategory).title} Details
               </Text>
               <TextInput
@@ -287,19 +284,25 @@ const ContactUsScreen = ({navigation}: {navigation: any}) => {
                 ).title.toLowerCase()} in detail...`}
                 multiline
                 numberOfLines={6}
-                style={styles.textInput}
-                placeholderTextColor="#999"
+                className="min-h-[140px] rounded-2xl border-2 border-border bg-surface-muted p-4 font-sans text-base text-text-strong"
+                placeholderTextColor={colors.textPlaceholder}
+                selectionColor={colors.primary}
                 textAlignVertical="top"
                 maxLength={1000}
+                accessibilityLabel={`${
+                  getCategoryInfo(selectedCategory).title
+                } details`}
               />
-              <Text style={styles.characterCount}>
+              <Text className="mt-2 text-right font-sans text-xs text-text-placeholder">
                 {feedbackText.length}/1000 characters
               </Text>
             </View>
             {loading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-                <Text style={styles.loadingText}>Sending your message...</Text>
+              <View className="items-center py-5">
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text className="mt-3 font-sans text-base text-text-secondary">
+                  Sending your message...
+                </Text>
               </View>
             ) : (
               <FormButton
@@ -308,36 +311,36 @@ const ContactUsScreen = ({navigation}: {navigation: any}) => {
               />
             )}
           </View>
-        </Card>
+        </View>
 
-        <View style={styles.infoSection}>
-          <View style={styles.infoItem}>
+        <View className="rounded-2xl border border-card-border bg-surface p-5 ios:shadow-md">
+          <View className="mb-3 flex-row items-center">
             <MaterialCommunityIcons
               name="shield-check"
               size={20}
-              color={SUCCESS_COLOR}
+              color={colors.success}
             />
-            <Text style={styles.infoText}>
+            <Text className="ml-3 flex-1 font-sans text-sm text-text-secondary">
               Your messages are secure and confidential
             </Text>
           </View>
-          <View style={styles.infoItem}>
+          <View className="mb-3 flex-row items-center">
             <MaterialCommunityIcons
               name="clock-outline"
               size={20}
-              color={PRIMARY_COLOR}
+              color={colors.primary}
             />
-            <Text style={styles.infoText}>
+            <Text className="ml-3 flex-1 font-sans text-sm text-text-secondary">
               We typically respond within 24-48 hours
             </Text>
           </View>
-          <View style={styles.infoItem}>
+          <View className="flex-row items-center">
             <MaterialCommunityIcons
               name="account-group"
               size={20}
-              color="#FF9800"
+              color={colors.warning}
             />
-            <Text style={styles.infoText}>
+            <Text className="ml-3 flex-1 font-sans text-sm text-text-secondary">
               Our support team is here to help you succeed
             </Text>
           </View>
@@ -348,184 +351,3 @@ const ContactUsScreen = ({navigation}: {navigation: any}) => {
 };
 
 export default ContactUsScreen;
-
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  scrollView: {flex: 1},
-  scrollContent: {padding: 20, paddingBottom: 40},
-  headerSection: {alignItems: 'center', marginBottom: 25, paddingTop: 20},
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#E8EBF7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  titleText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitleText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-    lineHeight: 22,
-    paddingHorizontal: 10,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginBottom: 20,
-  },
-  quickContactCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginBottom: 20,
-  },
-  formCard: {backgroundColor: '#FFFFFF', borderRadius: 20, marginBottom: 20},
-  cardContent: {padding: 24},
-  quickContactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-  },
-  quickContactLeft: {flexDirection: 'row', alignItems: 'center', flex: 1},
-  quickContactIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  quickContactTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  quickContactSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-    marginTop: 2,
-  },
-  divider: {backgroundColor: '#F0F0F0', marginVertical: 8},
-  categorySection: {marginBottom: 25},
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  categoryOption: {
-    width: '48%',
-    backgroundColor: '#F8F9FA',
-    borderWidth: 2,
-    borderColor: '#E8EBF7',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    minHeight: 100,
-  },
-  categoryOptionSelected: {
-    backgroundColor: PRIMARY_COLOR,
-    borderColor: PRIMARY_COLOR,
-  },
-  categoryTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  categoryTitleSelected: {color: '#FFFFFF'},
-  categoryDescription: {
-    fontSize: 12,
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  categoryDescriptionSelected: {color: '#E8EBF7'},
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFEBEE',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#F44336',
-  },
-  errorMessage: {
-    color: '#C62828',
-    fontSize: 14,
-    fontFamily: 'Lato-Regular',
-    marginLeft: 8,
-    flex: 1,
-  },
-  inputSection: {marginBottom: 25},
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-    marginBottom: 12,
-  },
-  textInput: {
-    borderWidth: 2,
-    borderColor: '#E5E5E5',
-    borderRadius: 16,
-    padding: 16,
-    fontSize: 16,
-    fontFamily: 'Lato-Regular',
-    backgroundColor: '#FAFAFA',
-    minHeight: 140,
-    color: '#2C2C2C',
-  },
-  characterCount: {
-    fontSize: 12,
-    color: '#999',
-    fontFamily: 'Lato-Regular',
-    textAlign: 'right',
-    marginTop: 8,
-  },
-  loadingContainer: {alignItems: 'center', paddingVertical: 20},
-  loadingText: {
-    fontSize: 16,
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-    marginTop: 12,
-  },
-  infoSection: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    elevation: Platform.OS === 'android' ? 0 : 3,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-  },
-  infoItem: {flexDirection: 'row', alignItems: 'center', marginBottom: 12},
-  infoText: {
-    fontSize: 14,
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-    marginLeft: 12,
-    flex: 1,
-  },
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-});
