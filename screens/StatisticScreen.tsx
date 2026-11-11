@@ -11,6 +11,7 @@ import React, {useState, useEffect, useCallback, useMemo, useRef} from 'react';
 import {Card, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {BarChart, PieChart} from 'react-native-gifted-charts';
+import {compactAxisLabel, niceAxisMax} from '../src/utils/chartAxis';
 import {useFocusEffect} from '@react-navigation/native';
 import {getAuth} from '@react-native-firebase/auth';
 import {
@@ -85,6 +86,8 @@ const TIME_RANGES: {key: TimeRange; label: string; icon: McIconName}[] = [
   {key: 'year', label: 'Last Year', icon: 'calendar'},
   {key: 'custom', label: 'Custom Range', icon: 'calendar-range'},
 ];
+
+const Y_AXIS_SECTIONS = 3;
 
 const StatisticScreen = ({navigation}: {navigation: any}) => {
   const {currency, formatAmount} = useCurrency();
@@ -674,19 +677,21 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
                       marginHorizontal: 2,
                       fontFamily: 'Lato-Regular',
                     }}
-                    noOfSections={3}
+                    noOfSections={Y_AXIS_SECTIONS}
+                    showFractionalValues
                     isAnimated
                     onPress={handleBarTap}
-                    yAxisLabelWidth={50}
-                    yAxisLabelPrefix={currency.symbol}
+                    yAxisLabelWidth={56}
+                    formatYLabel={label =>
+                      compactAxisLabel(Number(label), currency.symbol)
+                    }
                     width={chartWidth}
                     xAxisLabelsHeight={32}
                     rulesColor="#ECECEC"
-                    maxValue={
-                      Math.max(
-                        ...barData.filter(i => i.value > 0).map(i => i.value),
-                      ) * 1.1
-                    }
+                    maxValue={niceAxisMax(
+                      Math.max(0, ...barData.map(i => i.value)),
+                      Y_AXIS_SECTIONS,
+                    )}
                     initialSpacing={20}
                     endSpacing={20}
                     hideRules
