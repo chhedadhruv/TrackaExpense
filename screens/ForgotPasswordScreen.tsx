@@ -1,21 +1,14 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  TouchableOpacity,
-  Platform,
-} from 'react-native';
+import {View, Text, ActivityIndicator, TouchableOpacity} from 'react-native';
 import React, {useState, useContext} from 'react';
-import {Card} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import FormInput from '../components/FormInput';
 import FormButton from '../components/FormButton';
 import {AuthContext} from '../navigation/AuthProvider';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
-import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../src/constants/theme';
+import {useTheme} from '../src/theme';
 
 const ForgotPasswordScreen = ({navigation}: {navigation: any}) => {
+  const {colors} = useTheme();
   const [email, setEmail] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -54,56 +47,63 @@ const ForgotPasswordScreen = ({navigation}: {navigation: any}) => {
   };
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-background">
       <KeyboardAwareScrollView
         style={{flex: 1, width: '100%'}}
         keyboardShouldPersistTaps="always"
         showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          <View style={styles.headerContainer}>
-            <View style={styles.iconContainer}>
+        <View className="flex-1 px-5 pb-5 pt-10">
+          <View className="mb-[30px] items-center">
+            <View className="mb-5 h-[100px] w-[100px] items-center justify-center rounded-full bg-primary-soft">
               <MaterialCommunityIcons
                 name="lock-reset"
                 size={60}
-                color={PRIMARY_COLOR}
+                color={colors.primary}
               />
             </View>
-            <Text style={styles.headerText}>Forgot Password?</Text>
-            <Text style={styles.subtitleText}>
+            <Text className="mb-2.5 font-heading text-[28px] font-bold text-primary">
+              Forgot Password?
+            </Text>
+            <Text className="px-2.5 text-center font-sans text-base leading-[22px] text-text-secondary">
               No worries! Enter your email address and we'll send you a link to
               reset your password
             </Text>
           </View>
 
-          <Card
-            style={[
-              styles.formCard,
-              Platform.OS === 'android' && styles.cardAndroid,
-            ]}
-            elevation={Platform.OS === 'android' ? 0 : 4}>
-            <View style={styles.cardContent}>
+          <View className="mb-5 rounded-[20px] border border-card-border bg-surface ios:shadow-lg">
+            <View className="p-[30px]">
               {errorMessage && (
-                <View style={styles.errorContainer}>
+                <View
+                  accessibilityRole="alert"
+                  className="mb-5 flex-row items-center rounded-xl border-l-4 border-expense bg-expense-soft p-[15px]">
                   <MaterialCommunityIcons
                     name="alert-circle"
                     size={20}
-                    color="#C62828"
+                    color={colors.expenseText}
                   />
-                  <Text style={styles.errorMessage}>{errorMessage}</Text>
+                  <Text className="ml-2.5 flex-1 font-sans text-sm leading-[18px] text-expense-text">
+                    {errorMessage}
+                  </Text>
                 </View>
               )}
               {successMessage && (
-                <View style={styles.successContainer}>
+                <View
+                  accessibilityRole="alert"
+                  className="mb-5 flex-row items-center rounded-xl border-l-4 border-income bg-income-soft p-[15px]">
                   <MaterialCommunityIcons
                     name="check-circle"
                     size={20}
-                    color="#2E7D32"
+                    color={colors.incomeText}
                   />
-                  <Text style={styles.successMessage}>{successMessage}</Text>
+                  <Text className="ml-2.5 flex-1 font-sans text-sm leading-[18px] text-income-text">
+                    {successMessage}
+                  </Text>
                 </View>
               )}
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Email Address</Text>
+              <View className="mb-5">
+                <Text className="mb-2.5 font-sans-bold text-base font-semibold text-primary">
+                  Email Address
+                </Text>
                 <FormInput
                   labelValue={email}
                   onChangeText={setEmail}
@@ -115,9 +115,11 @@ const ForgotPasswordScreen = ({navigation}: {navigation: any}) => {
                 />
               </View>
               {isLoading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-                  <Text style={styles.loadingText}>Sending reset email...</Text>
+                <View className="items-center py-5">
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text className="mt-2.5 font-sans text-base text-primary">
+                    Sending reset email...
+                  </Text>
                 </View>
               ) : (
                 <FormButton
@@ -126,37 +128,34 @@ const ForgotPasswordScreen = ({navigation}: {navigation: any}) => {
                 />
               )}
             </View>
-          </Card>
+          </View>
 
-          <Card
-            style={[
-              styles.infoCard,
-              Platform.OS === 'android' && styles.cardAndroid,
-            ]}
-            elevation={Platform.OS === 'android' ? 0 : 2}>
-            <View style={styles.infoCardContent}>
+          <View className="mb-5 rounded-[15px] border border-card-border bg-surface ios:shadow-md">
+            <View className="flex-row items-start p-5">
               <MaterialCommunityIcons
                 name="information"
                 size={24}
-                color={PRIMARY_COLOR}
+                color={colors.primary}
               />
-              <View style={styles.infoTextContainer}>
-                <Text style={styles.infoTitle}>Need Help?</Text>
-                <Text style={styles.infoText}>
+              <View className="ml-[15px] flex-1">
+                <Text className="mb-[5px] font-sans-bold text-base font-semibold text-primary">
+                  Need Help?
+                </Text>
+                <Text className="font-sans text-sm leading-[18px] text-text-secondary">
                   If you don't receive the email within a few minutes, check
                   your spam folder or contact support.
                 </Text>
               </View>
             </View>
-          </Card>
+          </View>
 
-          <View style={styles.loginContainer}>
+          <View className="items-center pb-5">
             <TouchableOpacity
-              style={styles.loginButton}
+              className="p-[15px]"
               onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.loginButtonText}>
+              <Text className="text-center font-sans text-base text-text-secondary">
                 Remember your password?{' '}
-                <Text style={styles.loginLinkText}>Sign in here</Text>
+                <Text className="font-semibold text-primary">Sign in here</Text>
               </Text>
             </TouchableOpacity>
           </View>
@@ -167,116 +166,3 @@ const ForgotPasswordScreen = ({navigation}: {navigation: any}) => {
 };
 
 export default ForgotPasswordScreen;
-
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  content: {flex: 1, paddingHorizontal: 20, paddingTop: 40, paddingBottom: 20},
-  headerContainer: {alignItems: 'center', marginBottom: 30},
-  iconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#E8EBF7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  headerText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    fontFamily: 'Kufam-SemiBoldItalic',
-    marginBottom: 10,
-  },
-  subtitleText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-    lineHeight: 22,
-    paddingHorizontal: 10,
-  },
-  formCard: {backgroundColor: '#FFFFFF', borderRadius: 20, marginBottom: 20},
-  cardContent: {padding: 30},
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFEBEE',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#F44336',
-  },
-  errorMessage: {
-    color: '#C62828',
-    fontSize: 14,
-    fontFamily: 'Lato-Regular',
-    marginLeft: 10,
-    flex: 1,
-    lineHeight: 18,
-  },
-  successContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8F5E8',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#4CAF50',
-  },
-  successMessage: {
-    color: '#2E7D32',
-    fontSize: 14,
-    fontFamily: 'Lato-Regular',
-    marginLeft: 10,
-    flex: 1,
-    lineHeight: 18,
-  },
-  inputContainer: {marginBottom: 20},
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: PRIMARY_COLOR,
-    fontFamily: 'Lato-Bold',
-    marginBottom: 10,
-  },
-  loadingContainer: {alignItems: 'center', paddingVertical: 20},
-  loadingText: {
-    fontSize: 16,
-    color: PRIMARY_COLOR,
-    fontFamily: 'Lato-Regular',
-    marginTop: 10,
-  },
-  infoCard: {backgroundColor: '#FFFFFF', borderRadius: 15, marginBottom: 20},
-  infoCardContent: {
-    flexDirection: 'row',
-    padding: 20,
-    alignItems: 'flex-start',
-  },
-  infoTextContainer: {flex: 1, marginLeft: 15},
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: PRIMARY_COLOR,
-    fontFamily: 'Lato-Bold',
-    marginBottom: 5,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-    lineHeight: 18,
-  },
-  loginContainer: {alignItems: 'center', paddingBottom: 20},
-  loginButton: {padding: 15},
-  loginButtonText: {
-    fontSize: 16,
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-    textAlign: 'center',
-  },
-  loginLinkText: {color: PRIMARY_COLOR, fontWeight: '600'},
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-});

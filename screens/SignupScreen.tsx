@@ -3,14 +3,10 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
   Image,
-  Modal,
-  ScrollView,
   Platform,
 } from 'react-native';
-import {Card} from 'react-native-paper';
 import FormInput from '../components/FormInput';
 import FormButton from '../components/FormButton';
 import {AuthContext} from '../navigation/AuthProvider';
@@ -39,8 +35,8 @@ import {
   performAppleSignIn,
 } from '../utils/AppleSignInConfig';
 import {CURRENCIES} from '../utils/CurrencyUtil';
-import {PRIMARY_COLOR, BACKGROUND_COLOR} from '../src/constants/theme';
-import {ModalSnackbar} from '../src/components/Snackbar';
+import {useTheme} from '../src/theme';
+import CurrencyPickerModal from '../src/components/CurrencyPickerModal';
 
 interface PasswordValidation {
   length: boolean;
@@ -51,6 +47,7 @@ interface PasswordValidation {
 }
 
 const SignupScreen = ({navigation}: {navigation: any}) => {
+  const {colors} = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -268,34 +265,62 @@ const SignupScreen = ({navigation}: {navigation: any}) => {
     }
   };
 
+  const requirements: [boolean, string][] = [
+    [passwordValidation.length, 'At least 6 characters'],
+    [passwordValidation.numeric, 'At least 1 numeric character'],
+    [passwordValidation.special, 'At least 1 special character'],
+    [passwordValidation.lowercase, 'At least 1 lowercase letter'],
+    [passwordValidation.uppercase, 'At least 1 uppercase letter'],
+  ];
+
+  const googleButton = (
+    <TouchableOpacity
+      className="mb-2.5 flex-row items-center justify-center rounded-lg border border-border bg-surface-muted px-4 py-3"
+      onPress={handleGoogleSignUp}
+      disabled={loading}>
+      <Image
+        source={{
+          uri: 'https://developers.google.com/identity/images/g-logo.png',
+        }}
+        className="mr-3 h-5 w-5"
+      />
+      <Text className="font-sans text-base font-medium text-text">
+        Sign up with Google
+      </Text>
+    </TouchableOpacity>
+  );
+
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-background">
       <KeyboardAwareScrollView
         style={{flex: 1, width: '100%'}}
         keyboardShouldPersistTaps="always"
         showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          <View style={styles.headerContainer}>
-            <Text style={styles.headerText}>Create Account</Text>
-            <Text style={styles.subtitleText}>
+        <View className="flex-1 px-5 pb-5 pt-10">
+          <View className="mb-[30px] items-center">
+            <Text className="mb-2 font-heading text-[32px] font-bold text-primary">
+              Create Account
+            </Text>
+            <Text className="text-center font-sans text-base text-text-secondary">
               Start tracking your expenses with a new account
             </Text>
           </View>
 
-          <Card
-            style={[
-              styles.formCard,
-              Platform.OS === 'android' && styles.cardAndroid,
-            ]}
-            elevation={Platform.OS === 'android' ? 0 : 4}>
-            <View style={styles.cardContent}>
+          <View className="mb-5 rounded-[20px] border border-card-border bg-surface ios:shadow-lg">
+            <View className="p-[25px]">
               {errorMessage && (
-                <View style={styles.errorContainer}>
-                  <Text style={styles.errorMessage}>{errorMessage}</Text>
+                <View
+                  accessibilityRole="alert"
+                  className="mb-5 rounded-xl border-l-4 border-expense bg-expense-soft p-[15px]">
+                  <Text className="font-sans text-sm leading-5 text-expense-text">
+                    {errorMessage}
+                  </Text>
                 </View>
               )}
-              <View style={styles.inputSection}>
-                <Text style={styles.sectionTitle}>Personal Information</Text>
+              <View className="mb-[25px]">
+                <Text className="mb-[15px] border-b-2 border-card-border pb-[5px] font-sans-bold text-lg font-semibold text-primary">
+                  Personal Information
+                </Text>
                 <FormInput
                   labelValue={name}
                   onChangeText={setName}
@@ -323,20 +348,26 @@ const SignupScreen = ({navigation}: {navigation: any}) => {
                   autoCorrect={false}
                 />
               </View>
-              <View style={styles.inputSection}>
-                <Text style={styles.sectionTitle}>Preferences</Text>
+              <View className="mb-[25px]">
+                <Text className="mb-[15px] border-b-2 border-card-border pb-[5px] font-sans-bold text-lg font-semibold text-primary">
+                  Preferences
+                </Text>
                 <TouchableOpacity
-                  style={styles.currencySelector}
+                  accessibilityRole="button"
+                  accessibilityLabel="Choose currency"
+                  className="flex-row items-center justify-between rounded-xl border border-card-border bg-surface p-4"
                   onPress={() => setCurrencyModalVisible(true)}>
-                  <View style={styles.currencySelectorLeft}>
+                  <View className="flex-1 flex-row items-center">
                     <MaterialCommunityIcons
                       name="currency-usd"
                       size={20}
-                      color={PRIMARY_COLOR}
+                      color={colors.primary}
                     />
-                    <View style={styles.currencySelectorText}>
-                      <Text style={styles.currencyLabel}>Currency</Text>
-                      <Text style={styles.currencyValue}>
+                    <View className="ml-3 flex-1">
+                      <Text className="mb-0.5 font-sans text-xs text-text-secondary">
+                        Currency
+                      </Text>
+                      <Text className="font-sans-bold text-base text-text-strong">
                         {getSelectedCurrencyInfo().name} (
                         {getSelectedCurrencyInfo().symbol})
                       </Text>
@@ -345,13 +376,15 @@ const SignupScreen = ({navigation}: {navigation: any}) => {
                   <MaterialCommunityIcons
                     name="chevron-right"
                     size={24}
-                    color="#999"
+                    color={colors.textPlaceholder}
                   />
                 </TouchableOpacity>
               </View>
-              <View style={styles.inputSection}>
-                <Text style={styles.sectionTitle}>Security</Text>
-                <View style={styles.passwordContainer}>
+              <View className="mb-[25px]">
+                <Text className="mb-[15px] border-b-2 border-card-border pb-[5px] font-sans-bold text-lg font-semibold text-primary">
+                  Security
+                </Text>
+                <View className="relative mb-2.5">
                   <FormInput
                     labelValue={password}
                     onChangeText={text => {
@@ -363,54 +396,39 @@ const SignupScreen = ({navigation}: {navigation: any}) => {
                     secureTextEntry={!showPassword}
                   />
                   <TouchableOpacity
-                    style={styles.eyeIcon}
+                    className="absolute right-[15px] top-1/2 z-10 -translate-y-2.5"
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      showPassword ? 'Hide password' : 'Show password'
+                    }
                     onPress={() => setShowPassword(!showPassword)}>
                     <MaterialCommunityIcons
                       name={showPassword ? 'eye-off' : 'eye'}
                       size={20}
-                      color="#666"
+                      color={colors.textSecondary}
                     />
                   </TouchableOpacity>
                 </View>
                 {password.length > 0 && (
-                  <View style={styles.validationContainer}>
-                    <Text style={styles.validationTitle}>
+                  <View className="mb-[15px] rounded-lg border-l-[3px] border-primary bg-surface-muted p-3">
+                    <Text className="mb-2 font-sans-bold text-sm font-semibold text-text">
                       Password Requirements:
                     </Text>
-                    {(
-                      [
-                        [passwordValidation.length, 'At least 6 characters'],
-                        [
-                          passwordValidation.numeric,
-                          'At least 1 numeric character',
-                        ],
-                        [
-                          passwordValidation.special,
-                          'At least 1 special character',
-                        ],
-                        [
-                          passwordValidation.lowercase,
-                          'At least 1 lowercase letter',
-                        ],
-                        [
-                          passwordValidation.uppercase,
-                          'At least 1 uppercase letter',
-                        ],
-                      ] as [boolean, string][]
-                    ).map(([met, label]) => (
-                      <View key={label} style={styles.validationItem}>
+                    {requirements.map(([met, label]) => (
+                      <View key={label} className="mb-1">
                         <Text
-                          style={[
-                            styles.validationText,
-                            met && styles.validText,
-                          ]}>
+                          className={`font-sans text-[13px] ${
+                            met
+                              ? 'font-semibold text-income-text'
+                              : 'text-text-secondary'
+                          }`}>
                           {met ? '✓' : '○'} {label}
                         </Text>
                       </View>
                     ))}
                   </View>
                 )}
-                <View style={styles.passwordContainer}>
+                <View className="relative mb-2.5">
                   <FormInput
                     labelValue={confirmPassword}
                     onChangeText={setConfirmPassword}
@@ -419,14 +437,18 @@ const SignupScreen = ({navigation}: {navigation: any}) => {
                     secureTextEntry={!showConfirmPassword}
                   />
                   <TouchableOpacity
-                    style={styles.eyeIcon}
+                    className="absolute right-[15px] top-1/2 z-10 -translate-y-2.5"
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      showConfirmPassword ? 'Hide password' : 'Show password'
+                    }
                     onPress={() =>
                       setShowConfirmPassword(!showConfirmPassword)
                     }>
                     <MaterialCommunityIcons
                       name={showConfirmPassword ? 'eye-off' : 'eye'}
                       size={20}
-                      color="#666"
+                      color={colors.textSecondary}
                     />
                   </TouchableOpacity>
                 </View>
@@ -434,8 +456,8 @@ const SignupScreen = ({navigation}: {navigation: any}) => {
               {loading ? (
                 <ActivityIndicator
                   size="large"
-                  color={PRIMARY_COLOR}
-                  style={styles.loader}
+                  color={colors.primary}
+                  className="my-5"
                 />
               ) : (
                 <FormButton
@@ -443,382 +465,74 @@ const SignupScreen = ({navigation}: {navigation: any}) => {
                   onPress={handleSignup}
                 />
               )}
-              <View style={styles.dividerContainer}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>OR</Text>
-                <View style={styles.dividerLine} />
+              <View className="my-5 flex-row items-center">
+                <View className="h-px flex-1 bg-border" />
+                <Text className="mx-[15px] font-sans text-sm text-text-secondary">
+                  OR
+                </Text>
+                <View className="h-px flex-1 bg-border" />
               </View>
               {Platform.OS === 'ios' && isAppleSignInAvailable ? (
                 <>
                   <TouchableOpacity
-                    style={styles.appleButton}
+                    className="mb-2.5 flex-row items-center justify-center rounded-lg bg-inverse px-4 py-3"
                     onPress={handleAppleSignUp}
                     disabled={loading}>
                     <MaterialCommunityIcons
                       name="apple"
                       size={20}
-                      color="#FFFFFF"
-                      style={styles.appleIcon}
+                      color={colors.onInverse}
+                      className="mr-3"
                     />
-                    <Text style={styles.appleButtonText}>
+                    <Text className="font-sans text-base font-medium text-on-inverse">
                       Sign up with Apple
                     </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.googleButton}
-                    onPress={handleGoogleSignUp}
-                    disabled={loading}>
-                    <Image
-                      source={{
-                        uri: 'https://developers.google.com/identity/images/g-logo.png',
-                      }}
-                      style={styles.googleIcon}
-                    />
-                    <Text style={styles.googleButtonText}>
-                      Sign up with Google
-                    </Text>
-                  </TouchableOpacity>
+                  {googleButton}
                 </>
               ) : (
-                <TouchableOpacity
-                  style={styles.googleButton}
-                  onPress={handleGoogleSignUp}
-                  disabled={loading}>
-                  <Image
-                    source={{
-                      uri: 'https://developers.google.com/identity/images/g-logo.png',
-                    }}
-                    style={styles.googleIcon}
-                  />
-                  <Text style={styles.googleButtonText}>
-                    Sign up with Google
-                  </Text>
-                </TouchableOpacity>
+                googleButton
               )}
             </View>
-          </Card>
+          </View>
 
-          <Card
-            style={[
-              styles.termsCard,
-              Platform.OS === 'android' && styles.cardAndroid,
-            ]}
-            elevation={Platform.OS === 'android' ? 0 : 2}>
-            <View style={styles.termsContent}>
-              <Text style={styles.termsText}>
+          <View className="mb-5 rounded-[15px] border border-card-border bg-surface ios:shadow-md">
+            <View className="p-5">
+              <Text className="text-center font-sans text-[13px] leading-[18px] text-text-secondary">
                 By creating an account, you agree to our{' '}
                 <Text
-                  style={styles.termsLink}
+                  className="font-semibold text-primary underline"
                   onPress={() => navigation.navigate('PrivacyPolicy')}>
                   Privacy Policy
                 </Text>
               </Text>
             </View>
-          </Card>
+          </View>
 
-          <View style={styles.loginContainer}>
+          <View className="items-center pb-5">
             <TouchableOpacity
-              style={styles.loginButton}
+              className="p-[15px]"
               onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.loginButtonText}>
+              <Text className="text-center font-sans text-base text-text-secondary">
                 Already have an account?{' '}
-                <Text style={styles.loginLinkText}>Sign in here</Text>
+                <Text className="font-semibold text-primary">Sign in here</Text>
               </Text>
             </TouchableOpacity>
           </View>
         </View>
       </KeyboardAwareScrollView>
 
-      <Modal
+      <CurrencyPickerModal
         visible={currencyModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setCurrencyModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Currency</Text>
-              <TouchableOpacity onPress={() => setCurrencyModalVisible(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView
-              style={styles.currencyList}
-              showsVerticalScrollIndicator={false}>
-              {CURRENCIES.map(curr => (
-                <TouchableOpacity
-                  key={curr.code}
-                  style={[
-                    styles.currencyItem,
-                    selectedCurrency === curr.code &&
-                      styles.currencyItemSelected,
-                  ]}
-                  onPress={() => {
-                    setSelectedCurrency(curr.code);
-                    setCurrencyModalVisible(false);
-                  }}>
-                  <View style={styles.currencyInfo}>
-                    <Text style={styles.currencySymbol}>{curr.symbol}</Text>
-                    <View style={styles.currencyDetails}>
-                      <Text style={styles.currencyName}>{curr.name}</Text>
-                      <Text style={styles.currencyCode}>{curr.code}</Text>
-                    </View>
-                  </View>
-                  {selectedCurrency === curr.code && (
-                    <MaterialCommunityIcons
-                      name="check-circle"
-                      size={24}
-                      color={PRIMARY_COLOR}
-                    />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-        <ModalSnackbar />
-      </Modal>
+        selectedCode={selectedCurrency}
+        onSelect={code => {
+          setSelectedCurrency(code);
+          setCurrencyModalVisible(false);
+        }}
+        onClose={() => setCurrencyModalVisible(false)}
+      />
     </View>
   );
 };
 
 export default SignupScreen;
-
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: BACKGROUND_COLOR},
-  content: {flex: 1, paddingHorizontal: 20, paddingTop: 40, paddingBottom: 20},
-  headerContainer: {alignItems: 'center', marginBottom: 30},
-  headerText: {
-    fontFamily: 'Kufam-SemiBoldItalic',
-    fontSize: 32,
-    color: PRIMARY_COLOR,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  subtitleText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'Lato-Regular',
-  },
-  formCard: {backgroundColor: '#FFFFFF', borderRadius: 20, marginBottom: 20},
-  cardContent: {padding: 25},
-  inputSection: {marginBottom: 25},
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: PRIMARY_COLOR,
-    fontFamily: 'Lato-Bold',
-    marginBottom: 15,
-    borderBottomWidth: 2,
-    borderBottomColor: '#E8EBF7',
-    paddingBottom: 5,
-  },
-  errorContainer: {
-    backgroundColor: '#FFEBEE',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#F44336',
-  },
-  errorMessage: {
-    color: '#C62828',
-    fontSize: 14,
-    fontFamily: 'Lato-Regular',
-    lineHeight: 20,
-  },
-  loader: {marginVertical: 20},
-  termsCard: {backgroundColor: '#FFFFFF', borderRadius: 15, marginBottom: 20},
-  termsContent: {padding: 20},
-  termsText: {
-    fontSize: 13,
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  termsLink: {
-    color: PRIMARY_COLOR,
-    fontWeight: '600',
-    textDecorationLine: 'underline',
-  },
-  loginContainer: {alignItems: 'center', paddingBottom: 20},
-  loginButton: {padding: 15},
-  loginButtonText: {
-    fontSize: 16,
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-    textAlign: 'center',
-  },
-  loginLinkText: {color: PRIMARY_COLOR, fontWeight: '600'},
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  dividerLine: {flex: 1, height: 1, backgroundColor: '#E0E0E0'},
-  dividerText: {
-    marginHorizontal: 15,
-    fontSize: 14,
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-  },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 10,
-    elevation: Platform.OS === 'android' ? 0 : 2,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  googleIcon: {width: 20, height: 20, marginRight: 12},
-  googleButtonText: {
-    fontSize: 16,
-    color: '#333',
-    fontFamily: 'Lato-Regular',
-    fontWeight: '500',
-  },
-  appleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#000000',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 10,
-    elevation: Platform.OS === 'android' ? 0 : 2,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  appleIcon: {marginRight: 12},
-  appleButtonText: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontFamily: 'Lato-Regular',
-    fontWeight: '500',
-  },
-  passwordContainer: {position: 'relative', marginBottom: 10},
-  eyeIcon: {
-    position: 'absolute',
-    right: 15,
-    top: '50%',
-    transform: [{translateY: -10}],
-    zIndex: 1,
-  },
-  validationContainer: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 15,
-    borderLeftWidth: 3,
-    borderLeftColor: PRIMARY_COLOR,
-  },
-  validationTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    fontFamily: 'Lato-Bold',
-    marginBottom: 8,
-  },
-  validationItem: {marginBottom: 4},
-  validationText: {fontSize: 13, color: '#666', fontFamily: 'Lato-Regular'},
-  validText: {color: '#4CAF50', fontWeight: '600'},
-  currencySelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E8EBF7',
-  },
-  currencySelectorLeft: {flexDirection: 'row', alignItems: 'center', flex: 1},
-  currencySelectorText: {marginLeft: 12, flex: 1},
-  currencyLabel: {
-    fontSize: 12,
-    color: '#666',
-    fontFamily: 'Lato-Regular',
-    marginBottom: 2,
-  },
-  currencyValue: {fontSize: 16, color: '#2C2C2C', fontFamily: 'Lato-Bold'},
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContainer: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-    paddingBottom: 20,
-    height: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C2C2C',
-    fontFamily: 'Kufam-SemiBoldItalic',
-  },
-  currencyList: {paddingHorizontal: 20, paddingTop: 10},
-  currencyItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginVertical: 4,
-    backgroundColor: '#F8F9FA',
-  },
-  currencyItemSelected: {
-    backgroundColor: '#E8EBF7',
-    borderWidth: 2,
-    borderColor: PRIMARY_COLOR,
-  },
-  currencyInfo: {flexDirection: 'row', alignItems: 'center', flex: 1},
-  currencySymbol: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    marginRight: 16,
-    width: 40,
-    textAlign: 'center',
-  },
-  currencyDetails: {flex: 1},
-  currencyName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'Lato-Bold',
-  },
-  currencyCode: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-    fontFamily: 'Lato-Regular',
-  },
-  cardAndroid: {borderWidth: 1, borderColor: '#E8EBF7'},
-});
