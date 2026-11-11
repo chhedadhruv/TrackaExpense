@@ -9,7 +9,7 @@ import {
   Platform,
   Share,
 } from 'react-native';
-import {Card, Searchbar, ActivityIndicator} from 'react-native-paper';
+import {Card, Searchbar} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {
   collection,
@@ -25,6 +25,8 @@ import {fromMinor} from '../../src/utils/money';
 import {shareOfMinor} from '../../src/utils/splitMath';
 import {AuthContext} from '../../navigation/AuthProvider';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
+import {ErrorState, LoadingState} from '../../src/components/ScreenState';
+import {useLoadFailure} from '../../src/hooks/useLoadFailure';
 
 interface SplitUser {
   email?: string;
@@ -101,6 +103,7 @@ const SplitTransactionScreen = ({
   const currentUserEmail = user?.email?.toLowerCase();
   const {group} = route.params as {group: Group};
   const [loading, setLoading] = useState(true);
+  const {failed, succeed, fail} = useLoadFailure();
   const [transactions, setTransactions] = useState<SplitItem[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<SplitItem[]>(
     [],
@@ -135,8 +138,11 @@ const SplitTransactionScreen = ({
           return bTs - aTs;
         });
       setTransactions(fetched);
-      setLoading(false);
-    } catch (_) {
+      succeed();
+    } catch (e) {
+      // A failed load must not read as "No transactions found": show the error state instead.
+      fail(e);
+    } finally {
       setLoading(false);
     }
   };
@@ -254,11 +260,18 @@ const SplitTransactionScreen = ({
   };
 
   if (loading) {
+    return <LoadingState message="Loading transactions..." />;
+  }
+
+  if (failed) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading transactions...</Text>
-      </View>
+      <ErrorState
+        title="Could not load transactions"
+        onRetry={() => {
+          setLoading(true);
+          fetchTransactions();
+        }}
+      />
     );
   }
 
@@ -560,18 +573,6 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {flex: 1, backgroundColor: colors.background},
     scrollView: {flex: 1},
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.background,
-    },
-    loadingText: {
-      fontSize: 16,
-      color: colors.primary,
-      marginTop: 15,
-      fontFamily: 'Lato-Regular',
-    },
     headerSection: {
       alignItems: 'center',
       paddingHorizontal: 20,

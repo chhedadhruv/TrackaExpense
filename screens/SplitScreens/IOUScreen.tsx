@@ -36,6 +36,8 @@ import {
   EXPO_PUBLIC_NOTIFICATION_SERVER_URL,
 } from '@env';
 import {snackbar} from '../../src/utils/snackbarStore';
+import {ErrorState, LoadingState} from '../../src/components/ScreenState';
+import {useLoadFailure} from '../../src/hooks/useLoadFailure';
 
 interface IOU {
   id: string;
@@ -57,51 +59,56 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
   const styles = useThemedStyles(createStyles);
   const [tab, setTab] = useState<Tab>('iowe');
   const [loading, setLoading] = useState(true);
+  const {failed, succeed, fail} = useLoadFailure();
   const [refreshing, setRefreshing] = useState(false);
   const [iOwe, setIOwe] = useState<IOU[]>([]);
   const [owedToMe, setOwedToMe] = useState<IOU[]>([]);
   const [settlingId, setSettlingId] = useState<string | null>(null);
 
-  const loadIOUs = useCallback(async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-    try {
-      const currentUser = getAuth().currentUser;
-      if (!currentUser) {
-        return;
+  const loadIOUs = useCallback(
+    async (isRefresh = false) => {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
       }
-      const email = currentUser.email?.toLowerCase();
-      const [fromSnap, toSnap] = await Promise.all([
-        getDocs(
-          query(
-            collection(getFirestore(), 'ious'),
-            where('fromEmail', '==', email),
-            where('status', '==', 'pending'),
-            orderBy('createdAt', 'desc'),
+      try {
+        const currentUser = getAuth().currentUser;
+        if (!currentUser) {
+          return;
+        }
+        const email = currentUser.email?.toLowerCase();
+        const [fromSnap, toSnap] = await Promise.all([
+          getDocs(
+            query(
+              collection(getFirestore(), 'ious'),
+              where('fromEmail', '==', email),
+              where('status', '==', 'pending'),
+              orderBy('createdAt', 'desc'),
+            ),
           ),
-        ),
-        getDocs(
-          query(
-            collection(getFirestore(), 'ious'),
-            where('toEmail', '==', email),
-            where('status', '==', 'pending'),
-            orderBy('createdAt', 'desc'),
+          getDocs(
+            query(
+              collection(getFirestore(), 'ious'),
+              where('toEmail', '==', email),
+              where('status', '==', 'pending'),
+              orderBy('createdAt', 'desc'),
+            ),
           ),
-        ),
-      ]);
-      setIOwe(fromSnap.docs.map(d => ({id: d.id, ...d.data()} as IOU)));
-      setOwedToMe(toSnap.docs.map(d => ({id: d.id, ...d.data()} as IOU)));
-    } catch (_) {
-      setIOwe([]);
-      setOwedToMe([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+        ]);
+        setIOwe(fromSnap.docs.map(d => ({id: d.id, ...d.data()} as IOU)));
+        setOwedToMe(toSnap.docs.map(d => ({id: d.id, ...d.data()} as IOU)));
+        succeed();
+      } catch (e) {
+        // A failed load must not read as "You owe nothing": show the error state instead.
+        fail(e);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [succeed, fail],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -279,11 +286,12 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
   const isDebtor = tab === 'iowe';
 
   if (loading) {
+    return <LoadingState message="Loading IOUs..." />;
+  }
+
+  if (failed) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading IOUs...</Text>
-      </View>
+      <ErrorState title="Could not load IOUs" onRetry={() => loadIOUs()} />
     );
   }
 
@@ -385,18 +393,6 @@ const createStyles = (colors: ThemeColors) =>
     container: {flex: 1, backgroundColor: colors.background},
     scrollView: {flex: 1},
     listSpacer: {height: 80},
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.background,
-    },
-    loadingText: {
-      fontSize: 16,
-      color: colors.primary,
-      marginTop: 15,
-      fontFamily: 'Lato-Regular',
-    },
     headerSection: {
       alignItems: 'center',
       paddingHorizontal: 20,
