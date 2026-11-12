@@ -1,5 +1,5 @@
-import React, {useState, useCallback, useMemo} from 'react';
-import {useFocusEffect, useRouter} from 'expo-router';
+import React, {useState, useMemo} from 'react';
+import {useRouter} from 'expo-router';
 import {
   View,
   Text,
@@ -12,17 +12,8 @@ import {
 import {Searchbar} from 'react-native-paper';
 import ReceiptText from 'lucide-react-native/icons/receipt-text';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import {
-  collection,
-  getDocs,
-  getFirestore,
-  limit,
-  orderBy,
-  query as fsQuery,
-} from '@react-native-firebase/firestore';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
-import {getAuth} from '@react-native-firebase/auth';
 import Share from 'react-native-share';
 import {File, Paths} from 'expo-file-system';
 import {useCurrency} from '../utils/CurrencyUtil';
@@ -39,7 +30,7 @@ import {
   ErrorState,
   LoadingState,
 } from '../src/components/ScreenState';
-import {useLoadFailure} from '../src/hooks/useLoadFailure';
+import {useTransactions} from '../src/data/hooks';
 import TagChips from '../src/components/TagChips';
 import {collectTags, tagKey} from '../src/utils/tags';
 import {
@@ -65,14 +56,14 @@ const FILTER_LABELS: Record<FilterType, string> = {
   custom: 'Custom Range',
 };
 
+// A stable empty list, so the memo below does not recompute while nothing has loaded.
+const NO_TRANSACTIONS: TransactionDocument[] = [];
+
 const TransactionScreen = () => {
   const router = useRouter();
   const {colors} = useTheme();
   const searchStyles = useThemedStyles(createSearchStyles);
   const {currency, formatAmount} = useCurrency();
-  const [loading, setLoading] = useState(true);
-  const {failed, succeed, fail} = useLoadFailure();
-  const [transactions, setTransactions] = useState<TransactionDocument[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>('all');
@@ -81,38 +72,16 @@ const TransactionScreen = () => {
   const [startDatePickerVisible, setStartDatePickerVisible] = useState(false);
   const [endDatePickerVisible, setEndDatePickerVisible] = useState(false);
 
-  const fetchTransactions = useCallback(async () => {
-    try {
-      const currentUser = getAuth().currentUser!;
-      const snapshot = await getDocs(
-        fsQuery(
-          collection(getFirestore(), 'users', currentUser.uid, 'transactions'),
-          orderBy('createdAt', 'desc'),
-          // Same newest-first rows as reading everything and slicing, with far fewer reads.
-          limit(getConfig().max_transactions_displayed),
-        ),
-      );
-      const fetched = snapshot.docs.map(doc => ({
-        id: doc.id,
-        userId: currentUser.uid,
-        ...doc.data(),
-      })) as TransactionDocument[];
-      setTransactions(fetched);
-      succeed();
-    } catch (e) {
-      // A failed load must not read as "No transactions found": show the error state instead.
-      fail(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [succeed, fail]);
-
-  // Refetch whenever the screen is shown again, so a delete or edit made on the detail screen
-  // appears here when you come back (it used to load only once).
-  useFocusEffect(
-    useCallback(() => {
-      fetchTransactions();
-    }, [fetchTransactions]),
+  // The newest transactions from the shared cache, which live listeners keep current: a delete or
+  // edit made on the detail screen is here when you come back, with no reload.
+  const {data, loading, error, retry} = useTransactions();
+  const transactions = useMemo(
+    () =>
+      (data ?? NO_TRANSACTIONS).slice(
+        0,
+        getConfig().max_transactions_displayed,
+      ),
+    [data],
   );
 
   // Tags on the loaded transactions, most used first, so the tag filter only offers tags that
@@ -216,16 +185,9 @@ const TransactionScreen = () => {
     return <LoadingState message="Loading transactions..." />;
   }
 
-  if (failed) {
-    return (
-      <ErrorState
-        title="Could not load transactions"
-        onRetry={() => {
-          setLoading(true);
-          fetchTransactions();
-        }}
-      />
-    );
+  // A failed load must not read as "No transactions found": show the error state instead.
+  if (error) {
+    return <ErrorState title="Could not load transactions" onRetry={retry} />;
   }
 
   const noResults = filteredTransactions.length === 0;
