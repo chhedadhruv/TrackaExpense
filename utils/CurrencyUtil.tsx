@@ -1,11 +1,7 @@
-import React, {createContext, useContext, useState, useEffect} from 'react';
-import {
-  doc,
-  getDoc,
-  getFirestore,
-  updateDoc,
-} from '@react-native-firebase/firestore';
+import React, {createContext, useContext, useMemo} from 'react';
+import {doc, getFirestore, updateDoc} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
+import {useUserData} from '../src/data/hooks';
 import type {Currency} from '../src/types';
 
 export const CURRENCIES: Currency[] = [
@@ -51,51 +47,25 @@ const CurrencyContext = createContext<CurrencyContextValue>({
   loading: true,
 });
 
+/**
+ * The signed-in person's currency, taken from their cached profile (so there is no read of its own
+ * and a cold start already has it). A missing or unknown code is INR. Changing it is a write; the
+ * profile listener hands the new value back at once, which re-renders every amount.
+ */
 export const CurrencyProvider = ({children}: {children: React.ReactNode}) => {
-  const [currency, setCurrencyState] = useState<Currency>(DEFAULT_CURRENCY);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchUserCurrency();
-  }, []);
-
-  const fetchUserCurrency = async () => {
-    try {
-      const currentUser = getAuth().currentUser;
-      if (currentUser) {
-        const userDoc = await getDoc(
-          doc(getFirestore(), 'users', currentUser.uid),
-        );
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          if (userData?.currency) {
-            const userCurrency = CURRENCIES.find(
-              c => c.code === userData.currency,
-            );
-            if (userCurrency) {
-              setCurrencyState(userCurrency);
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching user currency:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const user = useUserData();
+  const code = user.data?.currency;
+  const currency = useMemo(() => getCurrencyByCode(code ?? ''), [code]);
+  const loading = user.loading;
 
   const setCurrency = async (currencyCode: string) => {
     try {
       const newCurrency = CURRENCIES.find(c => c.code === currencyCode);
-      if (newCurrency) {
-        setCurrencyState(newCurrency);
-        const currentUser = getAuth().currentUser;
-        if (currentUser) {
-          await updateDoc(doc(getFirestore(), 'users', currentUser.uid), {
-            currency: currencyCode,
-          });
-        }
+      const currentUser = getAuth().currentUser;
+      if (newCurrency && currentUser) {
+        await updateDoc(doc(getFirestore(), 'users', currentUser.uid), {
+          currency: currencyCode,
+        });
       }
     } catch (error) {
       console.error('Error updating currency:', error);

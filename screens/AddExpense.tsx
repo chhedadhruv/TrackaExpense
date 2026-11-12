@@ -44,8 +44,7 @@ import {
 import TextField from '../src/components/form/TextField';
 import ReceiptField from '../src/components/form/ReceiptField';
 import TagField from '../src/components/form/TagField';
-import {useKnownTags} from '../src/hooks/useKnownTags';
-import {recordTagUse} from '../src/services/TagService';
+import {useKnownTags, useRecordTags} from '../src/hooks/useKnownTags';
 import {snackbar} from '../src/utils/snackbarStore';
 import AlignLeft from 'lucide-react-native/icons/align-left';
 import BanknoteArrowDown from 'lucide-react-native/icons/banknote-arrow-down';
@@ -78,6 +77,7 @@ const AddExpense = () => {
     validateForm,
   } = useTransactionForm();
   const knownTags = useKnownTags();
+  const recordTags = useRecordTags();
 
   const [uploading, setUploading] = useState(false);
   const [transferred, setTransferred] = useState(0);
@@ -173,7 +173,7 @@ const AddExpense = () => {
         has_description: description.trim().length > 0,
       });
       // The suggestion list is a convenience: record the tags without holding up the screen.
-      recordTagUse(uid, tags, knownTags).catch(reportError);
+      recordTags(tags, knownTags).catch(reportError);
       // Deferred notification prompt: asked once, right after a saved expense.
       requestPushPermissionAfterFirstExpense();
       snackbar.success('Expense added');
