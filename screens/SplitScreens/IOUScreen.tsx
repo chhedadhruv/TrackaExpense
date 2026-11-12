@@ -1,4 +1,4 @@
-import React, {useState, useCallback} from 'react';
+import React, {useState} from 'react';
 import {
   View,
   StyleSheet,
@@ -15,20 +15,16 @@ import {
   addDoc,
   collection,
   doc,
-  getDocs,
   getFirestore,
   increment,
-  orderBy,
-  query,
   serverTimestamp,
   updateDoc,
-  where,
 } from '@react-native-firebase/firestore';
 import {lookupUserByEmail} from '../../src/services/UserLookup';
 import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
-import {useFocusEffect, useRouter} from 'expo-router';
+import {useRouter} from 'expo-router';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {majorOf, transactionMoneyFields} from '../../src/utils/amounts';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
@@ -38,7 +34,7 @@ import {
 } from '@env';
 import {snackbar} from '../../src/utils/snackbarStore';
 import {ErrorState, LoadingState} from '../../src/components/ScreenState';
-import {useLoadFailure} from '../../src/hooks/useLoadFailure';
+import {useIous} from '../../src/data/split';
 
 interface IOU {
   id: string;
@@ -60,66 +56,28 @@ const IOUScreen = () => {
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
   const [tab, setTab] = useState<Tab>('iowe');
-  const [loading, setLoading] = useState(true);
-  const {failed, succeed, fail} = useLoadFailure();
+  const ious = useIous<IOU>();
+  const iOwe = ious.iOwe ?? [];
+  const owedToMe = ious.owedToMe ?? [];
+  const loading = ious.loading;
+  // A failed load must not read as "You owe nothing": show the error state instead.
+  const failed = ious.error;
   const [refreshing, setRefreshing] = useState(false);
-  const [iOwe, setIOwe] = useState<IOU[]>([]);
-  const [owedToMe, setOwedToMe] = useState<IOU[]>([]);
   const [settlingId, setSettlingId] = useState<string | null>(null);
 
-  const loadIOUs = useCallback(
-    async (isRefresh = false) => {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-      try {
-        const currentUser = getAuth().currentUser;
-        if (!currentUser) {
-          return;
-        }
-        const email = currentUser.email?.toLowerCase();
-        const [fromSnap, toSnap] = await Promise.all([
-          getDocs(
-            query(
-              collection(getFirestore(), 'ious'),
-              where('fromEmail', '==', email),
-              where('status', '==', 'pending'),
-              orderBy('createdAt', 'desc'),
-            ),
-          ),
-          getDocs(
-            query(
-              collection(getFirestore(), 'ious'),
-              where('toEmail', '==', email),
-              where('status', '==', 'pending'),
-              orderBy('createdAt', 'desc'),
-            ),
-          ),
-        ]);
-        setIOwe(fromSnap.docs.map(d => ({id: d.id, ...d.data()} as IOU)));
-        setOwedToMe(toSnap.docs.map(d => ({id: d.id, ...d.data()} as IOU)));
-        succeed();
-      } catch (e) {
-        // A failed load must not read as "You owe nothing": show the error state instead.
-        fail(e);
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [succeed, fail],
-  );
-
-  useFocusEffect(
-    useCallback(() => {
-      loadIOUs();
-    }, [loadIOUs]),
-  );
+  const handleRefresh = () => {
+    setRefreshing(true);
+    ious.retry();
+    setTimeout(() => setRefreshing(false), 800);
+  };
 
   const settleIOU = async (iou: IOU) => {
     if (settlingId) {
+      return;
+    }
+    // The writes below use the amount shown, so settle only from the live copy.
+    if (!ious.live) {
+      snackbar.info('Still syncing your IOUs. Try again in a moment.');
       return;
     }
     setSettlingId(iou.id);
@@ -216,7 +174,6 @@ const IOUScreen = () => {
           } catch (_) {}
         }
       }
-      loadIOUs(true);
     } catch (_) {
       snackbar.error('Failed to mark as settled');
     } finally {
@@ -292,9 +249,7 @@ const IOUScreen = () => {
   }
 
   if (failed) {
-    return (
-      <ErrorState title="Could not load IOUs" onRetry={() => loadIOUs()} />
-    );
+    return <ErrorState title="Could not load IOUs" onRetry={handleRefresh} />;
   }
 
   return (
@@ -306,7 +261,7 @@ const IOUScreen = () => {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => loadIOUs(true)}
+              onRefresh={handleRefresh}
               colors={[colors.primary]}
               tintColor={colors.primary}
             />

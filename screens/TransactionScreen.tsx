@@ -18,8 +18,10 @@ import CalendarDays from 'lucide-react-native/icons/calendar-days';
 import CalendarRange from 'lucide-react-native/icons/calendar-range';
 import Download from 'lucide-react-native/icons/download';
 import List from 'lucide-react-native/icons/list';
-import Search from 'lucide-react-native/icons/search';
-import X from 'lucide-react-native/icons/x';
+import {
+  renderClearIcon,
+  renderSearchIcon,
+} from '../src/components/icons/searchbarIcons';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import Share from 'react-native-share';
@@ -82,14 +84,6 @@ const CategoryGlyph = ({
   const Icon = getCategoryIcon(category);
   return <Icon size={size} color={color} />;
 };
-
-// Paper's Searchbar draws its own icons from a font package; these replace them with lucide.
-const renderSearchIcon = ({size, color}: {size: number; color: string}) => (
-  <Search size={size} color={color} />
-);
-const renderClearIcon = ({size, color}: {size: number; color: string}) => (
-  <X size={size} color={color} />
-);
 
 const FILTER_LABELS: Record<FilterType, string> = {
   all: 'All',

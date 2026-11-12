@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   View,
   StyleSheet,
@@ -13,22 +13,12 @@ import Landmark from 'lucide-react-native/icons/landmark';
 import Pencil from 'lucide-react-native/icons/pencil';
 import Plus from 'lucide-react-native/icons/plus';
 import Trash2 from 'lucide-react-native/icons/trash-2';
-import {
-  collection,
-  getDocs,
-  getFirestore,
-  limit,
-  orderBy,
-  query,
-  where,
-} from '@react-native-firebase/firestore';
-import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {ErrorState, LoadingState} from '../../src/components/ScreenState';
-import {useLoadFailure} from '../../src/hooks/useLoadFailure';
+import {useGroups, useSplitHistory} from '../../src/data/split';
 
 interface HistoryItem {
   id: string;
@@ -59,94 +49,43 @@ const SplitHistoryScreen = () => {
   const {formatAmount} = useCurrency();
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
-  const [loading, setLoading] = useState(true);
-  const {failed, succeed, fail} = useLoadFailure();
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [allHistory, setAllHistory] = useState<HistoryItem[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
+  const groupsResult = useGroups();
+  const groups: Group[] = useMemo(
+    () => (groupsResult.data ?? []).map(g => ({id: g.id, name: g.name ?? ''})),
+    [groupsResult.data],
+  );
+  // History is read again every time the screen opens and on pull to refresh; the saved copy
+  // shows at once. It waits for the group list so it never runs for an empty list.
+  const historyResult = useSplitHistory<HistoryItem>(
+    groups,
+    groupsResult.data !== undefined,
+  );
+  const allHistory = historyResult.data;
+  const loading = groupsResult.loading || historyResult.loading;
+  // A failed load must not read as "No split history yet": show the error state instead.
+  const failed = groupsResult.error || historyResult.error;
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = React.useCallback(
-    async (isRefresh = false) => {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-      try {
-        const currentUser = getAuth().currentUser;
-        if (!currentUser) {
-          setLoading(false);
-          setRefreshing(false);
-          return;
-        }
-        const userEmail = currentUser.email;
-        const groupsSnapshot = await getDocs(
-          query(
-            collection(getFirestore(), 'groups'),
-            where('members', 'array-contains', userEmail),
-          ),
-        );
-        const groupIds: Group[] = groupsSnapshot.docs.map(d => ({
-          id: d.id,
-          name: d.data()?.name,
-        }));
-        setGroups(groupIds);
-        const historySnapshots = await Promise.all(
-          groupIds.map(g =>
-            getDocs(
-              query(
-                collection(getFirestore(), 'groups', g.id, 'splitHistory'),
-                orderBy('createdAt', 'desc'),
-                limit(50),
-              ),
-            ).then(s =>
-              s.docs.map(
-                d =>
-                  ({
-                    id: `${g.id}:${d.id}`,
-                    groupId: g.id,
-                    groupName: g.name,
-                    ...d.data(),
-                  } as HistoryItem),
-              ),
-            ),
-          ),
-        );
-        const merged = historySnapshots.flat();
-        merged.sort((a, b) => {
-          const ta =
-            a.createdAt?.toMillis?.() ?? (a.createdAt?.seconds ?? 0) * 1000;
-          const tb =
-            b.createdAt?.toMillis?.() ?? (b.createdAt?.seconds ?? 0) * 1000;
-          return tb - ta;
-        });
-        setAllHistory(merged);
-        setHistory(merged);
-        succeed();
-      } catch (e) {
-        // A failed load must not read as "No split history yet": show the error state instead.
-        fail(e);
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [succeed, fail],
+  const history = useMemo(
+    () =>
+      selectedGroup === null
+        ? allHistory ?? []
+        : (allHistory ?? []).filter(item => item.groupId === selectedGroup),
+    [selectedGroup, allHistory],
   );
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  useEffect(() => {
-    setHistory(
-      selectedGroup === null
-        ? allHistory
-        : allHistory.filter(item => item.groupId === selectedGroup),
-    );
-  }, [selectedGroup, allHistory]);
+  const load = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    }
+    try {
+      groupsResult.retry();
+      await historyResult.refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const formatValue = (val: unknown): string => {
     if (val === null || val === undefined) {
