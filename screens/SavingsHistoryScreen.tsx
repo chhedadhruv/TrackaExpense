@@ -1,5 +1,6 @@
 import React, {useMemo, useState} from 'react';
 import {
+  FlatList,
   View,
   StyleSheet,
   Platform,
@@ -16,7 +17,6 @@ import Pencil from 'lucide-react-native/icons/pencil';
 import Plus from 'lucide-react-native/icons/plus';
 import Trash2 from 'lucide-react-native/icons/trash-2';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {useTheme, useThemedStyles, type ThemeColors} from '../src/theme';
 import {ErrorState, LoadingState} from '../src/components/ScreenState';
@@ -28,6 +28,8 @@ type HistoryType = HistoryItem['type'];
 
 // A stable empty list, so the memos below do not recompute while nothing has loaded.
 const NO_HISTORY: HistoryItem[] = [];
+
+const keyOf = (item: HistoryItem) => item.id;
 
 interface GoalRef {
   id: string;
@@ -81,6 +83,32 @@ const SavingsHistoryScreen = () => {
     }
   };
 
+  const renderHistoryItem = ({item}: {item: HistoryItem}) => (
+    <View style={styles.historyItem}>
+      <View style={styles.historyIcon}>{renderIcon(item.type)}</View>
+      <View style={styles.historyDetails}>
+        <Text style={styles.historyDescription}>{renderDescription(item)}</Text>
+        {item.amount ? (
+          <Text
+            style={[
+              styles.historyAmount,
+              item.type === 'deposit'
+                ? styles.positiveAmount
+                : styles.negativeAmount,
+            ]}>
+            {item.type === 'deposit' ? '+' : '-'}
+            {formatAmount(item.amount)}
+          </Text>
+        ) : null}
+        <Text style={styles.historyDate}>
+          {item.createdAt
+            ? item.createdAt.toDate().toLocaleString()
+            : 'Unknown date'}
+        </Text>
+      </View>
+    </View>
+  );
+
   const renderDescription = (item: HistoryItem) => {
     const name = item.goalName || 'savings goal';
     switch (item.type) {
@@ -111,108 +139,87 @@ const SavingsHistoryScreen = () => {
             onRetry={() => historyQuery.refetch()}
           />
         ) : (
-          <KeyboardAwareScrollView
-            style={styles.scrollView}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                colors={[colors.primary]}
-                tintColor={colors.primary}
-              />
-            }>
-            <Card
-              style={[
-                styles.historyCard,
-                Platform.OS === 'android' && styles.cardAndroid,
-              ]}
-              elevation={Platform.OS === 'android' ? 0 : 2}>
-              <View style={styles.cardContent}>
-                <Text style={styles.historyTitle}>Savings Activity</Text>
-                {goals.length > 1 && (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.filterScroll}
-                    contentContainerStyle={styles.filterScrollContent}>
-                    <TouchableOpacity
-                      onPress={() => setSelectedGoalId(null)}
-                      style={[
-                        styles.filterChip,
-                        selectedGoalId === null && styles.filterChipActive,
-                      ]}>
-                      <Text
-                        style={[
-                          styles.filterChipText,
-                          selectedGoalId === null &&
-                            styles.filterChipTextActive,
-                        ]}>
-                        All
-                      </Text>
-                    </TouchableOpacity>
-                    {goals.map(g => (
+          // The card is the screen's one scroll area: its rows are a FlatList, so a long history
+          // only draws the rows on screen.
+          <Card
+            style={[
+              styles.historyCard,
+              Platform.OS === 'android' && styles.cardAndroid,
+            ]}
+            elevation={Platform.OS === 'android' ? 0 : 2}>
+            <FlatList
+              style={styles.historyList}
+              data={history}
+              keyExtractor={keyOf}
+              renderItem={renderHistoryItem}
+              contentContainerStyle={styles.cardContent}
+              showsVerticalScrollIndicator={false}
+              initialNumToRender={10}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
+                  colors={[colors.primary]}
+                  tintColor={colors.primary}
+                />
+              }
+              ListHeaderComponent={
+                <>
+                  <Text style={styles.historyTitle}>Savings Activity</Text>
+                  {goals.length > 1 && (
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      style={styles.filterScroll}
+                      contentContainerStyle={styles.filterScrollContent}>
                       <TouchableOpacity
-                        key={g.id}
-                        onPress={() => setSelectedGoalId(g.id)}
+                        onPress={() => setSelectedGoalId(null)}
                         style={[
                           styles.filterChip,
-                          selectedGoalId === g.id && styles.filterChipActive,
+                          selectedGoalId === null && styles.filterChipActive,
                         ]}>
                         <Text
                           style={[
                             styles.filterChipText,
-                            selectedGoalId === g.id &&
+                            selectedGoalId === null &&
                               styles.filterChipTextActive,
                           ]}>
-                          {g.name}
+                          All
                         </Text>
                       </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                )}
-                {history.length > 0 ? (
-                  history.map(item => (
-                    <View key={item.id} style={styles.historyItem}>
-                      <View style={styles.historyIcon}>
-                        {renderIcon(item.type)}
-                      </View>
-                      <View style={styles.historyDetails}>
-                        <Text style={styles.historyDescription}>
-                          {renderDescription(item)}
-                        </Text>
-                        {item.amount ? (
+                      {goals.map(g => (
+                        <TouchableOpacity
+                          key={g.id}
+                          onPress={() => setSelectedGoalId(g.id)}
+                          style={[
+                            styles.filterChip,
+                            selectedGoalId === g.id && styles.filterChipActive,
+                          ]}>
                           <Text
                             style={[
-                              styles.historyAmount,
-                              item.type === 'deposit'
-                                ? styles.positiveAmount
-                                : styles.negativeAmount,
+                              styles.filterChipText,
+                              selectedGoalId === g.id &&
+                                styles.filterChipTextActive,
                             ]}>
-                            {item.type === 'deposit' ? '+' : '-'}
-                            {formatAmount(item.amount)}
+                            {g.name}
                           </Text>
-                        ) : null}
-                        <Text style={styles.historyDate}>
-                          {item.createdAt
-                            ? item.createdAt.toDate().toLocaleString()
-                            : 'Unknown date'}
-                        </Text>
-                      </View>
-                    </View>
-                  ))
-                ) : (
-                  <View style={styles.emptyHistory}>
-                    <History size={48} color={colors.iconMuted} />
-                    <Text style={styles.emptyHistoryText}>No activity yet</Text>
-                    <Text style={styles.emptyHistorySubtext}>
-                      Your savings activity will appear here
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </Card>
-          </KeyboardAwareScrollView>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  )}
+                </>
+              }
+              ListEmptyComponent={
+                <View style={styles.emptyHistory}>
+                  <History size={48} color={colors.iconMuted} />
+                  <Text style={styles.emptyHistoryText}>No activity yet</Text>
+                  <Text style={styles.emptyHistorySubtext}>
+                    Your savings activity will appear here
+                  </Text>
+                </View>
+              }
+            />
+          </Card>
         )}
       </View>
     </SafeAreaProvider>
@@ -224,10 +231,12 @@ export default SavingsHistoryScreen;
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {flex: 1, backgroundColor: colors.background},
-    scrollView: {flex: 1},
-    filterScroll: {marginBottom: 15},
+    historyList: {flexGrow: 0},
+    filterScroll: {marginBottom: 15, flexGrow: 0},
     filterScrollContent: {flexDirection: 'row'},
     historyCard: {
+      // Shrinks to its rows when the history is short and stops at the screen edge when long.
+      flexShrink: 1,
       backgroundColor: colors.surface,
       borderRadius: 20,
       marginHorizontal: 20,

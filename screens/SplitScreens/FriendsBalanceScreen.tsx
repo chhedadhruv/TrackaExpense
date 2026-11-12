@@ -1,12 +1,13 @@
 import React, {useMemo, useState} from 'react';
 import {
+  ActivityIndicator,
+  FlatList,
   View,
   StyleSheet,
   RefreshControl,
   Platform,
   TouchableOpacity,
 } from 'react-native';
-import {ActivityIndicator} from 'react-native';
 import Card from '../../src/components/Card';
 import Text from '../../src/components/Text';
 import UserCheck from 'lucide-react-native/icons/user-check';
@@ -14,7 +15,6 @@ import Users from 'lucide-react-native/icons/users';
 import UserAvatar from '../../src/components/Avatar';
 import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {minorOf} from '../../src/utils/amounts';
 import {toMajorNumber} from '../../src/utils/money';
@@ -31,6 +31,8 @@ interface Balance {
   net: number;
   groups: {groupId: string; name: string; amount: number}[];
 }
+
+const balanceKey = (b: Balance) => b.email;
 
 interface SplitDoc {
   id: string;
@@ -259,12 +261,60 @@ const FriendsBalanceScreen = () => {
   const net = totalOwed - totalOwe;
   const isPositive = net >= 0;
 
+  const renderBalance = ({item: b}: {item: Balance}) => {
+    const owesYou = b.net > 0;
+    const color = owesYou ? colors.incomeText : colors.expenseText;
+    const label = owesYou ? 'owes you' : 'you owe';
+    return (
+      <Card
+        style={[
+          styles.balanceCard,
+          Platform.OS === 'android' && styles.cardAndroid,
+        ]}
+        elevation={Platform.OS === 'android' ? 0 : 1}>
+        <View style={styles.balanceCardContent}>
+          <UserAvatar size={44} name={b.name} />
+          <View style={styles.balanceInfo}>
+            <Text style={styles.balanceName}>{b.name}</Text>
+            <Text style={[styles.balanceLabel, {color}]}>{label}</Text>
+            {b.groups
+              .filter(g => Math.abs(g.amount) > 0.009)
+              .map((g, i) => (
+                <Text key={i} style={styles.groupBreakdown}>
+                  {g.name}: {g.amount > 0 ? '+ ' : '- '}
+                  {fmtAmt(g.amount)}
+                </Text>
+              ))}
+          </View>
+          <View style={styles.balanceRight}>
+            <Text style={[styles.balanceAmount, {color}]}>{fmtAmt(b.net)}</Text>
+            {owesYou && (
+              <TouchableOpacity
+                style={styles.remindButton}
+                disabled={remindingEmail === b.email}
+                onPress={() => handleRemind(b)}>
+                {remindingEmail === b.email ? (
+                  <ActivityIndicator size={14} color={colors.primary} />
+                ) : (
+                  <Text style={styles.remindButtonText}>Remind</Text>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </Card>
+    );
+  };
+
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
-        <KeyboardAwareScrollView
-          style={styles.scrollView}
+        <FlatList
+          data={balances}
+          keyExtractor={balanceKey}
+          renderItem={renderBalance}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={10}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -272,57 +322,65 @@ const FriendsBalanceScreen = () => {
               colors={[colors.primary]}
               tintColor={colors.primary}
             />
-          }>
-          <View style={styles.headerSection}>
-            <View style={styles.headerTitleRow}>
-              <Users size={32} color={colors.primary} />
-              <Text style={styles.headerTitle}>Friends & Balances</Text>
-            </View>
-            <Text style={styles.headerSubtitle}>
-              Net balances across all your groups
-            </Text>
-          </View>
-          {balances.length > 0 && (
-            <Card
-              style={[
-                styles.totalCard,
-                Platform.OS === 'android' && styles.cardAndroid,
-              ]}
-              elevation={Platform.OS === 'android' ? 0 : 2}>
-              <View style={styles.totalCardContent}>
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Overall you receive</Text>
-                  <Text style={[styles.totalValue, {color: colors.incomeText}]}>
-                    {fmtAmt(totalOwed)}
-                  </Text>
+          }
+          ListHeaderComponent={
+            <>
+              <View style={styles.headerSection}>
+                <View style={styles.headerTitleRow}>
+                  <Users size={32} color={colors.primary} />
+                  <Text style={styles.headerTitle}>Friends & Balances</Text>
                 </View>
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Overall you owe</Text>
-                  <Text
-                    style={[styles.totalValue, {color: colors.expenseText}]}>
-                    {fmtAmt(totalOwe)}
-                  </Text>
-                </View>
-                <View style={styles.totalDivider} />
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalNetLabel}>Net balance</Text>
-                  <Text
-                    style={[
-                      styles.totalNetValue,
-                      {
-                        color: isPositive
-                          ? colors.incomeText
-                          : colors.expenseText,
-                      },
-                    ]}>
-                    {isPositive ? '+ ' : '- '}
-                    {fmtAmt(Math.abs(net))}
-                  </Text>
-                </View>
+                <Text style={styles.headerSubtitle}>
+                  Net balances across all your groups
+                </Text>
               </View>
-            </Card>
-          )}
-          {balances.length === 0 ? (
+              {balances.length > 0 && (
+                <Card
+                  style={[
+                    styles.totalCard,
+                    Platform.OS === 'android' && styles.cardAndroid,
+                  ]}
+                  elevation={Platform.OS === 'android' ? 0 : 2}>
+                  <View style={styles.totalCardContent}>
+                    <View style={styles.totalRow}>
+                      <Text style={styles.totalLabel}>Overall you receive</Text>
+                      <Text
+                        style={[styles.totalValue, {color: colors.incomeText}]}>
+                        {fmtAmt(totalOwed)}
+                      </Text>
+                    </View>
+                    <View style={styles.totalRow}>
+                      <Text style={styles.totalLabel}>Overall you owe</Text>
+                      <Text
+                        style={[
+                          styles.totalValue,
+                          {color: colors.expenseText},
+                        ]}>
+                        {fmtAmt(totalOwe)}
+                      </Text>
+                    </View>
+                    <View style={styles.totalDivider} />
+                    <View style={styles.totalRow}>
+                      <Text style={styles.totalNetLabel}>Net balance</Text>
+                      <Text
+                        style={[
+                          styles.totalNetValue,
+                          {
+                            color: isPositive
+                              ? colors.incomeText
+                              : colors.expenseText,
+                          },
+                        ]}>
+                        {isPositive ? '+ ' : '- '}
+                        {fmtAmt(Math.abs(net))}
+                      </Text>
+                    </View>
+                  </View>
+                </Card>
+              )}
+            </>
+          }
+          ListEmptyComponent={
             <Card
               style={[
                 styles.emptyCard,
@@ -337,61 +395,8 @@ const FriendsBalanceScreen = () => {
                 </Text>
               </View>
             </Card>
-          ) : (
-            balances.map(b => {
-              const owesYou = b.net > 0;
-              const color = owesYou ? colors.incomeText : colors.expenseText;
-              const label = owesYou ? 'owes you' : 'you owe';
-              return (
-                <Card
-                  key={b.email}
-                  style={[
-                    styles.balanceCard,
-                    Platform.OS === 'android' && styles.cardAndroid,
-                  ]}
-                  elevation={Platform.OS === 'android' ? 0 : 1}>
-                  <View style={styles.balanceCardContent}>
-                    <UserAvatar size={44} name={b.name} />
-                    <View style={styles.balanceInfo}>
-                      <Text style={styles.balanceName}>{b.name}</Text>
-                      <Text style={[styles.balanceLabel, {color}]}>
-                        {label}
-                      </Text>
-                      {b.groups
-                        .filter(g => Math.abs(g.amount) > 0.009)
-                        .map((g, i) => (
-                          <Text key={i} style={styles.groupBreakdown}>
-                            {g.name}: {g.amount > 0 ? '+ ' : '- '}
-                            {fmtAmt(g.amount)}
-                          </Text>
-                        ))}
-                    </View>
-                    <View style={styles.balanceRight}>
-                      <Text style={[styles.balanceAmount, {color}]}>
-                        {fmtAmt(b.net)}
-                      </Text>
-                      {owesYou && (
-                        <TouchableOpacity
-                          style={styles.remindButton}
-                          disabled={remindingEmail === b.email}
-                          onPress={() => handleRemind(b)}>
-                          {remindingEmail === b.email ? (
-                            <ActivityIndicator
-                              size={14}
-                              color={colors.primary}
-                            />
-                          ) : (
-                            <Text style={styles.remindButtonText}>Remind</Text>
-                          )}
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  </View>
-                </Card>
-              );
-            })
-          )}
-        </KeyboardAwareScrollView>
+          }
+        />
       </View>
     </SafeAreaProvider>
   );
