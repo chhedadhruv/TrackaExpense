@@ -30,7 +30,11 @@ export const queryClient = new QueryClient({
 });
 
 /** Only these kinds of data are saved to disk. Add a kind here when its screen moves over. */
-export const PERSISTED_KINDS = ['user', 'transactions'] as const;
+export const PERSISTED_KINDS = [
+  'user',
+  'transactions',
+  'savingsHistory',
+] as const;
 for (const kind of PERSISTED_KINDS) {
   queryClient.setQueryDefaults([kind], {meta: {persist: true}});
 }

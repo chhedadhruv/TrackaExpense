@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useContext,
-  useCallback,
-  type ReactNode,
-} from 'react';
+import React, {useState, useEffect, useContext, type ReactNode} from 'react';
 import UserAvatar from '../src/components/Avatar';
 import {AuthContext} from '../navigation/AuthProvider';
 import {
@@ -16,13 +10,13 @@ import {
   collection,
   deleteDoc,
   doc as fsDoc,
-  getDoc,
   getDocs,
   getFirestore,
   writeBatch,
 } from '@react-native-firebase/firestore';
 import {reportError} from '../src/services/ErrorReporter';
-import {useFocusEffect, useRouter} from 'expo-router';
+import {useRouter} from 'expo-router';
+import {useUserData} from '../src/data/hooks';
 import * as Application from 'expo-application';
 import {version as appVersion} from '../package.json';
 import {View, Text, TouchableOpacity, ScrollView, Alert} from 'react-native';
@@ -30,7 +24,6 @@ import {Avatar, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {useTheme} from '../src/theme';
-import type {UserDocument} from '../src/types';
 import type {McIconName} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
 import AppearanceSetting from '../src/components/AppearanceSetting';
@@ -114,38 +107,22 @@ const ProfileScreen = () => {
   const router = useRouter();
   const {logout} = useContext(AuthContext);
   const {currency, setCurrency} = useCurrency();
-  const [userData, setUserData] = useState<UserDocument | null>(null);
+  // The profile comes from the shared cache, which a live listener keeps current (src/data), so
+  // there is nothing to fetch when the screen opens or comes back into focus.
+  const profile = useUserData();
+  const userData = profile.data ?? null;
   const [verified, setVerified] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const loading = profile.loading || deleting;
+  const error = profile.error
+    ? 'Could not load your profile. Check your connection and try again.'
+    : profile.live && !profile.data
+    ? 'User data not found'
+    : null;
   const [accountActionsExpanded, setAccountActionsExpanded] = useState(false);
   const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
 
   const user = getAuth().currentUser!;
-
-  const getUser = async () => {
-    try {
-      setLoading(true);
-      const snap = await getDoc(fsDoc(getFirestore(), 'users', user.uid));
-      if (snap.exists()) {
-        setUserData(snap.data() as UserDocument);
-        setLoading(false);
-      } else {
-        throw new Error('User data not found');
-      }
-    } catch (e: any) {
-      reportError(e as Error);
-      setLoading(false);
-      setError(e.message);
-    }
-  };
-
-  useFocusEffect(
-    useCallback(() => {
-      getUser();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []),
-  );
 
   useEffect(() => {
     if (user.emailVerified || userData?.verified === true) {
@@ -184,7 +161,7 @@ const ProfileScreen = () => {
 
   const deleteAccountPermanently = async () => {
     try {
-      setLoading(true);
+      setDeleting(true);
       const currentUser = getAuth().currentUser!;
       await deleteDoc(fsDoc(getFirestore(), 'users', currentUser.uid));
       const txSnap = await getDocs(
@@ -197,7 +174,7 @@ const ProfileScreen = () => {
       snackbar.success('Your account has been permanently deleted.');
     } catch (e: any) {
       reportError(e as Error);
-      setLoading(false);
+      setDeleting(false);
       if (e.code === 'auth/requires-recent-login') {
         snackbar.error(
           'Please log out and log back in, then try deleting your account again.',
@@ -270,7 +247,7 @@ const ProfileScreen = () => {
         <TouchableOpacity
           className="mt-2.5 rounded-xl bg-primary-fill px-6 py-3"
           accessibilityRole="button"
-          onPress={getUser}>
+          onPress={profile.retry}>
           <Text className="font-sans-bold text-base font-semibold text-on-primary">
             Retry
           </Text>
