@@ -1,0 +1,74 @@
+appId: com.trackaexpense
+name: Tags (add, filter, search, clear)
+tags:
+  - expense
+  - tags
+---
+# Adds an expense carrying the tag "maestro-test", finds it with the tag filter and with search,
+# then deletes it. The tag name is fixed on purpose: the app keeps a small suggestion list of every
+# tag ever used (users/{uid}/tags) and has no way to delete from it, so a unique tag per run would
+# leave one more document each time. If a run fails halfway, use
+# .maestro/tools/cleanup-leftovers.yaml.
+- launchApp
+- runFlow: ../subflows/dismiss-dev-banner.yaml
+- evalScript: ${output.title = 'Maestro ' + new Date().getTime()}
+
+# Add an expense with a tag
+- tapOn: 'Home'
+- tapOn: 'Add Expense'
+- tapOn: 'Enter expense title'
+- inputText: ${output.title}
+- tapOn: 'Select expense category'
+- tapOn: 'Food'
+- scrollUntilVisible:
+    element: 'Enter amount'
+- tapOn: 'Enter amount'
+- inputText: '2'
+- scrollUntilVisible:
+    element: 'Add a tag'
+- tapOn: 'Add a tag'
+- inputText: 'maestro-test'
+- pressKey: Enter
+# The typed text becomes a chip with a remove button.
+- assertVisible: 'Remove tag maestro-test'
+- scrollUntilVisible:
+    element:
+      text: 'Add Expense'
+      below: 'Receipt/Image (Optional)'
+- runFlow: ../subflows/dismiss-dev-banner.yaml
+# A tap can be lost while the keyboard is still animating away, so tap again if the expense does
+# not show up on Home.
+- retry:
+    maxRetries: 2
+    commands:
+      - waitForAnimationToEnd
+      - tapOn:
+          text: 'Add Expense'
+          below: 'Receipt/Image (Optional)'
+      - extendedWaitUntil:
+          visible: ${output.title}
+          timeout: 10000
+
+# Filter by the tag
+- runFlow: ../subflows/dismiss-dev-banner.yaml
+- tapOn: 'See All'
+- assertVisible: 'Filter by tag'
+- tapOn: 'Tag maestro-test, .*'
+- assertVisible: '1 transaction found'
+- assertVisible: ${output.title}
+
+# Clear the filter, then find it by searching for the tag
+- tapOn: 'Tag maestro-test, .*'
+- assertNotVisible: '1 transaction found'
+- tapOn: 'Search by title, amount, category or tag...'
+- inputText: 'maestro-test'
+- assertVisible: '1 transaction found'
+- assertVisible: ${output.title}
+
+# Delete it; with no tagged expense left the tag filter goes away
+- tapOn: ${output.title}
+- runFlow: ../subflows/dismiss-dev-banner.yaml
+- tapOn: 'Delete Transaction'
+- tapOn: 'Delete'
+- assertNotVisible: ${output.title}
+- assertNotVisible: 'Filter by tag'

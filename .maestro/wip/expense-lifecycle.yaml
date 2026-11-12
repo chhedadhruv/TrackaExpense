@@ -1,0 +1,78 @@
+appId: com.trackaexpense
+name: Expense lifecycle (add, edit, delete)
+tags:
+  - expense
+---
+# Adds an expense with a unique title, finds it in the list, edits its amount, then deletes it, so
+# the throwaway account ends up where it started (the balance moves down and back up).
+# If a run fails halfway, delete the leftover with .maestro/tools/cleanup-leftovers.yaml.
+- launchApp
+- runFlow: ../subflows/dismiss-dev-banner.yaml
+- evalScript: ${output.title = 'Maestro ' + new Date().getTime()}
+
+# Add
+- tapOn: 'Home'
+- tapOn: 'Add Expense'
+- tapOn: 'Enter expense title'
+- inputText: ${output.title}
+- tapOn: 'Select expense category'
+- tapOn: 'Food'
+- scrollUntilVisible:
+    element: 'Enter amount'
+- tapOn: 'Enter amount'
+- inputText: '3'
+- scrollUntilVisible:
+    element:
+      text: 'Add Expense'
+      below: 'Receipt/Image (Optional)'
+- runFlow: ../subflows/dismiss-dev-banner.yaml
+# Saving goes back to Home, where the new expense is the newest recent transaction. A tap can be
+# lost while the keyboard is still animating away, so tap again if the expense does not show up.
+- retry:
+    maxRetries: 2
+    commands:
+      - waitForAnimationToEnd
+      - tapOn:
+          text: 'Add Expense'
+          below: 'Receipt/Image (Optional)'
+      - extendedWaitUntil:
+          visible: ${output.title}
+          timeout: 10000
+
+# Find it in the full list
+- runFlow: ../subflows/dismiss-dev-banner.yaml
+- tapOn: 'See All'
+- assertVisible: ${output.title}
+- assertVisible: '- ₹3'
+
+# Edit the amount
+- tapOn: ${output.title}
+- tapOn: 'Edit Transaction'
+- scrollUntilVisible:
+    element: 'Enter amount'
+- tapOn: 'Enter amount'
+- eraseText: 5
+- inputText: '4'
+- scrollUntilVisible:
+    element: 'Update Transaction'
+- runFlow: ../subflows/dismiss-dev-banner.yaml
+- retry:
+    maxRetries: 2
+    commands:
+      - waitForAnimationToEnd
+      - tapOn: 'Update Transaction'
+      - extendedWaitUntil:
+          visible: ${output.title}
+          timeout: 10000
+
+# The edit shows in the list
+- runFlow: ../subflows/dismiss-dev-banner.yaml
+- tapOn: 'See All'
+- assertVisible: '- ₹4'
+
+# Delete
+- tapOn: ${output.title}
+- runFlow: ../subflows/dismiss-dev-banner.yaml
+- tapOn: 'Delete Transaction'
+- tapOn: 'Delete'
+- assertNotVisible: ${output.title}

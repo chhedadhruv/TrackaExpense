@@ -1,0 +1,4 @@
+# Maestro workspace config. `maestro test .maestro` runs the flows in `flows/` only; the shared
+# steps in `subflows/` and the manual helpers in `tools/` are not tests.
+flows:
+  - flows/*
