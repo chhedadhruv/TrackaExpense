@@ -23,6 +23,8 @@ import {getConfig, initRemoteConfig} from '../src/services/RemoteConfigService';
 import {isVersionBelow} from '../src/utils/version';
 import AppProviders from '../src/navigation/AppProviders';
 import AuthGate from '../src/navigation/AuthGate';
+import {PersistQueryClientProvider} from '@tanstack/react-query-persist-client';
+import {persistOptions, queryClient} from '../src/data/queryClient';
 
 // Start error reporting before anything renders so startup errors are captured, and keep the
 // native splash screen up until AuthGate knows whether someone is signed in.
@@ -100,9 +102,13 @@ const Shell = ({forceUpdateMessage}: {forceUpdateMessage: string | null}) => {
         {forceUpdateMessage !== null ? (
           <ForceUpdateScreen message={forceUpdateMessage} />
         ) : (
-          <AppProviders>
-            <AuthGate />
-          </AppProviders>
+          <PersistQueryClientProvider
+            client={queryClient}
+            persistOptions={persistOptions}>
+            <AppProviders>
+              <AuthGate />
+            </AppProviders>
+          </PersistQueryClientProvider>
         )}
       </ErrorBoundary>
       <SnackbarHost />

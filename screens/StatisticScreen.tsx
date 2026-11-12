@@ -7,18 +7,8 @@ import ChartColumn from 'lucide-react-native/icons/chart-column';
 import TrendingDown from 'lucide-react-native/icons/trending-down';
 import TrendingUp from 'lucide-react-native/icons/trending-up';
 import {useFocusEffect, useRouter} from 'expo-router';
-import {getAuth} from '@react-native-firebase/auth';
-import {
-  collection,
-  getDocs,
-  getFirestore,
-  limit,
-  orderBy,
-  query as fsQuery,
-} from '@react-native-firebase/firestore';
 import {DatePickerModal} from 'react-native-paper-dates';
-import {reportError} from '../src/services/ErrorReporter';
-import * as PerformanceService from '../src/services/PerformanceService';
+import {useTransactions} from '../src/data/hooks';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {useTheme} from '../src/theme';
 import {
@@ -81,18 +71,27 @@ const KINDS: {key: StatsKind; label: string}[] = [
 const isRangeKey = (value: unknown): value is StatsRangeKey =>
   RANGES.some(r => r.key === value);
 
+// A stable empty list, so the memo below does not recompute while nothing has loaded.
+const NO_TRANSACTIONS: TransactionDocument[] = [];
+
 const StatisticScreen = () => {
   const router = useRouter();
   const {colors} = useTheme();
   const {currency, formatAmount} = useCurrency();
   const code = currency.code;
 
-  const [allTransactions, setAllTransactions] = useState<TransactionDocument[]>(
-    [],
+  // The newest transactions from the shared cache (the same set Home and the Transactions list
+  // show), which live listeners keep current; this screen reads nothing from Firestore itself.
+  const {data, loading, error, retry} = useTransactions();
+  const allTransactions = useMemo(
+    () =>
+      (data ?? NO_TRANSACTIONS).slice(
+        0,
+        getConfig().max_transactions_displayed,
+      ),
+    [data],
   );
   const [today, setToday] = useState(() => dayKeyOfDate(new Date()));
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const configured = getConfig().stats_default_time_range;
   const [range, setRange] = useState<StatsRangeKey>(
     isRangeKey(configured) ? configured : 'all',
@@ -103,46 +102,15 @@ const StatisticScreen = () => {
   const [startPickerVisible, setStartPickerVisible] = useState(false);
   const [endPickerVisible, setEndPickerVisible] = useState(false);
 
-  const fetchTransactions = async () => {
-    try {
-      setError(null);
-      setLoading(true);
-      const stopTrace = await PerformanceService.traceCalculateStatistics();
-      // The newest transactions, the same set Home and the Transactions screen show.
-      const snapshot = await getDocs(
-        fsQuery(
-          collection(
-            getFirestore(),
-            'users',
-            getAuth().currentUser!.uid,
-            'transactions',
-          ),
-          orderBy('createdAt', 'desc'),
-          limit(getConfig().max_transactions_displayed),
-        ),
-      );
-      const txns = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as unknown as TransactionDocument[];
-      setAllTransactions(txns);
+  // Each time the screen is shown: "today" moves on past midnight, and the view is logged.
+  useFocusEffect(
+    useCallback(() => {
       setToday(dayKeyOfDate(new Date()));
       AnalyticsService.logViewStatistics({
         chart_type: kind,
         time_range: range,
       });
-      await stopTrace?.();
-    } catch (e) {
-      reportError(e as Error);
-      setError('Failed to load transactions. Tap to retry.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchTransactions();
+      // Logged when the screen comes into focus, not on every change of range or kind.
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
@@ -186,12 +154,7 @@ const StatisticScreen = () => {
   }
 
   if (error) {
-    return (
-      <ErrorState
-        title="Could not load statistics"
-        onRetry={fetchTransactions}
-      />
-    );
+    return <ErrorState title="Could not load statistics" onRetry={retry} />;
   }
 
   const {summary, breakdown, merchants, heatmap, largest, trend} = stats;
