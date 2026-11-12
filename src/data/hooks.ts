@@ -1,7 +1,21 @@
 import {useContext, useRef} from 'react';
 import {skipToken, useIsRestoring, useQuery} from '@tanstack/react-query';
+import {
+  collection,
+  getDocs,
+  getFirestore,
+  limit,
+  orderBy,
+  query,
+} from '@react-native-firebase/firestore';
 import {AuthContext} from '../../navigation/AuthProvider';
-import type {TransactionDocument, UserDocument} from '../types';
+import {reportError} from '../services/ErrorReporter';
+import type {
+  SavingsHistoryDocument,
+  TransactionDocument,
+  UserDocument,
+} from '../types';
+import {cachedFlags} from './cachedFlags';
 import {queryKeys} from './keys';
 import {useSyncStore, type SyncStatus} from './syncStore';
 
@@ -12,6 +26,14 @@ export interface CachedData<T> {
   loading: boolean;
   /** True only when the read failed and there is nothing to show; saved data stays on screen. */
   error: boolean;
+  /**
+   * True once the live listener has confirmed the data. Until then `data` may be the copy saved
+   * on the phone, which is fine to look at but not to build a write on: a screen that rewrites a
+   * whole field from what it shows (savings goals, a profile form) must wait for `live`.
+   */
+  live: boolean;
+  /** True when the live listener failed, even if a saved copy is still in `data`. */
+  failed: boolean;
   /** Starts the live listeners again. */
   retry: () => void;
 }
@@ -27,11 +49,9 @@ const useCached = <T>(
   const restoring = useIsRestoring();
   const retry = useSyncStore(state => state.retry);
   const {data} = useQuery<T>({queryKey: key, queryFn: skipToken});
-  const empty = data === undefined;
   return {
     data,
-    loading: empty && (restoring || status === 'loading'),
-    error: empty && !restoring && status === 'error',
+    ...cachedFlags(data !== undefined, restoring, status),
     retry,
   };
 };
@@ -75,6 +95,66 @@ export const useTransactionById = (
     data,
     loading: list.loading,
     error: list.error,
+    live: list.live,
+    failed: list.failed,
     retry: list.retry,
+  };
+};
+
+export interface SavingsHistoryResult {
+  data: SavingsHistoryDocument[] | undefined;
+  /** True until there is something to show (no saved copy and the first read is still running). */
+  loading: boolean;
+  /** True only when the read failed and there is nothing to show. */
+  error: boolean;
+  /** Reads the history again; resolves when it is done. */
+  refetch: () => Promise<unknown>;
+}
+
+const SAVINGS_HISTORY_LIMIT = 100;
+
+/**
+ * The latest savings history entries, newest first. Unlike the profile and the transactions this
+ * is an ordinary query, not a live listener: the saved copy shows at once and the history is read
+ * again every time the screen opens (and on pull to refresh), because the Savings screen adds
+ * entries while this screen is not mounted.
+ */
+export const useSavingsHistory = (): SavingsHistoryResult => {
+  const uid = useUid();
+  const restoring = useIsRestoring();
+  const result = useQuery<SavingsHistoryDocument[]>({
+    queryKey: queryKeys.savingsHistory(uid),
+    enabled: uid !== '',
+    staleTime: 0,
+    refetchOnMount: 'always',
+    queryFn: async () => {
+      try {
+        const snapshot = await getDocs(
+          query(
+            collection(getFirestore(), 'users', uid, 'savingsHistory'),
+            orderBy('createdAt', 'desc'),
+            limit(SAVINGS_HISTORY_LIMIT),
+          ),
+        );
+        return snapshot.docs.map(document => {
+          const data = document.data();
+          return {
+            id: document.id,
+            ...data,
+            goalName: data.goalName || data.goal?.name || 'savings goal',
+          } as SavingsHistoryDocument;
+        });
+      } catch (error) {
+        reportError(error as Error);
+        throw error;
+      }
+    },
+  });
+  const empty = result.data === undefined;
+  return {
+    data: result.data,
+    loading: empty && (restoring || result.isPending),
+    error: empty && !restoring && result.isError,
+    refetch: result.refetch,
   };
 };

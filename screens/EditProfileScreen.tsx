@@ -6,12 +6,9 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import FormButton from '../components/FormButton';
 import FormInput from '../components/FormInput';
-import {
-  doc,
-  getDoc,
-  getFirestore,
-  updateDoc,
-} from '@react-native-firebase/firestore';
+import {doc, getFirestore, updateDoc} from '@react-native-firebase/firestore';
+import {useUserData} from '../src/data/hooks';
+import {ErrorState} from '../src/components/ScreenState';
 import {getAuth} from '@react-native-firebase/auth';
 import {useTheme} from '../src/theme';
 import {FormError} from '../src/components/form/FormParts';
@@ -21,7 +18,6 @@ interface ProfileData {
   name: string;
   email: string;
   phone: string;
-  balance?: number;
 }
 
 const EditProfileScreen = () => {
@@ -32,42 +28,26 @@ const EditProfileScreen = () => {
     email: '',
     phone: '',
   });
-  const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // The form is filled once, from the shared profile cache, and only after the live listener has
+  // confirmed it: the form saves what it shows, and a copy saved on the phone could be older than
+  // what another device wrote. Later changes to the profile do not overwrite what is being typed.
+  const profile = useUserData();
+  const [ready, setReady] = useState(false);
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const currentUser = getAuth().currentUser;
-        if (!currentUser) {
-          snackbar.error('No user is logged in');
-          router.back();
-          return;
-        }
-        const snap = await getDoc(
-          doc(getFirestore(), 'users', currentUser.uid),
-        );
-        if (snap.exists()) {
-          const data = snap.data()!;
-          setUserData({
-            name: data.name ?? '',
-            email: data.email ?? '',
-            phone: data.phone ?? '',
-            balance: data.balance,
-          });
-        } else {
-          setErrorMessage('User data not found');
-        }
-      } catch (_) {
-        setErrorMessage('Failed to load user data');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUserData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (ready || !profile.live || !profile.data) {
+      return;
+    }
+    const data = profile.data;
+    setUserData({
+      name: data.name ?? '',
+      email: data.email ?? '',
+      phone: data.phone ?? '',
+    });
+    setReady(true);
+  }, [ready, profile.live, profile.data]);
 
   const validateEmail = (email: string) =>
     /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/.test(email);
@@ -100,11 +80,12 @@ const EditProfileScreen = () => {
       return;
     }
     try {
+      // Only the three fields this form edits. The balance is changed by incrementing it as
+      // transactions are added, so writing back the value loaded earlier could undo a newer one.
       await updateDoc(doc(getFirestore(), 'users', currentUser.uid), {
         name: userData.name,
         email: userData.email,
         phone: userData.phone,
-        balance: userData.balance,
       });
       snackbar.success('Profile updated successfully');
       router.back();
@@ -116,7 +97,18 @@ const EditProfileScreen = () => {
     }
   };
 
-  if (loading) {
+  // An empty form must never stand in for a profile that could not be loaded.
+  if (!ready && (profile.failed || (profile.live && !profile.data))) {
+    return (
+      <ErrorState
+        title="Could not load your profile"
+        message="Check your connection and try again."
+        onRetry={profile.retry}
+      />
+    );
+  }
+
+  if (!ready) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
         <ActivityIndicator size="large" color={colors.primary} />

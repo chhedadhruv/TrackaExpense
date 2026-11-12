@@ -18,6 +18,8 @@ export interface UserDocument {
   userImg: string | null;
   createdAt: Timestamp;
   verified: boolean;
+  /** Savings goals are embedded in the profile document, the client rewrites the whole array. */
+  savingsGoals?: SavingsGoal[];
 }
 
 /**
@@ -138,6 +140,16 @@ export interface SavingsGoal {
   reminderFrequency: string | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+/** users/{uid}/savingsHistory/{id}: one entry per deposit, withdrawal or change to a goal. */
+export interface SavingsHistoryDocument {
+  id: string;
+  type: 'deposit' | 'withdrawal' | 'create' | 'delete' | 'update';
+  amount?: number;
+  goalId?: string;
+  goalName?: string;
+  createdAt?: Timestamp;
 }
 
 // ─── IOU ──────────────────────────────────────────────────────────────────
