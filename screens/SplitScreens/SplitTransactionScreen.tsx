@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useContext} from 'react';
+import React, {useState, useEffect, useContext, useMemo} from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,6 @@ import {
 } from 'react-native';
 import {Card, Searchbar} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import {
-  collection,
-  getDocs,
-  getFirestore,
-} from '@react-native-firebase/firestore';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
@@ -27,7 +22,7 @@ import {AuthContext} from '../../navigation/AuthProvider';
 import {useRouter} from 'expo-router';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {ErrorState, LoadingState} from '../../src/components/ScreenState';
-import {useLoadFailure} from '../../src/hooks/useLoadFailure';
+import {useGroupSplits} from '../../src/data/split';
 
 interface SplitUser {
   email?: string;
@@ -101,9 +96,12 @@ const SplitTransactionScreen = ({group}: SplitTransactionScreenProps) => {
   const router = useRouter();
   const {user} = useContext(AuthContext);
   const currentUserEmail = user?.email?.toLowerCase();
-  const [loading, setLoading] = useState(true);
-  const {failed, succeed, fail} = useLoadFailure();
-  const [transactions, setTransactions] = useState<SplitItem[]>([]);
+  // The group's splits come from the shared cache (newest first); a read-only list may show the
+  // saved copy at once.
+  const splits = useGroupSplits<SplitItem>(group.id);
+  const transactions = useMemo(() => splits.data ?? [], [splits.data]);
+  const loading = splits.loading;
+  const failed = splits.error;
   const [filteredTransactions, setFilteredTransactions] = useState<SplitItem[]>(
     [],
   );
@@ -115,36 +113,9 @@ const SplitTransactionScreen = ({group}: SplitTransactionScreenProps) => {
   const [endDatePickerVisible, setEndDatePickerVisible] = useState(false);
 
   useEffect(() => {
-    fetchTransactions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
     filterTransactions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, transactions, customStartDate, customEndDate]);
-
-  const fetchTransactions = async () => {
-    try {
-      const splitsSnapshot = await getDocs(
-        collection(getFirestore(), 'groups', group.id, 'splits'),
-      );
-      const fetched = splitsSnapshot.docs
-        .map(doc => ({id: doc.id, ...doc.data()} as SplitItem))
-        .sort((a, b) => {
-          const aTs = (a.date || a.createdAt)?.toMillis?.() ?? 0;
-          const bTs = (b.date || b.createdAt)?.toMillis?.() ?? 0;
-          return bTs - aTs;
-        });
-      setTransactions(fetched);
-      succeed();
-    } catch (e) {
-      // A failed load must not read as "No transactions found": show the error state instead.
-      fail(e);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filterTransactions = () => {
     let filtered = transactions;
@@ -264,13 +235,7 @@ const SplitTransactionScreen = ({group}: SplitTransactionScreenProps) => {
 
   if (failed) {
     return (
-      <ErrorState
-        title="Could not load transactions"
-        onRetry={() => {
-          setLoading(true);
-          fetchTransactions();
-        }}
-      />
+      <ErrorState title="Could not load transactions" onRetry={splits.retry} />
     );
   }
 

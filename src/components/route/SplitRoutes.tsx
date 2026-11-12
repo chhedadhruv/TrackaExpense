@@ -1,8 +1,12 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useMemo} from 'react';
 import {useLocalSearchParams} from 'expo-router';
-import DocumentRoute from './DocumentRoute';
 import {EmptyState, ErrorState, LoadingState} from '../ScreenState';
-import {useGroup} from '../../data/split';
+import {
+  useGroup,
+  useGroupSplit,
+  useGroupSplits,
+  useMemberLookup,
+} from '../../data/split';
 import SplitDetailScreen, {
   type SplitDetailScreenProps,
 } from '../../../screens/SplitScreens/SplitDetailScreen';
@@ -14,28 +18,26 @@ import SettleUpScreen, {
   type SettleUpScreenProps,
 } from '../../../screens/SplitScreens/SettleUpScreen';
 import {
-  resolveGroupMembers,
-  type ResolvedGroupMember,
-} from '../../services/groupMembers';
-import {reportError} from '../../services/ErrorReporter';
-import {
   calculateNetLendingBalances,
-  type LendingDetail,
   type LendingSplit,
 } from '../../utils/lending';
 import {useCurrency} from '../../../utils/CurrencyUtil';
 import {getAuth} from '@react-native-firebase/auth';
-import {
-  collection,
-  getDocs,
-  getFirestore,
-} from '@react-native-firebase/firestore';
+
+/** A group member as a person: the name falls back to the part of the email before the "@". */
+interface ResolvedGroupMember {
+  email: string;
+  name: string;
+  avatar: string | null;
+  userId: string | null;
+}
 
 /** The part of a group document these routes need. */
 interface LoadedGroup {
   id: string;
   name: string;
   members?: string[];
+  memberNames?: Record<string, string>;
 }
 
 interface GroupRouteProps {
@@ -67,6 +69,40 @@ const GroupRoute = ({groupId, render}: GroupRouteProps) => {
   );
 };
 
+interface SplitRouteProps<T extends {id: string}> {
+  groupId: string;
+  splitId: string;
+  /** Edit forms write from what they show, so they wait for the live copy. */
+  needsLive?: boolean;
+  render: (split: T) => React.ReactElement;
+}
+
+/** One split of a group, taken from the group's cached splits. */
+const SplitRoute = <T extends {id: string}>({
+  groupId,
+  splitId,
+  needsLive = false,
+  render,
+}: SplitRouteProps<T>) => {
+  const split = useGroupSplit<T>(groupId, splitId);
+  if (split.data && (!needsLive || split.live)) {
+    return render(split.data);
+  }
+  if (split.error || (needsLive && split.failed)) {
+    return <ErrorState onRetry={split.retry} />;
+  }
+  if (split.loading || split.data) {
+    return <LoadingState message="Loading…" />;
+  }
+  return (
+    <EmptyState
+      fill
+      title="Split not found"
+      message="It may have been deleted."
+    />
+  );
+};
+
 /** A split, opened by the group id and the split id. */
 export const SplitDetailRoute = () => {
   const {groupId, splitId} = useLocalSearchParams<{
@@ -77,11 +113,9 @@ export const SplitDetailRoute = () => {
     <GroupRoute
       groupId={groupId}
       render={group => (
-        <DocumentRoute<SplitDetailScreenProps['split']>
-          segments={
-            groupId && splitId ? ['groups', groupId, 'splits', splitId] : null
-          }
-          missingTitle="Split not found"
+        <SplitRoute<SplitDetailScreenProps['split']>
+          groupId={group.id}
+          splitId={splitId ?? ''}
           render={split => <SplitDetailScreen group={group} split={split} />}
         />
       )}
@@ -111,9 +145,10 @@ export const CreateSplitRoute = () => {
       groupId={groupId}
       render={group =>
         splitId ? (
-          <DocumentRoute<NonNullable<CreateSplitScreenProps['split']>>
-            segments={['groups', group.id, 'splits', splitId]}
-            missingTitle="Split not found"
+          <SplitRoute<NonNullable<CreateSplitScreenProps['split']>>
+            groupId={group.id}
+            splitId={splitId}
+            needsLive
             render={split => <CreateSplitScreen group={group} split={split} />}
           />
         ) : (
@@ -129,69 +164,67 @@ interface SettleUpWithMembersProps {
   preselect: SettleUpScreenProps['preselect'];
 }
 
-interface SettleUpData {
-  members: ResolvedGroupMember[];
-  lendingDetails: LendingDetail[];
-}
-
 /**
  * Settle-up needs the members as people (name, avatar), not as emails, and the net balances for
  * its suggestions, so it looks the members up and works the balances out from the group's splits.
+ * The suggestions are amounts the person will pay, so it waits for the live splits and shows an
+ * error, not a guess, when either the splits or the member lookup fail.
  */
 const SettleUpWithMembers = ({group, preselect}: SettleUpWithMembersProps) => {
   const {currency} = useCurrency();
-  const [data, setData] = useState<SettleUpData | null>(null);
-  const [failed, setFailed] = useState(false);
-  const emailsKey = (group.members ?? []).join(',');
+  const emails = useMemo(() => group.members ?? [], [group.members]);
+  const splits = useGroupSplits<LendingSplit & {id: string}>(group.id);
+  const lookup = useMemberLookup(emails);
 
-  const load = useCallback(() => {
-    let active = true;
-    setFailed(false);
-    Promise.all([
-      resolveGroupMembers(group.members ?? []),
-      getDocs(collection(getFirestore(), 'groups', group.id, 'splits')),
-    ])
-      .then(([members, splitsSnapshot]) => {
-        if (!active) {
-          return;
-        }
-        const splits = splitsSnapshot.docs.map(d => ({
-          id: d.id,
-          ...d.data(),
-        })) as LendingSplit[];
-        setData({
-          members,
-          lendingDetails: calculateNetLendingBalances(splits, currency.code),
-        });
-      })
-      .catch(error => {
-        reportError(error as Error);
-        if (active) {
-          setFailed(true);
-        }
-      });
-    return () => {
-      active = false;
-    };
-    // The members are read through `emailsKey` so a new array each render does not reload.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [emailsKey, group.id, currency.code]);
+  const members = useMemo<ResolvedGroupMember[] | null>(() => {
+    if (emails.length === 0) {
+      return [];
+    }
+    if (!lookup.data) {
+      return null;
+    }
+    return emails.map(email => {
+      const match = lookup.data?.[email];
+      const fallbackName = group.memberNames?.[email] || email.split('@')[0];
+      return match
+        ? {
+            email,
+            name: match.name || fallbackName,
+            avatar: match.avatar,
+            userId: match.uid,
+          }
+        : {email, name: fallbackName, avatar: null, userId: null};
+    });
+  }, [emails, lookup.data, group.memberNames]);
 
-  useEffect(() => load(), [load]);
+  const lendingDetails = useMemo(
+    () =>
+      splits.live && splits.data
+        ? calculateNetLendingBalances(splits.data, currency.code)
+        : null,
+    [splits.live, splits.data, currency.code],
+  );
 
-  if (failed) {
-    return <ErrorState onRetry={load} />;
+  if (splits.failed || lookup.error) {
+    return (
+      <ErrorState
+        onRetry={() => {
+          splits.retry();
+          lookup.retry();
+        }}
+      />
+    );
   }
-  if (data === null) {
+  if (members === null || lendingDetails === null) {
     return <LoadingState message="Loading…" />;
   }
   // Without a tapped pair, prefill what the signed-in person owes, as the group screen did.
   const myEmail = getAuth().currentUser?.email;
-  const myDebt = data.lendingDetails.find(d => d.borrower.email === myEmail);
+  const myDebt = lendingDetails.find(d => d.borrower.email === myEmail);
   return (
     <SettleUpScreen
-      group={{id: group.id, name: group.name, members: data.members}}
-      lendingDetails={data.lendingDetails}
+      group={{id: group.id, name: group.name, members}}
+      lendingDetails={lendingDetails}
       preselect={preselect ?? myDebt}
     />
   );
