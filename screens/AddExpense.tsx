@@ -1,7 +1,7 @@
 import {View, Text} from 'react-native';
 import React, {useState, useEffect} from 'react';
 import {useRouter} from 'expo-router';
-import {ActivityIndicator} from 'react-native-paper';
+import {ActivityIndicator} from 'react-native';
 import {getAuth} from '@react-native-firebase/auth';
 import {
   Timestamp,

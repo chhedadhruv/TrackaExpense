@@ -24,7 +24,10 @@ import {
   pickImageFromCamera,
   pickImageFromLibrary,
 } from '../../src/utils/imagePicker';
-import {Card, ActivityIndicator, Switch} from 'react-native-paper';
+import {ActivityIndicator} from 'react-native';
+import Card from '../../src/components/Card';
+import TickBox from '../../src/components/TickBox';
+import Toggle from '../../src/components/Toggle';
 import {
   Timestamp,
   addDoc,
@@ -44,7 +47,7 @@ import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../../src/services/ErrorReporter';
 import * as PerformanceService from '../../src/services/PerformanceService';
 import * as AnalyticsService from '../../src/services/AnalyticsService';
-import {DatePickerModal} from 'react-native-paper-dates';
+import DatePickerModal from '../../src/components/DatePickerModal';
 import Calendar from 'lucide-react-native/icons/calendar';
 import Camera from 'lucide-react-native/icons/camera';
 import Check from 'lucide-react-native/icons/check';
@@ -1001,13 +1004,7 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
           <View style={styles.memberCheckboxContainer}>
             <View style={styles.memberInfo}>
               <View style={styles.memberNameContainer}>
-                <View
-                  style={[
-                    styles.customCheckbox,
-                    isSelected && styles.customCheckboxSelected,
-                  ]}>
-                  {isSelected && <Check size={18} color={colors.onPrimary} />}
-                </View>
+                <TickBox selected={isSelected} />
                 <Text style={styles.memberName}>
                   {member.name}
                   {isCurrentUser && ' (You)'}
@@ -1117,18 +1114,11 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
                   <Calendar size={20} color={colors.primary} />
                 </TouchableOpacity>
                 <DatePickerModal
-                  locale="en"
-                  mode="single"
                   visible={datePickerVisible}
                   onDismiss={onDismissDatePicker}
                   date={date}
-                  onConfirm={onConfirmDate as any}
-                  saveLabel="Confirm"
+                  onConfirm={onConfirmDate}
                   label="Select date"
-                  uppercase={false}
-                  {...(Platform.OS === 'ios' && {
-                    presentationStyle: 'pageSheet',
-                  })}
                 />
               </View>
 
@@ -1218,10 +1208,9 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
                       Auto-create this split on a schedule
                     </Text>
                   </View>
-                  <Switch
+                  <Toggle
                     value={recurringEnabled}
                     onValueChange={setRecurringEnabled}
-                    color={colors.primary}
                   />
                 </View>
                 {recurringEnabled && (
@@ -1271,10 +1260,9 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
                       Record your share as a personal expense
                     </Text>
                   </View>
-                  <Switch
+                  <Toggle
                     value={includeInTransactions}
                     onValueChange={setIncludeInTransactions}
-                    color={colors.primary}
                   />
                 </View>
               </View>
@@ -1640,21 +1628,6 @@ const createStyles = (colors: ThemeColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
-    },
-    customCheckbox: {
-      width: 24,
-      height: 24,
-      borderRadius: 4,
-      borderWidth: 2,
-      borderColor: colors.textMuted,
-      backgroundColor: colors.surface,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginLeft: 4,
-    },
-    customCheckboxSelected: {
-      backgroundColor: colors.primaryFill,
-      borderColor: colors.primaryFill,
     },
     memberName: {
       fontSize: 16,

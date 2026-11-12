@@ -10,7 +10,8 @@ import {
   Modal,
   Platform,
 } from 'react-native';
-import {Card, ActivityIndicator} from 'react-native-paper';
+import {ActivityIndicator} from 'react-native';
+import Card from '../src/components/Card';
 import Bell from 'lucide-react-native/icons/bell';
 import BellOff from 'lucide-react-native/icons/bell-off';
 import BellRing from 'lucide-react-native/icons/bell-ring';
@@ -50,7 +51,7 @@ import * as AnalyticsService from '../src/services/AnalyticsService';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import {KeyboardAvoidingModal} from '../src/components/KeyboardAvoidingModal';
-import {DatePickerModal} from 'react-native-paper-dates';
+import DatePickerModal from '../src/components/DatePickerModal';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {GOAL_KEYWORD_MAP} from '../utils/CategoryData';
 import ReminderNotificationService from '../services/ReminderNotificationService';
@@ -600,9 +601,8 @@ const SavingsScreen = () => {
 
   const onDismissDate = () => setOpenDate(false);
 
-  const onConfirmDate = (params: any) => {
+  const onConfirmDate = ({date: d}: {date: Date}) => {
     setOpenDate(false);
-    const d: Date = params.date;
     const formatted = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
       2,
       '0',
@@ -1545,19 +1545,14 @@ const SavingsScreen = () => {
         </Modal>
 
         <DatePickerModal
-          locale="en"
-          mode="single"
           visible={openDate}
           onDismiss={onDismissDate}
           date={
             editValues.targetDate ? new Date(editValues.targetDate) : new Date()
           }
           onConfirm={onConfirmDate}
-          saveLabel="Confirm"
           label="Select target date"
-          uppercase={false}
-          validRange={{startDate: new Date()}}
-          {...(Platform.OS === 'ios' && {presentationStyle: 'pageSheet'})}
+          minimumDate={new Date()}
         />
 
         {/* Category Picker Modal */}

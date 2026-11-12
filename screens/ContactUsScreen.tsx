@@ -1,7 +1,7 @@
 import React, {useState, useEffect} from 'react';
 import {useRouter} from 'expo-router';
 import {View, Text, TextInput, TouchableOpacity, Linking} from 'react-native';
-import {ActivityIndicator} from 'react-native-paper';
+import {ActivityIndicator} from 'react-native';
 import {
   Timestamp,
   addDoc,

@@ -66,9 +66,9 @@ Candidates for the next release, 1.4.1 or similar. None blocks 1.4.0.
 
 ## Left over from the icon migration (vector-icons to lucide)
 
-- `@expo/vector-icons` is still installed because react-native-paper and `react-native-paper-dates` load it at runtime (date picker chevrons and close button). Dropping it needs a `PaperProvider settings={{icon}}` mapping for the names those two use, then a check of every date picker (Home, Transactions, Savings, Split transactions, Create Split, Add and Edit forms). Not done: it is a separate, riskier change.
+- `react-native-paper`, `react-native-paper-dates` and `@expo/vector-icons` were removed (PR 3). Cards, text, switches, the tick box, the search box and the date picker are in `src/components/`. The date picker is now the native `@react-native-community/datetimepicker`: a new native module, so it ships only with a store build (fingerprint changes). Not checked: iOS (the wheel sheet in `DatePickerModal` is untested), and `@react-native-community/datetimepicker`'s config plugin was not added (Expo could not edit `app.config.js`); add `"@react-native-community/datetimepicker"` to the plugins only if the Android dialog needs custom colours.
 - Not checked: iOS (no iOS build), the Sign in with Apple button (hidden on Android; the new `AppleLogo` mark is drawn but unseen), and the Android 13 themed icon.
-- Visual changes to confirm with the owner: the Paper checkbox on the Create Split member list is now the same square tick box that iOS already had (Android used Paper's Material checkbox); a few glyphs differ from the old Material set (Bonus is a badge, wedding goal a gem, reminder off is a crossed bell, camera-switch is a refresh arrow).
+- Visual changes to confirm with the owner: the member lists on Create Split and Split now use the same square tick box on Android as on iOS (Android used Paper's Material checkbox); a few glyphs differ from the old Material set (Bonus is a badge, wedding goal a gem, reminder off is a crossed bell, camera-switch is a refresh arrow).
 
 ## Left over from the Statistics rewrite (Victory Native XL)
 

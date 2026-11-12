@@ -20,7 +20,7 @@ import {useUserData} from '../src/data/hooks';
 import * as Application from 'expo-application';
 import {version as appVersion} from '../package.json';
 import {View, Text, TouchableOpacity, ScrollView, Alert} from 'react-native';
-import {Avatar, ActivityIndicator} from 'react-native-paper';
+import {ActivityIndicator} from 'react-native';
 import ChevronDown from 'lucide-react-native/icons/chevron-down';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import ChevronUp from 'lucide-react-native/icons/chevron-up';
@@ -279,15 +279,12 @@ const ProfileScreen = () => {
           <View className="p-6">
             <View className="flex-row items-center">
               <View className="relative mr-4">
-                {userData?.userImg ? (
-                  <Avatar.Image source={{uri: userData.userImg}} size={80} />
-                ) : (
-                  <UserAvatar
-                    size={80}
-                    bgColor={colors.primaryFill}
-                    name={userData?.name ?? ''}
-                  />
-                )}
+                <UserAvatar
+                  size={80}
+                  src={userData?.userImg}
+                  bgColor={colors.primaryFill}
+                  name={userData?.name ?? ''}
+                />
                 <View className="absolute -bottom-0.5 -right-0.5 rounded-[10px] bg-surface p-0.5">
                   {verified ? (
                     <CircleCheck size={20} color={colors.income} />

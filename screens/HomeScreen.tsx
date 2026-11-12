@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {useRouter} from 'expo-router';
-import {Card} from 'react-native-paper';
+import Card from '../src/components/Card';
 import ArrowDown from 'lucide-react-native/icons/arrow-down';
 import ArrowUp from 'lucide-react-native/icons/arrow-up';
 import BanknoteArrowDown from 'lucide-react-native/icons/banknote-arrow-down';
@@ -37,7 +37,7 @@ import {
 } from '@react-native-firebase/firestore';
 import {useTransactions, useUserData} from '../src/data/hooks';
 import moment from 'moment';
-import {DatePickerModal} from 'react-native-paper-dates';
+import DatePickerModal from '../src/components/DatePickerModal';
 import {KeyboardAvoidingModal} from '../src/components/KeyboardAvoidingModal';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {getCategoryIcon} from '../utils/CategoryData';
@@ -421,34 +421,18 @@ const HomeScreen = () => {
         )}
 
         <DatePickerModal
-          locale="en"
-          mode="single"
           visible={startDatePickerVisible}
           onDismiss={() => setStartDatePickerVisible(false)}
           date={customStartDate ?? new Date()}
-          onConfirm={(params: any) => {
-            setStartDatePickerVisible(false);
-            setCustomStartDate(params.date);
-          }}
-          saveLabel="Confirm"
+          onConfirm={({date}) => setCustomStartDate(date)}
           label="Select start date"
-          uppercase={false}
-          {...(Platform.OS === 'ios' && {presentationStyle: 'pageSheet'})}
         />
         <DatePickerModal
-          locale="en"
-          mode="single"
           visible={endDatePickerVisible}
           onDismiss={() => setEndDatePickerVisible(false)}
           date={customEndDate ?? new Date()}
-          onConfirm={(params: any) => {
-            setEndDatePickerVisible(false);
-            setCustomEndDate(params.date);
-          }}
-          saveLabel="Confirm"
+          onConfirm={({date}) => setCustomEndDate(date)}
           label="Select end date"
-          uppercase={false}
-          {...(Platform.OS === 'ios' && {presentationStyle: 'pageSheet'})}
         />
 
         {/* Quick Actions */}
