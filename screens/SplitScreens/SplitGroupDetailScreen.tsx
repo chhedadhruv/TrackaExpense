@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useContext, useRef} from 'react';
+import React, {useState, useEffect, useContext, useMemo, useRef} from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   Platform,
 } from 'react-native';
 import {Card, Button} from 'react-native-paper';
-import {useFocusEffect} from '@react-navigation/native';
+import {useFocusEffect, useLocalSearchParams, useRouter} from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import UserAvatar from '../../src/components/Avatar';
 import {
@@ -27,20 +27,20 @@ import {
   where,
   writeBatch,
 } from '@react-native-firebase/firestore';
-import {lookupUsersByEmail} from '../../src/services/UserLookup';
+import {resolveGroupMembers} from '../../src/services/groupMembers';
+import {
+  calculateNetLendingBalances,
+  type LendingDetail,
+} from '../../src/utils/lending';
 import moment from 'moment';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
 import {AuthContext} from '../../navigation/AuthProvider';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import {useCurrency} from '../../utils/CurrencyUtil';
-import {majorOf, minorOf} from '../../src/utils/amounts';
+import {majorOf} from '../../src/utils/amounts';
 import {toMajorNumber} from '../../src/utils/money';
-import {
-  shareOfMinor,
-  sharesMinor,
-  totalSpentMajor,
-} from '../../src/utils/splitMath';
+import {shareOfMinor, totalSpentMajor} from '../../src/utils/splitMath';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {ErrorState, LoadingState} from '../../src/components/ScreenState';
 import {useLoadFailure} from '../../src/hooks/useLoadFailure';
@@ -73,12 +73,6 @@ interface SplitItem {
   date?: {toDate: () => Date; toMillis?: () => number};
   createdAt?: {toDate: () => Date; toMillis?: () => number};
   recurring?: {enabled?: boolean; frequency?: string};
-}
-
-interface LendingDetail {
-  lender: {email: string; name: string};
-  borrower: {email: string; name: string};
-  amount: number;
 }
 
 interface Group {
@@ -131,25 +125,19 @@ const getSplitCardColor = (
   return colors.primary;
 };
 
-const SplitGroupDetailScreen = ({
-  route,
-  navigation,
-}: {
-  route: any;
-  navigation: any;
-}) => {
+const SplitGroupDetailScreen = () => {
   const {currency, formatAmount} = useCurrency();
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
-  const rawGroup = route.params?.group;
-  const group: Group | null =
-    rawGroup ||
-    (route.params?.groupId
-      ? {
-          id: route.params.groupId,
-          name: decodeURIComponent(route.params.groupName || 'Split Group'),
-        }
-      : null);
+  const router = useRouter();
+  const params = useLocalSearchParams<{groupId?: string; groupName?: string}>();
+  // The name in the link (from the list or a push) shows at once; the group document replaces it
+  // as soon as it is read.
+  const [groupName, setGroupName] = useState(params.groupName || 'Split Group');
+  const group: Group | null = useMemo(
+    () => (params.groupId ? {id: params.groupId, name: groupName} : null),
+    [params.groupId, groupName],
+  );
   const {user} = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
   const {failed, succeed, fail} = useLoadFailure();
@@ -164,32 +152,6 @@ const SplitGroupDetailScreen = ({
   const [pendingInvites, setPendingInvites] = useState<string[]>([]);
   const hasLoadedOnce = useRef(false);
   const groupId = group?.id ?? '';
-
-  useEffect(() => {
-    if (!groupId) {
-      return;
-    }
-    const newSplit = route.params?.newSplit;
-    if (newSplit?.id) {
-      setSplits(prev => {
-        if (prev.some(s => s.id === newSplit.id)) {
-          return prev;
-        }
-        return [newSplit as SplitItem, ...prev].sort((a, b) => {
-          const aTs = (a.date || a.createdAt)?.toMillis?.() ?? 0;
-          const bTs = (b.date || b.createdAt)?.toMillis?.() ?? 0;
-          return bTs - aTs;
-        });
-      });
-    }
-  }, [route.params?.newSplit, groupId]);
-
-  useEffect(() => {
-    const gp = route.params?.group;
-    if (gp?.pendingInvites) {
-      setPendingInvites(gp.pendingInvites);
-    }
-  }, [route.params?.group]);
 
   useEffect(() => {
     if (splits.length > 0) {
@@ -219,7 +181,7 @@ const SplitGroupDetailScreen = ({
       <View style={styles.loadingContainer}>
         <Text>Group not found</Text>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={() => router.back()}
           style={styles.backButton}>
           <Text>Go Back</Text>
         </TouchableOpacity>
@@ -230,22 +192,14 @@ const SplitGroupDetailScreen = ({
   const fetchGroupMembers = async () => {
     try {
       const groupDoc = await getDoc(fsDoc(getFirestore(), 'groups', group!.id));
+      const storedName = groupDoc.data()?.name;
+      if (typeof storedName === 'string' && storedName) {
+        setGroupName(storedName);
+      }
       const membersData: string[] = groupDoc.data()?.members || [];
       const pending: string[] = groupDoc.data()?.pendingInvites || [];
       setPendingInvites(pending);
-      const found = await lookupUsersByEmail(membersData);
-      const resolved = membersData.map((email: string, i: number) => {
-        const match = found[i];
-        return match
-          ? {
-              email,
-              name: match.name || email.split('@')[0],
-              avatar: match.avatar,
-              userId: match.uid,
-            }
-          : {email, name: email.split('@')[0], avatar: null, userId: null};
-      });
-      setGroupMembers(resolved);
+      setGroupMembers(await resolveGroupMembers(membersData));
     } catch (err) {
       reportError(err);
     }
@@ -302,95 +256,6 @@ const SplitGroupDetailScreen = ({
     }
   };
 
-  const calculateNetLendingBalances = (
-    splitsArr: SplitItem[],
-    currencyCode: string,
-  ): LendingDetail[] => {
-    const balances: Record<string, Record<string, number>> = {};
-    splitsArr.forEach(split => {
-      // Skip settlements — they are already recorded in the splits list and handled separately
-      if (split.type === 'settlement' || split.isSettlement) {
-        const fromEmail = split.paidBy?.email?.toLowerCase();
-        const toEmail = split.splitUsers?.[0]?.email?.toLowerCase();
-        const amt = minorOf(split, currencyCode);
-        if (!fromEmail || !toEmail || fromEmail === toEmail || amt === null) {
-          return;
-        }
-        // Borrower paid lender: reduce what borrower owes lender
-        if (!balances[toEmail]) {
-          balances[toEmail] = {};
-        }
-        balances[toEmail][fromEmail] =
-          (balances[toEmail][fromEmail] || 0) - amt;
-        return;
-      }
-      const paidByEmail = split.paidBy?.email?.toLowerCase();
-      const splitUsers = split.splitUsers || [];
-      // Integer minor units: the shares of a split always add up to its total.
-      const shares = sharesMinor(split, currencyCode);
-      if (!paidByEmail || shares === null) {
-        return;
-      }
-      if (!balances[paidByEmail]) {
-        balances[paidByEmail] = {};
-      }
-      splitUsers.forEach((u, index) => {
-        const uEmail = u.email?.toLowerCase();
-        if (!uEmail || uEmail === paidByEmail) {
-          return;
-        }
-        balances[paidByEmail][uEmail] =
-          (balances[paidByEmail][uEmail] || 0) + shares[index];
-      });
-    });
-    const net: LendingDetail[] = [];
-    Object.keys(balances).forEach(lenderEmail => {
-      Object.keys(balances[lenderEmail]).forEach(borrowerEmail => {
-        if (lenderEmail >= borrowerEmail) {
-          return;
-        }
-        const lTob = balances[lenderEmail][borrowerEmail] || 0;
-        const bToL = balances[borrowerEmail]?.[lenderEmail] || 0;
-        const netAmt = lTob - bToL;
-        if (netAmt !== 0) {
-          const lenderName =
-            splitsArr.find(s => s.paidBy?.email === lenderEmail)?.paidBy
-              ?.name || lenderEmail.split('@')[0];
-          const borrowerName =
-            splitsArr
-              .find(s => s.splitUsers?.some(u => u.email === borrowerEmail))
-              ?.splitUsers?.find(u => u.email === borrowerEmail)?.name ||
-            borrowerEmail.split('@')[0];
-          net.push({
-            lender: {
-              email: netAmt > 0 ? lenderEmail : borrowerEmail,
-              name: netAmt > 0 ? lenderName : borrowerName,
-            },
-            borrower: {
-              email: netAmt > 0 ? borrowerEmail : lenderEmail,
-              name: netAmt > 0 ? borrowerName : lenderName,
-            },
-            amount: toMajorNumber(Math.abs(netAmt), currencyCode),
-          });
-        }
-      });
-    });
-    const result = net.reduce<LendingDetail[]>((acc, cur) => {
-      const exists = acc.find(
-        e =>
-          (e.lender.email === cur.lender.email &&
-            e.borrower.email === cur.borrower.email) ||
-          (e.lender.email === cur.borrower.email &&
-            e.borrower.email === cur.lender.email),
-      );
-      if (!exists) {
-        acc.push(cur);
-      }
-      return acc;
-    }, []);
-    return result;
-  };
-
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -425,10 +290,20 @@ const SplitGroupDetailScreen = ({
     borrower?: LendingDetail['borrower'],
     amount?: number,
   ) => {
-    navigation.navigate('SettleUp', {
-      group: {...group, members: groupMembers},
-      lendingDetails: detailedLendingInfo,
-      preselect: lender && borrower ? {lender, borrower, amount} : undefined,
+    // The pair that was tapped is prefilled; without one the settle-up screen prefills what the
+    // signed-in person owes.
+    router.navigate({
+      pathname: '/split/group/[groupId]/settle',
+      params: {
+        groupId: group!.id,
+        ...(lender && borrower && amount !== undefined
+          ? {
+              lenderEmail: lender.email,
+              borrowerEmail: borrower.email,
+              amount: String(amount),
+            }
+          : {}),
+      },
     });
   };
 
@@ -540,7 +415,12 @@ const SplitGroupDetailScreen = ({
         <View style={styles.actionButtonsRow}>
           <TouchableOpacity
             style={[styles.iconButton, styles.editButton]}
-            onPress={() => navigation.navigate('Split', {editGroup: group})}
+            onPress={() =>
+              router.navigate({
+                pathname: '/split',
+                params: {editGroupId: group!.id},
+              })
+            }
             accessibilityLabel="Edit group"
             accessibilityRole="button">
             <MaterialCommunityIcons
@@ -575,7 +455,7 @@ const SplitGroupDetailScreen = ({
                           },
                         );
                         snackbar.info('You have left the group.');
-                        navigation.goBack();
+                        router.back();
                       } catch (_) {
                         snackbar.error('Failed to leave group');
                       }
@@ -619,7 +499,7 @@ const SplitGroupDetailScreen = ({
                           fsDoc(getFirestore(), 'groups', group!.id),
                         );
                         snackbar.success('Group deleted successfully');
-                        navigation.goBack();
+                        router.back();
                       } catch (_) {
                         snackbar.error('Failed to delete group');
                       }
@@ -852,7 +732,10 @@ const SplitGroupDetailScreen = ({
                   <TouchableOpacity
                     style={styles.splitCardContent}
                     onPress={() =>
-                      navigation.navigate('SplitDetail', {group, split})
+                      router.navigate({
+                        pathname: '/split/group/[groupId]/split/[splitId]',
+                        params: {groupId: group!.id, splitId: split.id},
+                      })
                     }>
                     <View
                       style={[
@@ -903,7 +786,12 @@ const SplitGroupDetailScreen = ({
             })}
             {filteredSplits.length > RECENT_SPLITS_LIMIT && (
               <TouchableOpacity
-                onPress={() => navigation.navigate('SplitTransaction', {group})}
+                onPress={() =>
+                  router.navigate({
+                    pathname: '/split/group/[groupId]/transactions',
+                    params: {groupId: group!.id},
+                  })
+                }
                 style={styles.showAllButton}>
                 <Text style={styles.showAllText}>Show all transactions</Text>
                 <MaterialCommunityIcons
@@ -957,7 +845,12 @@ const SplitGroupDetailScreen = ({
         </KeyboardAwareScrollView>
         <TouchableOpacity
           style={styles.fab}
-          onPress={() => navigation.navigate('CreateSplit', {group})}
+          onPress={() =>
+            router.navigate({
+              pathname: '/split/group/[groupId]/create',
+              params: {groupId: group!.id},
+            })
+          }
           accessibilityLabel="Add split"
           accessibilityRole="button">
           <MaterialCommunityIcons

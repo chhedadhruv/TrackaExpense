@@ -1,5 +1,6 @@
 import {View, Text} from 'react-native';
 import React, {useState, useEffect} from 'react';
+import {useRouter} from 'expo-router';
 import {ActivityIndicator} from 'react-native-paper';
 import {getAuth} from '@react-native-firebase/auth';
 import {
@@ -49,7 +50,8 @@ import {snackbar} from '../src/utils/snackbarStore';
 
 const DISABLED_BUTTON = {opacity: 0.5} as const;
 
-const AddExpense = ({navigation}: {navigation: any}) => {
+const AddExpense = () => {
+  const router = useRouter();
   const {colors} = useTheme();
   const {currency} = useCurrency();
   const {
@@ -172,7 +174,7 @@ const AddExpense = ({navigation}: {navigation: any}) => {
       // Deferred notification prompt: asked once, right after a saved expense.
       requestPushPermissionAfterFirstExpense();
       snackbar.success('Expense added');
-      navigation.goBack();
+      router.back();
     } catch (e) {
       reportError(e as Error);
       setErrorMessage(

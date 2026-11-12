@@ -1,12 +1,6 @@
 import React, {useState} from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-  Linking,
-} from 'react-native';
+import {useRouter} from 'expo-router';
+import {View, Text, ScrollView, TouchableOpacity, Linking} from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {version as appVersion} from '../package.json';
 import {useTheme} from '../src/theme';
@@ -127,11 +121,19 @@ const ExpandableSection = ({
   );
 };
 
-const PrivacyPolicyScreen = ({navigation}: {navigation: any}) => {
+interface PrivacyPolicyScreenProps {
+  /**
+   * Contact Us only exists after sign-in; before it (from Sign up) the button would go nowhere,
+   * so only the signed-in route turns this on.
+   */
+  canContactSupport?: boolean;
+}
+
+const PrivacyPolicyScreen = ({
+  canContactSupport = false,
+}: PrivacyPolicyScreenProps) => {
   const {colors} = useTheme();
-  // Contact Us only exists after sign-in; before it (from Sign up) the button would go nowhere.
-  const canContactSupport: boolean =
-    navigation.getState?.()?.routeNames?.includes('ContactUs') ?? false;
+  const router = useRouter();
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >({});
@@ -140,7 +142,7 @@ const PrivacyPolicyScreen = ({navigation}: {navigation: any}) => {
     setExpandedSections(prev => ({...prev, [id]: !prev[id]}));
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <View className="flex-1 bg-background">
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
@@ -195,7 +197,7 @@ const PrivacyPolicyScreen = ({navigation}: {navigation: any}) => {
             <TouchableOpacity
               className="flex-row items-center justify-center rounded-xl bg-primary-fill py-[15px] ios:shadow-md"
               accessibilityRole="button"
-              onPress={() => navigation.navigate('ContactUs')}>
+              onPress={() => router.navigate('/profile/contact')}>
               <MaterialCommunityIcons
                 name="message-text"
                 size={20}
@@ -234,7 +236,7 @@ const PrivacyPolicyScreen = ({navigation}: {navigation: any}) => {
           </Text>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

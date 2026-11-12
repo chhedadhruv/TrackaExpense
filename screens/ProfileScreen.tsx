@@ -22,17 +22,10 @@ import {
   writeBatch,
 } from '@react-native-firebase/firestore';
 import {reportError} from '../src/services/ErrorReporter';
-import {useFocusEffect} from '@react-navigation/native';
+import {useFocusEffect, useRouter} from 'expo-router';
 import * as Application from 'expo-application';
 import {version as appVersion} from '../package.json';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  SafeAreaView,
-  Alert,
-} from 'react-native';
+import {View, Text, TouchableOpacity, ScrollView, Alert} from 'react-native';
 import {Avatar, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {useCurrency} from '../utils/CurrencyUtil';
@@ -116,8 +109,9 @@ const SettingsCard = ({children}: {children: ReactNode}) => (
   </View>
 );
 
-const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
+const ProfileScreen = () => {
   const {colors} = useTheme();
+  const router = useRouter();
   const {logout} = useContext(AuthContext);
   const {currency, setCurrency} = useCurrency();
   const [userData, setUserData] = useState<UserDocument | null>(null);
@@ -150,7 +144,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
     useCallback(() => {
       getUser();
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [route.key]),
+    }, []),
   );
 
   useEffect(() => {
@@ -286,7 +280,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <View className="flex-1 bg-background">
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
         <View className="px-5 pb-[15px] pt-5">
           <Text
@@ -354,9 +348,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
                 accessibilityRole="button"
                 accessibilityLabel="Edit profile"
                 hitSlop={8}
-                onPress={() =>
-                  navigation.navigate('EditProfile', {user: userData})
-                }>
+                onPress={() => router.navigate('/profile/edit')}>
                 <MaterialCommunityIcons
                   name="pencil"
                   size={20}
@@ -398,7 +390,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
               accent={ACCENT.blue}
               title="Contact Us"
               subtitle="Get help and share feedback"
-              onPress={() => navigation.navigate('ContactUs')}
+              onPress={() => router.navigate('/profile/contact')}
             />
             <RowDivider />
             <SettingsRow
@@ -406,7 +398,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
               accent={ACCENT.green}
               title="Privacy Policy"
               subtitle="Learn how we protect your data"
-              onPress={() => navigation.navigate('PrivacyPolicy')}
+              onPress={() => router.navigate('/profile/privacy-policy')}
             />
             <RowDivider />
             <SettingsRow
@@ -486,7 +478,7 @@ const ProfileScreen = ({navigation, route}: {navigation: any; route: any}) => {
         onSelect={handleCurrencyChange}
         onClose={() => setCurrencyModalVisible(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 

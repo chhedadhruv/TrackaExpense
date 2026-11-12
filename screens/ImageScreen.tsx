@@ -1,15 +1,16 @@
 import React, {useState} from 'react';
-import {View, Text, Image, ActivityIndicator, SafeAreaView} from 'react-native';
+import {View, Text, Image, ActivityIndicator} from 'react-native';
+import {useLocalSearchParams} from 'expo-router';
 import {useTheme} from '../src/theme';
 
-const ImageScreen = ({route}: {route: any}) => {
+const ImageScreen = () => {
   const {colors} = useTheme();
-  const {imageUrl} = route.params;
+  const {imageUrl} = useLocalSearchParams<{imageUrl: string}>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <View className="flex-1 bg-background">
       <View className="flex-1">
         {loading && !error && (
           <ActivityIndicator
@@ -40,7 +41,7 @@ const ImageScreen = ({route}: {route: any}) => {
           />
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 

@@ -1,31 +1,34 @@
-import './global.css';
+import '../global.css';
 import React, {useEffect, useState} from 'react';
 import {StatusBar, StyleSheet} from 'react-native';
+import * as Application from 'expo-application';
+import * as SplashScreen from 'expo-splash-screen';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {KeyboardProvider} from 'react-native-keyboard-controller';
-import {ThemeProvider, useTheme} from './src/theme';
+import {ThemeProvider, useTheme} from '../src/theme';
 import {
   initErrorReporting,
   reportError,
   wrapWithErrorReporting,
-} from './src/services/ErrorReporter';
-import {initMixpanel} from './src/services/MixpanelService';
-import {initPush} from './src/services/PushService';
-import Providers from './navigation';
-import NotificationService from './services/NotificationService';
-import {handleNotificationNavigation} from './services/NotificationNavigation';
-import UpdateService from './services/UpdateService';
-import ErrorBoundary from './components/ErrorBoundary';
-import * as Application from 'expo-application';
-import ForceUpdateScreen from './components/ForceUpdateScreen';
-import {SnackbarHost} from './src/components/Snackbar';
-import {getConfig, initRemoteConfig} from './src/services/RemoteConfigService';
-import {isVersionBelow} from './src/utils/version';
+} from '../src/services/ErrorReporter';
+import {initMixpanel} from '../src/services/MixpanelService';
+import {initPush} from '../src/services/PushService';
+import NotificationService from '../services/NotificationService';
+import {handleNotificationNavigation} from '../services/NotificationNavigation';
+import UpdateService from '../services/UpdateService';
+import ErrorBoundary from '../components/ErrorBoundary';
+import ForceUpdateScreen from '../components/ForceUpdateScreen';
+import {SnackbarHost} from '../src/components/Snackbar';
+import {getConfig, initRemoteConfig} from '../src/services/RemoteConfigService';
+import {isVersionBelow} from '../src/utils/version';
+import AppProviders from '../src/navigation/AppProviders';
+import AuthGate from '../src/navigation/AuthGate';
 
-// Start error reporting before anything renders so startup errors are captured.
+// Start error reporting before anything renders so startup errors are captured, and keep the
+// native splash screen up until AuthGate knows whether someone is signed in.
 initErrorReporting();
-
-const App: React.FC = () => {
+SplashScreen.preventAutoHideAsync().catch(() => {});
+const RootLayout = () => {
   const [forceUpdateMessage, setForceUpdateMessage] = useState<string | null>(
     null,
   );
@@ -45,7 +48,7 @@ const App: React.FC = () => {
       }
     })();
 
-    // Check for store update — runs independently, doesn't block notifications
+    // Check for store update. Runs independently, doesn't block notifications.
     (async () => {
       try {
         await UpdateService.checkForUpdate();
@@ -54,7 +57,7 @@ const App: React.FC = () => {
       }
     })();
 
-    // Initialize Remote Config — fetch and activate values, apply defaults on failure
+    // Initialize Remote Config: fetch and activate values, apply defaults on failure.
     (async () => {
       try {
         await initRemoteConfig();
@@ -97,7 +100,9 @@ const Shell = ({forceUpdateMessage}: {forceUpdateMessage: string | null}) => {
         {forceUpdateMessage !== null ? (
           <ForceUpdateScreen message={forceUpdateMessage} />
         ) : (
-          <Providers />
+          <AppProviders>
+            <AuthGate />
+          </AppProviders>
         )}
       </ErrorBoundary>
       <SnackbarHost />
@@ -111,4 +116,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default wrapWithErrorReporting(App);
+export default wrapWithErrorReporting(RootLayout);

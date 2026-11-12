@@ -28,7 +28,7 @@ import {
 } from '@react-native-firebase/firestore';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
-import {useFocusEffect} from '@react-navigation/native';
+import {useFocusEffect, useRouter} from 'expo-router';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {deleteSettlement} from '../../src/services/SettlementService';
@@ -68,21 +68,19 @@ interface Group {
   members?: string[];
 }
 
+export interface SplitDetailScreenProps {
+  split: SplitData;
+  group: Group;
+}
+
 const SplitDetailScreen = ({
-  route,
-  navigation,
-}: {
-  route: any;
-  navigation: any;
-}) => {
+  split: initialSplit,
+  group,
+}: SplitDetailScreenProps) => {
   const {currency, formatAmount} = useCurrency();
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
-  const {split: initialSplit, group} = route.params as {
-    split: SplitData;
-    group: Group;
-    transaction?: object;
-  };
+  const router = useRouter();
   const currentUser = getAuth().currentUser;
   const [split, setSplit] = React.useState<SplitData>(initialSplit);
   const [, setLoading] = React.useState(false);
@@ -244,7 +242,7 @@ const SplitDetailScreen = ({
           ? 'Settlement deleted successfully'
           : 'Split deleted successfully',
       );
-      navigation.goBack();
+      router.back();
     } catch (_) {
       snackbar.error(
         isSettlement ? 'Failed to delete settlement' : 'Failed to delete split',
@@ -481,7 +479,10 @@ const SplitDetailScreen = ({
             <TouchableOpacity
               style={styles.editButton}
               onPress={() =>
-                navigation.navigate('CreateSplit', {group, split})
+                router.navigate({
+                  pathname: '/split/group/[groupId]/create',
+                  params: {groupId: group.id, splitId: split.id},
+                })
               }>
               <MaterialCommunityIcons
                 name="pencil"

@@ -1,4 +1,6 @@
 import React, {useState, useEffect, useRef} from 'react';
+import {useRouter} from 'expo-router';
+import type {LendingDetail} from '../../src/utils/lending';
 import {
   View,
   Text,
@@ -35,14 +37,8 @@ import {snackbar} from '../../src/utils/snackbarStore';
 interface GroupMember {
   email: string;
   name: string;
-  avatar?: string;
-  userId?: string;
-}
-
-interface LendingDetail {
-  borrower: {email: string; name: string};
-  lender: {email: string; name: string};
-  amount: number;
+  avatar?: string | null;
+  userId?: string | null;
 }
 
 interface Group {
@@ -51,19 +47,28 @@ interface Group {
   members: GroupMember[];
 }
 
-const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
+export interface SettleUpScreenProps {
+  /** The group with its members already resolved (name, avatar, user id). */
+  group: Group;
+  /** Net balances between members, shown as suggestions (see src/utils/lending.ts). */
+  lendingDetails?: LendingDetail[];
+  /** The pair and amount to prefill, chosen by the route that opened this screen. */
+  preselect?: {
+    borrower: {email: string};
+    lender: {email: string};
+    amount: number;
+  };
+}
+
+const SettleUpScreen = ({
+  group,
+  lendingDetails,
+  preselect,
+}: SettleUpScreenProps) => {
   const {currency, formatAmount} = useCurrency();
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
-  const {group, lendingDetails, preselect} = route.params as {
-    group: Group;
-    lendingDetails?: LendingDetail[];
-    preselect?: {
-      borrower: {email: string};
-      lender: {email: string};
-      amount: number;
-    };
-  };
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [selectedLender, setSelectedLender] = useState<GroupMember | null>(
     null,
@@ -78,7 +83,6 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
   const requestIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const currentUserEmail = getAuth().currentUser?.email;
     const members = group.members || [];
     if (preselect) {
       setSelectedBorrower(
@@ -88,19 +92,6 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
         members.find(m => m.email === preselect.lender.email) ?? null,
       );
       setAmount(preselect.amount.toString());
-    } else if (lendingDetails?.length) {
-      const myDebt = lendingDetails.find(
-        d => d.borrower.email === currentUserEmail,
-      );
-      if (myDebt) {
-        setSelectedBorrower(
-          members.find(m => m.email === myDebt.borrower.email) ?? null,
-        );
-        setSelectedLender(
-          members.find(m => m.email === myDebt.lender.email) ?? null,
-        );
-        setAmount(myDebt.amount.toString());
-      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -217,7 +208,7 @@ const SettleUpScreen = ({route, navigation}: {route: any; navigation: any}) => {
       );
       requestIdRef.current = null;
       snackbar.success('Settlement recorded successfully');
-      navigation.goBack();
+      router.back();
     } catch (e) {
       reportError(e as Error);
       snackbar.error('Failed to record settlement');

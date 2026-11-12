@@ -45,19 +45,24 @@ import {useKnownTags} from '../src/hooks/useKnownTags';
 import {recordTagUse} from '../src/services/TagService';
 import {sanitizeTags} from '../src/utils/tags';
 import {snackbar} from '../src/utils/snackbarStore';
+import {useRouter} from 'expo-router';
+import type {TransactionDocument} from '../src/types';
 
 const DISABLED_BUTTON = {opacity: 0.5} as const;
 
+interface EditTransactionScreenProps {
+  transaction: TransactionDocument & {id: string};
+  /** "" in the Home tab and "/statistic" in the Statistic tab (see TransactionDetailScreen). */
+  basePath: string;
+}
+
 const EditTransactionScreen = ({
-  route,
-  navigation,
-}: {
-  route: any;
-  navigation: any;
-}) => {
+  transaction,
+  basePath,
+}: EditTransactionScreenProps) => {
   const {colors} = useTheme();
+  const router = useRouter();
   const {currency} = useCurrency();
-  const {transaction} = route.params;
 
   const {
     title,
@@ -198,7 +203,8 @@ const EditTransactionScreen = ({
       // The suggestion list is a convenience: record the tags without holding up the screen.
       recordTagUse(uid, tags, knownTags).catch(reportError);
       snackbar.success('Transaction updated');
-      navigation.navigate('Home');
+      // Back to the list this edit started from: Home, or the Statistic tab's own page.
+      router.navigate(basePath === '' ? '/home' : (basePath as '/statistic'));
     } catch (e) {
       reportError(e as Error);
       setErrorMessage(
