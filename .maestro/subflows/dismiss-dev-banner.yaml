@@ -1,0 +1,14 @@
+appId: com.trackaexpense
+---
+# Debug builds show a warning bar at the bottom a few seconds after launch (and again after later
+# warnings). It is white text on white, so it is invisible, but it swallows taps near the bottom of
+# the screen: a tap on a button above it did nothing until the bar was dismissed. Run this right
+# before taps that matter, not only at launch. It taps the bar's dismiss area when the bar is
+# there and does nothing otherwise (release builds never show it).
+- runFlow:
+    when:
+      visible:
+        id: 'card-container'
+    commands:
+      - tapOn:
+          point: '92%,92%'

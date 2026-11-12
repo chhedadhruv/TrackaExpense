@@ -1,0 +1,28 @@
+appId: com.trackaexpense
+name: Smoke test (every tab and the transactions list opens)
+tags:
+  - smoke
+---
+# Read-only: opens each main screen and checks its heading, so a crash on load, a missing screen
+# or a broken tab bar shows up straight away. Writes nothing.
+- launchApp
+- runFlow: ../subflows/dismiss-dev-banner.yaml
+
+- tapOn: 'Home'
+- assertVisible: 'Quick Actions'
+
+- tapOn: 'Statistic'
+- assertVisible: 'Track your financial insights'
+
+- tapOn: 'Split'
+- assertVisible: 'Split Groups'
+
+- tapOn: 'Savings'
+- assertVisible: 'Savings Goals'
+
+- tapOn: 'Profile'
+- assertVisible: 'Appearance'
+
+- tapOn: 'Home'
+- tapOn: 'See All'
+- assertVisible: 'All Transactions'
