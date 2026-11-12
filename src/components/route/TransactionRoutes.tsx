@@ -1,45 +1,46 @@
 import React from 'react';
 import {useLocalSearchParams} from 'expo-router';
-import {getAuth} from '@react-native-firebase/auth';
-import DocumentRoute from './DocumentRoute';
+import {EmptyState, ErrorState, LoadingState} from '../ScreenState';
 import TransactionDetailScreen from '../../../screens/TransactionDetailScreen';
 import EditTransactionScreen from '../../../screens/EditTransactionScreen';
-import type {TransactionDocument} from '../../types';
+import {useTransactionById} from '../../data/hooks';
 
-type LoadedTransaction = TransactionDocument & {id: string};
-
-const useTransactionSegments = (): readonly string[] | null => {
+/**
+ * Opens a transaction by id from the shared cache of the person's transactions (src/data), so the
+ * detail and edit screens cost no extra Firestore read and show an edit or delete at once.
+ * `basePath` is "" for the Home tab and "/statistic" for the Statistic tab.
+ */
+const useRouteTransaction = () => {
   const {id} = useLocalSearchParams<{id: string}>();
-  const uid = getAuth().currentUser?.uid;
-  return uid && id ? ['users', uid, 'transactions', id] : null;
+  return useTransactionById(id);
 };
 
-/** Opens a transaction by id. `basePath` is "" for the Home tab and "/statistic" for Statistic. */
+const NotFound = () => (
+  <EmptyState
+    fill
+    title="Transaction not found"
+    message="It may have been deleted."
+  />
+);
+
 export const TransactionDetailRoute = ({basePath}: {basePath: string}) => {
-  const segments = useTransactionSegments();
-  return (
-    <DocumentRoute<LoadedTransaction>
-      segments={segments}
-      missingTitle="Transaction not found"
-      render={transaction => (
-        <TransactionDetailScreen
-          transaction={transaction}
-          basePath={basePath}
-        />
-      )}
-    />
-  );
+  const {data, loading, error, retry} = useRouteTransaction();
+  if (data) {
+    return <TransactionDetailScreen transaction={data} basePath={basePath} />;
+  }
+  if (loading) {
+    return <LoadingState message="Loading…" />;
+  }
+  return error ? <ErrorState onRetry={retry} /> : <NotFound />;
 };
 
 export const EditTransactionRoute = ({basePath}: {basePath: string}) => {
-  const segments = useTransactionSegments();
-  return (
-    <DocumentRoute<LoadedTransaction>
-      segments={segments}
-      missingTitle="Transaction not found"
-      render={transaction => (
-        <EditTransactionScreen transaction={transaction} basePath={basePath} />
-      )}
-    />
-  );
+  const {data, loading, error, retry} = useRouteTransaction();
+  if (data) {
+    return <EditTransactionScreen transaction={data} basePath={basePath} />;
+  }
+  if (loading) {
+    return <LoadingState message="Loading…" />;
+  }
+  return error ? <ErrorState onRetry={retry} /> : <NotFound />;
 };

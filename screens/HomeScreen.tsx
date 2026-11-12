@@ -15,14 +15,11 @@ import {Card} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {getAuth} from '@react-native-firebase/auth';
 import {
-  collection,
   doc as fsDoc,
   getFirestore,
-  onSnapshot,
-  orderBy,
-  query,
   updateDoc,
 } from '@react-native-firebase/firestore';
+import {useTransactions, useUserData} from '../src/data/hooks';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {KeyboardAvoidingModal} from '../src/components/KeyboardAvoidingModal';
@@ -34,7 +31,7 @@ import {ErrorState, LoadingState} from '../src/components/ScreenState';
 import {formatInputAmount} from '../src/utils/formatters';
 import {majorOf, totalMajor} from '../src/utils/amounts';
 import {fromMinor, tryToMinor} from '../src/utils/money';
-import type {TransactionDocument, UserDocument} from '../src/types';
+import type {TransactionDocument} from '../src/types';
 import type {McIconName} from '../src/types/icons';
 
 type TimeRange =
@@ -58,22 +55,25 @@ const TIME_RANGES: {key: TimeRange; label: string; icon: McIconName}[] = [
 
 const RECENT_LIMIT = 5;
 
+// A stable empty list, so effects that depend on the transactions do not run on every render.
+const NO_TRANSACTIONS: TransactionDocument[] = [];
+
 const HomeScreen = () => {
   const router = useRouter();
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
   const {currency, formatAmount} = useCurrency();
-  const [userData, setUserData] = useState<UserDocument | null>(null);
+  // The profile and the transactions come from the shared cache, which live listeners keep
+  // current (src/data); this screen opens no listeners of its own.
+  const user = useUserData();
+  const transactionsData = useTransactions();
+  const userData = user.data ?? null;
+  const transactions = transactionsData.data ?? NO_TRANSACTIONS;
   const [totalExpense, setTotalExpense] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
-  const [transactions, setTransactions] = useState<TransactionDocument[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<
     TransactionDocument[]
   >([]);
-  const [userLoading, setUserLoading] = useState(true);
-  const [txLoading, setTxLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [retryKey, setRetryKey] = useState(0);
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
   const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
@@ -97,54 +97,6 @@ const HomeScreen = () => {
     },
     [],
   );
-
-  // Realtime listener for user data
-  useEffect(() => {
-    setUserLoading(true);
-    const unsub = onSnapshot(
-      fsDoc(getFirestore(), 'users', uid),
-      doc => {
-        if (doc.exists()) {
-          const data = doc.data() as UserDocument;
-          setUserData(data);
-          setError(null);
-        }
-        setUserLoading(false);
-      },
-      _err => {
-        setError(
-          'Error fetching user data. Please check your connection and try again.',
-        );
-        setUserLoading(false);
-      },
-    );
-    return () => unsub();
-  }, [retryKey, uid]);
-
-  // Realtime listener for transactions
-  useEffect(() => {
-    setTxLoading(true);
-    const unsub = onSnapshot(
-      query(
-        collection(getFirestore(), 'users', uid, 'transactions'),
-        orderBy('createdAt', 'desc'),
-      ),
-      snapshot => {
-        const arr = snapshot.docs.map(doc => ({
-          id: doc.id,
-          userId: uid,
-          ...doc.data(),
-        })) as TransactionDocument[];
-        setTransactions(arr);
-        setTxLoading(false);
-      },
-      _err => {
-        setError('Error fetching transactions. Please check your connection.');
-        setTxLoading(false);
-      },
-    );
-    return () => unsub();
-  }, [retryKey, uid]);
 
   const filterByRange = useCallback(
     (txns: TransactionDocument[], range: TimeRange): TransactionDocument[] => {
@@ -222,21 +174,16 @@ const HomeScreen = () => {
     }
   };
 
-  const loading = userLoading || txLoading;
-
-  if (loading) {
+  if (user.loading || transactionsData.loading) {
     return <LoadingState />;
   }
 
-  if (error) {
+  if (user.error || transactionsData.error) {
     return (
       <ErrorState
         title="Could not load your data"
-        message={error}
-        onRetry={() => {
-          setError(null);
-          setRetryKey(k => k + 1);
-        }}
+        message="Check your connection and try again."
+        onRetry={user.retry}
       />
     );
   }
