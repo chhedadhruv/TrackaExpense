@@ -33,8 +33,7 @@ import {
 } from '../src/components/form/FormParts';
 import TextField from '../src/components/form/TextField';
 import TagField from '../src/components/form/TagField';
-import {useKnownTags} from '../src/hooks/useKnownTags';
-import {recordTagUse} from '../src/services/TagService';
+import {useKnownTags, useRecordTags} from '../src/hooks/useKnownTags';
 import {snackbar} from '../src/utils/snackbarStore';
 import AlignLeft from 'lucide-react-native/icons/align-left';
 import BanknoteArrowUp from 'lucide-react-native/icons/banknote-arrow-up';
@@ -65,6 +64,7 @@ const AddIncome = () => {
     validateForm,
   } = useTransactionForm();
   const knownTags = useKnownTags();
+  const recordTags = useRecordTags();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -119,7 +119,7 @@ const AddIncome = () => {
         category: category ?? 'uncategorized',
       });
       // The suggestion list is a convenience: record the tags without holding up the screen.
-      recordTagUse(uid, tags, knownTags).catch(reportError);
+      recordTags(tags, knownTags).catch(reportError);
       snackbar.success('Income added');
       router.back();
     } catch (e) {

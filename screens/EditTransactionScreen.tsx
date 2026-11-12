@@ -41,8 +41,7 @@ import {
 import TextField from '../src/components/form/TextField';
 import ReceiptField from '../src/components/form/ReceiptField';
 import TagField from '../src/components/form/TagField';
-import {useKnownTags} from '../src/hooks/useKnownTags';
-import {recordTagUse} from '../src/services/TagService';
+import {useKnownTags, useRecordTags} from '../src/hooks/useKnownTags';
 import {sanitizeTags} from '../src/utils/tags';
 import {snackbar} from '../src/utils/snackbarStore';
 import AlignLeft from 'lucide-react-native/icons/align-left';
@@ -97,6 +96,7 @@ const EditTransactionScreen = ({
     tags: sanitizeTags(transaction.tags),
   });
   const knownTags = useKnownTags();
+  const recordTags = useRecordTags();
 
   const [uploading, setUploading] = useState(false);
   const [transferred, setTransferred] = useState(0);
@@ -205,7 +205,7 @@ const EditTransactionScreen = ({
           parseFloat(amount) !== parseFloat(transaction.amount.toString()),
       });
       // The suggestion list is a convenience: record the tags without holding up the screen.
-      recordTagUse(uid, tags, knownTags).catch(reportError);
+      recordTags(tags, knownTags).catch(reportError);
       snackbar.success('Transaction updated');
       // Back to the list this edit started from: Home, or the Statistic tab's own page.
       router.navigate(basePath === '' ? '/home' : (basePath as '/statistic'));
