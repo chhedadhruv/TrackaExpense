@@ -1,13 +1,15 @@
 import React, {useState, useEffect, useMemo} from 'react';
 import {
+  ActivityIndicator,
+  FlatList,
   View,
   TouchableOpacity,
   Alert,
   StyleSheet,
   TextInput,
   Platform,
+  type ScrollViewProps,
 } from 'react-native';
-import {ActivityIndicator} from 'react-native';
 import Card from '../../src/components/Card';
 import Text from '../../src/components/Text';
 import TickBox from '../../src/components/TickBox';
@@ -108,6 +110,17 @@ const buildGroupCategories = (color: string) =>
 
 const getCategoryIcon = (value: string): AppIcon =>
   GROUP_CATEGORY_ICONS[value] || Users;
+
+// A stable empty list for the groups, so the list does not see new data on every render.
+const NO_GROUPS: Group[] = [];
+
+const groupKey = (group: Group) => group.id;
+
+// The list's scroll container is the app's keyboard-aware one, because the create-group form in
+// the list header has text inputs that must stay above the keyboard.
+const renderKeyboardAwareScroll = (props: ScrollViewProps) => (
+  <KeyboardAwareScrollView {...props} />
+);
 
 const SplitScreen = () => {
   const router = useRouter();
@@ -566,233 +579,253 @@ const SplitScreen = () => {
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
-        <KeyboardAwareScrollView
-          style={styles.scrollView}
+        <FlatList
+          // While the list failed to load, show only its error (not a saved copy).
+          data={failed ? NO_GROUPS : groups}
+          keyExtractor={groupKey}
+          renderItem={({item}) => (
+            <View style={styles.groupRow}>{renderGroupCard(item)}</View>
+          )}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
-          <View style={styles.headerSection}>
-            <View style={styles.headerTitleRow}>
-              <Users size={32} color={colors.primary} />
-              <Text style={styles.headerTitle}>Split Groups</Text>
-            </View>
-            <Text style={styles.headerSubtitle}>
-              Manage your expense groups
-            </Text>
-          </View>
-          <View style={styles.quickAccessRow}>
-            <TouchableOpacity
-              style={styles.quickAccessButton}
-              onPress={() => router.navigate('/split/friends')}>
-              <Users size={22} color={colors.primary} />
-              <Text style={styles.quickAccessText}>Friends</Text>
-            </TouchableOpacity>
-            {getConfig().enable_iou_feature && (
-              <TouchableOpacity
-                style={styles.quickAccessButton}
-                onPress={() => router.navigate('/split/iou')}>
-                <Handshake size={22} color={colors.primary} />
-                <Text style={styles.quickAccessText}>IOUs</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          <Card
-            style={[
-              styles.createGroupCard,
-              Platform.OS === 'android' && styles.cardAndroid,
-            ]}
-            elevation={Platform.OS === 'android' ? 0 : 2}>
-            <View style={styles.cardContent}>
-              <TouchableOpacity
-                style={styles.createGroupHeader}
-                activeOpacity={0.7}
-                onPress={() => {
-                  if (!isFormVisible) {
-                    setEditingGroupId(null);
-                    setGroupName('');
-                    setCategory(null);
-                    setSelectedUsers([]);
-                  }
-                  setIsFormVisible(!isFormVisible);
-                }}>
-                <Text style={styles.createGroupTitle}>
-                  {editingGroupId ? 'Edit Group' : 'Create New Group'}
-                </Text>
-                {isFormVisible ? (
-                  <ChevronUp size={24} color={colors.primary} />
-                ) : (
-                  <ChevronDown size={24} color={colors.primary} />
-                )}
-              </TouchableOpacity>
-              {isFormVisible && (
-                <View style={styles.formContainer}>
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Group Name</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="Enter group name"
-                      placeholderTextColor={colors.textPlaceholder}
-                      value={groupName}
-                      onChangeText={setGroupName}
-                      maxLength={50}
-                    />
-                    <Text style={styles.characterCount}>
-                      {groupName.length}/50
-                    </Text>
-                  </View>
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Category</Text>
-                    <SelectModal
-                      value={category}
-                      options={groupCategories}
-                      onChange={setCategory}
-                      placeholder="Select Group Category"
-                      searchPlaceholder="Search categories..."
-                    />
-                  </View>
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Add Members</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="Search user by email or phone number"
-                      placeholderTextColor={colors.textPlaceholder}
-                      value={searchQuery}
-                      onChangeText={query => {
-                        setSearchQuery(query);
-                        if (query.includes('@') || /^\d+$/.test(query)) {
-                          fetchUserByEmailOrPhone(query);
-                        }
-                      }}
-                      keyboardType="email-address"
-                    />
-                  </View>
-                  {userDetails &&
-                    userDetails.email !== currentUser?.email &&
-                    renderUserCard(userDetails, true)}
-                  {userDetails && userDetails.email === currentUser?.email && (
-                    <View style={styles.warningCard}>
-                      <TriangleAlert size={18} color={colors.warningText} />
-                      <Text style={styles.warningText}>
-                        You cannot add yourself to the group. You are
-                        automatically included.
-                      </Text>
-                    </View>
-                  )}
-                  <View style={styles.selectedContainer}>
-                    <Text style={styles.selectedUsersLabel}>
-                      Selected Users:
-                    </Text>
-                    {selectedUsers.map(user => renderUserCard(user, true))}
-                    {selectedUsers.length === 0 && (
-                      <Text style={styles.emptySelectionText}>
-                        No users selected yet. Search and add members above.
-                      </Text>
-                    )}
-                  </View>
-                  <View style={styles.buttonContainer}>
-                    <TouchableOpacity
-                      style={[
-                        styles.createGroupButton,
-                        saving && styles.createGroupButtonSaving,
-                      ]}
-                      onPress={createGroup}
-                      disabled={saving}>
-                      {saving ? (
-                        <ActivityIndicator
-                          size="small"
-                          color={colors.onPrimary}
-                        />
-                      ) : (
-                        <>
-                          <Text style={styles.createGroupButtonText}>
-                            {editingGroupId ? 'Update Group' : 'Create Group'}
-                          </Text>
-                          {editingGroupId ? (
-                            <Pencil size={20} color={colors.onPrimary} />
-                          ) : (
-                            <Check size={20} color={colors.onPrimary} />
-                          )}
-                        </>
-                      )}
-                    </TouchableOpacity>
-                    {editingGroupId && (
-                      <TouchableOpacity
-                        style={styles.cancelButton}
-                        onPress={() => {
-                          setEditingGroupId(null);
-                          setGroupName('');
-                          setCategory(null);
-                          setSelectedUsers([]);
-                          setIsFormVisible(false);
-                        }}>
-                        <Text style={styles.cancelButtonText}>Cancel</Text>
-                        <X size={20} color={colors.textSecondary} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={8}
+          renderScrollComponent={renderKeyboardAwareScroll}
+          ListHeaderComponent={
+            <>
+              <View style={styles.headerSection}>
+                <View style={styles.headerTitleRow}>
+                  <Users size={32} color={colors.primary} />
+                  <Text style={styles.headerTitle}>Split Groups</Text>
                 </View>
-              )}
-            </View>
-          </Card>
-          <View style={styles.groupsSection}>
-            <View style={styles.groupsHeaderRow}>
-              <Text
-                style={[styles.sectionTitle, styles.groupsSectionTitle]}
-                numberOfLines={1}
-                ellipsizeMode="tail">
-                Your Groups
-              </Text>
-              <View style={styles.groupsHeaderActions}>
-                <TouchableOpacity
-                  style={styles.iconActionButton}
-                  onPress={() => router.navigate('/split/invitations')}>
-                  <UserPlus size={20} color={colors.onPrimary} />
-                  {invitationsCount > 0 && (
-                    <View style={styles.invitationsBadge}>
-                      <Text
-                        style={styles.invitationsBadgeText}
-                        numberOfLines={1}>
-                        {invitationsCount > 99
-                          ? '99+'
-                          : String(invitationsCount)}
-                      </Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.iconActionButton}
-                  onPress={() => router.navigate('/split/history')}>
-                  <History size={20} color={colors.onPrimary} />
-                </TouchableOpacity>
+                <Text style={styles.headerSubtitle}>
+                  Manage your expense groups
+                </Text>
               </View>
-            </View>
-            {failed ? (
-              <ErrorState
-                fill={false}
-                title="Could not load your groups"
-                onRetry={groupsData.retry}
-              />
-            ) : groups.length === 0 ? (
+              <View style={styles.quickAccessRow}>
+                <TouchableOpacity
+                  style={styles.quickAccessButton}
+                  onPress={() => router.navigate('/split/friends')}>
+                  <Users size={22} color={colors.primary} />
+                  <Text style={styles.quickAccessText}>Friends</Text>
+                </TouchableOpacity>
+                {getConfig().enable_iou_feature && (
+                  <TouchableOpacity
+                    style={styles.quickAccessButton}
+                    onPress={() => router.navigate('/split/iou')}>
+                    <Handshake size={22} color={colors.primary} />
+                    <Text style={styles.quickAccessText}>IOUs</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
               <Card
                 style={[
-                  styles.emptyStateCard,
+                  styles.createGroupCard,
                   Platform.OS === 'android' && styles.cardAndroid,
                 ]}
-                elevation={Platform.OS === 'android' ? 0 : 1}>
-                <View style={styles.emptyState}>
-                  <Users size={64} color={colors.iconMuted} />
-                  <Text style={styles.emptyStateText}>
-                    No groups created yet
-                  </Text>
-                  <Text style={styles.emptyStateSubtext}>
-                    Create your first group to start splitting expenses
-                  </Text>
+                elevation={Platform.OS === 'android' ? 0 : 2}>
+                <View style={styles.cardContent}>
+                  <TouchableOpacity
+                    style={styles.createGroupHeader}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      if (!isFormVisible) {
+                        setEditingGroupId(null);
+                        setGroupName('');
+                        setCategory(null);
+                        setSelectedUsers([]);
+                      }
+                      setIsFormVisible(!isFormVisible);
+                    }}>
+                    <Text style={styles.createGroupTitle}>
+                      {editingGroupId ? 'Edit Group' : 'Create New Group'}
+                    </Text>
+                    {isFormVisible ? (
+                      <ChevronUp size={24} color={colors.primary} />
+                    ) : (
+                      <ChevronDown size={24} color={colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                  {isFormVisible && (
+                    <View style={styles.formContainer}>
+                      <View style={styles.inputContainer}>
+                        <Text style={styles.inputLabel}>Group Name</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="Enter group name"
+                          placeholderTextColor={colors.textPlaceholder}
+                          value={groupName}
+                          onChangeText={setGroupName}
+                          maxLength={50}
+                        />
+                        <Text style={styles.characterCount}>
+                          {groupName.length}/50
+                        </Text>
+                      </View>
+                      <View style={styles.inputContainer}>
+                        <Text style={styles.inputLabel}>Category</Text>
+                        <SelectModal
+                          value={category}
+                          options={groupCategories}
+                          onChange={setCategory}
+                          placeholder="Select Group Category"
+                          searchPlaceholder="Search categories..."
+                        />
+                      </View>
+                      <View style={styles.inputContainer}>
+                        <Text style={styles.inputLabel}>Add Members</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="Search user by email or phone number"
+                          placeholderTextColor={colors.textPlaceholder}
+                          value={searchQuery}
+                          onChangeText={query => {
+                            setSearchQuery(query);
+                            if (query.includes('@') || /^\d+$/.test(query)) {
+                              fetchUserByEmailOrPhone(query);
+                            }
+                          }}
+                          keyboardType="email-address"
+                        />
+                      </View>
+                      {userDetails &&
+                        userDetails.email !== currentUser?.email &&
+                        renderUserCard(userDetails, true)}
+                      {userDetails &&
+                        userDetails.email === currentUser?.email && (
+                          <View style={styles.warningCard}>
+                            <TriangleAlert
+                              size={18}
+                              color={colors.warningText}
+                            />
+                            <Text style={styles.warningText}>
+                              You cannot add yourself to the group. You are
+                              automatically included.
+                            </Text>
+                          </View>
+                        )}
+                      <View style={styles.selectedContainer}>
+                        <Text style={styles.selectedUsersLabel}>
+                          Selected Users:
+                        </Text>
+                        {selectedUsers.map(user => renderUserCard(user, true))}
+                        {selectedUsers.length === 0 && (
+                          <Text style={styles.emptySelectionText}>
+                            No users selected yet. Search and add members above.
+                          </Text>
+                        )}
+                      </View>
+                      <View style={styles.buttonContainer}>
+                        <TouchableOpacity
+                          style={[
+                            styles.createGroupButton,
+                            saving && styles.createGroupButtonSaving,
+                          ]}
+                          onPress={createGroup}
+                          disabled={saving}>
+                          {saving ? (
+                            <ActivityIndicator
+                              size="small"
+                              color={colors.onPrimary}
+                            />
+                          ) : (
+                            <>
+                              <Text style={styles.createGroupButtonText}>
+                                {editingGroupId
+                                  ? 'Update Group'
+                                  : 'Create Group'}
+                              </Text>
+                              {editingGroupId ? (
+                                <Pencil size={20} color={colors.onPrimary} />
+                              ) : (
+                                <Check size={20} color={colors.onPrimary} />
+                              )}
+                            </>
+                          )}
+                        </TouchableOpacity>
+                        {editingGroupId && (
+                          <TouchableOpacity
+                            style={styles.cancelButton}
+                            onPress={() => {
+                              setEditingGroupId(null);
+                              setGroupName('');
+                              setCategory(null);
+                              setSelectedUsers([]);
+                              setIsFormVisible(false);
+                            }}>
+                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                            <X size={20} color={colors.textSecondary} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  )}
                 </View>
               </Card>
-            ) : (
-              groups.map(renderGroupCard)
-            )}
-          </View>
-        </KeyboardAwareScrollView>
+              <View style={styles.groupRow}>
+                <View style={styles.groupsHeaderRow}>
+                  <Text
+                    style={[styles.sectionTitle, styles.groupsSectionTitle]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail">
+                    Your Groups
+                  </Text>
+                  <View style={styles.groupsHeaderActions}>
+                    <TouchableOpacity
+                      style={styles.iconActionButton}
+                      onPress={() => router.navigate('/split/invitations')}>
+                      <UserPlus size={20} color={colors.onPrimary} />
+                      {invitationsCount > 0 && (
+                        <View style={styles.invitationsBadge}>
+                          <Text
+                            style={styles.invitationsBadgeText}
+                            numberOfLines={1}>
+                            {invitationsCount > 99
+                              ? '99+'
+                              : String(invitationsCount)}
+                          </Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.iconActionButton}
+                      onPress={() => router.navigate('/split/history')}>
+                      <History size={20} color={colors.onPrimary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </>
+          }
+          ListEmptyComponent={
+            <View style={styles.groupRow}>
+              {failed ? (
+                <ErrorState
+                  fill={false}
+                  title="Could not load your groups"
+                  onRetry={groupsData.retry}
+                />
+              ) : (
+                <Card
+                  style={[
+                    styles.emptyStateCard,
+                    Platform.OS === 'android' && styles.cardAndroid,
+                  ]}
+                  elevation={Platform.OS === 'android' ? 0 : 1}>
+                  <View style={styles.emptyState}>
+                    <Users size={64} color={colors.iconMuted} />
+                    <Text style={styles.emptyStateText}>
+                      No groups created yet
+                    </Text>
+                    <Text style={styles.emptyStateSubtext}>
+                      Create your first group to start splitting expenses
+                    </Text>
+                  </View>
+                </Card>
+              )}
+            </View>
+          }
+          ListFooterComponent={<View style={styles.listFooter} />}
+        />
       </View>
     </SafeAreaProvider>
   );
@@ -962,7 +995,8 @@ const createStyles = (colors: ThemeColors) =>
       marginRight: 8,
       fontFamily: 'Lato-Bold',
     },
-    groupsSection: {paddingHorizontal: 20, paddingBottom: 30},
+    groupRow: {paddingHorizontal: 20},
+    listFooter: {height: 30},
     groupsHeaderRow: {
       flexDirection: 'row',
       alignItems: 'center',
