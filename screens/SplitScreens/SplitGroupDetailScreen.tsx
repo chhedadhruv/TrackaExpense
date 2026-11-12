@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useContext, useMemo, useRef} from 'react';
+import React, {useContext, useMemo} from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   Platform,
 } from 'react-native';
 import {Card, Button} from 'react-native-paper';
-import {useFocusEffect, useLocalSearchParams, useRouter} from 'expo-router';
+import {useLocalSearchParams, useRouter} from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import UserAvatar from '../../src/components/Avatar';
 import {
@@ -27,7 +27,6 @@ import {
   where,
   writeBatch,
 } from '@react-native-firebase/firestore';
-import {resolveGroupMembers} from '../../src/services/groupMembers';
 import {
   calculateNetLendingBalances,
   type LendingDetail,
@@ -43,8 +42,7 @@ import {toMajorNumber} from '../../src/utils/money';
 import {shareOfMinor, totalSpentMajor} from '../../src/utils/splitMath';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {ErrorState, LoadingState} from '../../src/components/ScreenState';
-import {useLoadFailure} from '../../src/hooks/useLoadFailure';
-import {reportError} from '../../src/services/ErrorReporter';
+import {useGroup, useGroupSplits, useMemberDetails} from '../../src/data/split';
 import {snackbar} from '../../src/utils/snackbarStore';
 
 interface GroupMember {
@@ -82,6 +80,10 @@ interface Group {
 }
 
 const RECENT_SPLITS_LIMIT = 3;
+
+// Stable empty lists, so memos downstream do not recompute while nothing has loaded.
+const NO_SPLITS: SplitItem[] = [];
+const NO_EMAILS: string[] = [];
 
 // The deeper brand shade of the delete button on the group card, which is brand-coloured in
 // both themes.
@@ -131,50 +133,49 @@ const SplitGroupDetailScreen = () => {
   const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const params = useLocalSearchParams<{groupId?: string; groupName?: string}>();
-  // The name in the link (from the list or a push) shows at once; the group document replaces it
-  // as soon as it is read.
-  const [groupName, setGroupName] = useState(params.groupName || 'Split Group');
+  // Everything on this screen comes from the shared cache, kept current by live listeners
+  // (src/data/split.ts): the group, its splits, and the members' names. A split added, edited or
+  // deleted here or by anyone else shows up with no reload, so nothing is fetched on focus.
+  const groupData = useGroup(params.groupId);
+  const splitsData = useGroupSplits<SplitItem>(params.groupId);
+  // The name in the link (from the list or a push) shows at once; the group's own name replaces
+  // it as soon as the group is known.
+  const groupName = groupData.data?.name ?? (params.groupName || 'Split Group');
   const group: Group | null = useMemo(
     () => (params.groupId ? {id: params.groupId, name: groupName} : null),
     [params.groupId, groupName],
   );
   const {user} = useContext(AuthContext);
-  const [loading, setLoading] = useState(true);
-  const {failed, succeed, fail} = useLoadFailure();
-  const [splits, setSplits] = useState<SplitItem[]>([]);
-  const [totalSplitAmount, setTotalSplitAmount] = useState(0);
-  const [detailedLendingInfo, setDetailedLendingInfo] = useState<
-    LendingDetail[]
-  >([]);
-  const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
-  const [filteredSplits, setFilteredSplits] = useState<SplitItem[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [pendingInvites, setPendingInvites] = useState<string[]>([]);
-  const hasLoadedOnce = useRef(false);
-  const groupId = group?.id ?? '';
-
-  useEffect(() => {
-    if (splits.length > 0) {
-      setDetailedLendingInfo(
-        calculateNetLendingBalances(splits, currency.code),
-      );
-    }
-  }, [splits, currency.code]);
-
-  useEffect(() => {
-    setFilteredSplits(splits);
-  }, [splits]);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      if (!groupId) {
-        return;
-      }
-      fetchGroupSplits(!hasLoadedOnce.current);
-      fetchGroupMembers();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [groupId]),
+  const splits = splitsData.data ?? NO_SPLITS;
+  const filteredSplits = splits;
+  const totalSplitAmount = useMemo(
+    () => totalSpentMajor(splits, currency.code),
+    [splits, currency.code],
   );
+  const detailedLendingInfo: LendingDetail[] = useMemo(
+    () => calculateNetLendingBalances(splits, currency.code),
+    [splits, currency.code],
+  );
+  const pendingInvites = groupData.data?.pendingInvites ?? NO_EMAILS;
+  const memberEmails = groupData.data?.members ?? NO_EMAILS;
+  const foundMembers = useMemberDetails(memberEmails);
+  const groupMembers: GroupMember[] = useMemo(
+    () =>
+      memberEmails.map(email => {
+        const match = foundMembers?.[email];
+        const name =
+          match?.name ||
+          groupData.data?.memberNames?.[email] ||
+          email.split('@')[0];
+        return match
+          ? {email, name, avatar: match.avatar, userId: match.uid}
+          : {email, name, avatar: null, userId: null};
+      }),
+    [memberEmails, foundMembers, groupData.data?.memberNames],
+  );
+  const loading = splitsData.loading;
+  // A failed load must not read as "No splits yet" with no settlement suggestions.
+  const failed = splitsData.error;
 
   if (!group || !group.id) {
     return (
@@ -189,107 +190,17 @@ const SplitGroupDetailScreen = () => {
     );
   }
 
-  const fetchGroupMembers = async () => {
-    try {
-      const groupDoc = await getDoc(fsDoc(getFirestore(), 'groups', group!.id));
-      const storedName = groupDoc.data()?.name;
-      if (typeof storedName === 'string' && storedName) {
-        setGroupName(storedName);
-      }
-      const membersData: string[] = groupDoc.data()?.members || [];
-      const pending: string[] = groupDoc.data()?.pendingInvites || [];
-      setPendingInvites(pending);
-      setGroupMembers(await resolveGroupMembers(membersData));
-    } catch (err) {
-      reportError(err);
-    }
-  };
-
-  const fetchGroupSplits = async (showSpinner = true) => {
-    try {
-      if (showSpinner) {
-        setLoading(true);
-      }
-      const snap = await getDocs(
-        collection(getFirestore(), 'groups', group!.id, 'splits'),
-      );
-      const fetched = snap.docs
-        .map(doc => ({id: doc.id, ...doc.data()} as SplitItem))
-        .sort((a, b) => {
-          const aTs = (a.date || a.createdAt)?.toMillis?.() ?? 0;
-          const bTs = (b.date || b.createdAt)?.toMillis?.() ?? 0;
-          return bTs - aTs;
-        });
-      setTotalSplitAmount(totalSpentMajor(fetched, currency.code));
-      setSplits(fetched);
-      hasLoadedOnce.current = true;
-      succeed();
-    } catch (err) {
-      // A failed load must not read as "No splits yet" with no settlement suggestions.
-      fail(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _handleDeleteSplit = async (split: SplitItem) => {
-    try {
-      await deleteDoc(
-        fsDoc(getFirestore(), 'groups', group!.id, 'splits', split.id),
-      );
-      try {
-        await SplitNotificationService.notifySplitDeleted(
-          split as any,
-          {
-            id: group!.id,
-            name: group!.name,
-            members: groupMembers.map(m => m.email),
-          } as any,
-          user?.displayName || user?.email?.split('@')[0] || 'Someone',
-        );
-      } catch (notifErr) {}
-      fetchGroupSplits();
-      snackbar.success('Split deleted successfully');
-    } catch (err) {
-      snackbar.error('Failed to delete split');
-    }
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _handleSearch = (query: string) => {
-    setSearchQuery(query);
-    if (!query.trim()) {
-      setFilteredSplits(splits);
-      return;
-    }
-    const filtered = splits.filter(split => {
-      const matchTitle = (split.title ?? '')
-        .toLowerCase()
-        .includes(query.toLowerCase());
-      const matchDate = moment((split.date || split.createdAt)!.toDate())
-        .format('MMM D, YYYY')
-        .toLowerCase()
-        .includes(query.toLowerCase());
-      const matchCategory = split.category
-        ?.toLowerCase()
-        .includes(query.toLowerCase());
-      const matchAmount = String(split.amount).includes(query);
-      const matchPaidBy = (split.paidBy?.name ?? '')
-        .toLowerCase()
-        .includes(query.toLowerCase());
-      return (
-        matchTitle || matchDate || matchCategory || matchAmount || matchPaidBy
-      );
-    });
-    setFilteredSplits(filtered);
-  };
-
   const handleSettleUp = (
     lender?: LendingDetail['lender'],
     borrower?: LendingDetail['borrower'],
     amount?: number,
   ) => {
+    // The amounts offered here come from the splits on screen; a saved copy could be older than
+    // what someone else added, so wait for the live listener to confirm them.
+    if (!splitsData.live) {
+      snackbar.info('Still syncing this group. Try again in a moment.');
+      return;
+    }
     // The pair that was tapped is prefilled; without one the settle-up screen prefills what the
     // signed-in person owes.
     router.navigate({
@@ -803,11 +714,7 @@ const SplitGroupDetailScreen = () => {
             )}
           </>
         ) : (
-          <Text style={styles.noSplitsText}>
-            {searchQuery
-              ? 'No splits found matching your search'
-              : 'No splits yet'}
-          </Text>
+          <Text style={styles.noSplitsText}>No splits yet</Text>
         )}
       </View>
     );
@@ -821,7 +728,7 @@ const SplitGroupDetailScreen = () => {
     return (
       <ErrorState
         title="Could not load this group"
-        onRetry={() => fetchGroupSplits(true)}
+        onRetry={splitsData.retry}
       />
     );
   }
