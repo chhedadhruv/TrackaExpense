@@ -8,7 +8,8 @@ import {
   Platform,
 } from 'react-native';
 import {Text, Card, ActivityIndicator} from 'react-native-paper';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Check from 'lucide-react-native/icons/check';
+import Handshake from 'lucide-react-native/icons/handshake';
 import {
   addDoc,
   collection,
@@ -113,11 +114,7 @@ const CreateIOUScreen = () => {
           showsVerticalScrollIndicator={false}>
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
-              <MaterialCommunityIcons
-                name="handshake"
-                size={32}
-                color={colors.primary}
-              />
+              <Handshake size={32} color={colors.primary} />
               <Text style={styles.headerTitle}>New IOU</Text>
             </View>
             <Text style={styles.headerSubtitle}>Record a personal debt</Text>
@@ -215,11 +212,7 @@ const CreateIOUScreen = () => {
               ) : (
                 <>
                   <Text style={styles.submitButtonText}>Create IOU</Text>
-                  <MaterialCommunityIcons
-                    name="check"
-                    size={20}
-                    color={colors.onPrimary}
-                  />
+                  <Check size={20} color={colors.onPrimary} />
                 </>
               )}
             </TouchableOpacity>

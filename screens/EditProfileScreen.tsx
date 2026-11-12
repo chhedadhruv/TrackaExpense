@@ -2,7 +2,12 @@ import React, {useState, useEffect} from 'react';
 import {useRouter} from 'expo-router';
 import {View, Text} from 'react-native';
 import {ActivityIndicator} from 'react-native-paper';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Mail from 'lucide-react-native/icons/mail';
+import Phone from 'lucide-react-native/icons/phone';
+import RefreshCw from 'lucide-react-native/icons/refresh-cw';
+import ShieldCheck from 'lucide-react-native/icons/shield-check';
+import User from 'lucide-react-native/icons/user';
+import UserPen from 'lucide-react-native/icons/user-pen';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import FormButton from '../components/FormButton';
 import FormInput from '../components/FormInput';
@@ -128,11 +133,7 @@ const EditProfileScreen = () => {
         showsVerticalScrollIndicator={false}>
         <View className="mb-[30px] items-center pt-5">
           <View className="mb-5 h-20 w-20 items-center justify-center rounded-full bg-primary-soft">
-            <MaterialCommunityIcons
-              name="account-edit"
-              size={48}
-              color={colors.primary}
-            />
+            <UserPen size={48} color={colors.primary} />
           </View>
           <Text
             accessibilityRole="header"
@@ -160,7 +161,7 @@ const EditProfileScreen = () => {
                   }
                 }}
                 placeholderText="Full Name"
-                iconType="user"
+                icon={User}
                 autoCapitalize="words"
                 autoCorrect={false}
               />
@@ -173,7 +174,7 @@ const EditProfileScreen = () => {
                   }
                 }}
                 placeholderText="Email Address"
-                iconType="mail"
+                icon={Mail}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -187,7 +188,7 @@ const EditProfileScreen = () => {
                   }
                 }}
                 placeholderText="Phone Number"
-                iconType="phone"
+                icon={Phone}
                 keyboardType="phone-pad"
                 autoCapitalize="none"
                 maxLength={15}
@@ -208,21 +209,13 @@ const EditProfileScreen = () => {
 
         <View className="rounded-2xl border border-card-border bg-surface p-5 ios:shadow-md">
           <View className="mb-3 flex-row items-center">
-            <MaterialCommunityIcons
-              name="shield-check"
-              size={20}
-              color={colors.primary}
-            />
+            <ShieldCheck size={20} color={colors.primary} />
             <Text className="ml-3 flex-1 font-sans text-sm text-text-secondary">
               Your information is secure and encrypted
             </Text>
           </View>
           <View className="flex-row items-center">
-            <MaterialCommunityIcons
-              name="sync"
-              size={20}
-              color={colors.primary}
-            />
+            <RefreshCw size={20} color={colors.primary} />
             <Text className="ml-3 flex-1 font-sans text-sm text-text-secondary">
               Changes will sync across all your devices
             </Text>

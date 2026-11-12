@@ -8,7 +8,12 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import {Card, Text} from 'react-native-paper';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import CircleMinus from 'lucide-react-native/icons/circle-minus';
+import CirclePlus from 'lucide-react-native/icons/circle-plus';
+import History from 'lucide-react-native/icons/history';
+import Pencil from 'lucide-react-native/icons/pencil';
+import Plus from 'lucide-react-native/icons/plus';
+import Trash2 from 'lucide-react-native/icons/trash-2';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import {useCurrency} from '../utils/CurrencyUtil';
@@ -63,45 +68,15 @@ const SavingsHistoryScreen = () => {
   const renderIcon = (type: HistoryType) => {
     switch (type) {
       case 'deposit':
-        return (
-          <MaterialCommunityIcons
-            name="plus-circle"
-            size={20}
-            color={colors.income}
-          />
-        );
+        return <CirclePlus size={20} color={colors.income} />;
       case 'withdrawal':
-        return (
-          <MaterialCommunityIcons
-            name="minus-circle"
-            size={20}
-            color={colors.expense}
-          />
-        );
+        return <CircleMinus size={20} color={colors.expense} />;
       case 'create':
-        return (
-          <MaterialCommunityIcons
-            name="plus"
-            size={20}
-            color={colors.primary}
-          />
-        );
+        return <Plus size={20} color={colors.primary} />;
       case 'delete':
-        return (
-          <MaterialCommunityIcons
-            name="delete"
-            size={20}
-            color={colors.expense}
-          />
-        );
+        return <Trash2 size={20} color={colors.expense} />;
       default:
-        return (
-          <MaterialCommunityIcons
-            name="pencil"
-            size={20}
-            color={colors.primary}
-          />
-        );
+        return <Pencil size={20} color={colors.primary} />;
     }
   };
 
@@ -227,11 +202,7 @@ const SavingsHistoryScreen = () => {
                   ))
                 ) : (
                   <View style={styles.emptyHistory}>
-                    <MaterialCommunityIcons
-                      name="history"
-                      size={48}
-                      color={colors.iconMuted}
-                    />
+                    <History size={48} color={colors.iconMuted} />
                     <Text style={styles.emptyHistoryText}>No activity yet</Text>
                     <Text style={styles.emptyHistorySubtext}>
                       Your savings activity will appear here

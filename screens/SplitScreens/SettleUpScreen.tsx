@@ -21,7 +21,9 @@ import {
   serverTimestamp,
 } from '@react-native-firebase/firestore';
 import {recordSettlement} from '../../src/services/SettlementService';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import ArrowRight from 'lucide-react-native/icons/arrow-right';
+import CircleCheck from 'lucide-react-native/icons/circle-check';
+import Handshake from 'lucide-react-native/icons/handshake';
 import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../../src/services/ErrorReporter';
 import * as AnalyticsService from '../../src/services/AnalyticsService';
@@ -266,12 +268,9 @@ const SettleUpScreen = ({
                     {u.name}
                   </Text>
                   {selectedUser?.email === u.email && (
-                    <MaterialCommunityIcons
-                      name="check-circle"
-                      size={20}
-                      color={colors.primary}
-                      style={styles.checkIcon}
-                    />
+                    <View style={styles.checkIcon}>
+                      <CircleCheck size={20} color={colors.primary} />
+                    </View>
                   )}
                 </TouchableOpacity>
               ))}
@@ -290,11 +289,7 @@ const SettleUpScreen = ({
           showsVerticalScrollIndicator={false}>
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
-              <MaterialCommunityIcons
-                name="handshake"
-                size={32}
-                color={colors.success}
-              />
+              <Handshake size={32} color={colors.success} />
               <Text style={styles.headerTitle}>Settle Up</Text>
             </View>
             <Text style={styles.headerSubtitle}>
@@ -454,12 +449,9 @@ const SettleUpScreen = ({
                       name={selectedBorrower.name}
                       bgColor={colors.expenseFill}
                     />
-                    <MaterialCommunityIcons
-                      name="arrow-right"
-                      size={24}
-                      color={colors.textSecondary}
-                      style={styles.arrowIcon}
-                    />
+                    <View style={styles.arrowIcon}>
+                      <ArrowRight size={24} color={colors.textSecondary} />
+                    </View>
                     <UserAvatar
                       size={40}
                       name={selectedLender.name}
@@ -485,11 +477,7 @@ const SettleUpScreen = ({
               disabled={
                 loading || !selectedLender || !selectedBorrower || !amount
               }>
-              <MaterialCommunityIcons
-                name="handshake"
-                size={20}
-                color={colors.onPrimary}
-              />
+              <Handshake size={20} color={colors.onPrimary} />
               <Text style={styles.settleButtonText}>
                 {loading ? 'Processing...' : 'Settle Up'}
               </Text>

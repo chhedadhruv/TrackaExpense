@@ -1,6 +1,7 @@
 import React, {useState} from 'react';
 import {View, Text, TouchableOpacity, Modal, ScrollView} from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import ChevronDown from 'lucide-react-native/icons/chevron-down';
+import X from 'lucide-react-native/icons/x';
 import {useTheme} from '../theme';
 import type {Category} from '../types';
 import {ModalSnackbar} from './Snackbar';
@@ -40,11 +41,7 @@ const CategorySelector = ({
         accessibilityLabel={label ?? 'Select category'}>
         {selected ? (
           <>
-            <MaterialCommunityIcons
-              name={selected.icon}
-              size={20}
-              color={colors.primary}
-            />
+            <selected.icon size={20} color={colors.primary} />
             <Text className="ml-2.5 flex-1 font-sans text-[15px] text-text">
               {selected.label}
             </Text>
@@ -54,12 +51,9 @@ const CategorySelector = ({
             {placeholder}
           </Text>
         )}
-        <MaterialCommunityIcons
-          name="chevron-down"
-          size={20}
-          color={colors.textPlaceholder}
-          className="ml-1"
-        />
+        <View className="ml-1">
+          <ChevronDown size={20} color={colors.textPlaceholder} />
+        </View>
       </TouchableOpacity>
 
       <Modal
@@ -82,11 +76,7 @@ const CategorySelector = ({
                 onPress={() => setVisible(false)}
                 accessibilityRole="button"
                 accessibilityLabel="Close">
-                <MaterialCommunityIcons
-                  name="close"
-                  size={24}
-                  color={colors.textSecondary}
-                />
+                <X size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -105,8 +95,7 @@ const CategorySelector = ({
                         onSelect(cat.value);
                         setVisible(false);
                       }}>
-                      <MaterialCommunityIcons
-                        name={cat.icon}
+                      <cat.icon
                         size={22}
                         color={isSelected ? colors.onPrimary : colors.primary}
                       />

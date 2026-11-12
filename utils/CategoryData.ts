@@ -1,38 +1,57 @@
-import type {McIconName} from '../src/types/icons';
+import BadgeCheck from 'lucide-react-native/icons/badge-check';
+import Briefcase from 'lucide-react-native/icons/briefcase';
+import BriefcaseMedical from 'lucide-react-native/icons/briefcase-medical';
+import Car from 'lucide-react-native/icons/car';
+import Clapperboard from 'lucide-react-native/icons/clapperboard';
+import Dumbbell from 'lucide-react-native/icons/dumbbell';
+import FileText from 'lucide-react-native/icons/file-text';
+import Gift from 'lucide-react-native/icons/gift';
+import GraduationCap from 'lucide-react-native/icons/graduation-cap';
+import HandCoins from 'lucide-react-native/icons/hand-coins';
+import House from 'lucide-react-native/icons/house';
+import Laptop from 'lucide-react-native/icons/laptop';
+import Plane from 'lucide-react-native/icons/plane';
+import Repeat from 'lucide-react-native/icons/repeat';
+import Shapes from 'lucide-react-native/icons/shapes';
+import ShoppingBag from 'lucide-react-native/icons/shopping-bag';
+import ShoppingCart from 'lucide-react-native/icons/shopping-cart';
+import TrendingUp from 'lucide-react-native/icons/trending-up';
+import Utensils from 'lucide-react-native/icons/utensils';
+import type {AppIcon} from '../src/types/icons';
 import type {Category} from '../src/types';
 
 export const EXPENSE_CATEGORIES: readonly Category[] = [
-  {value: 'Food', label: 'Food', icon: 'food-fork-drink'},
-  {value: 'Groceries', label: 'Groceries', icon: 'cart'},
-  {value: 'Shopping', label: 'Shopping', icon: 'shopping'},
-  {value: 'Bills', label: 'Bills', icon: 'file-document'},
-  {value: 'Rent', label: 'Rent', icon: 'home'},
-  {value: 'Travel', label: 'Travel', icon: 'airplane'},
-  {value: 'Entertainment', label: 'Entertainment', icon: 'movie'},
-  {value: 'Health', label: 'Health', icon: 'medical-bag'},
-  {value: 'Education', label: 'Education', icon: 'school'},
-  {value: 'Fitness', label: 'Fitness', icon: 'dumbbell'},
-  {value: 'Subscriptions', label: 'Subscriptions', icon: 'repeat'},
-  {value: 'Others', label: 'Others', icon: 'shape-outline'},
+  {value: 'Food', label: 'Food', icon: Utensils},
+  {value: 'Groceries', label: 'Groceries', icon: ShoppingCart},
+  {value: 'Shopping', label: 'Shopping', icon: ShoppingBag},
+  {value: 'Bills', label: 'Bills', icon: FileText},
+  {value: 'Rent', label: 'Rent', icon: House},
+  {value: 'Travel', label: 'Travel', icon: Plane},
+  {value: 'Entertainment', label: 'Entertainment', icon: Clapperboard},
+  {value: 'Health', label: 'Health', icon: BriefcaseMedical},
+  {value: 'Education', label: 'Education', icon: GraduationCap},
+  {value: 'Fitness', label: 'Fitness', icon: Dumbbell},
+  {value: 'Subscriptions', label: 'Subscriptions', icon: Repeat},
+  {value: 'Others', label: 'Others', icon: Shapes},
 ] as const;
 
 export const INCOME_CATEGORIES: readonly Category[] = [
-  {value: 'Salary', label: 'Salary', icon: 'briefcase'},
-  {value: 'Bonus', label: 'Bonus', icon: 'star-circle'},
-  {value: 'Gift', label: 'Gift', icon: 'gift'},
-  {value: 'Freelance', label: 'Freelance', icon: 'laptop'},
-  {value: 'Investment', label: 'Investment', icon: 'trending-up'},
-  {value: 'Cashback', label: 'Cashback', icon: 'cash-refund'},
-  {value: 'Others', label: 'Others', icon: 'shape-outline'},
+  {value: 'Salary', label: 'Salary', icon: Briefcase},
+  {value: 'Bonus', label: 'Bonus', icon: BadgeCheck},
+  {value: 'Gift', label: 'Gift', icon: Gift},
+  {value: 'Freelance', label: 'Freelance', icon: Laptop},
+  {value: 'Investment', label: 'Investment', icon: TrendingUp},
+  {value: 'Cashback', label: 'Cashback', icon: HandCoins},
+  {value: 'Others', label: 'Others', icon: Shapes},
 ] as const;
 
 export const SPLIT_CATEGORIES: readonly Category[] = [
-  {value: 'Food', label: 'Food', icon: 'food-fork-drink'},
-  {value: 'Shopping', label: 'Shopping', icon: 'shopping'},
-  {value: 'Entertainment', label: 'Entertainment', icon: 'movie'},
-  {value: 'Transport', label: 'Transport', icon: 'car'},
-  {value: 'Bills', label: 'Bills', icon: 'file-document'},
-  {value: 'Others', label: 'Others', icon: 'shape-outline'},
+  {value: 'Food', label: 'Food', icon: Utensils},
+  {value: 'Shopping', label: 'Shopping', icon: ShoppingBag},
+  {value: 'Entertainment', label: 'Entertainment', icon: Clapperboard},
+  {value: 'Transport', label: 'Transport', icon: Car},
+  {value: 'Bills', label: 'Bills', icon: FileText},
+  {value: 'Others', label: 'Others', icon: Shapes},
 ] as const;
 
 export const EXPENSE_KEYWORD_MAP: Record<string, string> = {
@@ -252,30 +271,30 @@ export const GOAL_KEYWORD_MAP: Record<string, string> = {
   tv: 'electronics',
 };
 
-const ICON_MAP: Record<string, McIconName> = {
-  Food: 'food-fork-drink',
-  Groceries: 'cart',
-  Shopping: 'shopping',
-  Bills: 'file-document',
-  Rent: 'home',
-  Travel: 'airplane',
-  Entertainment: 'movie',
-  Health: 'medical-bag',
-  Education: 'school',
-  Fitness: 'dumbbell',
-  Subscriptions: 'repeat',
-  Salary: 'briefcase',
-  Bonus: 'star-circle',
-  Gift: 'gift',
-  Freelance: 'laptop',
-  Investment: 'trending-up',
-  Cashback: 'cash-refund',
-  Transport: 'car',
-  Others: 'shape-outline',
+const ICON_MAP: Record<string, AppIcon> = {
+  Food: Utensils,
+  Groceries: ShoppingCart,
+  Shopping: ShoppingBag,
+  Bills: FileText,
+  Rent: House,
+  Travel: Plane,
+  Entertainment: Clapperboard,
+  Health: BriefcaseMedical,
+  Education: GraduationCap,
+  Fitness: Dumbbell,
+  Subscriptions: Repeat,
+  Salary: Briefcase,
+  Bonus: BadgeCheck,
+  Gift: Gift,
+  Freelance: Laptop,
+  Investment: TrendingUp,
+  Cashback: HandCoins,
+  Transport: Car,
+  Others: Shapes,
 };
 
-export const getCategoryIcon = (category: string): McIconName =>
-  ICON_MAP[category] ?? 'shape-outline';
+export const getCategoryIcon = (category: string): AppIcon =>
+  ICON_MAP[category] ?? Shapes;
 
 export const getCategoryLabel = (
   value: string,

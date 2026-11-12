@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import {Text, Card, ActivityIndicator} from 'react-native-paper';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import UserCheck from 'lucide-react-native/icons/user-check';
+import Users from 'lucide-react-native/icons/users';
 import UserAvatar from '../../src/components/Avatar';
 import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
@@ -272,11 +273,7 @@ const FriendsBalanceScreen = () => {
           }>
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
-              <MaterialCommunityIcons
-                name="account-multiple"
-                size={32}
-                color={colors.primary}
-              />
+              <Users size={32} color={colors.primary} />
               <Text style={styles.headerTitle}>Friends & Balances</Text>
             </View>
             <Text style={styles.headerSubtitle}>
@@ -331,11 +328,7 @@ const FriendsBalanceScreen = () => {
               ]}
               elevation={Platform.OS === 'android' ? 0 : 2}>
               <View style={styles.emptyState}>
-                <MaterialCommunityIcons
-                  name="account-check"
-                  size={64}
-                  color={colors.iconMuted}
-                />
+                <UserCheck size={64} color={colors.iconMuted} />
                 <Text style={styles.emptyTitle}>All settled up!</Text>
                 <Text style={styles.emptySubtitle}>
                   No outstanding balances across your groups

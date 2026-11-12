@@ -1,6 +1,7 @@
 import React from 'react';
 import {Modal, ScrollView, Text, TouchableOpacity, View} from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import CircleCheck from 'lucide-react-native/icons/circle-check';
+import X from 'lucide-react-native/icons/x';
 import {CURRENCIES} from '../../utils/CurrencyUtil';
 import {useTheme} from '../theme';
 import {ModalSnackbar} from './Snackbar';
@@ -44,11 +45,7 @@ const CurrencyPickerModal = ({
               onPress={onClose}
               accessibilityRole="button"
               accessibilityLabel="Close">
-              <MaterialCommunityIcons
-                name="close"
-                size={24}
-                color={colors.textSecondary}
-              />
+              <X size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
           <ScrollView
@@ -85,13 +82,7 @@ const CurrencyPickerModal = ({
                       </Text>
                     </View>
                   </View>
-                  {selected && (
-                    <MaterialCommunityIcons
-                      name="check-circle"
-                      size={24}
-                      color={colors.primary}
-                    />
-                  )}
+                  {selected && <CircleCheck size={24} color={colors.primary} />}
                 </TouchableOpacity>
               );
             })}
