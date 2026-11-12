@@ -17,7 +17,7 @@ import type {
 } from '../types';
 import {cachedFlags} from './cachedFlags';
 import {queryKeys} from './keys';
-import {useSyncStore, type SyncStatus} from './syncStore';
+import {statusOf, useSyncStore, type SyncStatus} from './syncStore';
 
 export interface CachedData<T> {
   /** The data, from the cache: the saved copy at first, then what the live listener delivers. */
@@ -42,7 +42,7 @@ export interface CachedData<T> {
  * Reads one kind of cached data. Nothing is fetched here: the data arrives through DataSync, and
  * `skipToken` makes this query only observe the cache.
  */
-const useCached = <T>(
+export const useCached = <T>(
   key: readonly unknown[],
   status: SyncStatus,
 ): CachedData<T> => {
@@ -56,17 +56,19 @@ const useCached = <T>(
   };
 };
 
-const useUid = (): string => useContext(AuthContext).user?.uid ?? '';
+export const useUid = (): string => useContext(AuthContext).user?.uid ?? '';
 
 /** The signed-in person's own profile document. */
 export const useUserData = (): CachedData<UserDocument> => {
-  const status = useSyncStore(state => state.user);
+  const status = useSyncStore(state => statusOf(state.statuses, 'user'));
   return useCached<UserDocument>(queryKeys.user(useUid()), status);
 };
 
 /** The signed-in person's transactions, newest first (by when they were saved). */
 export const useTransactions = (): CachedData<TransactionDocument[]> => {
-  const status = useSyncStore(state => state.transactions);
+  const status = useSyncStore(state =>
+    statusOf(state.statuses, 'transactions'),
+  );
   return useCached<TransactionDocument[]>(
     queryKeys.transactions(useUid()),
     status,
