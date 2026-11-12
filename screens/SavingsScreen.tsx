@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {useRouter} from 'expo-router';
 import {
   View,
@@ -17,7 +17,6 @@ import {
   addDoc,
   collection,
   doc,
-  getDoc,
   getFirestore,
   updateDoc,
 } from '@react-native-firebase/firestore';
@@ -33,7 +32,7 @@ import {GOAL_KEYWORD_MAP} from '../utils/CategoryData';
 import ReminderNotificationService from '../services/ReminderNotificationService';
 import {useTheme, useThemedStyles, type ThemeColors} from '../src/theme';
 import {ErrorState, LoadingState} from '../src/components/ScreenState';
-import {useLoadFailure} from '../src/hooks/useLoadFailure';
+import {useUserData} from '../src/data/hooks';
 import {formatDisplayDate} from '../src/utils/formatters';
 import {
   addMajor,
@@ -86,14 +85,22 @@ const EMPTY_EDIT_VALUES: EditValues = {
   targetDate: '',
 };
 
+// A stable empty list, so the effect that creates the starter goal does not run on every render.
+const NO_GOALS: SavingsGoal[] = [];
+
 const SavingsScreen = () => {
   const router = useRouter();
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
   const {currency, formatAmount: formatCurrencyAmount} = useCurrency();
-  const [loading, setLoading] = useState(true);
-  const {failed, succeed, fail} = useLoadFailure();
-  const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
+  // The goals are part of the profile document, which the shared cache keeps current through a
+  // live listener (src/data). Every change below rewrites the whole goals array from what is on
+  // screen, so the screen shows goals only once the listener has confirmed them (`user.live`):
+  // a copy saved on the phone could be older than what another device wrote.
+  const user = useUserData();
+  const savingsGoals = user.data?.savingsGoals ?? NO_GOALS;
+  const creatingDefaultGoal = useRef(false);
+  const [defaultGoalFailed, setDefaultGoalFailed] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<EditValues>(EMPTY_EDIT_VALUES);
@@ -112,10 +119,41 @@ const SavingsScreen = () => {
   const [categoryManuallySelected, setCategoryManuallySelected] =
     useState(false);
 
+  // A profile with no goals at all gets one starter goal, once.
   useEffect(() => {
-    fetchSavingsData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const uid = getAuth().currentUser?.uid;
+    if (
+      !uid ||
+      !user.live ||
+      !user.data ||
+      savingsGoals.length > 0 ||
+      creatingDefaultGoal.current
+    ) {
+      return;
+    }
+    creatingDefaultGoal.current = true;
+    const defaultGoal: SavingsGoal = {
+      id: Date.now().toString(),
+      name: 'Emergency Fund',
+      description: 'Your emergency savings for unexpected expenses',
+      current: 0,
+      target: 10000,
+      monthly: 500,
+      category: 'emergency',
+      targetDate: '',
+      reminderEnabled: false,
+      reminderFrequency: null,
+      createdAt: Timestamp.fromDate(new Date()),
+      updatedAt: Timestamp.fromDate(new Date()),
+    };
+    updateDoc(doc(getFirestore(), 'users', uid), {
+      savingsGoals: [defaultGoal],
+    }).catch(error => {
+      reportError(error as Error);
+      creatingDefaultGoal.current = false;
+      setDefaultGoalFailed(true);
+    });
+  }, [user.live, user.data, savingsGoals.length]);
 
   useEffect(() => {
     if (editValues.name.trim().length < 3 || categoryManuallySelected) {
@@ -128,60 +166,6 @@ const SavingsScreen = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editValues.name]);
-
-  const fetchSavingsData = async () => {
-    try {
-      const currentUser = getAuth().currentUser;
-      if (!currentUser) {
-        fail(new Error('Savings: no signed-in user'));
-        setLoading(false);
-        return;
-      }
-
-      const userDoc = await getDoc(
-        doc(getFirestore(), 'users', currentUser.uid),
-      );
-
-      if (!userDoc.exists()) {
-        fail(new Error('Savings: user document not found'));
-        setLoading(false);
-        return;
-      }
-
-      const userData = userDoc.data();
-      const storedGoals = userData?.savingsGoals;
-      if (Array.isArray(storedGoals) && storedGoals.length > 0) {
-        setSavingsGoals(storedGoals as SavingsGoal[]);
-      } else {
-        const defaultGoal: SavingsGoal = {
-          id: Date.now().toString(),
-          name: 'Emergency Fund',
-          description: 'Your emergency savings for unexpected expenses',
-          current: 0,
-          target: 10000,
-          monthly: 500,
-          category: 'emergency',
-          targetDate: '',
-          reminderEnabled: false,
-          reminderFrequency: null,
-          createdAt: Timestamp.fromDate(new Date()),
-          updatedAt: Timestamp.fromDate(new Date()),
-        };
-        await updateDoc(doc(getFirestore(), 'users', currentUser.uid), {
-          savingsGoals: [defaultGoal],
-        });
-        setSavingsGoals([defaultGoal]);
-      }
-
-      succeed();
-      setLoading(false);
-    } catch (error: any) {
-      // A failed load must not show an empty goals list: the client rewrites the whole goals
-      // array on every change, so adding a goal on top of "no goals" could overwrite real ones.
-      fail(error);
-      setLoading(false);
-    }
-  };
 
   const handleEdit = (goalId: string) => {
     const goal = savingsGoals.find(g => g.id === goalId);
@@ -315,7 +299,6 @@ const SavingsScreen = () => {
       });
 
       await updateDoc(userDocRef, {savingsGoals: updatedGoals});
-      setSavingsGoals(updatedGoals);
       setIsEditing(false);
       setEditingGoalId(null);
       snackbar.success('Savings goal updated successfully');
@@ -386,7 +369,6 @@ const SavingsScreen = () => {
       });
 
       await updateDoc(userDocRef, {savingsGoals: updatedGoals});
-      setSavingsGoals(updatedGoals);
       AnalyticsService.logAddFundsToGoal({
         amount_range: AnalyticsService.getAmountRange(parsed),
         goal_category:
@@ -475,7 +457,6 @@ const SavingsScreen = () => {
       });
 
       await updateDoc(userDocRef, {savingsGoals: updatedGoals});
-      setSavingsGoals(updatedGoals);
       AnalyticsService.logWithdrawFromGoal({
         amount_range: AnalyticsService.getAmountRange(parsed),
       });
@@ -678,7 +659,6 @@ const SavingsScreen = () => {
         createdAt: Timestamp.fromDate(new Date()),
       });
 
-      setSavingsGoals(updatedGoals);
       setShowCreateModal(false);
       setEditValues(EMPTY_EDIT_VALUES);
       AnalyticsService.logCreateSavingsGoal({
@@ -722,7 +702,6 @@ const SavingsScreen = () => {
         createdAt: Timestamp.fromDate(new Date()),
       });
 
-      setSavingsGoals(updatedGoals);
       setShowDeleteModal(false);
       setGoalToDelete(null);
       AnalyticsService.logDeleteSavingsGoal();
@@ -768,7 +747,6 @@ const SavingsScreen = () => {
           : goal,
       );
       await updateDoc(userDocRef, {savingsGoals: updatedGoals});
-      setSavingsGoals(updatedGoals);
 
       if (enabled) {
         const goal = updatedGoals.find(g => g.id === goalId);
@@ -820,20 +798,23 @@ const SavingsScreen = () => {
     );
   };
 
-  if (loading) {
-    return <LoadingState message="Loading savings..." />;
-  }
-
-  if (failed) {
+  // A failed load must not show an empty goals list: the client rewrites the whole goals array on
+  // every change, so adding a goal on top of "no goals" could overwrite real ones.
+  if (user.failed || defaultGoalFailed || (user.live && !user.data)) {
     return (
       <ErrorState
         title="Could not load your savings"
         onRetry={() => {
-          setLoading(true);
-          fetchSavingsData();
+          setDefaultGoalFailed(false);
+          user.retry();
         }}
       />
     );
+  }
+
+  // Not confirmed by the live listener yet, or the starter goal is being created.
+  if (!user.live || savingsGoals.length === 0) {
+    return <LoadingState message="Loading savings..." />;
   }
 
   return (

@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useCallback} from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   View,
   StyleSheet,
@@ -9,34 +9,19 @@ import {
 } from 'react-native';
 import {Card, Text} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import {
-  collection,
-  doc as fsDoc,
-  getDoc,
-  getDocs,
-  getFirestore,
-  limit,
-  orderBy,
-  query,
-} from '@react-native-firebase/firestore';
-import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {useTheme, useThemedStyles, type ThemeColors} from '../src/theme';
 import {ErrorState, LoadingState} from '../src/components/ScreenState';
-import {useLoadFailure} from '../src/hooks/useLoadFailure';
+import {useSavingsHistory, useUserData} from '../src/data/hooks';
+import type {SavingsHistoryDocument} from '../src/types';
 
-type HistoryType = 'deposit' | 'withdrawal' | 'create' | 'delete' | 'update';
+type HistoryItem = SavingsHistoryDocument;
+type HistoryType = HistoryItem['type'];
 
-interface HistoryItem {
-  id: string;
-  type: HistoryType;
-  amount?: number;
-  goalId?: string;
-  goalName?: string;
-  createdAt?: any;
-}
+// A stable empty list, so the memos below do not recompute while nothing has loaded.
+const NO_HISTORY: HistoryItem[] = [];
 
 interface GoalRef {
   id: string;
@@ -47,78 +32,33 @@ const SavingsHistoryScreen = () => {
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
   const {formatAmount} = useCurrency();
-  const [loading, setLoading] = useState(true);
-  const {failed, succeed, fail} = useLoadFailure();
-  const [allHistory, setAllHistory] = useState<HistoryItem[]>([]);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [goals, setGoals] = useState<GoalRef[]>([]);
+  // The history is read again each time the screen opens (the saved copy shows meanwhile); the
+  // goal names for the filter come from the shared profile cache.
+  const historyQuery = useSavingsHistory();
+  const user = useUserData();
+  const allHistory = historyQuery.data ?? NO_HISTORY;
+  const goals: GoalRef[] = useMemo(
+    () => (user.data?.savingsGoals ?? []).map(g => ({id: g.id, name: g.name})),
+    [user.data],
+  );
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-
-  const load = useCallback(
-    async (isRefresh = false) => {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-      try {
-        const currentUser = getAuth().currentUser;
-        if (!currentUser) {
-          return;
-        }
-        const userDoc = await getDoc(
-          fsDoc(getFirestore(), 'users', currentUser.uid),
-        );
-        const savedGoals = ((userDoc.data()?.savingsGoals ?? []) as any[]).map(
-          g => ({id: g.id, name: g.name}),
-        );
-        setGoals(savedGoals);
-        const snapshot = await getDocs(
-          query(
-            collection(
-              getFirestore(),
-              'users',
-              currentUser.uid,
-              'savingsHistory',
-            ),
-            orderBy('createdAt', 'desc'),
-            limit(100),
-          ),
-        );
-        const items: HistoryItem[] = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            goalName: data.goalName || data.goal?.name || 'savings goal',
-          } as HistoryItem;
-        });
-        setAllHistory(items);
-        setHistory(items);
-        succeed();
-      } catch (e) {
-        // A failed load must not read as "no savings activity": show the error state instead.
-        fail(e);
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [succeed, fail],
-  );
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  useEffect(() => {
-    setHistory(
+  const history = useMemo(
+    () =>
       selectedGoalId === null
         ? allHistory
         : allHistory.filter(item => item.goalId === selectedGoalId),
-    );
-  }, [selectedGoalId, allHistory]);
+    [selectedGoalId, allHistory],
+  );
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await historyQuery.refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const renderIcon = (type: HistoryType) => {
     switch (type) {
@@ -186,12 +126,13 @@ const SavingsHistoryScreen = () => {
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
-        {loading ? (
+        {historyQuery.loading ? (
           <LoadingState message="Loading activity..." />
-        ) : failed ? (
+        ) : historyQuery.error ? (
+          // A failed load must not read as "no savings activity": show the error state instead.
           <ErrorState
             title="Could not load savings activity"
-            onRetry={() => load()}
+            onRetry={() => historyQuery.refetch()}
           />
         ) : (
           <KeyboardAwareScrollView
@@ -200,7 +141,7 @@ const SavingsHistoryScreen = () => {
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
-                onRefresh={() => load(true)}
+                onRefresh={handleRefresh}
                 colors={[colors.primary]}
                 tintColor={colors.primary}
               />
