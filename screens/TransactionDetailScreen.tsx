@@ -31,6 +31,8 @@ import TagChips from '../src/components/TagChips';
 import {sanitizeTags} from '../src/utils/tags';
 import type {McIconName} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
+import {useRouter} from 'expo-router';
+import type {TransactionDocument} from '../src/types';
 
 const DetailRow = ({
   icon,
@@ -57,16 +59,22 @@ const DetailRow = ({
   );
 };
 
+interface TransactionDetailScreenProps {
+  transaction: TransactionDocument & {id: string};
+  /**
+   * "" in the Home tab and "/statistic" in the Statistic tab: each tab has its own copy of the
+   * detail, edit and image routes so the tab bar and the way back stay in that tab.
+   */
+  basePath: string;
+}
+
 const TransactionDetailScreen = ({
-  route,
-  navigation,
-}: {
-  route: any;
-  navigation: any;
-}) => {
+  transaction,
+  basePath,
+}: TransactionDetailScreenProps) => {
   const {colors} = useTheme();
+  const router = useRouter();
   const {currency, formatAmount} = useCurrency();
-  const {transaction} = route.params;
   // Receipts are stored as imageUrl or the older image field; accept either.
   const receiptUrl = receiptUrlOf(transaction);
   const tagList = sanitizeTags(transaction.tags);
@@ -75,12 +83,17 @@ const TransactionDetailScreen = ({
 
   const onImagePress = () => {
     if (receiptUrl) {
-      navigation.navigate('Image', {imageUrl: receiptUrl});
+      router.navigate({
+        pathname: `${basePath}/image` as '/image',
+        params: {imageUrl: receiptUrl},
+      });
     }
   };
 
   const handleEdit = () => {
-    navigation.navigate('EditTransaction', {transaction});
+    router.navigate(
+      `${basePath}/transaction/${transaction.id}/edit` as '/transaction/[id]/edit',
+    );
   };
 
   const deleteTransaction = async () => {
@@ -103,7 +116,7 @@ const TransactionDetailScreen = ({
         category: transaction.category,
       });
       snackbar.success('Transaction deleted successfully!');
-      navigation.goBack();
+      router.back();
     } catch (e) {
       reportError(e as Error);
       setError('An error occurred while deleting the transaction.');

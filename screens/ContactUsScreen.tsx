@@ -1,12 +1,6 @@
 import React, {useState, useEffect} from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  SafeAreaView,
-  TouchableOpacity,
-  Linking,
-} from 'react-native';
+import {useRouter} from 'expo-router';
+import {View, Text, TextInput, TouchableOpacity, Linking} from 'react-native';
 import {ActivityIndicator} from 'react-native-paper';
 import {
   Timestamp,
@@ -62,7 +56,8 @@ const CONTACT_CATEGORIES: ContactCategory[] = [
   },
 ];
 
-const ContactUsScreen = ({navigation}: {navigation: any}) => {
+const ContactUsScreen = () => {
+  const router = useRouter();
   const {colors} = useTheme();
   const [feedbackText, setFeedbackText] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('feedback');
@@ -99,7 +94,7 @@ const ContactUsScreen = ({navigation}: {navigation: any}) => {
       });
       setFeedbackText('');
       snackbar.success("Message sent. We'll get back to you soon.");
-      navigation.goBack();
+      router.back();
     } catch (_) {
       setErrorMessage(
         'Failed to send message. Please check your connection and try again.',
@@ -115,7 +110,7 @@ const ContactUsScreen = ({navigation}: {navigation: any}) => {
         'mailto:me@dhruvchheda.com?subject=TrackaExpense Support',
       );
     } else if (type === 'privacy') {
-      navigation.navigate('PrivacyPolicy');
+      router.navigate('/profile/privacy-policy');
     }
   };
 
@@ -124,7 +119,7 @@ const ContactUsScreen = ({navigation}: {navigation: any}) => {
     CONTACT_CATEGORIES[0];
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <View className="flex-1 bg-background">
       <KeyboardAwareScrollView
         className="flex-1"
         contentContainerClassName="p-5 pb-10"
@@ -346,7 +341,7 @@ const ContactUsScreen = ({navigation}: {navigation: any}) => {
           </View>
         </View>
       </KeyboardAwareScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

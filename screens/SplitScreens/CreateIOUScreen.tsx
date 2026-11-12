@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import {useRouter} from 'expo-router';
 import {
   View,
   StyleSheet,
@@ -26,7 +27,8 @@ import {snackbar} from '../../src/utils/snackbarStore';
 
 type Direction = 'iowe' | 'owesme';
 
-const CreateIOUScreen = ({navigation}: {navigation: any}) => {
+const CreateIOUScreen = () => {
+  const router = useRouter();
   const {currency} = useCurrency();
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -94,7 +96,7 @@ const CreateIOUScreen = ({navigation}: {navigation: any}) => {
               createdAt: serverTimestamp(),
             };
       await addDoc(collection(getFirestore(), 'ious'), iouData);
-      navigation.goBack();
+      router.back();
     } catch (_) {
       snackbar.error('Failed to create IOU');
     } finally {

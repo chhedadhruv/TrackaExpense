@@ -1,4 +1,5 @@
 import React, {useRef, useState} from 'react';
+import {useRouter} from 'expo-router';
 import {
   FlatList,
   NativeScrollEvent,
@@ -17,7 +18,8 @@ import {
   type OnboardingPage,
 } from '../src/constants/onboardingContent';
 
-const OnboardingScreen = ({navigation}: {navigation: any}) => {
+const OnboardingScreen = () => {
+  const router = useRouter();
   const styles = useThemedStyles(createStyles);
   const {width} = useWindowDimensions();
   const listRef = useRef<FlatList<OnboardingPage>>(null);
@@ -26,7 +28,7 @@ const OnboardingScreen = ({navigation}: {navigation: any}) => {
   // Leaves room for the title, text and footer on a small phone.
   const artSize = Math.min(300, Math.round(width * 0.78));
 
-  const finish = () => navigation.replace('Login');
+  const finish = () => router.replace('/login');
 
   const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     setIndex(Math.round(e.nativeEvent.contentOffset.x / width));

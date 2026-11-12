@@ -6,7 +6,7 @@ import CalendarRange from 'lucide-react-native/icons/calendar-range';
 import ChartColumn from 'lucide-react-native/icons/chart-column';
 import TrendingDown from 'lucide-react-native/icons/trending-down';
 import TrendingUp from 'lucide-react-native/icons/trending-up';
-import {useFocusEffect} from '@react-navigation/native';
+import {useFocusEffect, useRouter} from 'expo-router';
 import {getAuth} from '@react-native-firebase/auth';
 import {
   collection,
@@ -81,7 +81,8 @@ const KINDS: {key: StatsKind; label: string}[] = [
 const isRangeKey = (value: unknown): value is StatsRangeKey =>
   RANGES.some(r => r.key === value);
 
-const StatisticScreen = ({navigation}: {navigation: any}) => {
+const StatisticScreen = () => {
+  const router = useRouter();
   const {colors} = useTheme();
   const {currency, formatAmount} = useCurrency();
   const code = currency.code;
@@ -596,9 +597,7 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
                         key={t.id}
                         accessibilityRole="button"
                         onPress={() =>
-                          navigation.navigate('TransactionDetail', {
-                            transaction: t,
-                          })
+                          router.navigate(`/statistic/transaction/${t.id}`)
                         }
                         className={`flex-row items-center py-3 ${
                           index > 0 ? 'border-t border-divider' : ''

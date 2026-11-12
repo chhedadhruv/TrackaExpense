@@ -1,5 +1,5 @@
 import React, {useState, useCallback, useMemo} from 'react';
-import {useFocusEffect} from '@react-navigation/native';
+import {useFocusEffect, useRouter} from 'expo-router';
 import {
   View,
   Text,
@@ -65,7 +65,8 @@ const FILTER_LABELS: Record<FilterType, string> = {
   custom: 'Custom Range',
 };
 
-const TransactionScreen = ({navigation}: {navigation: any}) => {
+const TransactionScreen = () => {
+  const router = useRouter();
   const {colors} = useTheme();
   const searchStyles = useThemedStyles(createSearchStyles);
   const {currency, formatAmount} = useCurrency();
@@ -278,9 +279,7 @@ const TransactionScreen = ({navigation}: {navigation: any}) => {
           <View className="px-5">
             <TouchableOpacity
               accessibilityRole="button"
-              onPress={() =>
-                navigation.navigate('TransactionDetail', {transaction})
-              }
+              onPress={() => router.navigate(`/transaction/${transaction.id}`)}
               className="mb-3 flex-row items-center justify-between rounded-2xl border border-card-border bg-surface p-4 ios:shadow-md">
               <View className="flex-1 flex-row items-center">
                 <View className="mr-3 h-[50px] w-[50px] items-center justify-center rounded-[14px] bg-primary-soft">

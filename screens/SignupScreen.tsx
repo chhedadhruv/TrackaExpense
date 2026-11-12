@@ -1,4 +1,5 @@
 import React, {useContext, useState} from 'react';
+import {useRouter} from 'expo-router';
 import {
   View,
   Text,
@@ -48,7 +49,8 @@ interface PasswordValidation {
   uppercase: boolean;
 }
 
-const SignupScreen = ({navigation}: {navigation: any}) => {
+const SignupScreen = () => {
+  const router = useRouter();
   const {colors} = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -509,7 +511,7 @@ const SignupScreen = ({navigation}: {navigation: any}) => {
                 By creating an account, you agree to our{' '}
                 <Text
                   className="font-semibold text-primary underline"
-                  onPress={() => navigation.navigate('PrivacyPolicy')}>
+                  onPress={() => router.navigate('/privacy-policy')}>
                   Privacy Policy
                 </Text>
               </Text>
@@ -519,7 +521,7 @@ const SignupScreen = ({navigation}: {navigation: any}) => {
           <View className="items-center pb-5">
             <TouchableOpacity
               className="p-[15px]"
-              onPress={() => navigation.navigate('Login')}>
+              onPress={() => router.navigate('/login')}>
               <Text className="text-center font-sans text-base text-text-secondary">
                 Already have an account?{' '}
                 <Text className="font-semibold text-primary">Sign in here</Text>

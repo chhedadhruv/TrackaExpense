@@ -24,6 +24,7 @@ import {majorOf} from '../../src/utils/amounts';
 import {fromMinor} from '../../src/utils/money';
 import {shareOfMinor} from '../../src/utils/splitMath';
 import {AuthContext} from '../../navigation/AuthProvider';
+import {useRouter} from 'expo-router';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {ErrorState, LoadingState} from '../../src/components/ScreenState';
 import {useLoadFailure} from '../../src/hooks/useLoadFailure';
@@ -89,19 +90,17 @@ const getSplitCardColor = (
   return colors.primary;
 };
 
-const SplitTransactionScreen = ({
-  route,
-  navigation,
-}: {
-  route: any;
-  navigation: any;
-}) => {
+export interface SplitTransactionScreenProps {
+  group: Group;
+}
+
+const SplitTransactionScreen = ({group}: SplitTransactionScreenProps) => {
   const {currency, formatAmount} = useCurrency();
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
+  const router = useRouter();
   const {user} = useContext(AuthContext);
   const currentUserEmail = user?.email?.toLowerCase();
-  const {group} = route.params as {group: Group};
   const [loading, setLoading] = useState(true);
   const {failed, succeed, fail} = useLoadFailure();
   const [transactions, setTransactions] = useState<SplitItem[]>([]);
@@ -301,9 +300,9 @@ const SplitTransactionScreen = ({
                   ]}
                   elevation={Platform.OS === 'android' ? 0 : 1}
                   onPress={() =>
-                    navigation.navigate('SplitDetail', {
-                      group,
-                      split: transaction,
+                    router.navigate({
+                      pathname: '/split/group/[groupId]/split/[splitId]',
+                      params: {groupId: group.id, splitId: transaction.id},
                     })
                   }>
                   <View style={styles.transactionsCardContent}>
