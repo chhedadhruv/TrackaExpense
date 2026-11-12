@@ -37,6 +37,7 @@
     "test:rules": "firebase emulators:exec --only firestore,storage --project demo-trackaexpense-rules \"yarn node --test firebase/tests/rules.test.mjs\"",
     "postinstall": "patch-package",
     "version:bump": "node scripts/bump-version.js",
+    "release:android:local": "bash scripts/local-release.sh",
     "functions:build": "yarn --cwd functions build",
     "test:functions": "yarn --cwd functions test",
     "test:backfill": "yarn --cwd functions build && functions/node_modules/.bin/firebase emulators:exec --only firestore --project demo-trackaexpense-backfill \"$(command -v node) functions/test/backfill.emulator.test.mjs\"",
