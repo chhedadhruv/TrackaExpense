@@ -81,6 +81,14 @@ Candidates for the next release, 1.4.1 or similar. None blocks 1.4.0.
 - The screens `PrivacyPolicy`, `Profile`, `EditProfile`, `ContactUs` and `Image` used React Native's deprecated `SafeAreaView`, which on Android is a plain view; they now use a plain view. On iOS the old component added the device insets: check the top and bottom spacing of these screens on the first iOS build.
 - The parked Maestro flow `.maestro/wip/expense-lifecycle.yaml` is still parked; the edit screen itself loads and shows its values (checked by hand).
 
+## Left over from the query cache (TanStack Query, Zustand, MMKV)
+
+- Moved to the shared cache so far: the profile and the transactions (Home, Transactions list, Statistics, transaction detail and edit). Still reading Firestore directly: Savings and its history, the Split screens, IOUs, Invitations, Profile, tags. Next candidates: Savings, Profile, then Split (its `date` and `createdAt` Timestamps are handled by the codec, but group and split data have more shapes to check). `useSplits` and `useSavings` in `src/hooks` are unused and can be deleted when their screens move.
+- `traceCalculateStatistics` in `PerformanceService` is no longer called (Statistics reads no data of its own); remove it or call it around the calculation.
+- Not tested: a release build on a phone (check `files/mmkv/query-cache` exists there too), iOS, an offline cold start (the first render with data was checked, the network was not cut), and a second account signing in on the same phone straight after the first (the sign-out wipe was checked by searching the file).
+- The MMKV cache is not encrypted (same as the Firestore offline cache). MMKV supports an encryption key; it would need a key kept in secure storage.
+- Zustand holds only the sync status for now. Candidates for later: the currency and theme choice (now in AsyncStorage and a context).
+
 ## Deferred until after Expo and the later phases
 
 - Expo conversion (Phase 1b-ii): audit done (`../trackaexpense-audit/07-expo-conversion-audit.md`), SDK 58 chosen, step 2 done on Android. Step 3 done: Firebase v27 (with the 19 `exists()` conversions, Remote Config and Storage API changes, Kotlin 2.4.0 for the Firebase Android SDK), Google sign-in 17, Notifee removed (owner chose OneSignal over `expo-notifications` because `expo-notifications` adds a competing Android messaging service). Remaining: EAS Update, EAS Build profiles, iOS bring-up.

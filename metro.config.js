@@ -28,6 +28,21 @@ const config = {
   },
 };
 
+// react-native-mmkv decides "am I in a test?" from process.env.JEST_WORKER_ID, which Metro's own
+// transform workers set and Expo's transformer inlines into the bundle. Anything inside the
+// package that asks for its isTest module gets the shim instead (see shims/mmkv-is-test.js).
+const mmkvIsTestShim = path.resolve(__dirname, 'shims/mmkv-is-test.js');
+const mmkvDir = `${path.sep}node_modules${path.sep}react-native-mmkv${path.sep}`;
+const resolveRequest = (context, moduleName, platform) => {
+  if (
+    /(^|\/)isTest$/.test(moduleName) &&
+    context.originModulePath.includes(mmkvDir)
+  ) {
+    return {type: 'sourceFile', filePath: mmkvIsTestShim};
+  }
+  return context.resolveRequest(context, moduleName, platform);
+};
+
 const defaults = getDefaultConfig(__dirname);
 
 module.exports = withNativeWind(
@@ -44,6 +59,7 @@ module.exports = withNativeWind(
         ...defaults.resolver.extraNodeModules,
         ...config.resolver.extraNodeModules,
       },
+      resolveRequest,
     },
   },
   {input: './global.css'},

@@ -22,6 +22,9 @@ import {setErrorReportingUser} from '../services/ErrorReporter';
 import {identifyUser, resetMixpanel} from '../services/MixpanelService';
 import {loginPush, logoutPush} from '../services/PushService';
 import {markNavigationReady, openPath, pathFromLink} from './openPath';
+import DataSync from '../data/DataSync';
+import {clearCachedData} from '../data/queryClient';
+import {useSyncStore} from '../data/syncStore';
 
 /**
  * Follows the Firebase sign-in state and shows only the group of screens that fits it: the app
@@ -61,6 +64,15 @@ const AuthGate = () => {
       SplashScreen.hideAsync().catch(() => {});
     }
   }, [initializing]);
+
+  // Nobody is signed in: drop the cached data, in memory and on disk, so the next person to sign
+  // in on this phone never sees it (also clears a copy left by a session that ended abruptly).
+  useEffect(() => {
+    if (!initializing && user === null) {
+      clearCachedData();
+      useSyncStore.getState().reset();
+    }
+  }, [initializing, user]);
 
   // A push whose data carries a link ("trackaexpense://split/invitations"): open it when the app
   // starts from the push and when the push is tapped while the app is in the background.
@@ -111,6 +123,7 @@ const AuthGate = () => {
 
   return (
     <NavigationThemeProvider value={navigationTheme}>
+      {user ? <DataSync uid={user.uid} /> : null}
       <Stack screenOptions={{headerShown: false}}>
         <Stack.Protected guard={user !== null}>
           <Stack.Screen name="(app)" />
