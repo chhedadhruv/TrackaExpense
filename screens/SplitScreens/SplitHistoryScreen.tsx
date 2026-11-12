@@ -1,5 +1,6 @@
 import React, {useMemo, useState} from 'react';
 import {
+  FlatList,
   View,
   StyleSheet,
   Platform,
@@ -15,7 +16,6 @@ import Pencil from 'lucide-react-native/icons/pencil';
 import Plus from 'lucide-react-native/icons/plus';
 import Trash2 from 'lucide-react-native/icons/trash-2';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {ErrorState, LoadingState} from '../../src/components/ScreenState';
@@ -45,6 +45,8 @@ interface Group {
   id: string;
   name: string;
 }
+
+const keyOf = (item: HistoryItem) => item.id;
 
 const SplitHistoryScreen = () => {
   const {formatAmount} = useCurrency();
@@ -176,6 +178,25 @@ const SplitHistoryScreen = () => {
     return `${actor} updated split "${splitTitle}" in "${groupName}"`;
   };
 
+  const renderHistoryItem = ({item}: {item: HistoryItem}) => (
+    <View style={styles.historyItem}>
+      <View style={styles.historyIcon}>{renderIcon(item.type)}</View>
+      <View style={styles.historyDetails}>
+        <Text style={styles.historyDescription}>{renderDescription(item)}</Text>
+        {(item.type === 'create' || item.type === 'settlement_create') &&
+        item.amount ? (
+          <Text style={styles.historyAmount}>{formatAmount(item.amount)}</Text>
+        ) : null}
+        {renderChanges(item)}
+        <Text style={styles.historyDate}>
+          {item.createdAt
+            ? item.createdAt.toDate().toLocaleString()
+            : 'Unknown date'}
+        </Text>
+      </View>
+    </View>
+  );
+
   const renderChanges = (item: HistoryItem) => {
     const changes = Array.isArray(item.changes) ? item.changes : [];
     if (item.type !== 'update' || changes.length === 0) {
@@ -203,105 +224,89 @@ const SplitHistoryScreen = () => {
             onRetry={() => load()}
           />
         ) : (
-          <KeyboardAwareScrollView
-            style={styles.scrollView}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={() => load(true)}
-                colors={[colors.primary]}
-                tintColor={colors.primary}
-              />
-            }>
-            <Card
-              style={[
-                styles.historyCard,
-                Platform.OS === 'android' && styles.cardAndroid,
-              ]}
-              elevation={Platform.OS === 'android' ? 0 : 2}>
-              <View style={styles.cardContent}>
-                <Text style={styles.historyTitle}>Split History</Text>
-                {groups.length > 1 && (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.filterScroll}
-                    contentContainerStyle={styles.filterScrollContent}>
-                    <TouchableOpacity
-                      onPress={() => setSelectedGroup(null)}
-                      style={[
-                        styles.filterChip,
-                        selectedGroup === null && styles.filterChipActive,
-                      ]}>
-                      <Text
-                        style={[
-                          styles.filterChipText,
-                          selectedGroup === null && styles.filterChipTextActive,
-                        ]}>
-                        All
-                      </Text>
-                    </TouchableOpacity>
-                    {groups.map(g => (
+          // The card is the screen's one scroll area: its rows are a FlatList, so a long history
+          // only draws the rows on screen.
+          <Card
+            style={[
+              styles.historyCard,
+              Platform.OS === 'android' && styles.cardAndroid,
+            ]}
+            elevation={Platform.OS === 'android' ? 0 : 2}>
+            <FlatList
+              style={styles.historyList}
+              data={history}
+              keyExtractor={keyOf}
+              renderItem={renderHistoryItem}
+              contentContainerStyle={styles.cardContent}
+              showsVerticalScrollIndicator={false}
+              initialNumToRender={10}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={() => load(true)}
+                  colors={[colors.primary]}
+                  tintColor={colors.primary}
+                />
+              }
+              ListHeaderComponent={
+                <>
+                  <Text style={styles.historyTitle}>Split History</Text>
+                  {groups.length > 1 && (
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      style={styles.filterScroll}
+                      contentContainerStyle={styles.filterScrollContent}>
                       <TouchableOpacity
-                        key={g.id}
-                        onPress={() => setSelectedGroup(g.id)}
+                        onPress={() => setSelectedGroup(null)}
                         style={[
                           styles.filterChip,
-                          selectedGroup === g.id && styles.filterChipActive,
+                          selectedGroup === null && styles.filterChipActive,
                         ]}>
                         <Text
                           style={[
                             styles.filterChipText,
-                            selectedGroup === g.id &&
+                            selectedGroup === null &&
                               styles.filterChipTextActive,
                           ]}>
-                          {g.name}
+                          All
                         </Text>
                       </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                )}
-                {history.length > 0 ? (
-                  history.map(item => (
-                    <View key={item.id} style={styles.historyItem}>
-                      <View style={styles.historyIcon}>
-                        {renderIcon(item.type)}
-                      </View>
-                      <View style={styles.historyDetails}>
-                        <Text style={styles.historyDescription}>
-                          {renderDescription(item)}
-                        </Text>
-                        {(item.type === 'create' ||
-                          item.type === 'settlement_create') &&
-                        item.amount ? (
-                          <Text style={styles.historyAmount}>
-                            {formatAmount(item.amount)}
+                      {groups.map(g => (
+                        <TouchableOpacity
+                          key={g.id}
+                          onPress={() => setSelectedGroup(g.id)}
+                          style={[
+                            styles.filterChip,
+                            selectedGroup === g.id && styles.filterChipActive,
+                          ]}>
+                          <Text
+                            style={[
+                              styles.filterChipText,
+                              selectedGroup === g.id &&
+                                styles.filterChipTextActive,
+                            ]}>
+                            {g.name}
                           </Text>
-                        ) : null}
-                        {renderChanges(item)}
-                        <Text style={styles.historyDate}>
-                          {item.createdAt
-                            ? item.createdAt.toDate().toLocaleString()
-                            : 'Unknown date'}
-                        </Text>
-                      </View>
-                    </View>
-                  ))
-                ) : (
-                  <View style={styles.emptyHistory}>
-                    <History size={48} color={colors.iconMuted} />
-                    <Text style={styles.emptyHistoryText}>
-                      No split history yet
-                    </Text>
-                    <Text style={styles.emptyHistorySubtext}>
-                      Your split history will appear here
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </Card>
-          </KeyboardAwareScrollView>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  )}
+                </>
+              }
+              ListEmptyComponent={
+                <View style={styles.emptyHistory}>
+                  <History size={48} color={colors.iconMuted} />
+                  <Text style={styles.emptyHistoryText}>
+                    No split history yet
+                  </Text>
+                  <Text style={styles.emptyHistorySubtext}>
+                    Your split history will appear here
+                  </Text>
+                </View>
+              }
+            />
+          </Card>
         )}
       </View>
     </SafeAreaProvider>
@@ -313,8 +318,9 @@ export default SplitHistoryScreen;
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {flex: 1, backgroundColor: colors.background},
-    scrollView: {flex: 1},
     historyCard: {
+      // Shrinks to its rows when the history is short and stops at the screen edge when long.
+      flexShrink: 1,
       backgroundColor: colors.surface,
       borderRadius: 20,
       marginHorizontal: 20,
@@ -372,7 +378,8 @@ const createStyles = (colors: ThemeColors) =>
       fontFamily: 'Lato-Regular',
     },
     cardAndroid: {borderWidth: 1, borderColor: colors.cardBorder},
-    filterScroll: {marginBottom: 15},
+    historyList: {flexGrow: 0},
+    filterScroll: {marginBottom: 15, flexGrow: 0},
     filterScrollContent: {flexDirection: 'row'},
     filterChip: {
       paddingHorizontal: 14,
