@@ -7,7 +7,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import {Card, Button} from 'react-native-paper';
+import Card from '../../src/components/Card';
 import {useLocalSearchParams, useRouter} from 'expo-router';
 import ArrowRight from 'lucide-react-native/icons/arrow-right';
 import Bell from 'lucide-react-native/icons/bell';
@@ -587,13 +587,13 @@ const SplitGroupDetailScreen = () => {
           );
         })}
         {hasActionable && (
-          <Button
-            mode="contained"
+          <TouchableOpacity
+            accessibilityRole="button"
+            activeOpacity={0.8}
             onPress={() => handleSettleUp()}
-            style={styles.settleAllButton}
-            textColor={colors.onPrimary}>
-            Settle Up
-          </Button>
+            style={styles.settleAllButton}>
+            <Text style={styles.settleAllButtonText}>Settle Up</Text>
+          </TouchableOpacity>
         )}
       </View>
     );
@@ -895,7 +895,19 @@ const createStyles = (colors: ThemeColors) =>
       alignSelf: 'flex-start',
     },
     categoryText: {fontSize: 12, color: colors.primary},
-    settleAllButton: {marginTop: 10, backgroundColor: colors.primaryFill},
+    settleAllButton: {
+      marginTop: 10,
+      minHeight: 40,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primaryFill,
+    },
+    settleAllButtonText: {
+      color: colors.onPrimary,
+      fontFamily: 'Lato-Bold',
+      fontSize: 15,
+    },
     fab: {
       position: 'absolute',
       right: 24,

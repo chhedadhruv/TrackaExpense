@@ -7,7 +7,8 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import {Card, Text} from 'react-native-paper';
+import Card from '../../src/components/Card';
+import Text from '../../src/components/Text';
 import History from 'lucide-react-native/icons/history';
 import Landmark from 'lucide-react-native/icons/landmark';
 import Pencil from 'lucide-react-native/icons/pencil';

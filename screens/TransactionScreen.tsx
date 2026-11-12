@@ -1,15 +1,7 @@
 import React, {useState, useMemo} from 'react';
 import {useRouter} from 'expo-router';
-import {
-  View,
-  Text,
-  FlatList,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  Platform,
-} from 'react-native';
-import {Searchbar} from 'react-native-paper';
+import {View, Text, FlatList, ScrollView, TouchableOpacity} from 'react-native';
+import SearchField from '../src/components/SearchField';
 import ReceiptText from 'lucide-react-native/icons/receipt-text';
 import Calendar1 from 'lucide-react-native/icons/calendar-1';
 import CalendarArrowDown from 'lucide-react-native/icons/calendar-arrow-down';
@@ -18,18 +10,14 @@ import CalendarDays from 'lucide-react-native/icons/calendar-days';
 import CalendarRange from 'lucide-react-native/icons/calendar-range';
 import Download from 'lucide-react-native/icons/download';
 import List from 'lucide-react-native/icons/list';
-import {
-  renderClearIcon,
-  renderSearchIcon,
-} from '../src/components/icons/searchbarIcons';
 import moment from 'moment';
-import {DatePickerModal} from 'react-native-paper-dates';
+import DatePickerModal from '../src/components/DatePickerModal';
 import Share from 'react-native-share';
 import {File, Paths} from 'expo-file-system';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {majorOf} from '../src/utils/amounts';
 import {getCategoryIcon} from '../utils/CategoryData';
-import {useTheme, useThemedStyles, type ThemeColors} from '../src/theme';
+import {useTheme} from '../src/theme';
 import {getConfig} from '../src/services/RemoteConfigService';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import type {TransactionDocument} from '../src/types';
@@ -98,7 +86,6 @@ const NO_TRANSACTIONS: TransactionDocument[] = [];
 const TransactionScreen = () => {
   const router = useRouter();
   const {colors} = useTheme();
-  const searchStyles = useThemedStyles(createSearchStyles);
   const {currency, formatAmount} = useCurrency();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -332,16 +319,10 @@ const TransactionScreen = () => {
         ListHeaderComponent={
           <>
             <View className="px-5 pt-5">
-              <Searchbar
+              <SearchField
                 placeholder="Search by title, amount, category or tag..."
-                placeholderTextColor={colors.textPlaceholder}
                 onChangeText={setSearchQuery}
                 value={searchQuery}
-                style={searchStyles.searchBar}
-                inputStyle={searchStyles.searchInput}
-                iconColor={colors.primary}
-                icon={renderSearchIcon}
-                clearIcon={renderClearIcon}
               />
             </View>
 
@@ -467,38 +448,18 @@ const TransactionScreen = () => {
                   </TouchableOpacity>
                 </View>
                 <DatePickerModal
-                  locale="en"
-                  mode="single"
                   visible={startDatePickerVisible}
                   onDismiss={() => setStartDatePickerVisible(false)}
                   date={customStartDate ?? undefined}
-                  onConfirm={(params: any) => {
-                    setStartDatePickerVisible(false);
-                    setCustomStartDate(params.date);
-                  }}
-                  saveLabel="Confirm"
+                  onConfirm={({date}) => setCustomStartDate(date)}
                   label="Select start date"
-                  uppercase={false}
-                  {...(Platform.OS === 'ios' && {
-                    presentationStyle: 'pageSheet',
-                  })}
                 />
                 <DatePickerModal
-                  locale="en"
-                  mode="single"
                   visible={endDatePickerVisible}
                   onDismiss={() => setEndDatePickerVisible(false)}
                   date={customEndDate ?? undefined}
-                  onConfirm={(params: any) => {
-                    setEndDatePickerVisible(false);
-                    setCustomEndDate(params.date);
-                  }}
-                  saveLabel="Confirm"
+                  onConfirm={({date}) => setCustomEndDate(date)}
                   label="Select end date"
-                  uppercase={false}
-                  {...(Platform.OS === 'ios' && {
-                    presentationStyle: 'pageSheet',
-                  })}
                 />
               </View>
             )}
@@ -512,20 +473,3 @@ const TransactionScreen = () => {
 };
 
 export default TransactionScreen;
-
-// The Paper search bar takes style objects, not class names.
-const createSearchStyles = (colors: ThemeColors) =>
-  StyleSheet.create({
-    searchBar: {
-      backgroundColor: colors.surface,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
-      elevation: 0,
-    },
-    searchInput: {
-      color: colors.text,
-      fontFamily: 'Lato-Regular',
-      fontSize: 15,
-    },
-  });

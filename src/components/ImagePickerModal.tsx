@@ -1,13 +1,13 @@
 import React from 'react';
-import {View, Text, TouchableOpacity} from 'react-native';
-import {Modal, Portal} from 'react-native-paper';
+import {Pressable, View, Text, TouchableOpacity} from 'react-native';
 import Camera from 'lucide-react-native/icons/camera';
 import Images from 'lucide-react-native/icons/images';
 import {pickImageFromCamera, pickImageFromLibrary} from '../utils/imagePicker';
 import {useTheme} from '../theme';
+import KeyboardAvoidingModal from './KeyboardAvoidingModal';
 
-// The Paper Modal draws its own container; the card inside carries the colours.
-const SHEET_CONTAINER = {margin: 20, backgroundColor: 'transparent'} as const;
+// The dimmed layer is the Pressable behind the card; the card sits centred on top of it.
+const OVERLAY = {justifyContent: 'center'} as const;
 
 interface ImagePickerModalProps {
   visible: boolean;
@@ -39,11 +39,18 @@ const ImagePickerModal = ({
   };
 
   return (
-    <Portal>
-      <Modal
-        visible={visible}
-        contentContainerStyle={SHEET_CONTAINER}
-        onDismiss={onDismiss}>
+    <KeyboardAvoidingModal
+      transparent
+      animationType="fade"
+      visible={visible}
+      onRequestClose={onDismiss}
+      overlayStyle={OVERLAY}>
+      <Pressable
+        className="absolute inset-0 bg-overlay"
+        accessibilityLabel="Close"
+        onPress={onDismiss}
+      />
+      <View className="mx-5">
         <View className="rounded-2xl bg-surface p-5 shadow-lg">
           <View className="mb-5 items-center gap-2">
             <Camera size={32} color={colors.primary} />
@@ -78,8 +85,8 @@ const ImagePickerModal = ({
             </Text>
           </TouchableOpacity>
         </View>
-      </Modal>
-    </Portal>
+      </View>
+    </KeyboardAvoidingModal>
   );
 };
 

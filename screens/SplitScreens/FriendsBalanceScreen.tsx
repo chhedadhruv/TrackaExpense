@@ -6,7 +6,9 @@ import {
   Platform,
   TouchableOpacity,
 } from 'react-native';
-import {Text, Card, ActivityIndicator} from 'react-native-paper';
+import {ActivityIndicator} from 'react-native';
+import Card from '../../src/components/Card';
+import Text from '../../src/components/Text';
 import UserCheck from 'lucide-react-native/icons/user-check';
 import Users from 'lucide-react-native/icons/users';
 import UserAvatar from '../../src/components/Avatar';

@@ -1,46 +1,12 @@
-import React, {useMemo} from 'react';
-import {
-  MD3DarkTheme,
-  MD3LightTheme,
-  Provider as PaperProvider,
-  type MD3Theme,
-} from 'react-native-paper';
+import React from 'react';
 import AuthProvider from '../../navigation/AuthProvider';
 import {CurrencyProvider} from '../../utils/CurrencyUtil';
-import {useTheme} from '../theme';
 
-/** Sign-in state, the currency and the react-native-paper theme, for everything under the router. */
-const AppProviders = ({children}: {children: React.ReactNode}) => {
-  const {colors, isDark} = useTheme();
-  // Paper components (Card, Dialog, ActivityIndicator) read their colours from this theme.
-  const paperTheme = useMemo<MD3Theme>(() => {
-    const base = isDark ? MD3DarkTheme : MD3LightTheme;
-    return {
-      ...base,
-      dark: isDark,
-      colors: {
-        ...base.colors,
-        primary: colors.primary,
-        onPrimary: colors.onPrimary,
-        background: colors.background,
-        onBackground: colors.text,
-        surface: colors.surface,
-        onSurface: colors.text,
-        surfaceVariant: colors.surfaceMuted,
-        onSurfaceVariant: colors.textSecondary,
-        outline: colors.border,
-        outlineVariant: colors.cardBorder,
-      },
-    };
-  }, [colors, isDark]);
-
-  return (
-    <AuthProvider>
-      <CurrencyProvider>
-        <PaperProvider theme={paperTheme}>{children}</PaperProvider>
-      </CurrencyProvider>
-    </AuthProvider>
-  );
-};
+/** Sign-in state and the currency, for everything under the router. */
+const AppProviders = ({children}: {children: React.ReactNode}) => (
+  <AuthProvider>
+    <CurrencyProvider>{children}</CurrencyProvider>
+  </AuthProvider>
+);
 
 export default AppProviders;

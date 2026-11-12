@@ -7,7 +7,10 @@ import {
   TextInput,
   Platform,
 } from 'react-native';
-import {Text, Checkbox, Card, ActivityIndicator} from 'react-native-paper';
+import {ActivityIndicator} from 'react-native';
+import Card from '../../src/components/Card';
+import Text from '../../src/components/Text';
+import TickBox from '../../src/components/TickBox';
 import {
   Timestamp,
   addDoc,
@@ -504,26 +507,14 @@ const SplitScreen = () => {
             <Text style={styles.youLabel}>(You - Group Creator)</Text>
           )}
         </View>
-        {withCheckbox &&
-          user.email !== currentUser?.email &&
-          (Platform.OS === 'ios' ? (
-            <TouchableOpacity
-              onPress={() => toggleUserSelection(user)}
-              activeOpacity={0.7}>
-              <View
-                style={[
-                  styles.customCheckboxIOS,
-                  isSelected && styles.customCheckboxIOSSelected,
-                ]}>
-                {isSelected && <Check size={18} color={colors.onPrimary} />}
-              </View>
-            </TouchableOpacity>
-          ) : (
-            <Checkbox
-              status={isSelected ? 'checked' : 'unchecked'}
-              onPress={() => toggleUserSelection(user)}
-            />
-          ))}
+        {withCheckbox && user.email !== currentUser?.email && (
+          <TouchableOpacity
+            accessibilityLabel={`Select ${user.name || user.email}`}
+            onPress={() => toggleUserSelection(user)}
+            activeOpacity={0.7}>
+            <TickBox selected={isSelected} />
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -899,21 +890,6 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 14,
       color: colors.textSecondary,
       fontFamily: 'Lato-Regular',
-    },
-    customCheckboxIOS: {
-      width: 24,
-      height: 24,
-      borderRadius: 4,
-      borderWidth: 2,
-      borderColor: colors.textMuted,
-      backgroundColor: colors.surface,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginLeft: 4,
-    },
-    customCheckboxIOSSelected: {
-      backgroundColor: colors.primaryFill,
-      borderColor: colors.primaryFill,
     },
     selectedContainer: {marginTop: 15},
     selectedUsersLabel: {
