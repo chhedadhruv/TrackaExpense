@@ -64,6 +64,12 @@ Candidates for the next release, 1.4.1 or similar. None blocks 1.4.0.
 - The 12 old Sentry issues from 1.3.5 debug builds of 8 to 9 November (local file paths in the stack traces) were resolved on 2026-11-10 as noise. Release-1.4.0 issues so far: two transient `firestore/unavailable` errors and one `TOO_MANY_REGISTRATIONS` push-registration error, all from the owner's phone.
 - The store listing sources, backups and restore payloads for the demo data are in `../trackaexpense-audit/store-listing/` (README inside). The demo data was restored; all 5 screenshots and the feature graphic are ready there.
 
+## Left over from the Statistics rewrite (Victory Native XL)
+
+- `react-native-gifted-charts` is no longer imported by any file. Before removing it, find out why removing it crashed startup earlier (see the gotcha in `CLAUDE.md`) and check a release build.
+- Not tested on a device: iOS, a custom date range with the date pickers, the 3 months, 6 months and year ranges with a lot of data, and a release build (the R8 build of Skia was only assembled locally).
+- Skia and Victory are new native modules: the next store build has a new fingerprint, and the app size grows by the Skia libraries. Check the Play size report.
+
 ## Deferred until after Expo and the later phases
 
 - Expo conversion (Phase 1b-ii): audit done (`../trackaexpense-audit/07-expo-conversion-audit.md`), SDK 58 chosen, step 2 done on Android. Step 3 done: Firebase v27 (with the 19 `exists()` conversions, Remote Config and Storage API changes, Kotlin 2.4.0 for the Firebase Android SDK), Google sign-in 17, Notifee removed (owner chose OneSignal over `expo-notifications` because `expo-notifications` adds a competing Android messaging service). Remaining: EAS Update, EAS Build profiles, iOS bring-up.

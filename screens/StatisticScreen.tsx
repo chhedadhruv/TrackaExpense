@@ -1,15 +1,11 @@
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Dimensions,
-  Platform,
-} from 'react-native';
-import React, {useState, useEffect, useCallback, useMemo, useRef} from 'react';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import {BarChart, PieChart} from 'react-native-gifted-charts';
-import {compactAxisLabel, niceAxisMax} from '../src/utils/chartAxis';
+import {View, Text, ScrollView, TouchableOpacity, Platform} from 'react-native';
+import React, {useState, useCallback, useMemo} from 'react';
+import ArrowDownLeft from 'lucide-react-native/icons/arrow-down-left';
+import ArrowUpRight from 'lucide-react-native/icons/arrow-up-right';
+import CalendarRange from 'lucide-react-native/icons/calendar-range';
+import ChartColumn from 'lucide-react-native/icons/chart-column';
+import TrendingDown from 'lucide-react-native/icons/trending-down';
+import TrendingUp from 'lucide-react-native/icons/trending-up';
 import {useFocusEffect} from '@react-navigation/native';
 import {getAuth} from '@react-native-firebase/auth';
 import {
@@ -20,109 +16,98 @@ import {
   orderBy,
   query as fsQuery,
 } from '@react-native-firebase/firestore';
+import {DatePickerModal} from 'react-native-paper-dates';
 import {reportError} from '../src/services/ErrorReporter';
 import * as PerformanceService from '../src/services/PerformanceService';
-import moment from 'moment';
-import {DatePickerModal} from 'react-native-paper-dates';
 import {useCurrency} from '../utils/CurrencyUtil';
-import {getCategoryIcon} from '../utils/CategoryData';
 import {useTheme} from '../src/theme';
-import {ErrorState, LoadingState} from '../src/components/ScreenState';
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from '../src/components/ScreenState';
 import {formatDisplayDate} from '../src/utils/formatters';
-import {majorOf, minorOf, totalMajor} from '../src/utils/amounts';
+import {majorOf} from '../src/utils/amounts';
 import {toMajorNumber} from '../src/utils/money';
 import {getConfig} from '../src/services/RemoteConfigService';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import type {TransactionDocument} from '../src/types';
-import type {McIconName} from '../src/types/icons';
+import TrendChart from '../src/components/statistics/TrendChart';
+import CategoryDonut, {
+  sliceColor,
+} from '../src/components/statistics/CategoryDonut';
+import Heatmap from '../src/components/statistics/Heatmap';
+import {
+  categoryBreakdown,
+  dailyHeatmap,
+  dayKeyOfDate,
+  filterByRange,
+  largestTransactions,
+  percentChange,
+  previousBounds,
+  rangeBounds,
+  summarize,
+  topMerchants,
+  trendBuckets,
+  type StatsKind,
+  type StatsRangeKey,
+} from '../src/utils/statistics';
 
-type TimeRange =
-  | 'all'
-  | '7days'
-  | '30days'
-  | '3months'
-  | '6months'
-  | 'year'
-  | 'custom';
-type ChartBtn = 'Income' | 'Expense';
-
-interface PieEntry {
-  value: number;
-  color: string;
-  text: string;
-  label: string;
-  percent: number;
-  amount: number;
-}
-
-interface BarEntry {
-  value: number;
-  label: string;
-  frontColor: string;
-  spacing: number;
-  showLabel?: boolean;
-}
-
-// Slice colours for the category chart. Data colours, the same in both themes; each is mid-tone
-// so it reads on the light card and on the charcoal one.
-const PIE_PALETTE = [
-  '#677CD2',
-  '#E98852',
-  '#25B07F',
-  '#F6C84E',
-  '#9B59B6',
-  '#2E86C1',
-  '#16A085',
-  '#D35400',
+const RANGES: {key: StatsRangeKey; label: string}[] = [
+  {key: 'all', label: 'All time'},
+  {key: '7days', label: '7 days'},
+  {key: '30days', label: '30 days'},
+  {key: '3months', label: '3 months'},
+  {key: '6months', label: '6 months'},
+  {key: 'year', label: 'Year'},
+  {key: 'custom', label: 'Custom'},
 ];
 
-const TIME_RANGES: {key: TimeRange; label: string; icon: McIconName}[] = [
-  {key: 'all', label: 'All Time', icon: 'format-list-bulleted'},
-  {key: '7days', label: 'Last 7 Days', icon: 'calendar-week'},
-  {key: '30days', label: 'Last 30 Days', icon: 'calendar-month'},
-  {key: '3months', label: 'Last 3 Months', icon: 'calendar-range'},
-  {key: '6months', label: 'Last 6 Months', icon: 'calendar-clock'},
-  {key: 'year', label: 'Last Year', icon: 'calendar'},
-  {key: 'custom', label: 'Custom Range', icon: 'calendar-range'},
+const RANGE_TITLES: Record<StatsRangeKey, string> = {
+  all: 'All time',
+  '7days': 'Last 7 days',
+  '30days': 'Last 30 days',
+  '3months': 'Last 3 months',
+  '6months': 'Last 6 months',
+  year: 'Last year',
+  custom: 'Custom range',
+};
+
+const KINDS: {key: StatsKind; label: string}[] = [
+  {key: 'expense', label: 'Expense'},
+  {key: 'income', label: 'Income'},
 ];
 
-const Y_AXIS_SECTIONS = 3;
+const isRangeKey = (value: unknown): value is StatsRangeKey =>
+  RANGES.some(r => r.key === value);
 
 const StatisticScreen = ({navigation}: {navigation: any}) => {
   const {colors} = useTheme();
   const {currency, formatAmount} = useCurrency();
-  const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [selectedBar, setSelectedBar] = useState<BarEntry | null>(null);
+  const code = currency.code;
+
   const [allTransactions, setAllTransactions] = useState<TransactionDocument[]>(
     [],
   );
+  const [today, setToday] = useState(() => dayKeyOfDate(new Date()));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [totalIncome, setTotalIncome] = useState(0);
-  const [totalExpense, setTotalExpense] = useState(0);
-  const [timeRange, setTimeRange] = useState<TimeRange>(
-    (getConfig().stats_default_time_range as TimeRange) || 'all',
+  const configured = getConfig().stats_default_time_range;
+  const [range, setRange] = useState<StatsRangeKey>(
+    isRangeKey(configured) ? configured : 'all',
   );
-  const [filteredTransactions, setFilteredTransactions] = useState<
-    TransactionDocument[]
-  >([]);
-  const [selectedBtn, setSelectedBtn] = useState<ChartBtn>('Income');
-  const [categoryPieData, setCategoryPieData] = useState<PieEntry[]>([]);
-  const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
-  const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
-  const [dateRangeError, setDateRangeError] = useState<string | null>(null);
-  const [startDatePickerVisible, setStartDatePickerVisible] = useState(false);
-  const [endDatePickerVisible, setEndDatePickerVisible] = useState(false);
-  const [barData, setBarData] = useState<BarEntry[]>([]);
-  const [visibleCount, setVisibleCount] = useState(10);
+  const [kind, setKind] = useState<StatsKind>('expense');
+  const [customStart, setCustomStart] = useState<Date | null>(null);
+  const [customEnd, setCustomEnd] = useState<Date | null>(null);
+  const [startPickerVisible, setStartPickerVisible] = useState(false);
+  const [endPickerVisible, setEndPickerVisible] = useState(false);
 
   const fetchTransactions = async () => {
     try {
       setError(null);
       setLoading(true);
       const stopTrace = await PerformanceService.traceCalculateStatistics();
-      // The newest transactions, the same set Home and the Transactions screen show. This used to
-      // read every document and keep the first N in document-ID order, which is arbitrary.
+      // The newest transactions, the same set Home and the Transactions screen show.
       const snapshot = await getDocs(
         fsQuery(
           collection(
@@ -140,9 +125,10 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
         ...doc.data(),
       })) as unknown as TransactionDocument[];
       setAllTransactions(txns);
+      setToday(dayKeyOfDate(new Date()));
       AnalyticsService.logViewStatistics({
-        chart_type: selectedBtn.toLowerCase(),
-        time_range: timeRange,
+        chart_type: kind,
+        time_range: range,
       });
       await stopTrace?.();
     } catch (e) {
@@ -160,274 +146,39 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
     }, []),
   );
 
-  const filterTransactionsByTimeRange = useCallback(
-    (txns: TransactionDocument[], range: TimeRange): TransactionDocument[] => {
-      if (range === 'all') {
-        return txns;
-      }
-      if (range === 'custom') {
-        if (!customStartDate || !customEndDate) {
-          return [];
-        }
-        if (customStartDate > customEndDate) {
-          return [];
-        }
-        return txns.filter(t =>
-          moment(t.date).isBetween(
-            customStartDate,
-            customEndDate,
-            undefined,
-            '[]',
-          ),
-        );
-      }
-      const cutoff = new Date();
-      const shifts: Record<Exclude<TimeRange, 'all' | 'custom'>, () => void> = {
-        '7days': () => cutoff.setDate(cutoff.getDate() - 7),
-        '30days': () => cutoff.setDate(cutoff.getDate() - 30),
-        '3months': () => cutoff.setMonth(cutoff.getMonth() - 3),
-        '6months': () => cutoff.setMonth(cutoff.getMonth() - 6),
-        year: () => cutoff.setFullYear(cutoff.getFullYear() - 1),
-      };
-      shifts[range as Exclude<TimeRange, 'all' | 'custom'>]?.();
-      return txns.filter(t => new Date(t.date) >= cutoff);
-    },
-    [customStartDate, customEndDate],
+  const customStartKey = customStart ? dayKeyOfDate(customStart) : null;
+  const customEndKey = customEnd ? dayKeyOfDate(customEnd) : null;
+  const customInvalid =
+    customStartKey !== null &&
+    customEndKey !== null &&
+    customStartKey > customEndKey;
+
+  const bounds = useMemo(
+    () => rangeBounds(range, today, {start: customStartKey, end: customEndKey}),
+    [range, today, customStartKey, customEndKey],
   );
 
-  useEffect(() => {
-    const filtered = filterTransactionsByTimeRange(allTransactions, timeRange);
-    setFilteredTransactions(filtered);
-    // Summed as integer minor units so the totals are exact.
-    setTotalIncome(
-      totalMajor(
-        filtered.filter(t => t.type === 'income'),
-        currency.code,
-      ),
-    );
-    setTotalExpense(
-      totalMajor(
-        filtered.filter(t => t.type !== 'income'),
-        currency.code,
-      ),
-    );
-  }, [
-    allTransactions,
-    timeRange,
-    filterTransactionsByTimeRange,
-    currency.code,
-  ]);
-
-  useEffect(() => {
-    if (
-      timeRange === 'custom' &&
-      customStartDate &&
-      customEndDate &&
-      customStartDate > customEndDate
-    ) {
-      setDateRangeError('Start date must be before end date.');
-    } else {
-      setDateRangeError(null);
-    }
-  }, [customStartDate, customEndDate, timeRange]);
-
-  useEffect(() => {
-    setVisibleCount(10);
-  }, [selectedBtn, timeRange]);
-
-  const handleBarTap = useCallback((data: any) => {
-    if (tooltipTimer.current) {
-      clearTimeout(tooltipTimer.current);
-    }
-    setSelectedBar(data);
-    tooltipTimer.current = setTimeout(() => setSelectedBar(null), 3000);
-  }, []);
-
-  const getGroupingInterval = (
-    range: TimeRange,
-  ): 'daily' | 'weekly' | 'monthly' => {
-    if (range === '7days' || range === '30days') {
-      return 'daily';
-    }
-    if (range === '3months') {
-      return 'weekly';
-    }
-    return 'monthly';
-  };
-
-  const getGroupingKeyAndLabel = (
-    date: string,
-    interval: 'daily' | 'weekly' | 'monthly',
-  ) => {
-    const d = new Date(date);
-    const year = d.getFullYear();
-    const month = d.getMonth();
-    const day = d.getDate();
-    if (interval === 'daily') {
-      return {
-        key: `${year}-${String(month + 1).padStart(2, '0')}-${String(
-          day,
-        ).padStart(2, '0')}`,
-        label: d.toLocaleDateString(undefined, {
-          month: 'short',
-          day: 'numeric',
-        }),
-        ts: new Date(year, month, day).getTime(),
-      };
-    }
-    if (interval === 'weekly') {
-      const week = Math.ceil(day / 7);
-      return {
-        key: `${year}-${month}-W${week}`,
-        label: `W${week}`,
-        ts: new Date(year, month, (week - 1) * 7 + 1).getTime(),
-      };
-    }
+  const stats = useMemo(() => {
+    const inside = filterByRange(allTransactions, bounds);
+    const summary = summarize(inside, code);
+    const previous = previousBounds(bounds);
+    const previousExpense = previous
+      ? summarize(filterByRange(allTransactions, previous), code).expenseMinor
+      : 0;
+    const trend = trendBuckets(inside, code, bounds, today);
     return {
-      key: `${year}-${String(month + 1).padStart(2, '0')}`,
-      label: d.toLocaleString('default', {month: 'short'}),
-      ts: new Date(year, month, 1).getTime(),
+      inside,
+      summary,
+      expenseChange: percentChange(summary.expenseMinor, previousExpense),
+      trend,
+      breakdown: categoryBreakdown(inside, kind, code),
+      merchants: topMerchants(inside, kind, code),
+      heatmap: dailyHeatmap(inside, kind, code, bounds, today),
+      largest: largestTransactions(inside, kind, code),
     };
-  };
+  }, [allTransactions, bounds, code, kind, today]);
 
-  const handleBarData = useCallback(() => {
-    if (!filteredTransactions.length) {
-      setBarData([]);
-      return;
-    }
-    const interval = getGroupingInterval(timeRange);
-    const aggregatedMap = new Map<
-      string,
-      {label: string; ts: number; income: number; expense: number}
-    >();
-    filteredTransactions.forEach(t => {
-      const {key, label, ts} = getGroupingKeyAndLabel(t.date, interval);
-      // Accumulated as integer minor units; converted to major units when the bars are built.
-      const value = minorOf(t, currency.code) ?? 0;
-      if (!aggregatedMap.has(key)) {
-        aggregatedMap.set(key, {label, ts, income: 0, expense: 0});
-      }
-      const entry = aggregatedMap.get(key)!;
-      if (t.type === 'income') {
-        entry.income += value;
-      } else {
-        entry.expense += value;
-      }
-    });
-    const sorted = Array.from(aggregatedMap.values())
-      .sort((a, b) => a.ts - b.ts)
-      .slice(-8);
-    const built: BarEntry[] = [];
-    sorted.forEach((item, index) => {
-      built.push({
-        value: 0,
-        label: item.label,
-        frontColor: 'transparent',
-        spacing: 2,
-        showLabel: index % 2 === 0,
-      });
-      if (item.income > 0) {
-        built.push({
-          value: toMajorNumber(item.income, currency.code),
-          label: '',
-          frontColor: colors.primary,
-          spacing: 2,
-        });
-      }
-      if (item.expense > 0) {
-        built.push({
-          value: toMajorNumber(item.expense, currency.code),
-          label: '',
-          frontColor: colors.expense,
-          spacing: 2,
-        });
-      }
-      built.push({
-        value: 0,
-        label: '',
-        frontColor: 'transparent',
-        spacing: 10,
-        showLabel: false,
-      });
-    });
-    setBarData(built);
-  }, [
-    filteredTransactions,
-    timeRange,
-    currency.code,
-    colors.primary,
-    colors.expense,
-  ]);
-
-  useEffect(() => {
-    handleBarData();
-  }, [handleBarData]);
-
-  useEffect(() => {
-    if (!filteredTransactions.length) {
-      setCategoryPieData([]);
-      return;
-    }
-    const typeKey = selectedBtn === 'Income' ? 'income' : 'expense';
-    const tx = filteredTransactions.filter(t => t.type === typeKey);
-    // Integer minor units, converted to major units for display below.
-    const total = tx.reduce(
-      (sum, t) => sum + (minorOf(t, currency.code) ?? 0),
-      0,
-    );
-    if (total <= 0) {
-      setCategoryPieData([]);
-      return;
-    }
-    const byCategory: Record<string, number> = {};
-    tx.forEach(t => {
-      const k = t.category || 'Others';
-      byCategory[k] = (byCategory[k] || 0) + (minorOf(t, currency.code) ?? 0);
-    });
-    const entries = Object.entries(byCategory)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 6);
-    setCategoryPieData(
-      entries.map(([label, amountMinor], idx) => {
-        const amountValue = toMajorNumber(amountMinor, currency.code);
-        const percentage = Math.round((amountMinor / total) * 100);
-        return {
-          value: percentage,
-          color: PIE_PALETTE[idx % PIE_PALETTE.length],
-          text: percentage >= 10 ? label : '',
-          label,
-          percent: percentage,
-          amount: amountValue,
-        };
-      }),
-    );
-  }, [filteredTransactions, selectedBtn, currency.code]);
-
-  const chartWidth = useMemo(() => {
-    const base = Dimensions.get('window').width - 80;
-    const groups = barData.filter(item => item.showLabel).length;
-    return Math.max(base, groups * 70);
-  }, [barData]);
-
-  // The chart library takes style objects for its axis labels, so they follow the theme here.
-  const axisTextStyles = useMemo(
-    () => ({
-      y: {color: colors.textMuted, fontFamily: 'Lato-Regular'},
-      x: {
-        color: colors.textMuted,
-        fontSize: 10,
-        textAlign: 'center' as const,
-        width: 46,
-        marginTop: 10,
-        marginHorizontal: 2,
-        fontFamily: 'Lato-Regular',
-      },
-    }),
-    [colors.textMuted],
-  );
-
-  const getTimeRangeLabel = () =>
-    TIME_RANGES.find(r => r.key === timeRange)?.label ?? 'Selected Period';
+  const money = (minor: number) => formatAmount(toMajorNumber(minor, code));
 
   if (loading) {
     return <LoadingState message="Loading your statistics…" />;
@@ -442,54 +193,52 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
     );
   }
 
-  const typeKey = selectedBtn === 'Income' ? 'income' : 'expense';
-  const visibleTransactions = filteredTransactions
-    .filter(t => t.type === typeKey)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const shownTransactions = visibleTransactions.slice(0, visibleCount);
-  const hasBars = barData.filter(item => item.value > 0).length > 0;
+  const {summary, breakdown, merchants, heatmap, largest, trend} = stats;
+  const kindTotal =
+    kind === 'income' ? summary.incomeMinor : summary.expenseMinor;
+  const hasAny = summary.count > 0;
+  const kindWord = kind === 'income' ? 'Income' : 'Spending';
+  const netPositive = summary.netMinor >= 0;
+  const change = stats.expenseChange;
 
   return (
     <View className="flex-1 bg-background">
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-        <View className="px-5 pb-[15px] pt-5">
+        <View className="px-5 pb-3 pt-5">
           <Text
             accessibilityRole="header"
             className="font-heading text-2xl font-bold text-text-strong">
             Statistics
           </Text>
           <Text className="mt-1 font-sans text-base text-text-secondary">
-            Track your financial insights
+            Where your money comes and goes
           </Text>
         </View>
 
-        {/* Time Range Filter */}
-        <View className="px-5 pb-[15px]">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {TIME_RANGES.map(({key, label, icon}) => {
-              const active = timeRange === key;
+        <View className="pb-3">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerClassName="px-5">
+            {RANGES.map(({key, label}) => {
+              const active = range === key;
               return (
                 <TouchableOpacity
                   key={key}
                   accessibilityRole="button"
                   accessibilityState={{selected: active}}
                   onPress={() => {
-                    setTimeRange(key);
+                    setRange(key);
                     AnalyticsService.logStatisticsTimeRangeChanged(key);
                   }}
-                  className={`mr-2.5 flex-row items-center rounded-full border px-3.5 py-2 ${
+                  className={`mr-2 rounded-full border px-4 py-2 ${
                     active
                       ? 'border-primary-fill bg-primary-fill'
                       : 'border-card-border bg-surface'
                   }`}>
-                  <MaterialCommunityIcons
-                    name={icon}
-                    size={16}
-                    color={active ? colors.onPrimary : colors.primary}
-                  />
                   <Text
-                    className={`ml-1.5 font-sans-bold text-[13px] font-semibold ${
-                      active ? 'text-on-primary' : 'text-primary'
+                    className={`font-sans-bold text-[13px] ${
+                      active ? 'text-on-primary' : 'text-text-secondary'
                     }`}>
                     {label}
                   </Text>
@@ -499,91 +248,66 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
           </ScrollView>
         </View>
 
-        {timeRange === 'custom' && (
-          <View className="mx-5 mb-[15px] rounded-2xl border border-card-border bg-surface p-5">
-            <Text className="mb-[15px] font-sans-bold text-base font-semibold text-text-strong">
-              Select Date Range
-            </Text>
+        {range === 'custom' && (
+          <View className="mx-5 mb-3 rounded-2xl border border-card-border bg-surface p-4">
             <View className="flex-row items-center">
               <TouchableOpacity
-                className="flex-1 rounded-xl border border-card-border bg-surface-muted p-3"
                 accessibilityRole="button"
-                onPress={() => setStartDatePickerVisible(true)}>
-                <View className="flex-row items-center">
-                  <MaterialCommunityIcons
-                    name="calendar-start"
-                    size={20}
-                    color={colors.primary}
-                  />
-                  <Text
-                    className={`ml-2 font-sans text-sm ${
-                      customStartDate ? 'text-text' : 'text-text-placeholder'
-                    }`}>
-                    {customStartDate
-                      ? moment(customStartDate).format('MMM DD, YYYY')
-                      : 'Start Date'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-              <View className="px-2.5">
-                <Text className="font-sans text-sm text-text-secondary">
-                  to
+                className="flex-1 flex-row items-center rounded-xl border border-card-border bg-surface-muted p-3"
+                onPress={() => setStartPickerVisible(true)}>
+                <CalendarRange size={18} color={colors.primary} />
+                <Text
+                  className={`ml-2 font-sans text-sm ${
+                    customStartKey ? 'text-text' : 'text-text-placeholder'
+                  }`}>
+                  {customStartKey ? formatDisplayDate(customStartKey) : 'From'}
                 </Text>
-              </View>
+              </TouchableOpacity>
+              <Text className="px-2.5 font-sans text-sm text-text-secondary">
+                to
+              </Text>
               <TouchableOpacity
-                className={`flex-1 rounded-xl border border-card-border bg-surface-muted p-3 ${
-                  customStartDate ? '' : 'opacity-50'
-                }`}
                 accessibilityRole="button"
-                accessibilityState={{disabled: !customStartDate}}
-                onPress={() =>
-                  customStartDate && setEndDatePickerVisible(true)
-                }>
-                <View className="flex-row items-center">
-                  <MaterialCommunityIcons
-                    name="calendar-end"
-                    size={20}
-                    color={
-                      customStartDate ? colors.primary : colors.textPlaceholder
-                    }
-                  />
-                  <Text
-                    className={`ml-2 font-sans text-sm ${
-                      customEndDate ? 'text-text' : 'text-text-placeholder'
-                    }`}>
-                    {customEndDate
-                      ? moment(customEndDate).format('MMM DD, YYYY')
-                      : 'End Date'}
-                  </Text>
-                </View>
+                accessibilityState={{disabled: !customStart}}
+                className={`flex-1 flex-row items-center rounded-xl border border-card-border bg-surface-muted p-3 ${
+                  customStart ? '' : 'opacity-50'
+                }`}
+                onPress={() => customStart && setEndPickerVisible(true)}>
+                <CalendarRange
+                  size={18}
+                  color={customStart ? colors.primary : colors.textPlaceholder}
+                />
+                <Text
+                  className={`ml-2 font-sans text-sm ${
+                    customEndKey ? 'text-text' : 'text-text-placeholder'
+                  }`}>
+                  {customEndKey ? formatDisplayDate(customEndKey) : 'To'}
+                </Text>
               </TouchableOpacity>
             </View>
-            {dateRangeError && (
+            {customInvalid ? (
               <Text
                 accessibilityRole="alert"
                 className="mt-2.5 font-sans text-[13px] text-expense-text">
-                {dateRangeError}
+                Start date must be before end date.
               </Text>
-            )}
-            {timeRange === 'custom' &&
-              (!customStartDate || !customEndDate) &&
-              !dateRangeError && (
-                <Text className="mt-2.5 text-center font-sans text-[13px] text-text-secondary">
-                  Select both dates to filter transactions.
-                </Text>
-              )}
+            ) : !customStartKey || !customEndKey ? (
+              <Text className="mt-2.5 text-center font-sans text-[13px] text-text-secondary">
+                Pick both dates to see this range.
+              </Text>
+            ) : null}
           </View>
         )}
 
         <DatePickerModal
           locale="en"
           mode="single"
-          visible={startDatePickerVisible}
-          onDismiss={() => setStartDatePickerVisible(false)}
-          date={customStartDate ?? new Date()}
+          visible={startPickerVisible}
+          onDismiss={() => setStartPickerVisible(false)}
+          date={customStart ?? new Date()}
           onConfirm={(params: any) => {
-            setStartDatePickerVisible(false);
-            setCustomStartDate(params.date);
+            setStartPickerVisible(false);
+            setCustomStart(params.date);
           }}
           saveLabel="Confirm"
           label="Select start date"
@@ -593,12 +317,12 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
         <DatePickerModal
           locale="en"
           mode="single"
-          visible={endDatePickerVisible}
-          onDismiss={() => setEndDatePickerVisible(false)}
-          date={customEndDate ?? new Date()}
+          visible={endPickerVisible}
+          onDismiss={() => setEndPickerVisible(false)}
+          date={customEnd ?? new Date()}
           onConfirm={(params: any) => {
-            setEndDatePickerVisible(false);
-            setCustomEndDate(params.date);
+            setEndPickerVisible(false);
+            setCustomEnd(params.date);
           }}
           saveLabel="Confirm"
           label="Select end date"
@@ -606,321 +330,304 @@ const StatisticScreen = ({navigation}: {navigation: any}) => {
           {...(Platform.OS === 'ios' && {presentationStyle: 'pageSheet'})}
         />
 
-        {/* Summary Cards */}
-        <View className="mb-5 flex-row justify-between px-5">
-          <View className="w-[48%] rounded-2xl border border-card-border bg-surface p-4 ios:shadow-md">
-            <View className="mb-2.5 flex-row items-center">
-              <View className="mr-2 h-8 w-8 items-center justify-center rounded-lg bg-surface-muted">
-                <MaterialCommunityIcons
-                  name="arrow-down"
-                  size={20}
-                  color={colors.income}
-                />
-              </View>
-              <Text className="font-sans text-sm text-text-secondary">
-                Total Income
-              </Text>
-            </View>
-            <Text className="font-sans-bold text-[22px] font-bold text-income">
-              {formatAmount(totalIncome)}
-            </Text>
+        {!hasAny ? (
+          <View className="px-5 pb-10">
+            <EmptyState
+              icon={ChartColumn}
+              title="Nothing to show yet"
+              message={`No transactions in this period (${RANGE_TITLES[
+                range
+              ].toLowerCase()}). Try another range.`}
+            />
           </View>
-          <View className="w-[48%] rounded-2xl border border-card-border bg-surface p-4 ios:shadow-md">
-            <View className="mb-2.5 flex-row items-center">
-              <View className="mr-2 h-8 w-8 items-center justify-center rounded-lg bg-surface-muted">
-                <MaterialCommunityIcons
-                  name="arrow-up"
-                  size={20}
-                  color={colors.expense}
-                />
-              </View>
-              <Text className="font-sans text-sm text-text-secondary">
-                Total Expense
+        ) : (
+          <>
+            {/* Overview */}
+            <View className="mx-5 mb-4 rounded-[20px] border border-card-border bg-surface p-5">
+              <Text className="font-sans text-[13px] text-text-secondary">
+                Net, {RANGE_TITLES[range].toLowerCase()}
               </Text>
+              <Text
+                className={`mt-1 font-sans-bold text-[30px] font-bold ${
+                  netPositive ? 'text-income' : 'text-expense'
+                }`}
+                accessibilityLabel={`Net ${
+                  netPositive ? 'plus' : 'minus'
+                } ${money(Math.abs(summary.netMinor))}`}>
+                {netPositive ? '' : '-'}
+                {money(Math.abs(summary.netMinor))}
+              </Text>
+              {change !== null && (
+                <View className="mt-1.5 flex-row items-center">
+                  {change > 0 ? (
+                    <TrendingUp size={16} color={colors.expense} />
+                  ) : (
+                    <TrendingDown size={16} color={colors.income} />
+                  )}
+                  <Text className="ml-1.5 font-sans text-[13px] text-text-secondary">
+                    Spending {change > 0 ? 'up' : change < 0 ? 'down' : 'flat'}{' '}
+                    {change === 0 ? '' : `${Math.abs(change)}% `}
+                    on the previous period
+                  </Text>
+                </View>
+              )}
+              <View className="mt-4 flex-row">
+                <View className="mr-3 flex-1 rounded-2xl bg-income-soft p-3.5">
+                  <View className="flex-row items-center">
+                    <ArrowDownLeft size={16} color={colors.incomeText} />
+                    <Text className="ml-1.5 font-sans text-[13px] text-text-secondary">
+                      Income
+                    </Text>
+                  </View>
+                  <Text
+                    className="mt-1.5 font-sans-bold text-lg font-bold text-income-text"
+                    numberOfLines={1}
+                    adjustsFontSizeToFit>
+                    {money(summary.incomeMinor)}
+                  </Text>
+                </View>
+                <View className="flex-1 rounded-2xl bg-expense-soft p-3.5">
+                  <View className="flex-row items-center">
+                    <ArrowUpRight size={16} color={colors.expenseText} />
+                    <Text className="ml-1.5 font-sans text-[13px] text-text-secondary">
+                      Expense
+                    </Text>
+                  </View>
+                  <Text
+                    className="mt-1.5 font-sans-bold text-lg font-bold text-expense-text"
+                    numberOfLines={1}
+                    adjustsFontSizeToFit>
+                    {money(summary.expenseMinor)}
+                  </Text>
+                </View>
+              </View>
             </View>
-            <Text className="font-sans-bold text-[22px] font-bold text-expense">
-              {formatAmount(totalExpense)}
-            </Text>
-          </View>
-        </View>
 
-        {/* Bar Chart */}
-        <View className="mx-5 mb-5 rounded-[20px] border border-card-border bg-surface ios:shadow-lg">
-          <View className="px-5 pb-2.5 pt-5">
-            <Text className="font-sans-bold text-lg font-bold text-text-strong">
-              Financial Overview
-            </Text>
-            <Text className="mt-0.5 font-sans text-[13px] text-text-secondary">
-              {getTimeRangeLabel()}
-            </Text>
-          </View>
-          <View className="px-5 pb-5">
-            {hasBars ? (
-              <>
-                <View className="mb-2.5 flex-row justify-center">
-                  <View className="mx-2.5 flex-row items-center">
-                    <View className="mr-1.5 h-2.5 w-2.5 rounded-full bg-primary" />
+            {/* Cash flow */}
+            <View className="mx-5 mb-4 rounded-[20px] border border-card-border bg-surface p-5">
+              <View className="mb-3 flex-row items-center justify-between">
+                <View>
+                  <Text className="font-sans-bold text-lg font-bold text-text-strong">
+                    Cash flow
+                  </Text>
+                  <Text className="mt-0.5 font-sans text-[13px] text-text-secondary">
+                    By{' '}
+                    {trend.interval === 'daily'
+                      ? 'day'
+                      : trend.interval === 'weekly'
+                      ? 'week'
+                      : 'month'}
+                  </Text>
+                </View>
+                <View className="flex-row">
+                  <View className="mr-3 flex-row items-center">
+                    <View className="mr-1.5 h-2.5 w-2.5 rounded-full bg-income" />
                     <Text className="font-sans text-xs text-text-secondary">
                       Income
                     </Text>
                   </View>
-                  <View className="mx-2.5 flex-row items-center">
+                  <View className="flex-row items-center">
                     <View className="mr-1.5 h-2.5 w-2.5 rounded-full bg-expense" />
                     <Text className="font-sans text-xs text-text-secondary">
                       Expense
                     </Text>
                   </View>
                 </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <BarChart
-                    data={barData}
-                    height={220}
-                    barWidth={15}
-                    spacing={2}
-                    roundedTop
-                    xAxisThickness={0}
-                    yAxisThickness={0}
-                    yAxisTextStyle={axisTextStyles.y}
-                    xAxisLabelTextStyle={axisTextStyles.x}
-                    noOfSections={Y_AXIS_SECTIONS}
-                    showFractionalValues
-                    isAnimated
-                    onPress={handleBarTap}
-                    yAxisLabelWidth={56}
-                    formatYLabel={label =>
-                      compactAxisLabel(Number(label), currency.symbol)
-                    }
-                    width={chartWidth}
-                    xAxisLabelsHeight={32}
-                    rulesColor={colors.divider}
-                    maxValue={niceAxisMax(
-                      Math.max(0, ...barData.map(i => i.value)),
-                      Y_AXIS_SECTIONS,
-                    )}
-                    initialSpacing={20}
-                    endSpacing={20}
-                    hideRules
-                    barBorderRadius={4}
-                  />
-                </ScrollView>
-                {selectedBar && (
-                  <View className="mt-2.5 self-center rounded-lg bg-primary-soft px-3.5 py-2">
-                    <Text className="font-sans-bold text-sm text-text-strong">
-                      {selectedBar.frontColor === colors.primary
-                        ? 'Income'
-                        : 'Expense'}
-                      : {formatAmount(selectedBar.value)}
-                    </Text>
-                  </View>
-                )}
-              </>
-            ) : (
-              <View className="items-center px-5 py-10">
-                <MaterialCommunityIcons
-                  name="chart-bar"
-                  size={48}
-                  color={colors.iconMuted}
-                />
-                <Text className="mt-3 font-sans-bold text-base font-semibold text-text-strong">
-                  No data available
-                </Text>
-                <Text className="mt-1.5 text-center font-sans text-sm text-text-secondary">
-                  No transactions found in this time period.{'\n'}Try changing
-                  the date range above.
-                </Text>
               </View>
-            )}
-          </View>
-        </View>
-
-        {/* Category Pie with Income/Expense toggle in header */}
-        <View className="mx-5 mb-5 rounded-[20px] border border-card-border bg-surface ios:shadow-lg">
-          <View className="flex-row items-center justify-between px-5 pb-2.5 pt-5">
-            <View className="flex-1">
-              <Text className="font-sans-bold text-lg font-bold text-text-strong">
-                {selectedBtn === 'Income'
-                  ? 'Income by Category'
-                  : 'Spending by Category'}
-              </Text>
-              <Text className="mt-0.5 font-sans text-[13px] text-text-secondary">
-                {selectedBtn === 'Income'
-                  ? 'Income distribution'
-                  : 'Expenses distribution'}
-              </Text>
+              {trend.buckets.length > 0 && (
+                <TrendChart
+                  buckets={trend.buckets}
+                  interval={trend.interval}
+                  currencyCode={code}
+                  formatAmount={formatAmount}
+                />
+              )}
             </View>
-            <View className="ml-2.5 flex-row rounded-[10px] bg-surface-muted p-[3px]">
-              {(['Income', 'Expense'] as ChartBtn[]).map(btn => {
-                const active = selectedBtn === btn;
+
+            {/* Expense or income switch for everything below */}
+            <View className="mx-5 mb-4 flex-row rounded-xl border border-card-border bg-surface-muted p-1">
+              {KINDS.map(({key, label}) => {
+                const active = kind === key;
                 return (
                   <TouchableOpacity
-                    key={btn}
+                    key={key}
                     accessibilityRole="radio"
                     accessibilityState={{selected: active}}
-                    className={`rounded-lg px-3 py-1.5 ${
+                    className={`flex-1 items-center rounded-[10px] py-2.5 ${
                       active ? 'bg-primary-fill' : ''
                     }`}
-                    onPress={() => setSelectedBtn(btn)}>
+                    onPress={() => setKind(key)}>
                     <Text
-                      className={`font-sans-bold text-xs font-semibold ${
+                      className={`font-sans-bold text-sm ${
                         active ? 'text-on-primary' : 'text-text-secondary'
                       }`}>
-                      {btn}
+                      {label}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
-          </View>
-          <View className="items-center px-5 pb-5">
-            {categoryPieData.length > 0 ? (
-              <PieChart
-                donut
-                innerRadius={70}
-                radius={100}
-                innerCircleColor={colors.surface}
-                focusOnPress
-                showText={false}
-                data={categoryPieData}
-                centerLabelComponent={() => (
-                  <View className="items-center">
-                    <Text className="font-sans-bold text-base text-text-strong">
-                      {formatAmount(
-                        selectedBtn === 'Income' ? totalIncome : totalExpense,
-                      )}
+
+            {kindTotal <= 0 ? (
+              <View className="mx-5 mb-4 rounded-[20px] border border-card-border bg-surface px-5 py-8">
+                <Text className="text-center font-sans-bold text-base text-text-strong">
+                  No {kind} in this period
+                </Text>
+                <Text className="mt-1.5 text-center font-sans text-sm text-text-secondary">
+                  Try another range or switch to{' '}
+                  {kind === 'income' ? 'expense' : 'income'}.
+                </Text>
+              </View>
+            ) : (
+              <>
+                {/* Categories */}
+                <View className="mx-5 mb-4 rounded-[20px] border border-card-border bg-surface p-5">
+                  <Text className="font-sans-bold text-lg font-bold text-text-strong">
+                    {kind === 'income'
+                      ? 'Income by category'
+                      : 'Spending by category'}
+                  </Text>
+                  <View className="mt-2">
+                    <CategoryDonut
+                      slices={breakdown.slices}
+                      centerTitle={`Total ${kind}`}
+                      centerValue={money(breakdown.totalMinor)}
+                    />
+                  </View>
+                  <View className="mt-4">
+                    {breakdown.slices.map((slice, index) => (
+                      <View key={slice.category} className="mb-3.5">
+                        <View className="flex-row items-center">
+                          <View
+                            className="mr-2.5 h-3 w-3 rounded-full"
+                            style={{backgroundColor: sliceColor(slice, index)}}
+                          />
+                          <Text
+                            className="flex-1 font-sans text-sm text-text"
+                            numberOfLines={1}>
+                            {slice.category}
+                          </Text>
+                          <Text className="font-sans-bold text-[13px] text-text-strong">
+                            {money(slice.minor)}
+                          </Text>
+                          <Text className="w-12 text-right font-sans text-[13px] text-text-secondary">
+                            {slice.percent}%
+                          </Text>
+                        </View>
+                        <View className="ml-[22px] mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-muted">
+                          <View
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${slice.percent}%`,
+                              backgroundColor: sliceColor(slice, index),
+                            }}
+                          />
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Top merchants */}
+                {merchants.length > 0 && (
+                  <View className="mx-5 mb-4 rounded-[20px] border border-card-border bg-surface p-5">
+                    <Text className="font-sans-bold text-lg font-bold text-text-strong">
+                      {kind === 'income' ? 'Top sources' : 'Top merchants'}
                     </Text>
-                    <Text className="font-sans text-xs text-text-secondary">
-                      {selectedBtn === 'Income'
-                        ? 'Total Income'
-                        : 'Total Expense'}
+                    <Text className="mb-2 mt-0.5 font-sans text-[13px] text-text-secondary">
+                      Grouped by title
                     </Text>
+                    {merchants.map((m, index) => (
+                      <View
+                        key={m.name}
+                        className={`flex-row items-center py-3 ${
+                          index > 0 ? 'border-t border-divider' : ''
+                        }`}>
+                        <View className="mr-3 h-8 w-8 items-center justify-center rounded-full bg-primary-soft">
+                          <Text className="font-sans-bold text-[13px] text-primary">
+                            {index + 1}
+                          </Text>
+                        </View>
+                        <View className="flex-1">
+                          <Text
+                            className="font-sans-bold text-[15px] text-text-strong"
+                            numberOfLines={1}>
+                            {m.name}
+                          </Text>
+                          <Text className="font-sans text-xs text-text-secondary">
+                            {m.count} transaction{m.count === 1 ? '' : 's'}
+                          </Text>
+                        </View>
+                        <Text className="font-sans-bold text-[15px] text-text-strong">
+                          {money(m.minor)}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
                 )}
-              />
-            ) : (
-              <View className="items-center px-5 py-10">
-                <MaterialCommunityIcons
-                  name="chart-pie"
-                  size={48}
-                  color={colors.iconMuted}
-                />
-                <Text className="mt-3 font-sans-bold text-base font-semibold text-text-strong">
-                  No {selectedBtn.toLowerCase()} data available
-                </Text>
-                <Text className="mt-1.5 text-center font-sans text-sm text-text-secondary">
-                  No {selectedBtn.toLowerCase()}s found in this time period.
-                  {'\n'}Try changing the date range above.
-                </Text>
-              </View>
-            )}
-            {categoryPieData.length > 0 && (
-              <View className="mt-5 w-full">
-                {categoryPieData.map(item => (
-                  <View
-                    key={item.label}
-                    className="mb-2.5 flex-row items-center">
-                    <View
-                      className="mr-2.5 h-3 w-3 rounded-full"
-                      style={{backgroundColor: item.color}}
-                    />
-                    <Text
-                      className="flex-1 font-sans text-sm text-text"
-                      numberOfLines={1}>
-                      {item.label}
-                    </Text>
-                    <Text className="font-sans-bold text-[13px] text-text-secondary">
-                      {item.percent}% · {formatAmount(Math.round(item.amount))}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        </View>
 
-        {/* Transaction list */}
-        <View className="px-5 pb-[30px]">
-          <Text
-            accessibilityRole="header"
-            className="font-sans-bold text-lg font-bold text-text-strong">
-            {selectedBtn} Transactions
-          </Text>
-          <Text className="mb-[15px] mt-0.5 font-sans text-[13px] text-text-secondary">
-            {visibleTransactions.length} transaction
-            {visibleTransactions.length !== 1 ? 's' : ''}
-          </Text>
-          <View>
-            {shownTransactions.length > 0 ? (
-              shownTransactions.map(transaction => (
-                <TouchableOpacity
-                  key={transaction.id}
-                  accessibilityRole="button"
-                  onPress={() =>
-                    navigation.navigate('TransactionDetail', {transaction})
-                  }
-                  className="mb-3 flex-row items-center justify-between rounded-2xl border border-card-border bg-surface p-4 ios:shadow-md">
-                  <View className="flex-1 flex-row items-center">
-                    <View className="mr-3 h-[50px] w-[50px] items-center justify-center rounded-[14px] bg-primary-soft">
-                      <MaterialCommunityIcons
-                        name={getCategoryIcon(transaction.category)}
-                        size={24}
-                        color={colors.primary}
-                      />
-                    </View>
-                    <View className="flex-1">
-                      <Text
-                        className="mb-0.5 font-sans-bold text-base font-semibold text-text-strong"
-                        numberOfLines={1}
-                        ellipsizeMode="tail">
-                        {transaction.title}
-                      </Text>
-                      <Text className="mb-0.5 font-sans text-[13px] text-primary">
-                        {transaction.category}
-                      </Text>
-                      <Text className="font-sans text-xs text-text-secondary">
-                        {formatDisplayDate(transaction.date)}
-                      </Text>
-                    </View>
+                {/* Heatmap */}
+                {heatmap.weeks.length > 0 && (
+                  <View className="mx-5 mb-4 rounded-[20px] border border-card-border bg-surface p-5">
+                    <Text className="font-sans-bold text-lg font-bold text-text-strong">
+                      Daily {kind === 'income' ? 'income' : 'spending'}
+                    </Text>
+                    <Text className="mb-2 mt-0.5 font-sans text-[13px] text-text-secondary">
+                      {kindWord} per day, up to the last 13 weeks
+                    </Text>
+                    <Heatmap
+                      data={heatmap}
+                      color={kind === 'income' ? colors.income : colors.expense}
+                      currencyCode={code}
+                      formatAmount={formatAmount}
+                      verb={kind === 'income' ? 'Earned' : 'Spent'}
+                    />
                   </View>
-                  <Text
-                    className={`ml-2 font-sans-bold text-base font-bold ${
-                      transaction.type === 'income'
-                        ? 'text-income'
-                        : 'text-expense'
-                    }`}>
-                    {transaction.type === 'income' ? '+ ' : '- '}
-                    {formatAmount(majorOf(transaction, currency.code))}
-                  </Text>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View className="items-center px-5 py-10">
-                <MaterialCommunityIcons
-                  name="chart-line"
-                  size={48}
-                  color={colors.iconMuted}
-                />
-                <Text className="mt-3 font-sans-bold text-base font-semibold text-text-strong">
-                  No {selectedBtn.toLowerCase()} transactions
-                </Text>
-                <Text className="mt-1.5 text-center font-sans text-sm text-text-secondary">
-                  No {selectedBtn.toLowerCase()} data available for the selected
-                  period.{'\n'}Try changing the date range above.
-                </Text>
-              </View>
+                )}
+
+                {/* Largest transactions */}
+                {largest.length > 0 && (
+                  <View className="mx-5 mb-8 rounded-[20px] border border-card-border bg-surface p-5">
+                    <Text className="font-sans-bold text-lg font-bold text-text-strong">
+                      Largest {kind === 'income' ? 'income' : 'expenses'}
+                    </Text>
+                    {largest.map((t, index) => (
+                      <TouchableOpacity
+                        key={t.id}
+                        accessibilityRole="button"
+                        onPress={() =>
+                          navigation.navigate('TransactionDetail', {
+                            transaction: t,
+                          })
+                        }
+                        className={`flex-row items-center py-3 ${
+                          index > 0 ? 'border-t border-divider' : ''
+                        } ${index === 0 ? 'mt-1' : ''}`}>
+                        <View className="flex-1 pr-3">
+                          <Text
+                            className="font-sans-bold text-[15px] text-text-strong"
+                            numberOfLines={1}>
+                            {t.title}
+                          </Text>
+                          <Text className="font-sans text-xs text-text-secondary">
+                            {t.category} · {formatDisplayDate(t.date)}
+                          </Text>
+                        </View>
+                        <Text
+                          className={`font-sans-bold text-[15px] ${
+                            kind === 'income' ? 'text-income' : 'text-expense'
+                          }`}>
+                          {kind === 'income' ? '+ ' : '- '}
+                          {formatAmount(majorOf(t, code))}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </>
             )}
-            {visibleTransactions.length > visibleCount && (
-              <TouchableOpacity
-                className="mt-1 items-center rounded-xl border border-primary-fill bg-surface py-3"
-                accessibilityRole="button"
-                onPress={() => setVisibleCount(c => c + 10)}>
-                <Text className="font-sans-bold text-sm font-semibold text-primary">
-                  Show More ({visibleTransactions.length - visibleCount}{' '}
-                  remaining)
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );
