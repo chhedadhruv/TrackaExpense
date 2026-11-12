@@ -1,4 +1,4 @@
-import {View, Text, ScrollView, TouchableOpacity, Platform} from 'react-native';
+import {View, Text, ScrollView, TouchableOpacity} from 'react-native';
 import React, {useState, useCallback, useMemo} from 'react';
 import ArrowDownLeft from 'lucide-react-native/icons/arrow-down-left';
 import ArrowUpRight from 'lucide-react-native/icons/arrow-up-right';
@@ -7,7 +7,7 @@ import ChartColumn from 'lucide-react-native/icons/chart-column';
 import TrendingDown from 'lucide-react-native/icons/trending-down';
 import TrendingUp from 'lucide-react-native/icons/trending-up';
 import {useFocusEffect, useRouter} from 'expo-router';
-import {DatePickerModal} from 'react-native-paper-dates';
+import DatePickerModal from '../src/components/DatePickerModal';
 import {useTransactions} from '../src/data/hooks';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {useTheme} from '../src/theme';
@@ -264,34 +264,18 @@ const StatisticScreen = () => {
         )}
 
         <DatePickerModal
-          locale="en"
-          mode="single"
           visible={startPickerVisible}
           onDismiss={() => setStartPickerVisible(false)}
           date={customStart ?? new Date()}
-          onConfirm={(params: any) => {
-            setStartPickerVisible(false);
-            setCustomStart(params.date);
-          }}
-          saveLabel="Confirm"
+          onConfirm={({date}) => setCustomStart(date)}
           label="Select start date"
-          uppercase={false}
-          {...(Platform.OS === 'ios' && {presentationStyle: 'pageSheet'})}
         />
         <DatePickerModal
-          locale="en"
-          mode="single"
           visible={endPickerVisible}
           onDismiss={() => setEndPickerVisible(false)}
           date={customEnd ?? new Date()}
-          onConfirm={(params: any) => {
-            setEndPickerVisible(false);
-            setCustomEnd(params.date);
-          }}
-          saveLabel="Confirm"
+          onConfirm={({date}) => setCustomEnd(date)}
           label="Select end date"
-          uppercase={false}
-          {...(Platform.OS === 'ios' && {presentationStyle: 'pageSheet'})}
         />
 
         {!hasAny ? (

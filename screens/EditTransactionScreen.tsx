@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {View, Text} from 'react-native';
-import {ActivityIndicator} from 'react-native-paper';
+import {ActivityIndicator} from 'react-native';
 import {getAuth} from '@react-native-firebase/auth';
 import {
   Timestamp,
