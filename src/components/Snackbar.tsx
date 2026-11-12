@@ -135,12 +135,14 @@ export const SnackbarHost = ({inModal = false}: SnackbarHostProps) => {
   const base =
     (!inModal && bottomOffset > 0 ? bottomOffset : bottomInset) + MARGIN;
 
+  // No dependency array: on native Reanimated 4 ignores it (and warns), because the worklet's
+  // closure ("base" and "inModal") is tracked automatically.
   const liftStyle = useAnimatedStyle(() => {
     // keyboard.height is negative while the keyboard is open (minus its height). A modal built on
     // KeyboardAvoidingModal already moves its content above the keyboard, so it needs no lift.
     const lift = inModal ? 0 : Math.max(0, -keyboard.height.value - base);
     return {transform: [{translateY: -lift}]};
-  }, [base, inModal]);
+  });
 
   // Exactly one host draws: the root one while no modal is open, the modal's own otherwise.
   const visible = inModal ? modalDepth > 0 : modalDepth === 0;

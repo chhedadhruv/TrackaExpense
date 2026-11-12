@@ -38,6 +38,7 @@ import SavingsScreen from '../screens/SavingsScreen';
 import SavingsHistoryScreen from '../screens/SavingsHistoryScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import {useTheme} from '../src/theme';
+import {TAB} from './tabNames';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -253,80 +254,124 @@ const renderTabBar = (props: BottomTabBarProps) => (
   <MeasuredTabBar {...props} />
 );
 
+interface TabIconProps {
+  color: string;
+  size: number;
+  focused: boolean;
+}
+
+/**
+ * Tab bar icon renderers. They live outside AppStack so no component is defined while rendering
+ * (a function written inline in the options would be a new component type every time). Each takes
+ * the active colour and returns the renderer the tab bar calls.
+ */
+const tabIcons = {
+  home:
+    (activeColor: string) =>
+    ({color, size, focused}: TabIconProps) =>
+      (
+        <MaterialCommunityIcons
+          name="home"
+          color={focused ? activeColor : color}
+          size={size}
+        />
+      ),
+  statistic:
+    (activeColor: string) =>
+    ({color, size, focused}: TabIconProps) =>
+      (
+        <FeatherIcons
+          name="bar-chart-2"
+          color={focused ? activeColor : color}
+          size={size}
+        />
+      ),
+  split:
+    (activeColor: string) =>
+    ({color, size, focused}: TabIconProps) =>
+      (
+        <FontAwesome6
+          name="money-bill-transfer"
+          color={focused ? activeColor : color}
+          size={size}
+        />
+      ),
+  savings:
+    (activeColor: string) =>
+    ({color, size, focused}: TabIconProps) =>
+      (
+        <MaterialCommunityIcons
+          name="piggy-bank"
+          color={focused ? activeColor : color}
+          size={size}
+        />
+      ),
+  profile:
+    (activeColor: string) =>
+    ({color, size, focused}: TabIconProps) =>
+      (
+        <Ionicons
+          name="person-outline"
+          color={focused ? activeColor : color}
+          size={size}
+        />
+      ),
+};
+
 const AppStack = () => {
   const {colors} = useTheme();
   return (
     <Tab.Navigator
       tabBar={renderTabBar}
       screenOptions={{activeTintColor: colors.primary} as any}>
+      {/*
+        The tab names end in "Tab" so they differ from the screen of the same name inside each
+        tab's stack (React Navigation warns about the same name nested inside itself, and a
+        navigate() to a duplicated name is ambiguous). The label on the bar is unchanged.
+      */}
       <Tab.Screen
-        name="Home"
+        name={TAB.home}
         component={HomeStack}
         options={{
+          tabBarLabel: 'Home',
           headerShown: false,
-          tabBarIcon: ({color, size, focused}) => (
-            <MaterialCommunityIcons
-              name="home"
-              color={focused ? colors.primary : color}
-              size={size}
-            />
-          ),
+          tabBarIcon: tabIcons.home(colors.primary),
         }}
       />
       <Tab.Screen
-        name="Statistic"
+        name={TAB.statistic}
         component={StatisticStack}
         options={{
+          tabBarLabel: 'Statistic',
           headerShown: false,
-          tabBarIcon: ({color, size, focused}) => (
-            <FeatherIcons
-              name="bar-chart-2"
-              color={focused ? colors.primary : color}
-              size={size}
-            />
-          ),
+          tabBarIcon: tabIcons.statistic(colors.primary),
         }}
       />
       <Tab.Screen
-        name="Split"
+        name={TAB.split}
         component={SplitStack}
         options={{
+          tabBarLabel: 'Split',
           headerShown: false,
-          tabBarIcon: ({color, size, focused}) => (
-            <FontAwesome6
-              name="money-bill-transfer"
-              color={focused ? colors.primary : color}
-              size={size}
-            />
-          ),
+          tabBarIcon: tabIcons.split(colors.primary),
         }}
       />
       <Tab.Screen
-        name="Savings"
+        name={TAB.savings}
         component={SavingsStack}
         options={{
+          tabBarLabel: 'Savings',
           headerShown: false,
-          tabBarIcon: ({color, size, focused}) => (
-            <MaterialCommunityIcons
-              name="piggy-bank"
-              color={focused ? colors.primary : color}
-              size={size}
-            />
-          ),
+          tabBarIcon: tabIcons.savings(colors.primary),
         }}
       />
       <Tab.Screen
-        name="Profile"
+        name={TAB.profile}
         component={ProfileStack}
         options={{
+          tabBarLabel: 'Profile',
           headerShown: false,
-          tabBarIcon: ({color, size, focused}) => (
-            <Ionicons
-              name="person-outline"
-              color={focused ? colors.primary : color}
-              size={size}
-            />
-          ),
+          tabBarIcon: tabIcons.profile(colors.primary),
         }}
       />
     </Tab.Navigator>

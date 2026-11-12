@@ -1,11 +1,5 @@
 import React, {useState} from 'react';
-import {
-  View,
-  Text,
-  ImageBackground,
-  ActivityIndicator,
-  SafeAreaView,
-} from 'react-native';
+import {View, Text, Image, ActivityIndicator, SafeAreaView} from 'react-native';
 import {useTheme} from '../src/theme';
 
 const ImageScreen = ({route}: {route: any}) => {
@@ -31,7 +25,9 @@ const ImageScreen = ({route}: {route: any}) => {
             </Text>
           </View>
         ) : (
-          <ImageBackground
+          // A plain Image: ImageBackground (deprecated) only adds a wrapper for children, and
+          // this screen draws nothing on top of the picture.
+          <Image
             source={{uri: imageUrl}}
             className="h-full w-full"
             resizeMode="contain"
