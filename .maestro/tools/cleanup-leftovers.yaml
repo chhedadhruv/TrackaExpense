@@ -1,0 +1,19 @@
+appId: com.trackaexpense
+name: Delete leftover Maestro expenses
+---
+# Run this by hand after a flow failed halfway: it deletes every expense whose title starts with
+# "Maestro " (the title the flows give their test expenses), so the throwaway account is clean.
+#   maestro test .maestro/tools/cleanup-leftovers.yaml
+- launchApp
+- runFlow: ../subflows/dismiss-dev-banner.yaml
+- tapOn: 'Home'
+- runFlow: ../subflows/dismiss-dev-banner.yaml
+- tapOn: 'See All'
+- repeat:
+    while:
+      visible: 'Maestro \d+'
+    commands:
+      - tapOn: 'Maestro \d+'
+      - runFlow: ../subflows/dismiss-dev-banner.yaml
+      - tapOn: 'Delete Transaction'
+      - tapOn: 'Delete'
