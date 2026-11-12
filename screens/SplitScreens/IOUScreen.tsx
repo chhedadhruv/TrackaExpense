@@ -1,5 +1,7 @@
 import React, {useState} from 'react';
 import {
+  ActivityIndicator,
+  FlatList,
   View,
   StyleSheet,
   TouchableOpacity,
@@ -7,7 +9,6 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import {ActivityIndicator} from 'react-native';
 import Card from '../../src/components/Card';
 import Text from '../../src/components/Text';
 import Handshake from 'lucide-react-native/icons/handshake';
@@ -25,7 +26,6 @@ import {
 import {lookupUserByEmail} from '../../src/services/UserLookup';
 import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
 import {useRouter} from 'expo-router';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {majorOf, transactionMoneyFields} from '../../src/utils/amounts';
@@ -37,6 +37,8 @@ import {
 import {snackbar} from '../../src/utils/snackbarStore';
 import {ErrorState, LoadingState} from '../../src/components/ScreenState';
 import {useIous} from '../../src/data/split';
+
+const iouKey = (iou: {id: string}) => iou.id;
 
 interface IOU {
   id: string;
@@ -257,9 +259,12 @@ const IOUScreen = () => {
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
-        <KeyboardAwareScrollView
-          style={styles.scrollView}
+        <FlatList
+          data={activeList}
+          keyExtractor={iouKey}
+          renderItem={({item}) => renderIOU(item, isDebtor)}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={10}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -267,41 +272,45 @@ const IOUScreen = () => {
               colors={[colors.primary]}
               tintColor={colors.primary}
             />
-          }>
-          <View style={styles.headerSection}>
-            <View style={styles.headerTitleRow}>
-              <Handshake size={32} color={colors.primary} />
-              <Text style={styles.headerTitle}>IOUs</Text>
-            </View>
-            <Text style={styles.headerSubtitle}>
-              Track personal debts without a group
-            </Text>
-          </View>
-          <View style={styles.tabRow}>
-            <TouchableOpacity
-              style={[styles.tab, tab === 'iowe' && styles.tabActive]}
-              onPress={() => setTab('iowe')}>
-              <Text
-                style={[
-                  styles.tabText,
-                  tab === 'iowe' && styles.tabTextActive,
-                ]}>
-                I Owe ({iOwe.length})
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, tab === 'owedtome' && styles.tabActive]}
-              onPress={() => setTab('owedtome')}>
-              <Text
-                style={[
-                  styles.tabText,
-                  tab === 'owedtome' && styles.tabTextActive,
-                ]}>
-                Owed to Me ({owedToMe.length})
-              </Text>
-            </TouchableOpacity>
-          </View>
-          {activeList.length === 0 ? (
+          }
+          ListHeaderComponent={
+            <>
+              <View style={styles.headerSection}>
+                <View style={styles.headerTitleRow}>
+                  <Handshake size={32} color={colors.primary} />
+                  <Text style={styles.headerTitle}>IOUs</Text>
+                </View>
+                <Text style={styles.headerSubtitle}>
+                  Track personal debts without a group
+                </Text>
+              </View>
+              <View style={styles.tabRow}>
+                <TouchableOpacity
+                  style={[styles.tab, tab === 'iowe' && styles.tabActive]}
+                  onPress={() => setTab('iowe')}>
+                  <Text
+                    style={[
+                      styles.tabText,
+                      tab === 'iowe' && styles.tabTextActive,
+                    ]}>
+                    I Owe ({iOwe.length})
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tab, tab === 'owedtome' && styles.tabActive]}
+                  onPress={() => setTab('owedtome')}>
+                  <Text
+                    style={[
+                      styles.tabText,
+                      tab === 'owedtome' && styles.tabTextActive,
+                    ]}>
+                    Owed to Me ({owedToMe.length})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          }
+          ListEmptyComponent={
             <Card
               style={[
                 styles.emptyCard,
@@ -318,11 +327,9 @@ const IOUScreen = () => {
                 </Text>
               </View>
             </Card>
-          ) : (
-            activeList.map(iou => renderIOU(iou, isDebtor))
-          )}
-          <View style={styles.listSpacer} />
-        </KeyboardAwareScrollView>
+          }
+          ListFooterComponent={<View style={styles.listSpacer} />}
+        />
         <TouchableOpacity
           style={styles.fab}
           onPress={() => router.navigate('/split/iou/new')}>
