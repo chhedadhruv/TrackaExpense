@@ -10,4 +10,10 @@ export const queryKeys = {
   groups: (uid: string) => ['groups', uid] as const,
   invitations: (uid: string) => ['invitations', uid] as const,
   memberDetails: (emails: string) => ['memberDetails', emails] as const,
+  groupSplits: (uid: string, groupId: string) =>
+    ['groupSplits', uid, groupId] as const,
+  splitHistory: (uid: string, groupIds: string) =>
+    ['splitHistory', uid, groupIds] as const,
+  iouFrom: (uid: string) => ['iouFrom', uid] as const,
+  iouTo: (uid: string) => ['iouTo', uid] as const,
 };

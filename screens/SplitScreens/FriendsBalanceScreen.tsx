@@ -1,4 +1,4 @@
-import React, {useState, useCallback} from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   View,
   StyleSheet,
@@ -9,17 +9,9 @@ import {
 import {Text, Card, ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import UserAvatar from '../../src/components/Avatar';
-import {
-  collection,
-  getDocs,
-  getFirestore,
-  query,
-  where,
-} from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
-import {useFocusEffect} from 'expo-router';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {minorOf} from '../../src/utils/amounts';
 import {toMajorNumber} from '../../src/utils/money';
@@ -28,7 +20,7 @@ import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import {snackbar} from '../../src/utils/snackbarStore';
 import {ErrorState, LoadingState} from '../../src/components/ScreenState';
-import {useLoadFailure} from '../../src/hooks/useLoadFailure';
+import {useGroups, useGroupsSplits} from '../../src/data/split';
 
 interface Balance {
   email: string;
@@ -39,8 +31,6 @@ interface Balance {
 
 interface SplitDoc {
   id: string;
-  groupId: string;
-  groupName?: string;
   type?: string;
   isSettlement?: boolean;
   amount: number | string;
@@ -48,6 +38,77 @@ interface SplitDoc {
   splitUsers?: {email?: string; name?: string; percentage?: number}[];
   splitType?: string;
 }
+
+const calculateBalancesForSplits = (
+  splits: SplitDoc[],
+  currentEmail: string,
+  currencyCode: string,
+): {email: string; name: string; net: number}[] => {
+  const netMap: Record<string, {email: string; name: string; net: number}> = {};
+  splits.forEach(split => {
+    if (split.type === 'settlement' || split.isSettlement) {
+      const fromEmail = split.paidBy?.email?.toLowerCase();
+      const toEmail = split.splitUsers?.[0]?.email?.toLowerCase();
+      // Integer minor units; converted back to major units when the result is returned.
+      const amount = minorOf(split, currencyCode) ?? 0;
+      if (!fromEmail || !toEmail || fromEmail === toEmail) {
+        return;
+      }
+      if (fromEmail === currentEmail) {
+        if (!netMap[toEmail]) {
+          netMap[toEmail] = {
+            email: toEmail,
+            name: split.splitUsers![0]?.name || toEmail.split('@')[0],
+            net: 0,
+          };
+        }
+        netMap[toEmail].net += amount;
+      } else if (toEmail === currentEmail) {
+        if (!netMap[fromEmail]) {
+          netMap[fromEmail] = {
+            email: fromEmail,
+            name: split.paidBy?.name || fromEmail.split('@')[0],
+            net: 0,
+          };
+        }
+        netMap[fromEmail].net -= amount;
+      }
+      return;
+    }
+    const paidByEmail = split.paidBy?.email?.toLowerCase();
+    const splitUsers = split.splitUsers || [];
+    const shares = sharesMinor(split, currencyCode) ?? [];
+    splitUsers.forEach((u, index) => {
+      const uEmail = u.email?.toLowerCase();
+      if (!uEmail || uEmail === paidByEmail) {
+        return;
+      }
+      const share = shares[index] ?? 0;
+      if (paidByEmail === currentEmail) {
+        if (!netMap[uEmail]) {
+          netMap[uEmail] = {
+            email: uEmail,
+            name: u.name || uEmail.split('@')[0],
+            net: 0,
+          };
+        }
+        netMap[uEmail].net += share;
+      } else if (uEmail === currentEmail) {
+        if (!netMap[paidByEmail!]) {
+          netMap[paidByEmail!] = {
+            email: paidByEmail!,
+            name: split.paidBy?.name || paidByEmail!.split('@')[0],
+            net: 0,
+          };
+        }
+        netMap[paidByEmail!].net -= share;
+      }
+    });
+  });
+  // `net` is in minor units here (summed across groups by the caller); a balance under one
+  // minor unit (0.01) counts as settled.
+  return Object.values(netMap).filter(b => Math.abs(b.net) >= 1);
+};
 
 const FriendsBalanceScreen = () => {
   const {currency} = useCurrency();
@@ -61,191 +122,66 @@ const FriendsBalanceScreen = () => {
     });
     return `${currency.symbol}${formatted}`;
   };
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const {failed, succeed, fail} = useLoadFailure();
-  const [balances, setBalances] = useState<Balance[]>([]);
   const [remindingEmail, setRemindingEmail] = useState<string | null>(null);
 
-  const calculateBalancesForSplits = (
-    splits: SplitDoc[],
-    currentEmail: string,
-    currencyCode: string,
-  ): {email: string; name: string; net: number}[] => {
-    const netMap: Record<string, {email: string; name: string; net: number}> =
-      {};
-    splits.forEach(split => {
-      if (split.type === 'settlement' || split.isSettlement) {
-        const fromEmail = split.paidBy?.email?.toLowerCase();
-        const toEmail = split.splitUsers?.[0]?.email?.toLowerCase();
-        // Integer minor units; converted back to major units when the result is returned.
-        const amount = minorOf(split, currencyCode) ?? 0;
-        if (!fromEmail || !toEmail || fromEmail === toEmail) {
-          return;
+  const groups = useGroups();
+  const groupList = groups.data;
+  const groupIds = useMemo(() => (groupList ?? []).map(g => g.id), [groupList]);
+  const groupSplits = useGroupsSplits<SplitDoc>(groupIds);
+
+  // Worked out from the cached splits, so a split added, settled or deleted anywhere changes the
+  // balances at once. Summed across groups as integer minor units, converted to major units for
+  // display.
+  const balances = useMemo<Balance[]>(() => {
+    if (!groupList || !groupSplits.data) {
+      return [];
+    }
+    const currentEmail = getAuth().currentUser?.email?.toLowerCase() ?? '';
+    const aggregated: Record<string, Balance> = {};
+    const aggregatedMinor: Record<string, number> = {};
+    groupList.forEach(group => {
+      const bals = calculateBalancesForSplits(
+        groupSplits.data?.[group.id] ?? [],
+        currentEmail,
+        currency.code,
+      );
+      bals.forEach(b => {
+        if (!aggregated[b.email]) {
+          aggregated[b.email] = {
+            email: b.email,
+            name: b.name,
+            net: 0,
+            groups: [],
+          };
         }
-        if (fromEmail === currentEmail) {
-          if (!netMap[toEmail]) {
-            netMap[toEmail] = {
-              email: toEmail,
-              name: split.splitUsers![0]?.name || toEmail.split('@')[0],
-              net: 0,
-            };
-          }
-          netMap[toEmail].net += amount;
-        } else if (toEmail === currentEmail) {
-          if (!netMap[fromEmail]) {
-            netMap[fromEmail] = {
-              email: fromEmail,
-              name: split.paidBy?.name || fromEmail.split('@')[0],
-              net: 0,
-            };
-          }
-          netMap[fromEmail].net -= amount;
-        }
-        return;
-      }
-      const paidByEmail = split.paidBy?.email?.toLowerCase();
-      const splitUsers = split.splitUsers || [];
-      const shares = sharesMinor(split, currencyCode) ?? [];
-      splitUsers.forEach((u, index) => {
-        const uEmail = u.email?.toLowerCase();
-        if (!uEmail || uEmail === paidByEmail) {
-          return;
-        }
-        const share = shares[index] ?? 0;
-        if (paidByEmail === currentEmail) {
-          if (!netMap[uEmail]) {
-            netMap[uEmail] = {
-              email: uEmail,
-              name: u.name || uEmail.split('@')[0],
-              net: 0,
-            };
-          }
-          netMap[uEmail].net += share;
-        } else if (uEmail === currentEmail) {
-          if (!netMap[paidByEmail!]) {
-            netMap[paidByEmail!] = {
-              email: paidByEmail!,
-              name: split.paidBy?.name || paidByEmail!.split('@')[0],
-              net: 0,
-            };
-          }
-          netMap[paidByEmail!].net -= share;
-        }
+        aggregatedMinor[b.email] = (aggregatedMinor[b.email] ?? 0) + b.net;
+        aggregated[b.email].net = toMajorNumber(
+          aggregatedMinor[b.email],
+          currency.code,
+        );
+        aggregated[b.email].groups.push({
+          groupId: group.id,
+          name: group.name ?? '',
+          amount: toMajorNumber(b.net, currency.code),
+        });
       });
     });
-    // `net` is in minor units here (summed across groups by the caller); a balance under one
-    // minor unit (0.01) counts as settled.
-    return Object.values(netMap).filter(b => Math.abs(b.net) >= 1);
+    return Object.values(aggregated)
+      .filter(b => Math.abs(b.net) > 0.009)
+      .sort((x, y) => Math.abs(y.net) - Math.abs(x.net));
+  }, [groupList, groupSplits.data, currency.code]);
+
+  const loading = groups.loading || groupSplits.loading;
+  // A failed load must not read as "All settled up": show the error state instead.
+  const failed = groups.error || groupSplits.error;
+  const live = groups.live && groupSplits.live;
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    groups.retry();
+    setTimeout(() => setRefreshing(false), 800);
   };
-
-  const loadBalances = useCallback(
-    async (isRefresh = false) => {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-      try {
-        const currentUser = getAuth().currentUser;
-        if (!currentUser) {
-          return;
-        }
-        const currentEmail = currentUser.email?.toLowerCase() ?? '';
-        const groupsSnap = await getDocs(
-          query(
-            collection(getFirestore(), 'groups'),
-            where('members', 'array-contains', currentUser.email),
-          ),
-        );
-        const allSplits: SplitDoc[] = (
-          await Promise.all(
-            groupsSnap.docs.map(g =>
-              getDocs(
-                collection(getFirestore(), 'groups', g.id, 'splits'),
-              ).then(s =>
-                s.docs.map(
-                  d =>
-                    ({
-                      id: d.id,
-                      groupId: g.id,
-                      groupName: g.data()?.name,
-                      ...d.data(),
-                    } as SplitDoc),
-                ),
-              ),
-            ),
-          )
-        ).flat();
-        const aggregated: Record<string, Balance> = {};
-        const perGroupBalances: Record<
-          string,
-          {name: string; splits: SplitDoc[]}
-        > = {};
-        allSplits.forEach(split => {
-          const groupKey = split.groupId;
-          if (!perGroupBalances[groupKey]) {
-            perGroupBalances[groupKey] = {
-              name: split.groupName || '',
-              splits: [],
-            };
-          }
-          perGroupBalances[groupKey].splits.push(split);
-        });
-        // Summed across groups as integer minor units, converted to major units for display.
-        const aggregatedMinor: Record<string, number> = {};
-        Object.entries(perGroupBalances).forEach(
-          ([groupId, {name: groupName, splits: groupSplits}]) => {
-            const bals = calculateBalancesForSplits(
-              groupSplits,
-              currentEmail,
-              currency.code,
-            );
-            bals.forEach(b => {
-              if (!aggregated[b.email]) {
-                aggregated[b.email] = {
-                  email: b.email,
-                  name: b.name,
-                  net: 0,
-                  groups: [],
-                };
-              }
-              aggregatedMinor[b.email] =
-                (aggregatedMinor[b.email] ?? 0) + b.net;
-              aggregated[b.email].net = toMajorNumber(
-                aggregatedMinor[b.email],
-                currency.code,
-              );
-              aggregated[b.email].groups.push({
-                groupId,
-                name: groupName,
-                amount: toMajorNumber(b.net, currency.code),
-              });
-            });
-          },
-        );
-        const result = Object.values(aggregated)
-          .filter(b => Math.abs(b.net) > 0.009)
-          .sort((a, b) => Math.abs(b.net) - Math.abs(a.net));
-        setBalances(result);
-        succeed();
-      } catch (e) {
-        // A failed load must not read as "All settled up": show the error state instead.
-        fail(e);
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-      // calculateBalancesForSplits is pure (it uses only its arguments).
-    },
-    [currency.code, succeed, fail],
-  );
-
-  useFocusEffect(
-    useCallback(() => {
-      loadBalances();
-    }, [loadBalances]),
-  );
 
   const handleRemind = async (b: Balance) => {
     if (remindingEmail) {
@@ -253,6 +189,11 @@ const FriendsBalanceScreen = () => {
     }
     const currentUser = getAuth().currentUser;
     if (!currentUser) {
+      return;
+    }
+    // The reminder names an amount, so it is sent only from balances the server has confirmed.
+    if (!live) {
+      snackbar.info('Still syncing your balances. Try again in a moment.');
       return;
     }
     const lender = {
@@ -302,10 +243,7 @@ const FriendsBalanceScreen = () => {
 
   if (failed) {
     return (
-      <ErrorState
-        title="Could not load balances"
-        onRetry={() => loadBalances()}
-      />
+      <ErrorState title="Could not load balances" onRetry={handleRefresh} />
     );
   }
 
@@ -327,7 +265,7 @@ const FriendsBalanceScreen = () => {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => loadBalances(true)}
+              onRefresh={handleRefresh}
               colors={[colors.primary]}
               tintColor={colors.primary}
             />
