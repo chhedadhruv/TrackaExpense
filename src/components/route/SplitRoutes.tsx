@@ -1,7 +1,8 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {useLocalSearchParams} from 'expo-router';
 import DocumentRoute from './DocumentRoute';
-import {ErrorState, LoadingState} from '../ScreenState';
+import {EmptyState, ErrorState, LoadingState} from '../ScreenState';
+import {useGroup} from '../../data/split';
 import SplitDetailScreen, {
   type SplitDetailScreenProps,
 } from '../../../screens/SplitScreens/SplitDetailScreen';
@@ -37,8 +38,34 @@ interface LoadedGroup {
   members?: string[];
 }
 
-const groupSegments = (groupId: string | undefined) =>
-  groupId ? ['groups', groupId] : null;
+interface GroupRouteProps {
+  groupId: string | undefined;
+  render: (group: LoadedGroup) => React.ReactElement;
+}
+
+/**
+ * The route-level wrapper for a screen of one group: the group comes from the cached list of the
+ * person's groups (src/data/split.ts), so no screen reads the group document itself.
+ */
+const GroupRoute = ({groupId, render}: GroupRouteProps) => {
+  const group = useGroup(groupId);
+  if (group.data) {
+    return render(group.data);
+  }
+  if (group.loading) {
+    return <LoadingState message="Loading…" />;
+  }
+  if (group.error) {
+    return <ErrorState onRetry={group.retry} />;
+  }
+  return (
+    <EmptyState
+      fill
+      title="Group not found"
+      message="It may have been deleted."
+    />
+  );
+};
 
 /** A split, opened by the group id and the split id. */
 export const SplitDetailRoute = () => {
@@ -47,9 +74,8 @@ export const SplitDetailRoute = () => {
     splitId: string;
   }>();
   return (
-    <DocumentRoute<LoadedGroup>
-      segments={groupSegments(groupId)}
-      missingTitle="Group not found"
+    <GroupRoute
+      groupId={groupId}
       render={group => (
         <DocumentRoute<SplitDetailScreenProps['split']>
           segments={
@@ -67,9 +93,8 @@ export const SplitDetailRoute = () => {
 export const SplitTransactionsRoute = () => {
   const {groupId} = useLocalSearchParams<{groupId: string}>();
   return (
-    <DocumentRoute<LoadedGroup>
-      segments={groupSegments(groupId)}
-      missingTitle="Group not found"
+    <GroupRoute
+      groupId={groupId}
       render={group => <SplitTransactionScreen group={group} />}
     />
   );
@@ -82,9 +107,8 @@ export const CreateSplitRoute = () => {
     splitId?: string;
   }>();
   return (
-    <DocumentRoute<LoadedGroup>
-      segments={groupSegments(groupId)}
-      missingTitle="Group not found"
+    <GroupRoute
+      groupId={groupId}
       render={group =>
         splitId ? (
           <DocumentRoute<NonNullable<CreateSplitScreenProps['split']>>
@@ -194,9 +218,8 @@ export const SettleUpRoute = () => {
         }
       : undefined;
   return (
-    <DocumentRoute<LoadedGroup>
-      segments={groupSegments(groupId)}
-      missingTitle="Group not found"
+    <GroupRoute
+      groupId={groupId}
       render={group => (
         <SettleUpWithMembers group={group} preselect={preselect} />
       )}
