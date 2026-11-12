@@ -77,6 +77,12 @@ export interface GroupDocument {
   memberNames: Record<string, string>;
   createdBy: string;
   createdAt: Timestamp;
+  /** Group kind chosen when it was created (travel, home, ...). */
+  category?: string;
+  /** Emails invited but not yet joined. */
+  pendingInvites?: string[];
+  /** Member uids, derived by the server from `members`. Not read by the app yet. */
+  memberIds?: string[];
 }
 
 export interface SplitUser {
@@ -174,6 +180,8 @@ export interface InvitationDocument {
   groupId: string;
   groupName: string;
   invitedBy: string;
+  inviterName?: string;
+  inviterEmail?: string;
   status: 'pending' | 'accepted' | 'declined';
 }
 
