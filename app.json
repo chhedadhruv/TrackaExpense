@@ -128,6 +128,7 @@
           "backgroundColor": "#4553b3"
         }
       ],
+      "expo-router",
       "./plugins/with-release-signing"
     ],
     "runtimeVersion": {

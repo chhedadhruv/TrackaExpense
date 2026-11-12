@@ -10,6 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import React, {useState, useEffect, useCallback, useRef} from 'react';
+import {useRouter} from 'expo-router';
 import {Card} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {getAuth} from '@react-native-firebase/auth';
@@ -57,7 +58,8 @@ const TIME_RANGES: {key: TimeRange; label: string; icon: McIconName}[] = [
 
 const RECENT_LIMIT = 5;
 
-const HomeScreen = ({navigation}: {navigation: any}) => {
+const HomeScreen = () => {
+  const router = useRouter();
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
   const {currency, formatAmount} = useCurrency();
@@ -494,7 +496,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
           <View style={styles.quickActionsContainer}>
             <TouchableOpacity
               style={[styles.quickActionButton, styles.addIncomeButton]}
-              onPress={() => navigation.navigate('AddIncome')}>
+              onPress={() => router.navigate('/income/add')}>
               <MaterialCommunityIcons
                 name="cash-plus"
                 size={20}
@@ -504,7 +506,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.quickActionButton, styles.addExpenseButton]}
-              onPress={() => navigation.navigate('AddExpense')}>
+              onPress={() => router.navigate('/expense/add')}>
               <MaterialCommunityIcons
                 name="cash-minus"
                 size={20}
@@ -531,7 +533,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
               </Text>
             </View>
             <TouchableOpacity
-              onPress={() => navigation.navigate('Transaction')}
+              onPress={() => router.navigate('/transactions')}
               style={styles.seeAllButton}>
               <Text style={styles.seeAllText}>See All</Text>
               <MaterialCommunityIcons
@@ -552,7 +554,7 @@ const HomeScreen = ({navigation}: {navigation: any}) => {
                   ]}
                   elevation={Platform.OS === 'android' ? 0 : 2}
                   onPress={() =>
-                    navigation.navigate('TransactionDetail', {transaction})
+                    router.navigate(`/transaction/${transaction.id}`)
                   }>
                   <View style={styles.transactionsCardContent}>
                     <View style={styles.transactionsCardDetails}>

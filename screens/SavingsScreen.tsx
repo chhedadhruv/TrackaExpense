@@ -1,4 +1,5 @@
 import React, {useState, useEffect} from 'react';
+import {useRouter} from 'expo-router';
 import {
   View,
   Text,
@@ -85,7 +86,8 @@ const EMPTY_EDIT_VALUES: EditValues = {
   targetDate: '',
 };
 
-const SavingsScreen = ({navigation}: {navigation: any}) => {
+const SavingsScreen = () => {
+  const router = useRouter();
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
   const {currency, formatAmount: formatCurrencyAmount} = useCurrency();
@@ -854,7 +856,7 @@ const SavingsScreen = ({navigation}: {navigation: any}) => {
               </View>
               <TouchableOpacity
                 style={styles.historyIconButton}
-                onPress={() => navigation.navigate('SavingsHistory')}>
+                onPress={() => router.navigate('/savings/history')}>
                 <MaterialCommunityIcons
                   name="history"
                   size={20}

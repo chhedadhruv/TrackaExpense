@@ -1,5 +1,6 @@
 import {View, Text, ActivityIndicator, TouchableOpacity} from 'react-native';
 import React, {useState, useContext} from 'react';
+import {useRouter} from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import FormInput from '../components/FormInput';
 import FormButton from '../components/FormButton';
@@ -7,7 +8,8 @@ import {AuthContext} from '../navigation/AuthProvider';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import {useTheme} from '../src/theme';
 
-const ForgotPasswordScreen = ({navigation}: {navigation: any}) => {
+const ForgotPasswordScreen = () => {
+  const router = useRouter();
   const {colors} = useTheme();
   const [email, setEmail] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -152,7 +154,7 @@ const ForgotPasswordScreen = ({navigation}: {navigation: any}) => {
           <View className="items-center pb-5">
             <TouchableOpacity
               className="p-[15px]"
-              onPress={() => navigation.navigate('Login')}>
+              onPress={() => router.navigate('/login')}>
               <Text className="text-center font-sans text-base text-text-secondary">
                 Remember your password?{' '}
                 <Text className="font-semibold text-primary">Sign in here</Text>

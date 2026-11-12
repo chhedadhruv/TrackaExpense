@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from 'react';
-import {View, Text, SafeAreaView} from 'react-native';
+import {useRouter} from 'expo-router';
+import {View, Text} from 'react-native';
 import {ActivityIndicator} from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
@@ -23,7 +24,8 @@ interface ProfileData {
   balance?: number;
 }
 
-const EditProfileScreen = ({navigation}: {navigation: any}) => {
+const EditProfileScreen = () => {
+  const router = useRouter();
   const {colors} = useTheme();
   const [userData, setUserData] = useState<ProfileData>({
     name: '',
@@ -40,7 +42,7 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
         const currentUser = getAuth().currentUser;
         if (!currentUser) {
           snackbar.error('No user is logged in');
-          navigation.goBack();
+          router.back();
           return;
         }
         const snap = await getDoc(
@@ -105,7 +107,7 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
         balance: userData.balance,
       });
       snackbar.success('Profile updated successfully');
-      navigation.goBack();
+      router.back();
     } catch (_) {
       setUpdating(false);
       setErrorMessage(
@@ -126,7 +128,7 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <View className="flex-1 bg-background">
       <KeyboardAwareScrollView
         className="flex-1"
         contentContainerClassName="p-5 pb-10"
@@ -235,7 +237,7 @@ const EditProfileScreen = ({navigation}: {navigation: any}) => {
           </View>
         </View>
       </KeyboardAwareScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

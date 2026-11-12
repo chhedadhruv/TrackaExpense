@@ -34,7 +34,7 @@ import {
   lookupUsersByEmail,
 } from '../../src/services/UserLookup';
 import {getAuth} from '@react-native-firebase/auth';
-import {useFocusEffect} from '@react-navigation/native';
+import {useFocusEffect, useLocalSearchParams, useRouter} from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import TriangleAlert from 'lucide-react-native/icons/triangle-alert';
 import UserAvatar from '../../src/components/Avatar';
@@ -93,7 +93,10 @@ const buildGroupCategories = (color: string) =>
 const getCategoryIcon = (value: string): McIconName =>
   GROUP_CATEGORY_ICONS[value] || 'account-group';
 
-const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
+const SplitScreen = () => {
+  const router = useRouter();
+  // Set by the group detail screen's edit button; opens that group's edit form once loaded.
+  const {editGroupId} = useLocalSearchParams<{editGroupId?: string}>();
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
   const groupCategories = React.useMemo(
@@ -192,31 +195,15 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
   }, [currentUser?.email]);
 
   useEffect(() => {
-    if (route?.params?.editGroupId && groups.length > 0) {
-      const target = groups.find(g => g.id === route.params.editGroupId);
+    if (editGroupId && groups.length > 0) {
+      const target = groups.find(g => g.id === editGroupId);
       if (target) {
         handleEditGroup(target);
-        navigation.setParams({editGroupId: undefined});
+        router.setParams({editGroupId: undefined});
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route?.params?.editGroupId, groups]);
-
-  useEffect(() => {
-    if (route?.params?.editGroup && groups.length > 0) {
-      handleEditGroup(route.params.editGroup);
-      navigation.setParams({editGroup: undefined});
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route?.params?.editGroup, groups]);
-
-  useEffect(() => {
-    if (route?.params?.editGroup && !loading && groups.length === 0) {
-      handleEditGroup(route.params.editGroup);
-      navigation.setParams({editGroup: undefined});
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route?.params?.editGroup, loading, groups.length]);
+  }, [editGroupId, groups]);
 
   useEffect(() => {
     const fetchSplitHistory = async () => {
@@ -656,14 +643,9 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
         <TouchableOpacity
           style={styles.groupCardContent}
           onPress={() =>
-            navigation.navigate('SplitGroupDetail', {
-              group: {
-                id: group.id,
-                name: group.name,
-                category: group.category,
-                members: group.members,
-                memberDetails: group.memberDetails,
-              },
+            router.navigate({
+              pathname: '/split/group/[groupId]',
+              params: {groupId: group.id, groupName: group.name},
             })
           }>
           <View style={styles.groupCardHeader}>
@@ -723,7 +705,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
           <View style={styles.quickAccessRow}>
             <TouchableOpacity
               style={styles.quickAccessButton}
-              onPress={() => navigation.navigate('FriendsBalance')}>
+              onPress={() => router.navigate('/split/friends')}>
               <MaterialCommunityIcons
                 name="account-multiple"
                 size={22}
@@ -734,7 +716,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
             {getConfig().enable_iou_feature && (
               <TouchableOpacity
                 style={styles.quickAccessButton}
-                onPress={() => navigation.navigate('IOU')}>
+                onPress={() => router.navigate('/split/iou')}>
                 <MaterialCommunityIcons
                   name="handshake"
                   size={22}
@@ -897,7 +879,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
               <View style={styles.groupsHeaderActions}>
                 <TouchableOpacity
                   style={styles.iconActionButton}
-                  onPress={() => navigation.navigate('Invitations')}>
+                  onPress={() => router.navigate('/split/invitations')}>
                   <MaterialCommunityIcons
                     name="account-multiple-plus-outline"
                     size={20}
@@ -917,7 +899,7 @@ const SplitScreen = ({navigation, route}: {navigation: any; route: any}) => {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.iconActionButton}
-                  onPress={() => navigation.navigate('SplitHistory')}>
+                  onPress={() => router.navigate('/split/history')}>
                   <MaterialCommunityIcons
                     name="history"
                     size={20}
