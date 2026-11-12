@@ -1,11 +1,13 @@
 import React from 'react';
 import {View, type ColorValue} from 'react-native';
 import {BottomTabBar, type BottomTabBarProps} from 'expo-router/js-tabs';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
-import FeatherIcons from '@expo/vector-icons/Feather';
+import ArrowLeftRight from 'lucide-react-native/icons/arrow-left-right';
+import ChartColumn from 'lucide-react-native/icons/chart-column';
+import House from 'lucide-react-native/icons/house';
+import PiggyBank from 'lucide-react-native/icons/piggy-bank';
+import User from 'lucide-react-native/icons/user';
 import {setSnackbarBottomOffset} from '../utils/snackbarStore';
+import type {AppIcon} from '../types/icons';
 
 /** Reports the tab bar height so the snackbar floats just above it. */
 const MeasuredTabBar = (props: BottomTabBarProps) => {
@@ -35,55 +37,16 @@ interface TabIconProps {
  * (a function written inline in the options would be a new component type every time). Each takes
  * the active colour and returns the renderer the tab bar calls.
  */
+const tabIcon =
+  (Icon: AppIcon) =>
+  (activeColor: string) =>
+  ({color, size, focused}: TabIconProps) =>
+    <Icon color={(focused ? activeColor : color) as string} size={size} />;
+
 export const tabIcons = {
-  home:
-    (activeColor: string) =>
-    ({color, size, focused}: TabIconProps) =>
-      (
-        <MaterialCommunityIcons
-          name="home"
-          color={(focused ? activeColor : color) as string}
-          size={size}
-        />
-      ),
-  statistic:
-    (activeColor: string) =>
-    ({color, size, focused}: TabIconProps) =>
-      (
-        <FeatherIcons
-          name="bar-chart-2"
-          color={(focused ? activeColor : color) as string}
-          size={size}
-        />
-      ),
-  split:
-    (activeColor: string) =>
-    ({color, size, focused}: TabIconProps) =>
-      (
-        <FontAwesome6
-          name="money-bill-transfer"
-          color={(focused ? activeColor : color) as string}
-          size={size}
-        />
-      ),
-  savings:
-    (activeColor: string) =>
-    ({color, size, focused}: TabIconProps) =>
-      (
-        <MaterialCommunityIcons
-          name="piggy-bank"
-          color={(focused ? activeColor : color) as string}
-          size={size}
-        />
-      ),
-  profile:
-    (activeColor: string) =>
-    ({color, size, focused}: TabIconProps) =>
-      (
-        <Ionicons
-          name="person-outline"
-          color={(focused ? activeColor : color) as string}
-          size={size}
-        />
-      ),
+  home: tabIcon(House),
+  statistic: tabIcon(ChartColumn),
+  split: tabIcon(ArrowLeftRight),
+  savings: tabIcon(PiggyBank),
+  profile: tabIcon(User),
 };

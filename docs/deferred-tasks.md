@@ -64,6 +64,12 @@ Candidates for the next release, 1.4.1 or similar. None blocks 1.4.0.
 - The 12 old Sentry issues from 1.3.5 debug builds of 8 to 9 November (local file paths in the stack traces) were resolved on 2026-11-10 as noise. Release-1.4.0 issues so far: two transient `firestore/unavailable` errors and one `TOO_MANY_REGISTRATIONS` push-registration error, all from the owner's phone.
 - The store listing sources, backups and restore payloads for the demo data are in `../trackaexpense-audit/store-listing/` (README inside). The demo data was restored; all 5 screenshots and the feature graphic are ready there.
 
+## Left over from the icon migration (vector-icons to lucide)
+
+- `@expo/vector-icons` is still installed because react-native-paper and `react-native-paper-dates` load it at runtime (date picker chevrons and close button). Dropping it needs a `PaperProvider settings={{icon}}` mapping for the names those two use, then a check of every date picker (Home, Transactions, Savings, Split transactions, Create Split, Add and Edit forms). Not done: it is a separate, riskier change.
+- Not checked: iOS (no iOS build), the Sign in with Apple button (hidden on Android; the new `AppleLogo` mark is drawn but unseen), and the Android 13 themed icon.
+- Visual changes to confirm with the owner: the Paper checkbox on the Create Split member list is now the same square tick box that iOS already had (Android used Paper's Material checkbox); a few glyphs differ from the old Material set (Bonus is a badge, wedding goal a gem, reminder off is a crossed bell, camera-switch is a refresh arrow).
+
 ## Left over from the Statistics rewrite (Victory Native XL)
 
 - `react-native-gifted-charts` is no longer imported by any file. Before removing it, find out why removing it crashed startup earlier (see the gotcha in `CLAUDE.md`) and check a release build.

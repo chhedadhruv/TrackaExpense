@@ -9,7 +9,18 @@ import {
 } from 'react-native';
 import {Card, Button} from 'react-native-paper';
 import {useFocusEffect, useLocalSearchParams, useRouter} from 'expo-router';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import ArrowRight from 'lucide-react-native/icons/arrow-right';
+import Bell from 'lucide-react-native/icons/bell';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
+import Clock from 'lucide-react-native/icons/clock';
+import HandCoins from 'lucide-react-native/icons/hand-coins';
+import LogOut from 'lucide-react-native/icons/log-out';
+import MailCheck from 'lucide-react-native/icons/mail-check';
+import Pencil from 'lucide-react-native/icons/pencil';
+import Plus from 'lucide-react-native/icons/plus';
+import Receipt from 'lucide-react-native/icons/receipt';
+import Repeat from 'lucide-react-native/icons/repeat';
+import Trash2 from 'lucide-react-native/icons/trash-2';
 import UserAvatar from '../../src/components/Avatar';
 import {
   Timestamp,
@@ -390,22 +401,14 @@ const SplitGroupDetailScreen = () => {
             <Text style={styles.pendingInvitesLabel}>Pending Invites</Text>
             {pendingInvites.map(email => (
               <View key={email} style={styles.pendingInviteRow}>
-                <MaterialCommunityIcons
-                  name="clock-outline"
-                  size={14}
-                  color="rgba(255,255,255,0.7)"
-                />
+                <Clock size={14} color="rgba(255,255,255,0.7)" />
                 <Text style={styles.pendingInviteEmail} numberOfLines={1}>
                   {email}
                 </Text>
                 <TouchableOpacity
                   onPress={() => handleResendInvite(email)}
                   style={styles.resendButton}>
-                  <MaterialCommunityIcons
-                    name="email-fast-outline"
-                    size={16}
-                    color={colors.onPrimary}
-                  />
+                  <MailCheck size={16} color={colors.onPrimary} />
                   <Text style={styles.resendText}>Resend</Text>
                 </TouchableOpacity>
               </View>
@@ -423,11 +426,7 @@ const SplitGroupDetailScreen = () => {
             }
             accessibilityLabel="Edit group"
             accessibilityRole="button">
-            <MaterialCommunityIcons
-              name="pencil"
-              size={24}
-              color={colors.primary}
-            />
+            <Pencil size={24} color={colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.iconButton, styles.leaveButton]}
@@ -466,11 +465,7 @@ const SplitGroupDetailScreen = () => {
             }}
             accessibilityLabel="Leave group"
             accessibilityRole="button">
-            <MaterialCommunityIcons
-              name="exit-to-app"
-              size={24}
-              color={colors.expense}
-            />
+            <LogOut size={24} color={colors.expense} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.iconButton, styles.deleteButton]}
@@ -510,11 +505,7 @@ const SplitGroupDetailScreen = () => {
             }}
             accessibilityLabel="Delete group"
             accessibilityRole="button">
-            <MaterialCommunityIcons
-              name="delete-outline"
-              size={24}
-              color={colors.onPrimary}
-            />
+            <Trash2 size={24} color={colors.onPrimary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -546,11 +537,7 @@ const SplitGroupDetailScreen = () => {
                 styles.statIconCircle,
                 {backgroundColor: colors.primarySoft},
               ]}>
-              <MaterialCommunityIcons
-                name="receipt"
-                size={18}
-                color={colors.primary}
-              />
+              <Receipt size={18} color={colors.primary} />
             </View>
             <Text style={styles.statCardLabel}>Total Spent</Text>
             <Text style={[styles.statCardValue, {color: colors.primary}]}>
@@ -570,11 +557,7 @@ const SplitGroupDetailScreen = () => {
                 styles.statIconCircle,
                 {backgroundColor: colors.expenseSoft},
               ]}>
-              <MaterialCommunityIcons
-                name="account-cash"
-                size={18}
-                color={colors.expense}
-              />
+              <HandCoins size={18} color={colors.expense} />
             </View>
             <Text style={styles.statCardLabel}>Your Share</Text>
             <Text style={[styles.statCardValue, {color: colors.expenseText}]}>
@@ -618,12 +601,9 @@ const SplitGroupDetailScreen = () => {
               <View style={styles.lendingSummaryContent}>
                 <View style={styles.lendingUserContainer}>
                   <UserAvatar size={40} name={detail.borrower.name} />
-                  <MaterialCommunityIcons
-                    name="arrow-right"
-                    size={20}
-                    color={colors.textMuted}
-                    style={styles.arrowIcon}
-                  />
+                  <View style={styles.arrowIcon}>
+                    <ArrowRight size={20} color={colors.textMuted} />
+                  </View>
                   <UserAvatar size={40} name={detail.lender.name} />
                 </View>
                 {viewerPays ? (
@@ -682,11 +662,7 @@ const SplitGroupDetailScreen = () => {
                           snackbar.error('Failed to send reminder');
                         }
                       }}>
-                      <MaterialCommunityIcons
-                        name="bell-outline"
-                        size={18}
-                        color={colors.primary}
-                      />
+                      <Bell size={18} color={colors.primary} />
                     </TouchableOpacity>
                   </>
                 ) : (
@@ -762,11 +738,7 @@ const SplitGroupDetailScreen = () => {
                       )}
                       {split.recurring?.enabled && (
                         <View style={styles.recurringTag}>
-                          <MaterialCommunityIcons
-                            name="repeat"
-                            size={11}
-                            color={colors.primary}
-                          />
+                          <Repeat size={11} color={colors.primary} />
                           <Text style={styles.recurringTagText}>
                             {split.recurring.frequency === 'weekly'
                               ? 'Weekly'
@@ -794,11 +766,7 @@ const SplitGroupDetailScreen = () => {
                 }
                 style={styles.showAllButton}>
                 <Text style={styles.showAllText}>Show all transactions</Text>
-                <MaterialCommunityIcons
-                  name="chevron-right"
-                  size={20}
-                  color={colors.primary}
-                />
+                <ChevronRight size={20} color={colors.primary} />
               </TouchableOpacity>
             )}
           </>
@@ -853,11 +821,7 @@ const SplitGroupDetailScreen = () => {
           }
           accessibilityLabel="Add split"
           accessibilityRole="button">
-          <MaterialCommunityIcons
-            name="plus"
-            size={28}
-            color={colors.onPrimary}
-          />
+          <Plus size={28} color={colors.onPrimary} />
         </TouchableOpacity>
       </View>
     </SafeAreaProvider>

@@ -7,14 +7,13 @@ import {
   TextStyle,
 } from 'react-native';
 import {windowHeight} from '../utils/Dimentions';
-import AntDesign from '@expo/vector-icons/AntDesign';
-import type {AntIconName} from '../src/types/icons';
+import type {AppIcon} from '../src/types/icons';
 import {useTheme} from '../src/theme';
 
 interface FormInputProps extends TextInputProps {
   labelValue?: string;
   placeholderText?: string;
-  iconType?: AntIconName;
+  icon?: AppIcon;
   iconSize?: number;
   /** Overrides the theme's secondary text colour for the icon. */
   iconColor?: string;
@@ -27,7 +26,7 @@ const INPUT_HEIGHT = windowHeight / 15;
 const FormInput = ({
   labelValue,
   placeholderText,
-  iconType,
+  icon: Icon,
   iconSize = 25,
   iconColor,
   inputStyle,
@@ -38,13 +37,9 @@ const FormInput = ({
     <View
       className="mb-2.5 mt-1 w-full flex-row items-center rounded-lg border border-border bg-surface"
       style={{height: INPUT_HEIGHT}}>
-      {iconType && (
+      {Icon && (
         <View className="h-full w-[50px] items-center justify-center border-r border-border p-2.5">
-          <AntDesign
-            name={iconType}
-            size={iconSize}
-            color={iconColor ?? colors.textSecondary}
-          />
+          <Icon size={iconSize} color={iconColor ?? colors.textSecondary} />
         </View>
       )}
       <TextInput

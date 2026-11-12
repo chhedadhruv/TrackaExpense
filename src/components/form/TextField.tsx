@@ -1,8 +1,7 @@
 import React from 'react';
 import {Text, TextInput, View, type TextInputProps} from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {useTheme} from '../../theme';
-import type {McIconName} from '../../types/icons';
+import type {AppIcon} from '../../types/icons';
 import {FormSection} from './FormParts';
 
 interface TextFieldProps
@@ -12,7 +11,7 @@ interface TextFieldProps
   > {
   label: string;
   optional?: boolean;
-  icon: McIconName;
+  icon: AppIcon;
   maxLength: number;
   disabled?: boolean;
 }
@@ -23,7 +22,7 @@ const TOP_ALIGNED = {textAlignVertical: 'top'} as const;
 const TextField = ({
   label,
   optional,
-  icon,
+  icon: Icon,
   maxLength,
   disabled = false,
   value = '',
@@ -33,12 +32,9 @@ const TextField = ({
   return (
     <FormSection label={label} optional={optional}>
       <View className="flex-row items-center rounded-xl border border-card-border bg-surface-muted px-[15px] py-2.5">
-        <MaterialCommunityIcons
-          name={icon}
-          size={20}
-          color={colors.primary}
-          className="mr-3"
-        />
+        <View className="mr-3">
+          <Icon size={20} color={colors.primary} />
+        </View>
         <TextInput
           {...inputProps}
           value={value}

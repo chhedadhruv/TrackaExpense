@@ -1,13 +1,15 @@
 import React from 'react';
 import {Text, TouchableOpacity, View} from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Moon from 'lucide-react-native/icons/moon';
+import Sun from 'lucide-react-native/icons/sun';
+import SunMoon from 'lucide-react-native/icons/sun-moon';
 import {useTheme, type ThemeMode} from '../theme';
-import type {McIconName} from '../types/icons';
+import type {AppIcon} from '../types/icons';
 
-const OPTIONS: {mode: ThemeMode; label: string; icon: McIconName}[] = [
-  {mode: 'system', label: 'System', icon: 'theme-light-dark'},
-  {mode: 'light', label: 'Light', icon: 'weather-sunny'},
-  {mode: 'dark', label: 'Dark', icon: 'weather-night'},
+const OPTIONS: {mode: ThemeMode; label: string; icon: AppIcon}[] = [
+  {mode: 'system', label: 'System', icon: SunMoon},
+  {mode: 'light', label: 'Light', icon: Sun},
+  {mode: 'dark', label: 'Dark', icon: Moon},
 ];
 
 /**
@@ -30,6 +32,7 @@ const AppearanceSetting = () => {
       <View accessibilityRole="radiogroup" className="mt-3.5 flex-row gap-2">
         {OPTIONS.map(option => {
           const selected = mode === option.mode;
+          const Icon = option.icon;
           return (
             <TouchableOpacity
               key={option.mode}
@@ -42,8 +45,7 @@ const AppearanceSetting = () => {
                   ? 'border-primary-fill bg-primary-fill'
                   : 'border-card-border bg-surface-muted'
               }`}>
-              <MaterialCommunityIcons
-                name={option.icon}
+              <Icon
                 size={18}
                 color={selected ? colors.onPrimary : colors.textSecondary}
               />

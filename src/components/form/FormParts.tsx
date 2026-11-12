@@ -1,8 +1,8 @@
 import React, {type ReactNode} from 'react';
 import {Text, View} from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import CircleAlert from 'lucide-react-native/icons/circle-alert';
 import {useTheme} from '../../theme';
-import type {McIconName} from '../../types/icons';
+import type {AppIcon} from '../../types/icons';
 
 /**
  * Small building blocks shared by the add and edit forms (expense, income, transaction), so they
@@ -10,7 +10,7 @@ import type {McIconName} from '../../types/icons';
  */
 
 interface FormHeaderProps {
-  icon: McIconName;
+  icon: AppIcon;
   /** Icon colour, usually the income or expense colour from useTheme(). */
   iconColor: string;
   title: string;
@@ -19,14 +19,14 @@ interface FormHeaderProps {
 
 /** The screen title: a coloured icon, the heading and one line of help. */
 export const FormHeader = ({
-  icon,
+  icon: Icon,
   iconColor,
   title,
   subtitle,
 }: FormHeaderProps) => (
   <View className="items-center px-5 pb-5 pt-[30px]">
     <View className="mb-2 flex-row items-center">
-      <MaterialCommunityIcons name={icon} size={32} color={iconColor} />
+      <Icon size={32} color={iconColor} />
       <Text
         accessibilityRole="header"
         className="ml-3 font-heading text-[28px] font-bold text-primary">
@@ -78,11 +78,7 @@ export const FormError = ({message}: {message: string}) => {
     <View
       accessibilityRole="alert"
       className="mb-5 flex-row items-center rounded-xl border-l-4 border-expense bg-expense-soft p-[15px]">
-      <MaterialCommunityIcons
-        name="alert-circle"
-        size={20}
-        color={colors.expenseText}
-      />
+      <CircleAlert size={20} color={colors.expenseText} />
       <Text className="ml-2.5 flex-1 font-sans text-sm text-expense-text">
         {message}
       </Text>

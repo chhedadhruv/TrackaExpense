@@ -7,7 +7,9 @@ import {respondToInvitation} from '../../src/services/InvitationService';
 import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../../src/services/ErrorReporter';
 import * as AnalyticsService from '../../src/services/AnalyticsService';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Check from 'lucide-react-native/icons/check';
+import Users from 'lucide-react-native/icons/users';
+import X from 'lucide-react-native/icons/x';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {ErrorState} from '../../src/components/ScreenState';
 import {useInvitations} from '../../src/data/split';
@@ -90,11 +92,7 @@ const InvitationsScreen = () => {
                     <View style={styles.inviteRow}>
                       <View style={styles.inviteLeft}>
                         <View style={styles.inviteIconWrap}>
-                          <MaterialCommunityIcons
-                            name="account-group"
-                            size={22}
-                            color={colors.onPrimary}
-                          />
+                          <Users size={22} color={colors.onPrimary} />
                         </View>
                         <View style={styles.inviteTextContainer}>
                           <Text style={styles.inviteTitle}>
@@ -110,20 +108,12 @@ const InvitationsScreen = () => {
                         <TouchableOpacity
                           style={styles.acceptBtn}
                           onPress={() => acceptInvitation(invite)}>
-                          <MaterialCommunityIcons
-                            name="check"
-                            size={18}
-                            color={colors.onPrimary}
-                          />
+                          <Check size={18} color={colors.onPrimary} />
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={styles.declineBtn}
                           onPress={() => declineInvitation(invite)}>
-                          <MaterialCommunityIcons
-                            name="close"
-                            size={18}
-                            color={colors.expense}
-                          />
+                          <X size={18} color={colors.expense} />
                         </TouchableOpacity>
                       </View>
                     </View>

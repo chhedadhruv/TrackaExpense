@@ -11,7 +11,15 @@ import {
 } from 'react-native';
 import {Searchbar} from 'react-native-paper';
 import ReceiptText from 'lucide-react-native/icons/receipt-text';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Calendar1 from 'lucide-react-native/icons/calendar-1';
+import CalendarArrowDown from 'lucide-react-native/icons/calendar-arrow-down';
+import CalendarArrowUp from 'lucide-react-native/icons/calendar-arrow-up';
+import CalendarDays from 'lucide-react-native/icons/calendar-days';
+import CalendarRange from 'lucide-react-native/icons/calendar-range';
+import Download from 'lucide-react-native/icons/download';
+import List from 'lucide-react-native/icons/list';
+import Search from 'lucide-react-native/icons/search';
+import X from 'lucide-react-native/icons/x';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import Share from 'react-native-share';
@@ -23,7 +31,7 @@ import {useTheme, useThemedStyles, type ThemeColors} from '../src/theme';
 import {getConfig} from '../src/services/RemoteConfigService';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import type {TransactionDocument} from '../src/types';
-import type {McIconName} from '../src/types/icons';
+import type {AppIcon} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
 import {
   EmptyState,
@@ -42,12 +50,46 @@ type FilterType = PeriodFilter;
 
 const FILTERS: FilterType[] = ['all', '7days', '30days', 'custom'];
 
-const FILTER_ICONS: Record<FilterType, McIconName> = {
-  all: 'format-list-bulleted',
-  '7days': 'calendar-week',
-  '30days': 'calendar-month',
-  custom: 'calendar-range',
+const FILTER_ICONS: Record<FilterType, AppIcon> = {
+  all: List,
+  '7days': Calendar1,
+  '30days': CalendarDays,
+  custom: CalendarRange,
 };
+
+const FilterGlyph = ({
+  filter,
+  size,
+  color,
+}: {
+  filter: FilterType;
+  size: number;
+  color: string;
+}) => {
+  const Icon = FILTER_ICONS[filter];
+  return <Icon size={size} color={color} />;
+};
+
+const CategoryGlyph = ({
+  category,
+  size,
+  color,
+}: {
+  category: string;
+  size: number;
+  color: string;
+}) => {
+  const Icon = getCategoryIcon(category);
+  return <Icon size={size} color={color} />;
+};
+
+// Paper's Searchbar draws its own icons from a font package; these replace them with lucide.
+const renderSearchIcon = ({size, color}: {size: number; color: string}) => (
+  <Search size={size} color={color} />
+);
+const renderClearIcon = ({size, color}: {size: number; color: string}) => (
+  <X size={size} color={color} />
+);
 
 const FILTER_LABELS: Record<FilterType, string> = {
   all: 'All',
@@ -214,8 +256,7 @@ const TransactionScreen = () => {
             accessibilityState={{disabled: noResults}}
             onPress={downloadCSV}
             disabled={noResults}>
-            <MaterialCommunityIcons
-              name="download"
+            <Download
               size={20}
               color={noResults ? colors.textPlaceholder : colors.primary}
             />
@@ -245,8 +286,8 @@ const TransactionScreen = () => {
               className="mb-3 flex-row items-center justify-between rounded-2xl border border-card-border bg-surface p-4 ios:shadow-md">
               <View className="flex-1 flex-row items-center">
                 <View className="mr-3 h-[50px] w-[50px] items-center justify-center rounded-[14px] bg-primary-soft">
-                  <MaterialCommunityIcons
-                    name={getCategoryIcon(transaction.category)}
+                  <CategoryGlyph
+                    category={transaction.category}
                     size={25}
                     color={colors.primary}
                   />
@@ -305,6 +346,8 @@ const TransactionScreen = () => {
                 style={searchStyles.searchBar}
                 inputStyle={searchStyles.searchInput}
                 iconColor={colors.primary}
+                icon={renderSearchIcon}
+                clearIcon={renderClearIcon}
               />
             </View>
 
@@ -329,8 +372,8 @@ const TransactionScreen = () => {
                           ? 'border-primary-fill bg-primary-fill'
                           : 'border-card-border bg-surface'
                       }`}>
-                      <MaterialCommunityIcons
-                        name={FILTER_ICONS[f]}
+                      <FilterGlyph
+                        filter={f}
                         size={16}
                         color={active ? colors.onPrimary : colors.primary}
                       />
@@ -402,11 +445,7 @@ const TransactionScreen = () => {
                     accessibilityRole="button"
                     onPress={() => setStartDatePickerVisible(true)}>
                     <View className="flex-row items-center">
-                      <MaterialCommunityIcons
-                        name="calendar-start"
-                        size={20}
-                        color={colors.primary}
-                      />
+                      <CalendarArrowUp size={20} color={colors.primary} />
                       <Text className="ml-2 font-sans text-sm text-text">
                         {customStartDate
                           ? moment(customStartDate).format('MMM DD, YYYY')
@@ -424,11 +463,7 @@ const TransactionScreen = () => {
                     accessibilityRole="button"
                     onPress={() => setEndDatePickerVisible(true)}>
                     <View className="flex-row items-center">
-                      <MaterialCommunityIcons
-                        name="calendar-end"
-                        size={20}
-                        color={colors.primary}
-                      />
+                      <CalendarArrowDown size={20} color={colors.primary} />
                       <Text className="ml-2 font-sans text-sm text-text">
                         {customEndDate
                           ? moment(customEndDate).format('MMM DD, YYYY')

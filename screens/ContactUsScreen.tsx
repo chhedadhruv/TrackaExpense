@@ -9,12 +9,22 @@ import {
   getFirestore,
 } from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Bug from 'lucide-react-native/icons/bug';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
+import CircleHelp from 'lucide-react-native/icons/circle-help';
+import Clock from 'lucide-react-native/icons/clock';
+import ExternalLink from 'lucide-react-native/icons/external-link';
+import Lightbulb from 'lucide-react-native/icons/lightbulb';
+import Mail from 'lucide-react-native/icons/mail';
+import MessageSquareText from 'lucide-react-native/icons/message-square-text';
+import Mic from 'lucide-react-native/icons/mic';
+import ShieldCheck from 'lucide-react-native/icons/shield-check';
+import Users from 'lucide-react-native/icons/users';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import FormButton from '../components/FormButton';
 import {useTheme} from '../src/theme';
 import {FormError} from '../src/components/form/FormParts';
-import type {McIconName} from '../src/types/icons';
+import type {AppIcon} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
 
 // Accent colours of the quick-contact icons. Each circle is the accent at a low alpha, so one
@@ -25,7 +35,7 @@ const tint = (hex: string): string => `${hex}1F`;
 interface ContactCategory {
   id: string;
   title: string;
-  icon: McIconName;
+  icon: AppIcon;
   description: string;
 }
 
@@ -33,25 +43,25 @@ const CONTACT_CATEGORIES: ContactCategory[] = [
   {
     id: 'feedback',
     title: 'General Feedback',
-    icon: 'message-text',
+    icon: MessageSquareText,
     description: 'Share your thoughts or suggestions',
   },
   {
     id: 'bug',
     title: 'Report a Bug',
-    icon: 'bug',
+    icon: Bug,
     description: 'Found something not working?',
   },
   {
     id: 'feature',
     title: 'Feature Request',
-    icon: 'lightbulb',
+    icon: Lightbulb,
     description: 'Suggest new features',
   },
   {
     id: 'support',
     title: 'Technical Support',
-    icon: 'help-circle',
+    icon: CircleHelp,
     description: 'Need help using the app?',
   },
 ];
@@ -127,11 +137,7 @@ const ContactUsScreen = () => {
         showsVerticalScrollIndicator={false}>
         <View className="mb-[25px] items-center pt-5">
           <View className="mb-5 h-20 w-20 items-center justify-center rounded-full bg-primary-soft">
-            <MaterialCommunityIcons
-              name="account-voice"
-              size={48}
-              color={colors.primary}
-            />
+            <Mic size={48} color={colors.primary} />
           </View>
           <Text
             accessibilityRole="header"
@@ -158,11 +164,7 @@ const ContactUsScreen = () => {
                 <View
                   className="mr-4 h-12 w-12 items-center justify-center rounded-xl"
                   style={{backgroundColor: tint(ACCENT.blue)}}>
-                  <MaterialCommunityIcons
-                    name="email"
-                    size={24}
-                    color={ACCENT.blue}
-                  />
+                  <Mail size={24} color={ACCENT.blue} />
                 </View>
                 <View>
                   <Text className="font-sans-bold text-base font-semibold text-text-strong">
@@ -173,11 +175,7 @@ const ContactUsScreen = () => {
                   </Text>
                 </View>
               </View>
-              <MaterialCommunityIcons
-                name="open-in-new"
-                size={20}
-                color={colors.textSecondary}
-              />
+              <ExternalLink size={20} color={colors.textSecondary} />
             </TouchableOpacity>
             <View className="my-2 h-px bg-divider" />
             <TouchableOpacity
@@ -189,11 +187,7 @@ const ContactUsScreen = () => {
                 <View
                   className="mr-4 h-12 w-12 items-center justify-center rounded-xl"
                   style={{backgroundColor: tint(ACCENT.green)}}>
-                  <MaterialCommunityIcons
-                    name="shield-check"
-                    size={24}
-                    color={ACCENT.green}
-                  />
+                  <ShieldCheck size={24} color={ACCENT.green} />
                 </View>
                 <View>
                   <Text className="font-sans-bold text-base font-semibold text-text-strong">
@@ -204,11 +198,7 @@ const ContactUsScreen = () => {
                   </Text>
                 </View>
               </View>
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={20}
-                color={colors.textSecondary}
-              />
+              <ChevronRight size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -238,8 +228,7 @@ const ContactUsScreen = () => {
                       }`}
                       onPress={() => setSelectedCategory(category.id)}
                       activeOpacity={0.7}>
-                      <MaterialCommunityIcons
-                        name={category.icon}
+                      <category.icon
                         size={24}
                         color={selected ? colors.onPrimary : colors.primary}
                       />
@@ -310,31 +299,19 @@ const ContactUsScreen = () => {
 
         <View className="rounded-2xl border border-card-border bg-surface p-5 ios:shadow-md">
           <View className="mb-3 flex-row items-center">
-            <MaterialCommunityIcons
-              name="shield-check"
-              size={20}
-              color={colors.success}
-            />
+            <ShieldCheck size={20} color={colors.success} />
             <Text className="ml-3 flex-1 font-sans text-sm text-text-secondary">
               Your messages are secure and confidential
             </Text>
           </View>
           <View className="mb-3 flex-row items-center">
-            <MaterialCommunityIcons
-              name="clock-outline"
-              size={20}
-              color={colors.primary}
-            />
+            <Clock size={20} color={colors.primary} />
             <Text className="ml-3 flex-1 font-sans text-sm text-text-secondary">
               We typically respond within 24-48 hours
             </Text>
           </View>
           <View className="flex-row items-center">
-            <MaterialCommunityIcons
-              name="account-group"
-              size={20}
-              color={colors.warning}
-            />
+            <Users size={20} color={colors.warning} />
             <Text className="ml-3 flex-1 font-sans text-sm text-text-secondary">
               Our support team is here to help you succeed
             </Text>

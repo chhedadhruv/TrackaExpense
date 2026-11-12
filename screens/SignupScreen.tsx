@@ -29,7 +29,15 @@ import {
   getFirestore,
   setDoc,
 } from '@react-native-firebase/firestore';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
+import CircleDollarSign from 'lucide-react-native/icons/circle-dollar-sign';
+import Eye from 'lucide-react-native/icons/eye';
+import EyeOff from 'lucide-react-native/icons/eye-off';
+import Lock from 'lucide-react-native/icons/lock';
+import Mail from 'lucide-react-native/icons/mail';
+import Phone from 'lucide-react-native/icons/phone';
+import User from 'lucide-react-native/icons/user';
+import AppleLogo from '../src/components/icons/AppleLogo';
 import {configureGoogleSignIn} from '../utils/GoogleSignInConfig';
 import {
   configureAppleSignIn,
@@ -329,7 +337,7 @@ const SignupScreen = () => {
                   labelValue={name}
                   onChangeText={setName}
                   placeholderText="Full Name"
-                  iconType="user"
+                  icon={User}
                   autoCapitalize="words"
                   autoCorrect={false}
                 />
@@ -337,7 +345,7 @@ const SignupScreen = () => {
                   labelValue={email}
                   onChangeText={setEmail}
                   placeholderText="Email Address"
-                  iconType="mail"
+                  icon={Mail}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -346,7 +354,7 @@ const SignupScreen = () => {
                   labelValue={phone}
                   onChangeText={setPhone}
                   placeholderText="Phone Number (Optional)"
-                  iconType="phone"
+                  icon={Phone}
                   keyboardType="numeric"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -362,11 +370,7 @@ const SignupScreen = () => {
                   className="flex-row items-center justify-between rounded-xl border border-card-border bg-surface p-4"
                   onPress={() => setCurrencyModalVisible(true)}>
                   <View className="flex-1 flex-row items-center">
-                    <MaterialCommunityIcons
-                      name="currency-usd"
-                      size={20}
-                      color={colors.primary}
-                    />
+                    <CircleDollarSign size={20} color={colors.primary} />
                     <View className="ml-3 flex-1">
                       <Text className="mb-0.5 font-sans text-xs text-text-secondary">
                         Currency
@@ -377,11 +381,7 @@ const SignupScreen = () => {
                       </Text>
                     </View>
                   </View>
-                  <MaterialCommunityIcons
-                    name="chevron-right"
-                    size={24}
-                    color={colors.textPlaceholder}
-                  />
+                  <ChevronRight size={24} color={colors.textPlaceholder} />
                 </TouchableOpacity>
               </View>
               <View className="mb-[25px]">
@@ -396,7 +396,7 @@ const SignupScreen = () => {
                       validatePassword(text);
                     }}
                     placeholderText="Password"
-                    iconType="lock"
+                    icon={Lock}
                     secureTextEntry={!showPassword}
                   />
                   <TouchableOpacity
@@ -406,11 +406,11 @@ const SignupScreen = () => {
                       showPassword ? 'Hide password' : 'Show password'
                     }
                     onPress={() => setShowPassword(!showPassword)}>
-                    <MaterialCommunityIcons
-                      name={showPassword ? 'eye-off' : 'eye'}
-                      size={20}
-                      color={colors.textSecondary}
-                    />
+                    {showPassword ? (
+                      <EyeOff size={20} color={colors.textSecondary} />
+                    ) : (
+                      <Eye size={20} color={colors.textSecondary} />
+                    )}
                   </TouchableOpacity>
                 </View>
                 {password.length > 0 && (
@@ -442,7 +442,7 @@ const SignupScreen = () => {
                     labelValue={confirmPassword}
                     onChangeText={setConfirmPassword}
                     placeholderText="Confirm Password"
-                    iconType="lock"
+                    icon={Lock}
                     secureTextEntry={!showConfirmPassword}
                   />
                   <TouchableOpacity
@@ -454,11 +454,11 @@ const SignupScreen = () => {
                     onPress={() =>
                       setShowConfirmPassword(!showConfirmPassword)
                     }>
-                    <MaterialCommunityIcons
-                      name={showConfirmPassword ? 'eye-off' : 'eye'}
-                      size={20}
-                      color={colors.textSecondary}
-                    />
+                    {showConfirmPassword ? (
+                      <EyeOff size={20} color={colors.textSecondary} />
+                    ) : (
+                      <Eye size={20} color={colors.textSecondary} />
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -487,12 +487,9 @@ const SignupScreen = () => {
                     className="mb-2.5 flex-row items-center justify-center rounded-lg bg-inverse px-4 py-3"
                     onPress={handleAppleSignUp}
                     disabled={loading}>
-                    <MaterialCommunityIcons
-                      name="apple"
-                      size={20}
-                      color={colors.onInverse}
-                      className="mr-3"
-                    />
+                    <View className="mr-3">
+                      <AppleLogo size={20} color={colors.onInverse} />
+                    </View>
                     <Text className="font-sans text-base font-medium text-on-inverse">
                       Sign up with Apple
                     </Text>

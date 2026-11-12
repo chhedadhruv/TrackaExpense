@@ -1,7 +1,8 @@
 import React from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
 import {Modal, Portal} from 'react-native-paper';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Camera from 'lucide-react-native/icons/camera';
+import Images from 'lucide-react-native/icons/images';
 import {pickImageFromCamera, pickImageFromLibrary} from '../utils/imagePicker';
 import {useTheme} from '../theme';
 
@@ -45,11 +46,7 @@ const ImagePickerModal = ({
         onDismiss={onDismiss}>
         <View className="rounded-2xl bg-surface p-5 shadow-lg">
           <View className="mb-5 items-center gap-2">
-            <MaterialCommunityIcons
-              name="camera"
-              size={32}
-              color={colors.primary}
-            />
+            <Camera size={32} color={colors.primary} />
             <Text
               accessibilityRole="header"
               className="font-sans-bold text-lg text-text">
@@ -60,22 +57,14 @@ const ImagePickerModal = ({
             className="mb-2.5 flex-row items-center gap-3 rounded-[10px] border border-border p-3.5"
             accessibilityRole="button"
             onPress={handleTakePhoto}>
-            <MaterialCommunityIcons
-              name="camera"
-              size={24}
-              color={colors.primary}
-            />
+            <Camera size={24} color={colors.primary} />
             <Text className="font-sans text-base text-text">Take Photo</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="mb-2.5 flex-row items-center gap-3 rounded-[10px] border border-border p-3.5"
             accessibilityRole="button"
             onPress={handleChooseFromLibrary}>
-            <MaterialCommunityIcons
-              name="image-multiple"
-              size={24}
-              color={colors.primary}
-            />
+            <Images size={24} color={colors.primary} />
             <Text className="font-sans text-base text-text">
               Choose from Gallery
             </Text>
