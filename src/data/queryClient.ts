@@ -34,6 +34,8 @@ export const PERSISTED_KINDS = [
   'user',
   'transactions',
   'savingsHistory',
+  'groups',
+  'invitations',
 ] as const;
 for (const kind of PERSISTED_KINDS) {
   queryClient.setQueryDefaults([kind], {meta: {persist: true}});

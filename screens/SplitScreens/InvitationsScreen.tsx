@@ -1,15 +1,8 @@
-import React, {useEffect, useState, useCallback} from 'react';
+import React, {useCallback} from 'react';
 import {View, StyleSheet, TouchableOpacity, Platform} from 'react-native';
 import {Text, Card, ActivityIndicator} from 'react-native-paper';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
-import {
-  collection,
-  getFirestore,
-  onSnapshot,
-  query,
-  where,
-} from '@react-native-firebase/firestore';
 import {respondToInvitation} from '../../src/services/InvitationService';
 import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../../src/services/ErrorReporter';
@@ -17,54 +10,26 @@ import * as AnalyticsService from '../../src/services/AnalyticsService';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {ErrorState} from '../../src/components/ScreenState';
-import {useLoadFailure} from '../../src/hooks/useLoadFailure';
+import {useInvitations} from '../../src/data/split';
+import type {InvitationDocument} from '../../src/types';
 import {snackbar} from '../../src/utils/snackbarStore';
 
-interface Invitation {
-  id: string;
-  groupId: string;
-  groupName: string;
-  inviterName?: string;
-  inviterEmail?: string;
-  email: string;
-  status: string;
-}
+type Invitation = InvitationDocument;
+
+// A stable empty list, so nothing downstream sees a new array on every render before data arrives.
+const NO_INVITATIONS: Invitation[] = [];
 
 const InvitationsScreen = () => {
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
-  const [loading, setLoading] = useState(true);
-  const [retryKey, setRetryKey] = useState(0);
-  const {failed, succeed, fail} = useLoadFailure();
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  // The pending invitations come from the shared cache, kept current by a live listener that the
+  // Split screen's badge shares (src/data/split.ts).
+  const invitationsData = useInvitations();
+  const invitations: Invitation[] = invitationsData.data ?? NO_INVITATIONS;
+  const loading = invitationsData.loading;
+  // A failed listener must not read as "No invitations yet".
+  const failed = invitationsData.error;
   const currentUser = getAuth().currentUser;
-
-  useEffect(() => {
-    if (!currentUser?.email) {
-      return;
-    }
-    const unsub = onSnapshot(
-      query(
-        collection(getFirestore(), 'invitations'),
-        where('email', '==', currentUser.email),
-        where('status', '==', 'pending'),
-      ),
-      snapshot => {
-        const data = snapshot.docs.map(
-          d => ({id: d.id, ...d.data()} as Invitation),
-        );
-        setInvitations(data);
-        succeed();
-        setLoading(false);
-      },
-      e => {
-        // A failed listener must not read as "No invitations yet".
-        fail(e);
-        setLoading(false);
-      },
-    );
-    return () => unsub && unsub();
-  }, [currentUser?.email, retryKey, succeed, fail]);
 
   const acceptInvitation = useCallback(
     async (invite: Invitation) => {
@@ -108,10 +73,7 @@ const InvitationsScreen = () => {
               <ErrorState
                 fill={false}
                 title="Could not load invitations"
-                onRetry={() => {
-                  setLoading(true);
-                  setRetryKey(k => k + 1);
-                }}
+                onRetry={invitationsData.retry}
               />
             ) : invitations.length === 0 ? (
               <Text style={styles.placeholderSubtitle}>No invitations yet</Text>

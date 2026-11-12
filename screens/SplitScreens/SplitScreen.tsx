@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
 import {
   View,
   TouchableOpacity,
@@ -15,15 +15,9 @@ import {
   deleteDoc,
   doc as fsDoc,
   getDoc,
-  getDocs,
   getFirestore,
-  limit,
-  onSnapshot,
-  orderBy,
-  query as fsQuery,
   serverTimestamp,
   updateDoc,
-  where,
   writeBatch,
 } from '@react-native-firebase/firestore';
 import type {DocumentData} from '@react-native-firebase/firestore';
@@ -31,7 +25,6 @@ import {planGroupEdit} from '../../src/utils/groupEdit';
 import {
   lookupUserByEmail,
   lookupUserByPhone,
-  lookupUsersByEmail,
 } from '../../src/services/UserLookup';
 import {getAuth} from '@react-native-firebase/auth';
 import {useFocusEffect, useLocalSearchParams, useRouter} from 'expo-router';
@@ -46,7 +39,11 @@ import ReminderNotificationService from '../../services/ReminderNotificationServ
 import {getConfig} from '../../src/services/RemoteConfigService';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {ErrorState, LoadingState} from '../../src/components/ScreenState';
-import {useLoadFailure} from '../../src/hooks/useLoadFailure';
+import {
+  useGroups,
+  useInvitations,
+  useMemberDetails,
+} from '../../src/data/split';
 import type {McIconName} from '../../src/types/icons';
 import {snackbar} from '../../src/utils/snackbarStore';
 
@@ -107,95 +104,57 @@ const SplitScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [userDetails, setUserDetails] = useState<UserDetail | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<UserDetail[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
+  // The groups come from the shared cache, which a live listener keeps current (src/data/split.ts),
+  // so a group created, edited or deleted here, or by someone else, shows up without a reload.
+  const groupsData = useGroups();
+  const rawGroups = groupsData.data;
+  const allMemberEmails = useMemo(
+    () => [...new Set((rawGroups ?? []).flatMap(g => g.members ?? []))],
+    [rawGroups],
+  );
+  const foundMembers = useMemberDetails(allMemberEmails);
+  const groups: Group[] = useMemo(
+    () =>
+      (rawGroups ?? []).map(
+        g =>
+          ({
+            ...g,
+            memberDetails: (g.members ?? []).map(email => {
+              const match = foundMembers?.[email];
+              return match
+                ? {
+                    email,
+                    name: match.name || g.memberNames?.[email] || null,
+                    avatar: match.avatar,
+                    userId: match.uid,
+                  }
+                : {email, name: g.memberNames?.[email] || null};
+            }),
+          } as Group),
+      ),
+    [rawGroups, foundMembers],
+  );
+  const invitations = useInvitations();
+  const invitationsCount = invitations.data?.length ?? 0;
+  const loading = groupsData.loading;
+  // A failed load must not read as "No groups created yet".
+  const failed = groupsData.error;
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [category, setCategory] = useState<string | null>(null);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const {failed, succeed, fail} = useLoadFailure();
   const [saving, setSaving] = useState(false);
   const [_unregisteredName, setUnregisteredName] = useState('');
-  const [_splitHistory, setSplitHistory] = useState<object[]>([]);
-  const [invitationsCount, setInvitationsCount] = useState(0);
   const currentUser = getAuth().currentUser;
-
-  const fetchGroups = async () => {
-    try {
-      setLoading(true);
-      if (!currentUser) {
-        return;
-      }
-      const groupSnapshot = await getDocs(
-        fsQuery(
-          collection(getFirestore(), 'groups'),
-          where('members', 'array-contains', currentUser.email),
-        ),
-      );
-      // One lookup for every member of every group, instead of one profile read per member.
-      const allEmails: string[] = [
-        ...new Set<string>(
-          groupSnapshot.docs.flatMap(d => (d.data().members as string[]) || []),
-        ),
-      ];
-      const foundList = await lookupUsersByEmail(allEmails);
-      const foundByEmail = new Map(
-        allEmails.map((email, i) => [email, foundList[i]] as const),
-      );
-      const fetchedGroups = groupSnapshot.docs.map(doc => {
-        const groupData = doc.data();
-        const memberDetails: UserDetail[] = (groupData.members || []).map(
-          (email: string) => {
-            const match = foundByEmail.get(email);
-            return match
-              ? {
-                  email,
-                  name: match.name || groupData.memberNames?.[email] || null,
-                  avatar: match.avatar,
-                  userId: match.uid,
-                }
-              : {email, name: groupData.memberNames?.[email] || null};
-          },
-        );
-        return {id: doc.id, ...groupData, memberDetails} as Group;
-      });
-      setGroups(fetchedGroups);
-      succeed();
-    } catch (err) {
-      // A failed load must not read as "No groups created yet".
-      fail(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchGroups();
       ReminderNotificationService.processRecurringSplits().catch(() => {});
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentUser]),
+    }, []),
   );
 
+  // Opens the edit form of the group chosen on the group screen, once the list is confirmed.
   useEffect(() => {
-    if (!currentUser?.email) {
-      return;
-    }
-    const unsub = onSnapshot(
-      fsQuery(
-        collection(getFirestore(), 'invitations'),
-        where('email', '==', currentUser.email),
-        where('status', '==', 'pending'),
-      ),
-      snapshot => {
-        setInvitationsCount(snapshot.size);
-      },
-      () => {},
-    );
-    return () => unsub && unsub();
-  }, [currentUser?.email]);
-
-  useEffect(() => {
-    if (editGroupId && groups.length > 0) {
+    if (editGroupId && groupsData.live && groups.length > 0) {
       const target = groups.find(g => g.id === editGroupId);
       if (target) {
         handleEditGroup(target);
@@ -203,31 +162,7 @@ const SplitScreen = () => {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editGroupId, groups]);
-
-  useEffect(() => {
-    const fetchSplitHistory = async () => {
-      try {
-        if (!currentUser) {
-          return;
-        }
-        const snap = await getDocs(
-          fsQuery(
-            collection(
-              getFirestore(),
-              'users',
-              currentUser.uid,
-              'splitHistory',
-            ),
-            orderBy('createdAt', 'desc'),
-            limit(20),
-          ),
-        );
-        setSplitHistory(snap.docs.map(doc => ({id: doc.id, ...doc.data()})));
-      } catch (_) {}
-    };
-    fetchSplitHistory();
-  }, [currentUser]);
+  }, [editGroupId, groups, groupsData.live]);
 
   const fetchUserByEmailOrPhone = async (query: string) => {
     try {
@@ -281,6 +216,12 @@ const SplitScreen = () => {
   };
 
   const handleEditGroup = (group: Group) => {
+    // The edit rewrites the member list from what is on screen, so it waits for the live listener
+    // to confirm the groups: a saved copy could be older than what someone else changed.
+    if (!groupsData.live) {
+      snackbar.info('Still syncing your groups. Try again in a moment.');
+      return;
+    }
     try {
       const updatedMembers = [...group.members];
       const updatedMemberDetails = [...group.memberDetails];
@@ -297,19 +238,6 @@ const SplitScreen = () => {
     } catch (_) {
       snackbar.error('Failed to prepare group for editing');
     }
-  };
-
-  const refreshHistory = async () => {
-    try {
-      const snap = await getDocs(
-        fsQuery(
-          collection(getFirestore(), 'users', currentUser!.uid, 'splitHistory'),
-          orderBy('createdAt', 'desc'),
-          limit(20),
-        ),
-      );
-      setSplitHistory(snap.docs.map(doc => ({id: doc.id, ...doc.data()})));
-    } catch (_) {}
   };
 
   const resetGroupForm = () => {
@@ -418,23 +346,6 @@ const SplitScreen = () => {
             ).catch(() => {});
           });
         }
-        setGroups(prev =>
-          prev.map(g =>
-            g.id === editingGroupId
-              ? {
-                  ...g,
-                  ...editData,
-                  memberDetails: [
-                    ...selectedUsers,
-                    {
-                      email: currentUser?.email ?? '',
-                      name: currentUser?.displayName || 'You',
-                    },
-                  ],
-                }
-              : g,
-          ),
-        );
         addDoc(
           collection(getFirestore(), 'users', currentUser!.uid, 'splitHistory'),
           {
@@ -446,9 +357,7 @@ const SplitScreen = () => {
             membersCount: 1,
             createdAt: Timestamp.fromDate(new Date()),
           },
-        )
-          .then(() => refreshHistory())
-          .catch(() => {});
+        ).catch(() => {});
         SplitNotificationService.notifyGroupUpdated(
           {
             id: editingGroupId,
@@ -506,23 +415,6 @@ const SplitScreen = () => {
             email,
           ).catch(() => {});
         }
-        const memberDetails = [
-          {
-            email: currentUser?.email ?? '',
-            name:
-              currentUser?.displayName ||
-              memberNames[currentUser?.email ?? ''] ||
-              'You',
-          },
-        ];
-        setGroups(prev =>
-          prev.some(g => g.id === groupRef.id)
-            ? prev
-            : [
-                ...prev,
-                {id: groupRef.id, ...groupData, memberDetails} as Group,
-              ],
-        );
         addDoc(
           collection(getFirestore(), 'users', currentUser!.uid, 'splitHistory'),
           {
@@ -533,9 +425,7 @@ const SplitScreen = () => {
             membersCount: 1,
             createdAt: Timestamp.fromDate(new Date()),
           },
-        )
-          .then(() => refreshHistory())
-          .catch(() => {});
+        ).catch(() => {});
         snackbar.success('Group created successfully');
         resetGroupForm();
       }
@@ -563,7 +453,6 @@ const SplitScreen = () => {
               groupDoc = await getDoc(fsDoc(getFirestore(), 'groups', groupId));
             } catch (_) {}
             await deleteDoc(fsDoc(getFirestore(), 'groups', groupId));
-            setGroups(prev => prev.filter(g => g.id !== groupId));
             try {
               await addDoc(
                 collection(
@@ -579,7 +468,6 @@ const SplitScreen = () => {
                   createdAt: Timestamp.fromDate(new Date()),
                 },
               );
-              await refreshHistory();
             } catch (_) {}
             snackbar.success('Group deleted successfully');
           },
@@ -912,7 +800,7 @@ const SplitScreen = () => {
               <ErrorState
                 fill={false}
                 title="Could not load your groups"
-                onRetry={fetchGroups}
+                onRetry={groupsData.retry}
               />
             ) : groups.length === 0 ? (
               <Card
