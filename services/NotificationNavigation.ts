@@ -1,5 +1,6 @@
 import {reportError} from '../src/services/ErrorReporter';
 import * as RootNavigation from '../navigation/Routes';
+import {TAB} from '../navigation/tabNames';
 
 export interface NotificationData {
   type?: string;
@@ -21,14 +22,14 @@ export function handleNotificationNavigation(
     switch (data.type) {
       case 'split_invite':
       case 'group_created':
-        RootNavigation.navigate('Split', {screen: 'Invitations'});
+        RootNavigation.navigate(TAB.split, {screen: 'Invitations'});
         break;
       case 'split_created':
       case 'split_updated':
       case 'split_deleted':
       case 'settlement_made':
         if (data.groupId) {
-          RootNavigation.navigate('Split', {
+          RootNavigation.navigate(TAB.split, {
             screen: 'SplitGroupDetail',
             params: {
               group: {id: data.groupId, name: data.groupName || 'Split Group'},
@@ -40,7 +41,7 @@ export function handleNotificationNavigation(
       case 'user_left_group':
       case 'group_updated':
         if (data.groupId) {
-          RootNavigation.navigate('Split', {
+          RootNavigation.navigate(TAB.split, {
             screen: 'SplitGroupDetail',
             params: {
               group: {id: data.groupId, name: data.groupName || 'Split Group'},
@@ -49,31 +50,31 @@ export function handleNotificationNavigation(
         }
         break;
       case 'group_deleted':
-        RootNavigation.navigate('Split', {screen: 'Split'});
+        RootNavigation.navigate(TAB.split, {screen: 'Split'});
         break;
       case 'settlement_reminder':
-        RootNavigation.navigate('Split', {screen: 'FriendsBalance'});
+        RootNavigation.navigate(TAB.split, {screen: 'FriendsBalance'});
         break;
       case 'reminder':
         if (data.action === 'add_income') {
-          RootNavigation.navigate('Home', {screen: 'AddIncome'});
+          RootNavigation.navigate(TAB.home, {screen: 'AddIncome'});
         } else if (data.action === 'add_expense') {
-          RootNavigation.navigate('Home', {screen: 'AddExpense'});
+          RootNavigation.navigate(TAB.home, {screen: 'AddExpense'});
         } else if (data.action === 'add_savings') {
-          RootNavigation.navigate('Savings', {screen: 'Savings'});
+          RootNavigation.navigate(TAB.savings, {screen: 'Savings'});
         } else {
-          RootNavigation.navigate('Home', {screen: 'Home'});
+          RootNavigation.navigate(TAB.home, {screen: 'Home'});
         }
         break;
       case 'achievement':
-        RootNavigation.navigate('Statistic', {screen: 'Statistic'});
+        RootNavigation.navigate(TAB.statistic, {screen: 'Statistic'});
         break;
       case 'weekly_summary':
       case 'monthly_goal':
-        RootNavigation.navigate('Statistic', {screen: 'Statistic'});
+        RootNavigation.navigate(TAB.statistic, {screen: 'Statistic'});
         break;
       default:
-        RootNavigation.navigate('Home', {screen: 'Home'});
+        RootNavigation.navigate(TAB.home, {screen: 'Home'});
         break;
     }
   } catch (error) {
