@@ -13,6 +13,7 @@ import {
   tagErrorMessage,
   tagKey,
   unknownTags,
+  withRecentTags,
 } from '../src/utils/tags';
 
 describe('cleanTag and tagKey', () => {
@@ -181,6 +182,46 @@ describe('tagDocId', () => {
     expect(tagDocId('.')).toBe('t_.');
     expect(tagDocId('a/b')).toBe('t_a%2Fb');
     expect(tagDocId('a/b')).not.toContain('/');
+  });
+});
+
+describe('withRecentTags', () => {
+  it('moves used tags to the front and keeps the rest in order', () => {
+    expect(withRecentTags(['Trip', 'Work', 'Food'], ['Food'])).toEqual([
+      'Food',
+      'Trip',
+      'Work',
+    ]);
+  });
+
+  it('keeps the stored spelling of a tag that is already known', () => {
+    expect(withRecentTags(['Goa Trip', 'Work'], ['goa trip'])).toEqual([
+      'Goa Trip',
+      'Work',
+    ]);
+  });
+
+  it('adds a new tag in cleaned form at the front', () => {
+    expect(withRecentTags(['Work'], ['  #Rent '])).toEqual(['Rent', 'Work']);
+  });
+
+  it('never lists a tag twice, ignoring case', () => {
+    expect(
+      withRecentTags(['Work', 'work'], ['WORK', 'work', 'Food', 'food']),
+    ).toEqual(['Work', 'Food']);
+  });
+
+  it('puts the used tags first in the order they were used', () => {
+    expect(withRecentTags(['A', 'B', 'C'], ['C', 'B'])).toEqual([
+      'C',
+      'B',
+      'A',
+    ]);
+  });
+
+  it('returns the list unchanged when nothing was used, and skips blanks', () => {
+    expect(withRecentTags(['A', 'B'], [])).toEqual(['A', 'B']);
+    expect(withRecentTags(['A'], ['   '])).toEqual(['A']);
   });
 });
 

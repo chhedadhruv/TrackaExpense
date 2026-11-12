@@ -7,6 +7,7 @@ export const queryKeys = {
   user: (uid: string) => ['user', uid] as const,
   transactions: (uid: string) => ['transactions', uid] as const,
   savingsHistory: (uid: string) => ['savingsHistory', uid] as const,
+  tags: (uid: string) => ['tags', uid] as const,
   groups: (uid: string) => ['groups', uid] as const,
   invitations: (uid: string) => ['invitations', uid] as const,
   memberDetails: (emails: string) => ['memberDetails', emails] as const,

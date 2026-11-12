@@ -117,6 +117,34 @@ export const unknownTags = (
 };
 
 /**
+ * The cached suggestion list after these tags were just used: the used tags move to the front (a
+ * tag already in the list keeps its stored spelling, a new one is added as cleaned) and nothing is
+ * listed twice, so the next form shows them without reading the list again.
+ */
+export const withRecentTags = (
+  known: readonly string[],
+  used: readonly string[],
+): string[] => {
+  const spelling = new Map<string, string>();
+  known.forEach(t => {
+    if (!spelling.has(tagKey(t))) {
+      spelling.set(tagKey(t), t);
+    }
+  });
+  const seen = new Set<string>();
+  const result: string[] = [];
+  const front = used.map(t => spelling.get(tagKey(t)) ?? cleanTag(t));
+  [...front, ...known].forEach(tag => {
+    const key = tagKey(tag);
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      result.push(tag);
+    }
+  });
+  return result;
+};
+
+/**
  * The distinct tags on a set of transactions with how many transactions carry each, most used
  * first (ties alphabetical). The first spelling met is the one shown. Used to offer only tags that
  * would actually return rows.
