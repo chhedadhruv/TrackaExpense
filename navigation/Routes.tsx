@@ -23,6 +23,7 @@ import type {User as FirebaseUser} from '@react-native-firebase/auth';
 import {setErrorReportingUser} from '../src/services/ErrorReporter';
 import {identifyUser, resetMixpanel} from '../src/services/MixpanelService';
 import {loginPush, logoutPush} from '../src/services/PushService';
+import {TAB} from './tabNames';
 
 export const navigationRef = React.createRef<NavigationContainerRef<any>>();
 
@@ -43,26 +44,26 @@ const linking = {
   prefixes: ['trackaexpense://'],
   config: {
     screens: {
-      Home: {
+      [TAB.home]: {
         screens: {
           Home: 'home',
           AddIncome: 'income/add',
           AddExpense: 'expense/add',
         },
       },
-      Statistic: {
+      [TAB.statistic]: {
         screens: {
           Statistic: 'statistic',
         },
       },
-      Split: {
+      [TAB.split]: {
         screens: {
           Split: 'split',
           Invitations: 'split/invitations',
           SplitGroupDetail: 'split/group/:groupId',
         },
       },
-      Savings: {
+      [TAB.savings]: {
         screens: {
           Savings: 'savings',
         },
