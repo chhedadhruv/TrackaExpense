@@ -36,6 +36,9 @@ import TagField from '../src/components/form/TagField';
 import {useKnownTags} from '../src/hooks/useKnownTags';
 import {recordTagUse} from '../src/services/TagService';
 import {snackbar} from '../src/utils/snackbarStore';
+import AlignLeft from 'lucide-react-native/icons/align-left';
+import BanknoteArrowUp from 'lucide-react-native/icons/banknote-arrow-up';
+import FileText from 'lucide-react-native/icons/file-text';
 
 const DISABLED_BUTTON = {opacity: 0.5} as const;
 
@@ -148,7 +151,7 @@ const AddIncome = () => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <FormHeader
-            icon="cash-plus"
+            icon={BanknoteArrowUp}
             iconColor={colors.income}
             title="Add Income"
             subtitle="Record your income to track your finances"
@@ -159,7 +162,7 @@ const AddIncome = () => {
 
             <TextField
               label="Title"
-              icon="text"
+              icon={AlignLeft}
               placeholder="Enter income title"
               value={title}
               onChangeText={setTitle}
@@ -170,7 +173,7 @@ const AddIncome = () => {
             <TextField
               label="Description"
               optional
-              icon="text-box"
+              icon={FileText}
               placeholder="Enter description"
               value={description}
               onChangeText={setDescription}

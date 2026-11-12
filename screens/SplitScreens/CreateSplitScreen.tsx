@@ -24,7 +24,7 @@ import {
   pickImageFromCamera,
   pickImageFromLibrary,
 } from '../../src/utils/imagePicker';
-import {Card, Checkbox, ActivityIndicator, Switch} from 'react-native-paper';
+import {Card, ActivityIndicator, Switch} from 'react-native-paper';
 import {
   Timestamp,
   addDoc,
@@ -45,7 +45,16 @@ import {reportError} from '../../src/services/ErrorReporter';
 import * as PerformanceService from '../../src/services/PerformanceService';
 import * as AnalyticsService from '../../src/services/AnalyticsService';
 import {DatePickerModal} from 'react-native-paper-dates';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Calendar from 'lucide-react-native/icons/calendar';
+import Camera from 'lucide-react-native/icons/camera';
+import Check from 'lucide-react-native/icons/check';
+import ChevronDown from 'lucide-react-native/icons/chevron-down';
+import Coins from 'lucide-react-native/icons/coins';
+import ImageIcon from 'lucide-react-native/icons/image';
+import ImagePlus from 'lucide-react-native/icons/image-plus';
+import RefreshCw from 'lucide-react-native/icons/refresh-cw';
+import Trash2 from 'lucide-react-native/icons/trash-2';
+import X from 'lucide-react-native/icons/x';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
 import SplitNotificationService from '../../services/SplitNotificationService';
@@ -992,26 +1001,13 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
           <View style={styles.memberCheckboxContainer}>
             <View style={styles.memberInfo}>
               <View style={styles.memberNameContainer}>
-                {Platform.OS === 'ios' ? (
-                  <View
-                    style={[
-                      styles.customCheckboxIOS,
-                      isSelected && styles.customCheckboxIOSSelected,
-                    ]}>
-                    {isSelected && (
-                      <MaterialCommunityIcons
-                        name="check"
-                        size={18}
-                        color={colors.onPrimary}
-                      />
-                    )}
-                  </View>
-                ) : (
-                  <Checkbox
-                    status={isSelected ? 'checked' : 'unchecked'}
-                    color={colors.primary}
-                  />
-                )}
+                <View
+                  style={[
+                    styles.customCheckbox,
+                    isSelected && styles.customCheckboxSelected,
+                  ]}>
+                  {isSelected && <Check size={18} color={colors.onPrimary} />}
+                </View>
                 <Text style={styles.memberName}>
                   {member.name}
                   {isCurrentUser && ' (You)'}
@@ -1059,11 +1055,7 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
           showsVerticalScrollIndicator={false}>
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
-              <MaterialCommunityIcons
-                name="cash-multiple"
-                size={32}
-                color={colors.primary}
-              />
+              <Coins size={32} color={colors.primary} />
               <Text style={styles.headerTitle}>
                 {isEditMode ? 'Edit Split' : 'Create Split'}
               </Text>
@@ -1122,11 +1114,7 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
                   <Text style={styles.dateText}>
                     {date.toLocaleDateString()}
                   </Text>
-                  <MaterialCommunityIcons
-                    name="calendar"
-                    size={20}
-                    color={colors.primary}
-                  />
+                  <Calendar size={20} color={colors.primary} />
                 </TouchableOpacity>
                 <DatePickerModal
                   locale="en"
@@ -1151,11 +1139,10 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
                   onPress={() => setCategoryModalVisible(true)}>
                   {category ? (
                     <>
-                      <MaterialCommunityIcons
-                        name={getCategoryIcon(category)}
-                        size={20}
-                        color={colors.primary}
-                      />
+                      {React.createElement(getCategoryIcon(category), {
+                        size: 20,
+                        color: colors.primary,
+                      })}
                       <Text style={styles.categorySelectorText}>
                         {getCategoryLabel(category, 'split')}
                       </Text>
@@ -1165,11 +1152,7 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
                       Select category
                     </Text>
                   )}
-                  <MaterialCommunityIcons
-                    name="chevron-down"
-                    size={20}
-                    color={colors.textPlaceholder}
-                  />
+                  <ChevronDown size={20} color={colors.textPlaceholder} />
                 </TouchableOpacity>
               </View>
 
@@ -1200,21 +1183,13 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
                       <TouchableOpacity
                         style={styles.receiptActionBtn}
                         onPress={() => setImageModalVisible(true)}>
-                        <MaterialCommunityIcons
-                          name="camera-switch"
-                          size={18}
-                          color={colors.primary}
-                        />
+                        <RefreshCw size={18} color={colors.primary} />
                         <Text style={styles.receiptActionText}>Change</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.receiptActionBtn, styles.removeBtn]}
                         onPress={() => setReceiptImage(null)}>
-                        <MaterialCommunityIcons
-                          name="delete"
-                          size={18}
-                          color={colors.expense}
-                        />
+                        <Trash2 size={18} color={colors.expense} />
                         <Text
                           style={[
                             styles.receiptActionText,
@@ -1229,11 +1204,7 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
                   <TouchableOpacity
                     style={styles.receiptUploadBtn}
                     onPress={() => setImageModalVisible(true)}>
-                    <MaterialCommunityIcons
-                      name="camera-plus"
-                      size={28}
-                      color={colors.primary}
-                    />
+                    <ImagePlus size={28} color={colors.primary} />
                     <Text style={styles.receiptUploadText}>Attach Receipt</Text>
                   </TouchableOpacity>
                 )}
@@ -1392,11 +1363,7 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
               <Text style={styles.submitButtonText}>
                 {isEditMode ? 'Update Split' : 'Create Split'}
               </Text>
-              <MaterialCommunityIcons
-                name="check"
-                size={20}
-                color={colors.onPrimary}
-              />
+              <Check size={20} color={colors.onPrimary} />
             </TouchableOpacity>
           </View>
 
@@ -1414,11 +1381,7 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
                   <Text style={styles.categoryModalTitle}>Select Category</Text>
                   <TouchableOpacity
                     onPress={() => setCategoryModalVisible(false)}>
-                    <MaterialCommunityIcons
-                      name="close"
-                      size={24}
-                      color={colors.textSecondary}
-                    />
+                    <X size={24} color={colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.categoryGrid}>
@@ -1435,8 +1398,7 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
                           setCategory(cat.value);
                           setCategoryModalVisible(false);
                         }}>
-                        <MaterialCommunityIcons
-                          name={cat.icon}
+                        <cat.icon
                           size={22}
                           color={isSelected ? colors.onPrimary : colors.primary}
                         />
@@ -1470,21 +1432,13 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
                 <TouchableOpacity
                   style={styles.modalOption}
                   onPress={takePhotoFromCamera}>
-                  <MaterialCommunityIcons
-                    name="camera"
-                    size={24}
-                    color={colors.primary}
-                  />
+                  <Camera size={24} color={colors.primary} />
                   <Text style={styles.modalOptionText}>Take Photo</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.modalOption}
                   onPress={choosePhotoFromLibrary}>
-                  <MaterialCommunityIcons
-                    name="image"
-                    size={24}
-                    color={colors.primary}
-                  />
+                  <ImageIcon size={24} color={colors.primary} />
                   <Text style={styles.modalOptionText}>
                     Choose from Gallery
                   </Text>
@@ -1687,7 +1641,7 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       gap: 10,
     },
-    customCheckboxIOS: {
+    customCheckbox: {
       width: 24,
       height: 24,
       borderRadius: 4,
@@ -1698,7 +1652,7 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       marginLeft: 4,
     },
-    customCheckboxIOSSelected: {
+    customCheckboxSelected: {
       backgroundColor: colors.primaryFill,
       borderColor: colors.primaryFill,
     },

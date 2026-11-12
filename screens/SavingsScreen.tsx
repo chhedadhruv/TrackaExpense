@@ -11,7 +11,31 @@ import {
   Platform,
 } from 'react-native';
 import {Card, ActivityIndicator} from 'react-native-paper';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Bell from 'lucide-react-native/icons/bell';
+import BellOff from 'lucide-react-native/icons/bell-off';
+import BellRing from 'lucide-react-native/icons/bell-ring';
+import Building2 from 'lucide-react-native/icons/building-2';
+import Calendar from 'lucide-react-native/icons/calendar';
+import Calendar1 from 'lucide-react-native/icons/calendar-1';
+import CalendarClock from 'lucide-react-native/icons/calendar-clock';
+import CalendarDays from 'lucide-react-native/icons/calendar-days';
+import CarFront from 'lucide-react-native/icons/car-front';
+import ChartLine from 'lucide-react-native/icons/chart-line';
+import ChevronDown from 'lucide-react-native/icons/chevron-down';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
+import CircleAlert from 'lucide-react-native/icons/circle-alert';
+import GraduationCap from 'lucide-react-native/icons/graduation-cap';
+import Gem from 'lucide-react-native/icons/gem';
+import History from 'lucide-react-native/icons/history';
+import Minus from 'lucide-react-native/icons/minus';
+import Pencil from 'lucide-react-native/icons/pencil';
+import PiggyBank from 'lucide-react-native/icons/piggy-bank';
+import Plane from 'lucide-react-native/icons/plane';
+import Plus from 'lucide-react-native/icons/plus';
+import ShieldCheck from 'lucide-react-native/icons/shield-check';
+import Smartphone from 'lucide-react-native/icons/smartphone';
+import Trash2 from 'lucide-react-native/icons/trash-2';
+import X from 'lucide-react-native/icons/x';
 import {
   Timestamp,
   addDoc,
@@ -41,26 +65,26 @@ import {
   sumValuesMajor,
 } from '../src/utils/amounts';
 import type {SavingsGoal} from '../src/types';
-import type {McIconName} from '../src/types/icons';
+import type {AppIcon} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
 import {ModalSnackbar} from '../src/components/Snackbar';
 
 interface GoalCategory {
   id: string;
   label: string;
-  icon: McIconName;
+  icon: AppIcon;
 }
 
 const GOAL_CATEGORIES: GoalCategory[] = [
-  {id: 'emergency', label: 'Emergency', icon: 'shield-check'},
-  {id: 'vacation', label: 'Vacation', icon: 'airplane'},
-  {id: 'house', label: 'House', icon: 'home-city'},
-  {id: 'car', label: 'Car', icon: 'car-sports'},
-  {id: 'education', label: 'Education', icon: 'school'},
-  {id: 'investment', label: 'Investment', icon: 'chart-line'},
-  {id: 'wedding', label: 'Wedding', icon: 'ring'},
-  {id: 'electronics', label: 'Electronics', icon: 'devices'},
-  {id: 'other', label: 'Other', icon: 'piggy-bank'},
+  {id: 'emergency', label: 'Emergency', icon: ShieldCheck},
+  {id: 'vacation', label: 'Vacation', icon: Plane},
+  {id: 'house', label: 'House', icon: Building2},
+  {id: 'car', label: 'Car', icon: CarFront},
+  {id: 'education', label: 'Education', icon: GraduationCap},
+  {id: 'investment', label: 'Investment', icon: ChartLine},
+  {id: 'wedding', label: 'Wedding', icon: Gem},
+  {id: 'electronics', label: 'Electronics', icon: Smartphone},
+  {id: 'other', label: 'Other', icon: PiggyBank},
 ];
 
 interface EditValues {
@@ -499,9 +523,9 @@ const SavingsScreen = () => {
     return colors.expense;
   };
 
-  const getCategoryIcon = (category: string): McIconName => {
+  const getCategoryIcon = (category: string): AppIcon => {
     const cat = GOAL_CATEGORIES.find(c => c.id === category);
-    return cat ? cat.icon : 'piggy-bank';
+    return cat ? cat.icon : PiggyBank;
   };
 
   const calculateTargetDateLabel = (
@@ -786,11 +810,7 @@ const SavingsScreen = () => {
     const cat = GOAL_CATEGORIES.find(c => c.id === editValues.category);
     return cat ? (
       <>
-        <MaterialCommunityIcons
-          name={cat.icon}
-          size={20}
-          color={colors.primary}
-        />
+        <cat.icon size={20} color={colors.primary} />
         <Text style={styles.categorySelectorText}>{cat.label}</Text>
       </>
     ) : (
@@ -828,21 +848,13 @@ const SavingsScreen = () => {
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
               <View style={styles.headerTitleLeft}>
-                <MaterialCommunityIcons
-                  name="piggy-bank"
-                  size={32}
-                  color={colors.success}
-                />
+                <PiggyBank size={32} color={colors.success} />
                 <Text style={styles.headerTitle}>Savings Goals</Text>
               </View>
               <TouchableOpacity
                 style={styles.historyIconButton}
                 onPress={() => router.navigate('/savings/history')}>
-                <MaterialCommunityIcons
-                  name="history"
-                  size={20}
-                  color={colors.onPrimary}
-                />
+                <History size={20} color={colors.onPrimary} />
               </TouchableOpacity>
             </View>
             <Text style={styles.headerSubtitle}>
@@ -851,11 +863,7 @@ const SavingsScreen = () => {
             <TouchableOpacity
               style={styles.addGoalButton}
               onPress={() => setShowCreateModal(true)}>
-              <MaterialCommunityIcons
-                name="plus"
-                size={20}
-                color={colors.onPrimary}
-              />
+              <Plus size={20} color={colors.onPrimary} />
               <Text style={styles.addGoalButtonText}>Add New Goal</Text>
             </TouchableOpacity>
           </View>
@@ -920,11 +928,10 @@ const SavingsScreen = () => {
                   <View style={styles.cardContent}>
                     <View style={styles.savingsHeader}>
                       <View style={styles.goalCategoryIcon}>
-                        <MaterialCommunityIcons
-                          name={getCategoryIcon(goal.category)}
-                          size={24}
-                          color={colors.primary}
-                        />
+                        {React.createElement(getCategoryIcon(goal.category), {
+                          size: 24,
+                          color: colors.primary,
+                        })}
                       </View>
                       <View style={styles.goalInfo}>
                         <Text style={styles.goalName}>{goal.name}</Text>
@@ -938,35 +945,21 @@ const SavingsScreen = () => {
                         <TouchableOpacity
                           onPress={() => handleReminderToggle(goal.id)}
                           style={styles.actionIcon}>
-                          <MaterialCommunityIcons
-                            name={
-                              goal.reminderEnabled ? 'bell' : 'bell-outline'
-                            }
-                            size={20}
-                            color={
-                              goal.reminderEnabled
-                                ? colors.primary
-                                : colors.textPlaceholder
-                            }
-                          />
+                          {goal.reminderEnabled ? (
+                            <Bell size={20} color={colors.primary} />
+                          ) : (
+                            <BellOff size={20} color={colors.textPlaceholder} />
+                          )}
                         </TouchableOpacity>
                         <TouchableOpacity
                           onPress={() => handleEdit(goal.id)}
                           style={styles.actionIcon}>
-                          <MaterialCommunityIcons
-                            name="pencil"
-                            size={20}
-                            color={colors.primary}
-                          />
+                          <Pencil size={20} color={colors.primary} />
                         </TouchableOpacity>
                         <TouchableOpacity
                           onPress={() => confirmDelete(goal.id)}
                           style={styles.actionIcon}>
-                          <MaterialCommunityIcons
-                            name="delete"
-                            size={20}
-                            color={colors.expense}
-                          />
+                          <Trash2 size={20} color={colors.expense} />
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -1015,8 +1008,7 @@ const SavingsScreen = () => {
                             style={styles.categorySelectorButton}
                             onPress={() => setShowCategoryModal(true)}>
                             {renderCategoryButton()}
-                            <MaterialCommunityIcons
-                              name="chevron-down"
+                            <ChevronDown
                               size={20}
                               color={colors.textPlaceholder}
                             />
@@ -1059,12 +1051,9 @@ const SavingsScreen = () => {
                           <TouchableOpacity
                             style={styles.dateInputWrapper}
                             onPress={() => setOpenDate(true)}>
-                            <MaterialCommunityIcons
-                              name="calendar"
-                              size={20}
-                              color={colors.primary}
-                              style={styles.inputIcon}
-                            />
+                            <View style={styles.inputIcon}>
+                              <Calendar size={20} color={colors.primary} />
+                            </View>
                             <Text
                               style={[
                                 styles.dateText,
@@ -1075,8 +1064,7 @@ const SavingsScreen = () => {
                                 ? formatDisplayDate(editValues.targetDate)
                                 : 'Select target date'}
                             </Text>
-                            <MaterialCommunityIcons
-                              name="chevron-down"
+                            <ChevronDown
                               size={20}
                               color={colors.textPlaceholder}
                             />
@@ -1132,8 +1120,7 @@ const SavingsScreen = () => {
                               targetDateLabel === 'Overdue' &&
                                 styles.targetDateBadgeOverdue,
                             ]}>
-                            <MaterialCommunityIcons
-                              name="calendar-clock"
+                            <CalendarClock
                               size={12}
                               color={
                                 targetDateLabel === 'Overdue'
@@ -1223,11 +1210,7 @@ const SavingsScreen = () => {
                               showAmountInput('add');
                             }}
                             disabled={isSubmitting}>
-                            <MaterialCommunityIcons
-                              name="plus"
-                              size={20}
-                              color={colors.onPrimary}
-                            />
+                            <Plus size={20} color={colors.onPrimary} />
                             <Text style={styles.goalActionText}>Add Money</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
@@ -1240,11 +1223,7 @@ const SavingsScreen = () => {
                               showAmountInput('withdraw');
                             }}
                             disabled={isSubmitting}>
-                            <MaterialCommunityIcons
-                              name="minus"
-                              size={20}
-                              color={colors.onPrimary}
-                            />
+                            <Minus size={20} color={colors.onPrimary} />
                             <Text style={styles.goalActionText}>Withdraw</Text>
                           </TouchableOpacity>
                         </View>
@@ -1262,11 +1241,7 @@ const SavingsScreen = () => {
               ]}
               elevation={Platform.OS === 'android' ? 0 : 2}>
               <View style={styles.emptyState}>
-                <MaterialCommunityIcons
-                  name="piggy-bank-outline"
-                  size={64}
-                  color={colors.iconMuted}
-                />
+                <PiggyBank size={64} color={colors.iconMuted} />
                 <Text style={styles.emptyStateTitle}>No Savings Goals Yet</Text>
                 <Text style={styles.emptyStateSubtitle}>
                   Create your first savings goal to start tracking your progress
@@ -1388,11 +1363,7 @@ const SavingsScreen = () => {
                   style={styles.categorySelectorButton}
                   onPress={() => setShowCategoryModal(true)}>
                   {renderCategoryButton()}
-                  <MaterialCommunityIcons
-                    name="chevron-down"
-                    size={20}
-                    color={colors.textPlaceholder}
-                  />
+                  <ChevronDown size={20} color={colors.textPlaceholder} />
                 </TouchableOpacity>
               </View>
               <View style={styles.inputContainer}>
@@ -1430,12 +1401,9 @@ const SavingsScreen = () => {
                 <TouchableOpacity
                   style={styles.dateInputWrapper}
                   onPress={() => setOpenDate(true)}>
-                  <MaterialCommunityIcons
-                    name="calendar"
-                    size={20}
-                    color={colors.primary}
-                    style={styles.inputIcon}
-                  />
+                  <View style={styles.inputIcon}>
+                    <Calendar size={20} color={colors.primary} />
+                  </View>
                   <Text
                     style={[
                       styles.dateText,
@@ -1445,11 +1413,7 @@ const SavingsScreen = () => {
                       ? formatDisplayDate(editValues.targetDate)
                       : 'Select target date'}
                   </Text>
-                  <MaterialCommunityIcons
-                    name="chevron-down"
-                    size={20}
-                    color={colors.textPlaceholder}
-                  />
+                  <ChevronDown size={20} color={colors.textPlaceholder} />
                 </TouchableOpacity>
               </View>
               <View style={styles.inputContainer}>
@@ -1499,11 +1463,7 @@ const SavingsScreen = () => {
           onRequestClose={() => setShowDeleteModal(false)}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <MaterialCommunityIcons
-                name="alert-circle"
-                size={48}
-                color={colors.expense}
-              />
+              <CircleAlert size={48} color={colors.expense} />
               <Text style={styles.modalTitle}>Delete Savings Goal</Text>
               <Text style={styles.modalSubtitle}>
                 Are you sure you want to delete "{goalToDelete?.name}"? This
@@ -1539,11 +1499,7 @@ const SavingsScreen = () => {
           onRequestClose={() => setShowReminderModal(false)}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <MaterialCommunityIcons
-                name="bell-ring"
-                size={40}
-                color={colors.primary}
-              />
+              <BellRing size={40} color={colors.primary} />
               <Text style={styles.modalTitle}>Set Reminder</Text>
               <Text style={styles.modalSubtitle}>
                 How often would you like to be reminded about this savings goal?
@@ -1554,22 +1510,14 @@ const SavingsScreen = () => {
                   setShowReminderModal(false);
                   toggleReminder(reminderGoalId!, true, 'weekly');
                 }}>
-                <MaterialCommunityIcons
-                  name="calendar-week"
-                  size={22}
-                  color={colors.primary}
-                />
+                <Calendar1 size={22} color={colors.primary} />
                 <View style={styles.reminderOptionText}>
                   <Text style={styles.reminderOptionTitle}>Weekly</Text>
                   <Text style={styles.reminderOptionSubtitle}>
                     Every week to check in on your goal
                   </Text>
                 </View>
-                <MaterialCommunityIcons
-                  name="chevron-right"
-                  size={20}
-                  color={colors.textPlaceholder}
-                />
+                <ChevronRight size={20} color={colors.textPlaceholder} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.reminderOption}
@@ -1577,22 +1525,14 @@ const SavingsScreen = () => {
                   setShowReminderModal(false);
                   toggleReminder(reminderGoalId!, true, 'monthly');
                 }}>
-                <MaterialCommunityIcons
-                  name="calendar-month"
-                  size={22}
-                  color={colors.primary}
-                />
+                <CalendarDays size={22} color={colors.primary} />
                 <View style={styles.reminderOptionText}>
                   <Text style={styles.reminderOptionTitle}>Monthly</Text>
                   <Text style={styles.reminderOptionSubtitle}>
                     Once a month to review progress
                   </Text>
                 </View>
-                <MaterialCommunityIcons
-                  name="chevron-right"
-                  size={20}
-                  color={colors.textPlaceholder}
-                />
+                <ChevronRight size={20} color={colors.textPlaceholder} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalCancelButton, styles.reminderCancelButton]}
@@ -1631,11 +1571,7 @@ const SavingsScreen = () => {
               <View style={styles.categoryModalHeader}>
                 <Text style={styles.categoryModalTitle}>Select Category</Text>
                 <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
-                  <MaterialCommunityIcons
-                    name="close"
-                    size={24}
-                    color={colors.textSecondary}
-                  />
+                  <X size={24} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
               <View style={styles.categoryGrid}>
@@ -1653,8 +1589,7 @@ const SavingsScreen = () => {
                         setCategoryManuallySelected(true);
                         setShowCategoryModal(false);
                       }}>
-                      <MaterialCommunityIcons
-                        name={cat.icon}
+                      <cat.icon
                         size={22}
                         color={isSelected ? colors.onPrimary : colors.primary}
                       />

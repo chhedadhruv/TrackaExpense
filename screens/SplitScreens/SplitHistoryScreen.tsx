@@ -8,7 +8,11 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import {Card, Text} from 'react-native-paper';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import History from 'lucide-react-native/icons/history';
+import Landmark from 'lucide-react-native/icons/landmark';
+import Pencil from 'lucide-react-native/icons/pencil';
+import Plus from 'lucide-react-native/icons/plus';
+import Trash2 from 'lucide-react-native/icons/trash-2';
 import {
   collection,
   getDocs,
@@ -169,37 +173,13 @@ const SplitHistoryScreen = () => {
   const renderIcon = (type: string) => {
     switch (type) {
       case 'create':
-        return (
-          <MaterialCommunityIcons
-            name="plus"
-            size={20}
-            color={colors.primary}
-          />
-        );
+        return <Plus size={20} color={colors.primary} />;
       case 'settlement_create':
-        return (
-          <MaterialCommunityIcons
-            name="bank-transfer"
-            size={20}
-            color={colors.primary}
-          />
-        );
+        return <Landmark size={20} color={colors.primary} />;
       case 'delete':
-        return (
-          <MaterialCommunityIcons
-            name="delete"
-            size={20}
-            color={colors.expense}
-          />
-        );
+        return <Trash2 size={20} color={colors.expense} />;
       default:
-        return (
-          <MaterialCommunityIcons
-            name="pencil"
-            size={20}
-            color={colors.primary}
-          />
-        );
+        return <Pencil size={20} color={colors.primary} />;
     }
   };
 
@@ -370,11 +350,7 @@ const SplitHistoryScreen = () => {
                   ))
                 ) : (
                   <View style={styles.emptyHistory}>
-                    <MaterialCommunityIcons
-                      name="history"
-                      size={48}
-                      color={colors.iconMuted}
-                    />
+                    <History size={48} color={colors.iconMuted} />
                     <Text style={styles.emptyHistoryText}>
                       No split history yet
                     </Text>

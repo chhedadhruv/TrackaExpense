@@ -2,7 +2,8 @@ import React, {useState} from 'react';
 import {View, Text, TouchableOpacity, Platform} from 'react-native';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Calendar from 'lucide-react-native/icons/calendar';
+import ChevronDown from 'lucide-react-native/icons/chevron-down';
 import {useTheme} from '../theme';
 import {formatDisplayDate} from '../utils/formatters';
 
@@ -48,23 +49,16 @@ const DateInput = ({
           disabled={disabled}
           accessibilityRole="button"
           accessibilityLabel={label ?? 'Select date'}>
-          <MaterialCommunityIcons
-            name="calendar"
-            size={20}
-            color={colors.primary}
-            className="mr-2.5"
-          />
+          <View className="mr-2.5">
+            <Calendar size={20} color={colors.primary} />
+          </View>
           <Text
             className={`flex-1 font-sans text-[15px] ${
               date ? 'text-text' : 'text-text-placeholder'
             }`}>
             {date ? formatDisplayDate(date) : 'Select date'}
           </Text>
-          <MaterialCommunityIcons
-            name="chevron-down"
-            size={20}
-            color={colors.textPlaceholder}
-          />
+          <ChevronDown size={20} color={colors.textPlaceholder} />
         </TouchableOpacity>
         <DatePickerModal
           locale="en"

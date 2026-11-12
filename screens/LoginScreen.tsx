@@ -29,7 +29,11 @@ import {
   getFirestore,
   setDoc,
 } from '@react-native-firebase/firestore';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Eye from 'lucide-react-native/icons/eye';
+import EyeOff from 'lucide-react-native/icons/eye-off';
+import Lock from 'lucide-react-native/icons/lock';
+import User from 'lucide-react-native/icons/user';
+import AppleLogo from '../src/components/icons/AppleLogo';
 import {configureGoogleSignIn} from '../utils/GoogleSignInConfig';
 import {
   configureAppleSignIn,
@@ -301,7 +305,7 @@ const LoginScreen = () => {
                 labelValue={email}
                 onChangeText={setEmail}
                 placeholderText="Email"
-                iconType="user"
+                icon={User}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -314,7 +318,7 @@ const LoginScreen = () => {
                     validatePassword(text);
                   }}
                   placeholderText="Password"
-                  iconType="lock"
+                  icon={Lock}
                   secureTextEntry={!showPassword}
                 />
                 <TouchableOpacity
@@ -324,11 +328,11 @@ const LoginScreen = () => {
                     showPassword ? 'Hide password' : 'Show password'
                   }
                   onPress={() => setShowPassword(!showPassword)}>
-                  <MaterialCommunityIcons
-                    name={showPassword ? 'eye-off' : 'eye'}
-                    size={20}
-                    color={colors.textSecondary}
-                  />
+                  {showPassword ? (
+                    <EyeOff size={20} color={colors.textSecondary} />
+                  ) : (
+                    <Eye size={20} color={colors.textSecondary} />
+                  )}
                 </TouchableOpacity>
               </View>
               {password.length > 0 && (
@@ -397,12 +401,9 @@ const LoginScreen = () => {
                     className="mb-2.5 flex-row items-center justify-center rounded-lg bg-inverse px-4 py-3"
                     onPress={handleAppleSignIn}
                     disabled={loading}>
-                    <MaterialCommunityIcons
-                      name="apple"
-                      size={20}
-                      color={colors.onInverse}
-                      className="mr-3"
-                    />
+                    <View className="mr-3">
+                      <AppleLogo size={20} color={colors.onInverse} />
+                    </View>
                     <Text className="font-sans text-base font-medium text-on-inverse">
                       Sign in with Apple
                     </Text>

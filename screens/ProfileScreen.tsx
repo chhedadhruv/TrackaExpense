@@ -21,10 +21,23 @@ import * as Application from 'expo-application';
 import {version as appVersion} from '../package.json';
 import {View, Text, TouchableOpacity, ScrollView, Alert} from 'react-native';
 import {Avatar, ActivityIndicator} from 'react-native-paper';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import ChevronDown from 'lucide-react-native/icons/chevron-down';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
+import ChevronUp from 'lucide-react-native/icons/chevron-up';
+import CircleAlert from 'lucide-react-native/icons/circle-alert';
+import CircleCheck from 'lucide-react-native/icons/circle-check';
+import CircleDollarSign from 'lucide-react-native/icons/circle-dollar-sign';
+import CircleX from 'lucide-react-native/icons/circle-x';
+import LockKeyhole from 'lucide-react-native/icons/lock-keyhole';
+import LogOut from 'lucide-react-native/icons/log-out';
+import Mic from 'lucide-react-native/icons/mic';
+import Pencil from 'lucide-react-native/icons/pencil';
+import ShieldAlert from 'lucide-react-native/icons/shield-alert';
+import ShieldCheck from 'lucide-react-native/icons/shield-check';
+import UserX from 'lucide-react-native/icons/user-x';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {useTheme} from '../src/theme';
-import type {McIconName} from '../src/types/icons';
+import type {AppIcon} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
 import AppearanceSetting from '../src/components/AppearanceSetting';
 import CurrencyPickerModal from '../src/components/CurrencyPickerModal';
@@ -35,7 +48,7 @@ const ACCENT = {amber: '#FFC107', blue: '#2196F3', green: '#4CAF50'} as const;
 const tint = (hex: string): string => `${hex}1F`;
 
 interface SettingsRowProps {
-  icon: McIconName;
+  icon: AppIcon;
   /** Icon colour; the circle behind it is the same colour at a low alpha. */
   accent: string;
   title: string;
@@ -44,19 +57,19 @@ interface SettingsRowProps {
   /** Colours the title (for destructive rows). */
   danger?: boolean;
   /** Trailing icon, a chevron by default. */
-  trailing?: McIconName;
+  trailing?: AppIcon;
   accessibilityState?: {expanded: boolean};
 }
 
 /** One tappable row of a settings card. */
 const SettingsRow = ({
-  icon,
+  icon: Icon,
   accent,
   title,
   subtitle,
   onPress,
   danger = false,
-  trailing = 'chevron-right',
+  trailing: Trailing = ChevronRight,
   accessibilityState,
 }: SettingsRowProps) => {
   const {colors} = useTheme();
@@ -71,7 +84,7 @@ const SettingsRow = ({
         <View
           className="mr-4 h-12 w-12 items-center justify-center rounded-xl"
           style={{backgroundColor: tint(accent)}}>
-          <MaterialCommunityIcons name={icon} size={24} color={accent} />
+          <Icon size={24} color={accent} />
         </View>
         <View className="flex-1">
           <Text
@@ -85,11 +98,7 @@ const SettingsRow = ({
           </Text>
         </View>
       </View>
-      <MaterialCommunityIcons
-        name={trailing}
-        size={24}
-        color={colors.iconMuted}
-      />
+      <Trailing size={24} color={colors.iconMuted} />
     </TouchableOpacity>
   );
 };
@@ -234,11 +243,7 @@ const ProfileScreen = () => {
   if (error) {
     return (
       <View className="flex-1 items-center justify-center bg-background px-5">
-        <MaterialCommunityIcons
-          name="alert-circle-outline"
-          size={48}
-          color={colors.expense}
-        />
+        <CircleAlert size={48} color={colors.expense} />
         <Text
           accessibilityRole="alert"
           className="my-[15px] text-center font-sans text-base text-expense-text">
@@ -284,11 +289,11 @@ const ProfileScreen = () => {
                   />
                 )}
                 <View className="absolute -bottom-0.5 -right-0.5 rounded-[10px] bg-surface p-0.5">
-                  <MaterialCommunityIcons
-                    name={verified ? 'check-circle' : 'close-circle'}
-                    size={20}
-                    color={verified ? colors.income : colors.expense}
-                  />
+                  {verified ? (
+                    <CircleCheck size={20} color={colors.income} />
+                  ) : (
+                    <CircleX size={20} color={colors.expense} />
+                  )}
                 </View>
               </View>
               <View className="flex-1 justify-center">
@@ -306,11 +311,11 @@ const ProfileScreen = () => {
                         ? tint(colors.income)
                         : tint(colors.warning),
                     }}>
-                    <MaterialCommunityIcons
-                      name={verified ? 'shield-check' : 'shield-alert'}
-                      size={14}
-                      color={verified ? colors.income : colors.warning}
-                    />
+                    {verified ? (
+                      <ShieldCheck size={14} color={colors.income} />
+                    ) : (
+                      <ShieldAlert size={14} color={colors.warning} />
+                    )}
                     <Text
                       className={`ml-1.5 font-sans-bold text-sm font-semibold ${
                         verified ? 'text-income' : 'text-warning'
@@ -326,11 +331,7 @@ const ProfileScreen = () => {
                 accessibilityLabel="Edit profile"
                 hitSlop={8}
                 onPress={() => router.navigate('/profile/edit')}>
-                <MaterialCommunityIcons
-                  name="pencil"
-                  size={20}
-                  color={colors.primary}
-                />
+                <Pencil size={20} color={colors.primary} />
               </TouchableOpacity>
             </View>
           </View>
@@ -355,7 +356,7 @@ const ProfileScreen = () => {
           </Text>
           <SettingsCard>
             <SettingsRow
-              icon="currency-usd"
+              icon={CircleDollarSign}
               accent={ACCENT.amber}
               title="Currency"
               subtitle={`${currency.name} (${currency.symbol})`}
@@ -363,7 +364,7 @@ const ProfileScreen = () => {
             />
             <RowDivider />
             <SettingsRow
-              icon="account-voice"
+              icon={Mic}
               accent={ACCENT.blue}
               title="Contact Us"
               subtitle="Get help and share feedback"
@@ -371,7 +372,7 @@ const ProfileScreen = () => {
             />
             <RowDivider />
             <SettingsRow
-              icon="shield-check"
+              icon={ShieldCheck}
               accent={ACCENT.green}
               title="Privacy Policy"
               subtitle="Learn how we protect your data"
@@ -379,7 +380,7 @@ const ProfileScreen = () => {
             />
             <RowDivider />
             <SettingsRow
-              icon="logout"
+              icon={LogOut}
               accent={colors.expense}
               title="Logout"
               subtitle="Sign out of your account"
@@ -392,7 +393,7 @@ const ProfileScreen = () => {
         <View className="px-5 pb-[30px]">
           <SettingsCard>
             <SettingsRow
-              icon="shield-alert"
+              icon={ShieldAlert}
               accent={colors.warning}
               title="Account Actions"
               subtitle={
@@ -400,7 +401,7 @@ const ProfileScreen = () => {
                   ? 'Hide sensitive options'
                   : 'Password, deletion, and other actions'
               }
-              trailing={accountActionsExpanded ? 'chevron-up' : 'chevron-down'}
+              trailing={accountActionsExpanded ? ChevronUp : ChevronDown}
               accessibilityState={{expanded: accountActionsExpanded}}
               onPress={() => setAccountActionsExpanded(!accountActionsExpanded)}
             />
@@ -408,7 +409,7 @@ const ProfileScreen = () => {
               <View className="pb-2">
                 <RowDivider />
                 <SettingsRow
-                  icon="lock-reset"
+                  icon={LockKeyhole}
                   accent={ACCENT.blue}
                   title="Change Password"
                   subtitle="Reset your password via email"
@@ -416,7 +417,7 @@ const ProfileScreen = () => {
                 />
                 <RowDivider />
                 <SettingsRow
-                  icon="account-remove"
+                  icon={UserX}
                   accent={colors.expense}
                   title="Delete Account"
                   subtitle="Permanently delete your account and data"
@@ -424,11 +425,7 @@ const ProfileScreen = () => {
                   onPress={handleDeleteAccount}
                 />
                 <View className="mx-5 mb-2 mt-4 flex-row items-center rounded-lg bg-warning-soft p-3">
-                  <MaterialCommunityIcons
-                    name="alert-circle"
-                    size={16}
-                    color={colors.warning}
-                  />
+                  <CircleAlert size={16} color={colors.warning} />
                   <Text className="ml-2 flex-1 font-sans text-xs leading-4 text-warning-text">
                     These actions are sensitive and may require additional
                     verification.

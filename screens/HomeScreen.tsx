@@ -12,7 +12,23 @@ import {
 import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {useRouter} from 'expo-router';
 import {Card} from 'react-native-paper';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import ArrowDown from 'lucide-react-native/icons/arrow-down';
+import ArrowUp from 'lucide-react-native/icons/arrow-up';
+import BanknoteArrowDown from 'lucide-react-native/icons/banknote-arrow-down';
+import BanknoteArrowUp from 'lucide-react-native/icons/banknote-arrow-up';
+import Calendar from 'lucide-react-native/icons/calendar';
+import Calendar1 from 'lucide-react-native/icons/calendar-1';
+import CalendarArrowDown from 'lucide-react-native/icons/calendar-arrow-down';
+import CalendarArrowUp from 'lucide-react-native/icons/calendar-arrow-up';
+import CalendarClock from 'lucide-react-native/icons/calendar-clock';
+import CalendarDays from 'lucide-react-native/icons/calendar-days';
+import CalendarRange from 'lucide-react-native/icons/calendar-range';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
+import Handshake from 'lucide-react-native/icons/handshake';
+import List from 'lucide-react-native/icons/list';
+import NotebookText from 'lucide-react-native/icons/notebook-text';
+import Pencil from 'lucide-react-native/icons/pencil';
+import Users from 'lucide-react-native/icons/users';
 import {getAuth} from '@react-native-firebase/auth';
 import {
   doc as fsDoc,
@@ -32,7 +48,7 @@ import {formatInputAmount} from '../src/utils/formatters';
 import {majorOf, totalMajor} from '../src/utils/amounts';
 import {fromMinor, tryToMinor} from '../src/utils/money';
 import type {TransactionDocument} from '../src/types';
-import type {McIconName} from '../src/types/icons';
+import type {AppIcon} from '../src/types/icons';
 
 type TimeRange =
   | 'all'
@@ -43,15 +59,34 @@ type TimeRange =
   | 'year'
   | 'custom';
 
-const TIME_RANGES: {key: TimeRange; label: string; icon: McIconName}[] = [
-  {key: 'all', label: 'All Time', icon: 'format-list-bulleted'},
-  {key: '7days', label: 'Last 7 Days', icon: 'calendar-week'},
-  {key: '30days', label: 'Last 30 Days', icon: 'calendar-month'},
-  {key: '3months', label: 'Last 3 Months', icon: 'calendar-range'},
-  {key: '6months', label: 'Last 6 Months', icon: 'calendar-clock'},
-  {key: 'year', label: 'Last Year', icon: 'calendar'},
-  {key: 'custom', label: 'Custom Range', icon: 'calendar-range'},
+const TIME_RANGES: {key: TimeRange; label: string; icon: AppIcon}[] = [
+  {key: 'all', label: 'All Time', icon: List},
+  {key: '7days', label: 'Last 7 Days', icon: Calendar1},
+  {key: '30days', label: 'Last 30 Days', icon: CalendarDays},
+  {key: '3months', label: 'Last 3 Months', icon: CalendarRange},
+  {key: '6months', label: 'Last 6 Months', icon: CalendarClock},
+  {key: 'year', label: 'Last Year', icon: Calendar},
+  {key: 'custom', label: 'Custom Range', icon: CalendarRange},
 ];
+
+/** The icon of a recent transaction: a handshake for settlements, a group for splits, else its category. */
+const TransactionGlyph = ({
+  transaction,
+  size,
+  color,
+}: {
+  transaction: TransactionDocument;
+  size: number;
+  color: string;
+}) => {
+  const Icon: AppIcon =
+    transaction.source === 'split' && transaction.category === 'Settlement'
+      ? Handshake
+      : transaction.source === 'split'
+      ? Users
+      : getCategoryIcon(transaction.category);
+  return <Icon size={size} color={color} />;
+};
 
 const RECENT_LIMIT = 5;
 
@@ -257,11 +292,7 @@ const HomeScreen = () => {
                 }}
                 style={styles.balanceEditBtn}
                 hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-                <MaterialCommunityIcons
-                  name="pencil-outline"
-                  size={18}
-                  color={colors.primary}
-                />
+                <Pencil size={18} color={colors.primary} />
               </TouchableOpacity>
             </View>
           </View>
@@ -278,11 +309,7 @@ const HomeScreen = () => {
             <View style={styles.cardContent}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardIcon}>
-                  <MaterialCommunityIcons
-                    name="arrow-down-bold"
-                    size={20}
-                    color={colors.income}
-                  />
+                  <ArrowDown size={20} color={colors.income} />
                 </View>
                 <Text style={styles.cardTitle}>Total Income</Text>
               </View>
@@ -300,11 +327,7 @@ const HomeScreen = () => {
             <View style={styles.cardContent}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardIcon}>
-                  <MaterialCommunityIcons
-                    name="arrow-up-bold"
-                    size={20}
-                    color={colors.expense}
-                  />
+                  <ArrowUp size={20} color={colors.expense} />
                 </View>
                 <Text style={styles.cardTitle}>Total Expense</Text>
               </View>
@@ -321,7 +344,7 @@ const HomeScreen = () => {
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.filterScrollView}>
-            {TIME_RANGES.map(({key, label, icon}) => {
+            {TIME_RANGES.map(({key, label, icon: Icon}) => {
               const active = timeRange === key;
               return (
                 <TouchableOpacity
@@ -331,8 +354,7 @@ const HomeScreen = () => {
                     styles.filterButton,
                     active && styles.filterButtonActive,
                   ]}>
-                  <MaterialCommunityIcons
-                    name={icon}
+                  <Icon
                     size={16}
                     color={active ? colors.onPrimary : colors.primary}
                   />
@@ -358,11 +380,7 @@ const HomeScreen = () => {
                 style={styles.dateInput}
                 onPress={() => setStartDatePickerVisible(true)}>
                 <View style={styles.dateInputContent}>
-                  <MaterialCommunityIcons
-                    name="calendar-start"
-                    size={20}
-                    color={colors.primary}
-                  />
+                  <CalendarArrowUp size={20} color={colors.primary} />
                   <Text
                     style={[
                       styles.dateInputText,
@@ -381,11 +399,7 @@ const HomeScreen = () => {
                 style={styles.dateInput}
                 onPress={() => setEndDatePickerVisible(true)}>
                 <View style={styles.dateInputContent}>
-                  <MaterialCommunityIcons
-                    name="calendar-end"
-                    size={20}
-                    color={colors.primary}
-                  />
+                  <CalendarArrowDown size={20} color={colors.primary} />
                   <Text
                     style={[
                       styles.dateInputText,
@@ -444,21 +458,13 @@ const HomeScreen = () => {
             <TouchableOpacity
               style={[styles.quickActionButton, styles.addIncomeButton]}
               onPress={() => router.navigate('/income/add')}>
-              <MaterialCommunityIcons
-                name="cash-plus"
-                size={20}
-                color={colors.onPrimary}
-              />
+              <BanknoteArrowUp size={20} color={colors.onPrimary} />
               <Text style={styles.quickActionText}>Add Income</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.quickActionButton, styles.addExpenseButton]}
               onPress={() => router.navigate('/expense/add')}>
-              <MaterialCommunityIcons
-                name="cash-minus"
-                size={20}
-                color={colors.onPrimary}
-              />
+              <BanknoteArrowDown size={20} color={colors.onPrimary} />
               <Text style={styles.quickActionText}>Add Expense</Text>
             </TouchableOpacity>
           </View>
@@ -483,11 +489,7 @@ const HomeScreen = () => {
               onPress={() => router.navigate('/transactions')}
               style={styles.seeAllButton}>
               <Text style={styles.seeAllText}>See All</Text>
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={18}
-                color={colors.primary}
-              />
+              <ChevronRight size={18} color={colors.primary} />
             </TouchableOpacity>
           </View>
           <View style={styles.transactionsList}>
@@ -506,15 +508,8 @@ const HomeScreen = () => {
                   <View style={styles.transactionsCardContent}>
                     <View style={styles.transactionsCardDetails}>
                       <View style={styles.transactionsCardIcon}>
-                        <MaterialCommunityIcons
-                          name={
-                            transaction.source === 'split' &&
-                            transaction.category === 'Settlement'
-                              ? 'handshake'
-                              : transaction.source === 'split'
-                              ? 'account-group'
-                              : getCategoryIcon(transaction.category)
-                          }
+                        <TransactionGlyph
+                          transaction={transaction}
                           size={25}
                           color={colors.primary}
                         />
@@ -557,11 +552,7 @@ const HomeScreen = () => {
               ))
             ) : (
               <View style={styles.emptyState}>
-                <MaterialCommunityIcons
-                  name="note-text-outline"
-                  size={48}
-                  color={colors.iconMuted}
-                />
+                <NotebookText size={48} color={colors.iconMuted} />
                 {transactions.length === 0 ? (
                   <>
                     <Text style={styles.emptyStateText}>

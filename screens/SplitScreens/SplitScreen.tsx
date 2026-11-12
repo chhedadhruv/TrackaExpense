@@ -28,7 +28,23 @@ import {
 } from '../../src/services/UserLookup';
 import {getAuth} from '@react-native-firebase/auth';
 import {useFocusEffect, useLocalSearchParams, useRouter} from 'expo-router';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import BookOpen from 'lucide-react-native/icons/book-open';
+import Briefcase from 'lucide-react-native/icons/briefcase';
+import Check from 'lucide-react-native/icons/check';
+import ChevronDown from 'lucide-react-native/icons/chevron-down';
+import ChevronUp from 'lucide-react-native/icons/chevron-up';
+import CircleEllipsis from 'lucide-react-native/icons/circle-ellipsis';
+import Handshake from 'lucide-react-native/icons/handshake';
+import Heart from 'lucide-react-native/icons/heart';
+import History from 'lucide-react-native/icons/history';
+import House from 'lucide-react-native/icons/house';
+import Palette from 'lucide-react-native/icons/palette';
+import Pencil from 'lucide-react-native/icons/pencil';
+import Plane from 'lucide-react-native/icons/plane';
+import Trophy from 'lucide-react-native/icons/trophy';
+import UserPlus from 'lucide-react-native/icons/user-plus';
+import Users from 'lucide-react-native/icons/users';
+import X from 'lucide-react-native/icons/x';
 import TriangleAlert from 'lucide-react-native/icons/triangle-alert';
 import UserAvatar from '../../src/components/Avatar';
 import SelectModal from '../../src/components/SelectModal';
@@ -44,7 +60,7 @@ import {
   useInvitations,
   useMemberDetails,
 } from '../../src/data/split';
-import type {McIconName} from '../../src/types/icons';
+import type {AppIcon} from '../../src/types/icons';
 import {snackbar} from '../../src/utils/snackbarStore';
 
 interface UserDetail {
@@ -67,28 +83,28 @@ interface Group {
   updatedAt?: unknown;
 }
 
-const GROUP_CATEGORY_ICONS: Record<string, McIconName> = {
-  Work: 'briefcase',
-  Family: 'home-heart',
-  Couple: 'heart-multiple',
-  Friends: 'account-group',
-  Travel: 'airplane',
-  Sports: 'basketball',
-  Hobby: 'palette',
-  Study: 'book-open-variant',
-  Other: 'dots-horizontal-circle',
+const GROUP_CATEGORY_ICONS: Record<string, AppIcon> = {
+  Work: Briefcase,
+  Family: House,
+  Couple: Heart,
+  Friends: Users,
+  Travel: Plane,
+  Sports: Trophy,
+  Hobby: Palette,
+  Study: BookOpen,
+  Other: CircleEllipsis,
 };
 
 // The icon colour comes from the theme, so the options are built inside the component.
 const buildGroupCategories = (color: string) =>
-  Object.entries(GROUP_CATEGORY_ICONS).map(([value, name]) => ({
+  Object.entries(GROUP_CATEGORY_ICONS).map(([value, Icon]) => ({
     label: value,
     value,
-    icon: () => <MaterialCommunityIcons name={name} size={24} color={color} />,
+    icon: () => <Icon size={24} color={color} />,
   }));
 
-const getCategoryIcon = (value: string): McIconName =>
-  GROUP_CATEGORY_ICONS[value] || 'account-group';
+const getCategoryIcon = (value: string): AppIcon =>
+  GROUP_CATEGORY_ICONS[value] || Users;
 
 const SplitScreen = () => {
   const router = useRouter();
@@ -499,13 +515,7 @@ const SplitScreen = () => {
                   styles.customCheckboxIOS,
                   isSelected && styles.customCheckboxIOSSelected,
                 ]}>
-                {isSelected && (
-                  <MaterialCommunityIcons
-                    name="check"
-                    size={18}
-                    color={colors.onPrimary}
-                  />
-                )}
+                {isSelected && <Check size={18} color={colors.onPrimary} />}
               </View>
             </TouchableOpacity>
           ) : (
@@ -519,7 +529,7 @@ const SplitScreen = () => {
   };
 
   const renderGroupCard = (group: Group) => {
-    const iconName = getCategoryIcon(group.category || '');
+    const GroupIcon = getCategoryIcon(group.category || '');
     return (
       <Card
         key={group.id}
@@ -539,20 +549,12 @@ const SplitScreen = () => {
           <View style={styles.groupCardHeader}>
             <View style={styles.groupCardLeft}>
               <View style={styles.categoryIconContainer}>
-                <MaterialCommunityIcons
-                  name={iconName}
-                  size={24}
-                  color={colors.onPrimary}
-                />
+                <GroupIcon size={24} color={colors.onPrimary} />
               </View>
               <View style={styles.groupInfo}>
                 <Text style={styles.groupName}>{group.name}</Text>
                 <View style={styles.memberCountContainer}>
-                  <MaterialCommunityIcons
-                    name="account-multiple"
-                    size={14}
-                    color={colors.textSecondary}
-                  />
+                  <Users size={14} color={colors.textSecondary} />
                   <Text style={styles.groupMembers}>
                     {group.members.length}{' '}
                     {group.members.length === 1 ? 'Member' : 'Members'}
@@ -579,11 +581,7 @@ const SplitScreen = () => {
           showsVerticalScrollIndicator={false}>
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
-              <MaterialCommunityIcons
-                name="account-group"
-                size={32}
-                color={colors.primary}
-              />
+              <Users size={32} color={colors.primary} />
               <Text style={styles.headerTitle}>Split Groups</Text>
             </View>
             <Text style={styles.headerSubtitle}>
@@ -594,22 +592,14 @@ const SplitScreen = () => {
             <TouchableOpacity
               style={styles.quickAccessButton}
               onPress={() => router.navigate('/split/friends')}>
-              <MaterialCommunityIcons
-                name="account-multiple"
-                size={22}
-                color={colors.primary}
-              />
+              <Users size={22} color={colors.primary} />
               <Text style={styles.quickAccessText}>Friends</Text>
             </TouchableOpacity>
             {getConfig().enable_iou_feature && (
               <TouchableOpacity
                 style={styles.quickAccessButton}
                 onPress={() => router.navigate('/split/iou')}>
-                <MaterialCommunityIcons
-                  name="handshake"
-                  size={22}
-                  color={colors.primary}
-                />
+                <Handshake size={22} color={colors.primary} />
                 <Text style={styles.quickAccessText}>IOUs</Text>
               </TouchableOpacity>
             )}
@@ -636,11 +626,11 @@ const SplitScreen = () => {
                 <Text style={styles.createGroupTitle}>
                   {editingGroupId ? 'Edit Group' : 'Create New Group'}
                 </Text>
-                <MaterialCommunityIcons
-                  name={isFormVisible ? 'chevron-up' : 'chevron-down'}
-                  size={24}
-                  color={colors.primary}
-                />
+                {isFormVisible ? (
+                  <ChevronUp size={24} color={colors.primary} />
+                ) : (
+                  <ChevronDown size={24} color={colors.primary} />
+                )}
               </TouchableOpacity>
               {isFormVisible && (
                 <View style={styles.formContainer}>
@@ -725,11 +715,11 @@ const SplitScreen = () => {
                           <Text style={styles.createGroupButtonText}>
                             {editingGroupId ? 'Update Group' : 'Create Group'}
                           </Text>
-                          <MaterialCommunityIcons
-                            name={editingGroupId ? 'pencil' : 'check'}
-                            size={20}
-                            color={colors.onPrimary}
-                          />
+                          {editingGroupId ? (
+                            <Pencil size={20} color={colors.onPrimary} />
+                          ) : (
+                            <Check size={20} color={colors.onPrimary} />
+                          )}
                         </>
                       )}
                     </TouchableOpacity>
@@ -744,11 +734,7 @@ const SplitScreen = () => {
                           setIsFormVisible(false);
                         }}>
                         <Text style={styles.cancelButtonText}>Cancel</Text>
-                        <MaterialCommunityIcons
-                          name="close"
-                          size={20}
-                          color={colors.textSecondary}
-                        />
+                        <X size={20} color={colors.textSecondary} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -768,11 +754,7 @@ const SplitScreen = () => {
                 <TouchableOpacity
                   style={styles.iconActionButton}
                   onPress={() => router.navigate('/split/invitations')}>
-                  <MaterialCommunityIcons
-                    name="account-multiple-plus-outline"
-                    size={20}
-                    color={colors.onPrimary}
-                  />
+                  <UserPlus size={20} color={colors.onPrimary} />
                   {invitationsCount > 0 && (
                     <View style={styles.invitationsBadge}>
                       <Text
@@ -788,11 +770,7 @@ const SplitScreen = () => {
                 <TouchableOpacity
                   style={styles.iconActionButton}
                   onPress={() => router.navigate('/split/history')}>
-                  <MaterialCommunityIcons
-                    name="history"
-                    size={20}
-                    color={colors.onPrimary}
-                  />
+                  <History size={20} color={colors.onPrimary} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -810,11 +788,7 @@ const SplitScreen = () => {
                 ]}
                 elevation={Platform.OS === 'android' ? 0 : 1}>
                 <View style={styles.emptyState}>
-                  <MaterialCommunityIcons
-                    name="account-group-outline"
-                    size={64}
-                    color={colors.iconMuted}
-                  />
+                  <Users size={64} color={colors.iconMuted} />
                   <Text style={styles.emptyStateText}>
                     No groups created yet
                   </Text>
