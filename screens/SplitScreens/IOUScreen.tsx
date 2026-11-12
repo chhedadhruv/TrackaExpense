@@ -27,7 +27,7 @@ import {lookupUserByEmail} from '../../src/services/UserLookup';
 import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
-import {useFocusEffect} from '@react-navigation/native';
+import {useFocusEffect, useRouter} from 'expo-router';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {majorOf, transactionMoneyFields} from '../../src/utils/amounts';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
@@ -53,7 +53,8 @@ interface IOU {
 
 type Tab = 'iowe' | 'owedtome';
 
-const IOUScreen = ({navigation}: {navigation: any}) => {
+const IOUScreen = () => {
+  const router = useRouter();
   const {currency, formatAmount} = useCurrency();
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -374,7 +375,7 @@ const IOUScreen = ({navigation}: {navigation: any}) => {
         </KeyboardAwareScrollView>
         <TouchableOpacity
           style={styles.fab}
-          onPress={() => navigation.navigate('CreateIOU')}>
+          onPress={() => router.navigate('/split/iou/new')}>
           <MaterialCommunityIcons
             name="plus"
             size={28}

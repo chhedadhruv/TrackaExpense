@@ -1,4 +1,5 @@
 import React, {useContext, useState} from 'react';
+import {useRouter} from 'expo-router';
 import {
   View,
   Text,
@@ -48,7 +49,8 @@ interface PasswordValidation {
   uppercase: boolean;
 }
 
-const LoginScreen = ({navigation}: {navigation: any}) => {
+const LoginScreen = () => {
+  const router = useRouter();
   const {colors} = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -412,7 +414,7 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
               )}
               <TouchableOpacity
                 className="mt-5 items-center"
-                onPress={() => navigation.navigate('ForgotPassword')}>
+                onPress={() => router.navigate('/forgot-password')}>
                 <Text className="font-sans text-base font-medium text-primary">
                   Forgot Password?
                 </Text>
@@ -423,7 +425,7 @@ const LoginScreen = ({navigation}: {navigation: any}) => {
           <View className="items-center pb-10">
             <TouchableOpacity
               className="p-[15px]"
-              onPress={() => navigation.navigate('Signup')}>
+              onPress={() => router.navigate('/signup')}>
               <Text className="text-center font-sans text-base text-text-secondary">
                 Don't have an account?{' '}
                 <Text className="font-semibold text-primary">

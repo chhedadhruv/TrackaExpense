@@ -12,7 +12,7 @@ tags:
 - assertVisible: 'Quick Actions'
 
 - tapOn: 'Statistic'
-- assertVisible: 'Track your financial insights'
+- assertVisible: 'Where your money comes and goes'
 
 - tapOn: 'Split'
 - assertVisible: 'Split Groups'

@@ -1,4 +1,5 @@
 import React, {useState, useEffect} from 'react';
+import {useRouter} from 'expo-router';
 import {
   View,
   Text,
@@ -128,13 +129,18 @@ interface Group {
   members?: string[];
 }
 
-const CreateSplitScreen = ({route, navigation}: any) => {
+export interface CreateSplitScreenProps {
+  group: Group;
+  /** Present when an existing split is being edited. */
+  split?: ExistingSplit;
+}
+
+const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
   const {currency} = useCurrency();
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
+  const router = useRouter();
   const [isSplitByPercentage, setIsSplitByPercentage] = useState(false);
-  const {group, split}: {group: Group; split?: ExistingSplit} =
-    route.params || {};
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [paidBy, setPaidBy] = useState<GroupMember | null>(null);
@@ -164,7 +170,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
   useEffect(() => {
     if (!group || !group.id) {
       snackbar.error('Group information is missing');
-      navigation.goBack();
+      router.back();
       return;
     }
     fetchGroupMembers();
@@ -251,7 +257,7 @@ const CreateSplitScreen = ({route, navigation}: any) => {
     } catch (error) {
       reportError(error as Error);
       snackbar.error('Failed to load group members');
-      navigation.goBack();
+      router.back();
     }
   };
 
@@ -390,7 +396,6 @@ const CreateSplitScreen = ({route, navigation}: any) => {
     }
 
     setLoading(true);
-    let newSplitId: string | null = null;
     try {
       const currentUser = getAuth().currentUser;
       if (!currentUser) {
@@ -653,7 +658,6 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         );
       } else {
         const splitRef = await addDoc(splitsCollection, splitData);
-        newSplitId = splitRef.id;
 
         SplitNotificationService.notifySplitCreated(
           {id: splitRef.id, ...splitData} as any,
@@ -719,14 +723,12 @@ const CreateSplitScreen = ({route, navigation}: any) => {
         });
       }
       setLoading(false);
+      // Back to the group, which reads its splits again each time it comes into focus.
       if (isEditMode) {
         snackbar.success('Split updated successfully');
-        navigation.goBack();
+        router.back();
       } else {
-        navigation.navigate('SplitGroupDetail', {
-          group,
-          newSplit: newSplitId ? {id: newSplitId, ...splitData} : undefined,
-        });
+        router.back();
         snackbar.success('Split added successfully');
       }
     } catch (error) {

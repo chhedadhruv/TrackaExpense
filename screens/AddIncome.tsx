@@ -1,5 +1,6 @@
 import {View, Text} from 'react-native';
 import React, {useState, useEffect} from 'react';
+import {useRouter} from 'expo-router';
 import {ActivityIndicator} from 'react-native-paper';
 import {getAuth} from '@react-native-firebase/auth';
 import {
@@ -38,7 +39,8 @@ import {snackbar} from '../src/utils/snackbarStore';
 
 const DISABLED_BUTTON = {opacity: 0.5} as const;
 
-const AddIncome = ({navigation}: {navigation: any}) => {
+const AddIncome = () => {
+  const router = useRouter();
   const {colors} = useTheme();
   const {currency} = useCurrency();
   const {
@@ -116,7 +118,7 @@ const AddIncome = ({navigation}: {navigation: any}) => {
       // The suggestion list is a convenience: record the tags without holding up the screen.
       recordTagUse(uid, tags, knownTags).catch(reportError);
       snackbar.success('Income added');
-      navigation.goBack();
+      router.back();
     } catch (e) {
       reportError(e as Error);
       setErrorMessage(

@@ -19,7 +19,7 @@ import {
 import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
-import {useFocusEffect} from '@react-navigation/native';
+import {useFocusEffect} from 'expo-router';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {minorOf} from '../../src/utils/amounts';
 import {toMajorNumber} from '../../src/utils/money';
