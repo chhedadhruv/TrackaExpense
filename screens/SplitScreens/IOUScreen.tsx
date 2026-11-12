@@ -7,7 +7,9 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import {Text, Card, ActivityIndicator} from 'react-native-paper';
+import {ActivityIndicator} from 'react-native';
+import Card from '../../src/components/Card';
+import Text from '../../src/components/Text';
 import Handshake from 'lucide-react-native/icons/handshake';
 import Plus from 'lucide-react-native/icons/plus';
 import UserAvatar from '../../src/components/Avatar';

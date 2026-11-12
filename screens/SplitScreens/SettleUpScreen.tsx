@@ -10,7 +10,8 @@ import {
   TextInput,
   Platform,
 } from 'react-native';
-import {Card, Switch} from 'react-native-paper';
+import Card from '../../src/components/Card';
+import Toggle from '../../src/components/Toggle';
 import UserAvatar from '../../src/components/Avatar';
 import {
   addDoc,
@@ -425,10 +426,9 @@ const SettleUpScreen = ({
                     Record your share as a personal expense
                   </Text>
                 </View>
-                <Switch
+                <Toggle
                   value={includeInTransactions}
                   onValueChange={setIncludeInTransactions}
-                  color={colors.primaryFill}
                 />
               </View>
             </View>

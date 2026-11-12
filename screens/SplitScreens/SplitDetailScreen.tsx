@@ -8,7 +8,8 @@ import {
   Image,
   Linking,
 } from 'react-native';
-import {Text, Card} from 'react-native-paper';
+import Card from '../../src/components/Card';
+import Text from '../../src/components/Text';
 import UserAvatar from '../../src/components/Avatar';
 import Coins from 'lucide-react-native/icons/coins';
 import Landmark from 'lucide-react-native/icons/landmark';

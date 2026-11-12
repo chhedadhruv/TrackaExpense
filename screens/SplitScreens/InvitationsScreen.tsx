@@ -1,6 +1,8 @@
 import React, {useCallback} from 'react';
 import {View, StyleSheet, TouchableOpacity, Platform} from 'react-native';
-import {Text, Card, ActivityIndicator} from 'react-native-paper';
+import {ActivityIndicator} from 'react-native';
+import Card from '../../src/components/Card';
+import Text from '../../src/components/Text';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
 import {respondToInvitation} from '../../src/services/InvitationService';

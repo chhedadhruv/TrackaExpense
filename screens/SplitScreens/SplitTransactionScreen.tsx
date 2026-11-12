@@ -9,17 +9,14 @@ import {
   Platform,
   Share,
 } from 'react-native';
-import {Card, Searchbar} from 'react-native-paper';
+import Card from '../../src/components/Card';
+import SearchField from '../../src/components/SearchField';
 import Calendar from 'lucide-react-native/icons/calendar';
 import History from 'lucide-react-native/icons/history';
 import ListFilter from 'lucide-react-native/icons/list-filter';
 import ShareIcon from 'lucide-react-native/icons/share';
-import {
-  renderClearIcon,
-  renderSearchIcon,
-} from '../../src/components/icons/searchbarIcons';
 import moment from 'moment';
-import {DatePickerModal} from 'react-native-paper-dates';
+import DatePickerModal from '../../src/components/DatePickerModal';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {majorOf} from '../../src/utils/amounts';
@@ -353,16 +350,10 @@ const SplitTransactionScreen = ({group}: SplitTransactionScreenProps) => {
                 </Text>
               </View>
               <View style={styles.searchContainer}>
-                <Searchbar
+                <SearchField
                   placeholder="Search transactions..."
-                  placeholderTextColor={colors.textPlaceholder}
                   onChangeText={handleSearch}
                   value={searchQuery}
-                  style={styles.searchBar}
-                  inputStyle={styles.searchInput}
-                  iconColor={colors.primary}
-                  icon={renderSearchIcon}
-                  clearIcon={renderClearIcon}
                 />
               </View>
               <Card
@@ -447,42 +438,18 @@ const SplitTransactionScreen = ({group}: SplitTransactionScreenProps) => {
                         </View>
                       </View>
                       <DatePickerModal
-                        locale="en"
-                        mode="single"
                         visible={startDatePickerVisible}
                         onDismiss={() => setStartDatePickerVisible(false)}
                         date={customStartDate ?? undefined}
-                        onConfirm={(params: {date?: Date}) => {
-                          setStartDatePickerVisible(false);
-                          if (params.date) {
-                            setCustomStartDate(params.date);
-                          }
-                        }}
-                        saveLabel="Confirm"
+                        onConfirm={({date}) => setCustomStartDate(date)}
                         label="Select start date"
-                        uppercase={false}
-                        {...(Platform.OS === 'ios' && {
-                          presentationStyle: 'pageSheet',
-                        })}
                       />
                       <DatePickerModal
-                        locale="en"
-                        mode="single"
                         visible={endDatePickerVisible}
                         onDismiss={() => setEndDatePickerVisible(false)}
                         date={customEndDate ?? undefined}
-                        onConfirm={(params: {date?: Date}) => {
-                          setEndDatePickerVisible(false);
-                          if (params.date) {
-                            setCustomEndDate(params.date);
-                          }
-                        }}
-                        saveLabel="Confirm"
+                        onConfirm={({date}) => setCustomEndDate(date)}
                         label="Select end date"
-                        uppercase={false}
-                        {...(Platform.OS === 'ios' && {
-                          presentationStyle: 'pageSheet',
-                        })}
                       />
                       <TouchableOpacity
                         style={styles.applyButton}
@@ -560,23 +527,6 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.textStrong,
       marginBottom: 15,
       fontFamily: 'Lato-Bold',
-    },
-    searchBar: {
-      marginBottom: 15,
-      backgroundColor: colors.surface,
-      elevation: Platform.OS === 'android' ? 0 : 1,
-      shadowColor: colors.shadow,
-      shadowOffset: {width: 0, height: 1},
-      shadowOpacity: 0.05,
-      shadowRadius: 1,
-      borderRadius: 12,
-      fontFamily: 'Lato-Regular',
-      fontSize: 16,
-    },
-    searchInput: {
-      color: colors.textStrong,
-      fontFamily: 'Lato-Regular',
-      fontSize: 16,
     },
     filterScrollContainer: {marginBottom: 15},
     filterContainer: {flexDirection: 'row', paddingHorizontal: 5},
