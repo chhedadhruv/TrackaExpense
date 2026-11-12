@@ -1,8 +1,8 @@
 import React from 'react';
-import {View} from 'react-native';
+import {Pressable} from 'react-native';
 import {useRouter} from 'expo-router';
 import {Stack} from 'expo-router/js-stack';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import {useTheme} from '../../src/theme';
 import {useAuthStackOptions} from '../../src/navigation/stackOptions';
 
@@ -15,16 +15,13 @@ const BackArrow = ({to}: BackProps) => {
   const {colors} = useTheme();
   const router = useRouter();
   return (
-    <View className="ml-2.5">
-      <FontAwesome.Button
-        name="long-arrow-left"
-        size={25}
-        backgroundColor={colors.background}
-        color={colors.text}
-        accessibilityLabel="Back"
-        onPress={() => router.navigate(to)}
-      />
-    </View>
+    <Pressable
+      className="ml-2.5 p-3"
+      accessibilityRole="button"
+      accessibilityLabel="Back"
+      onPress={() => router.navigate(to)}>
+      <ArrowLeft size={25} color={colors.text} />
+    </Pressable>
   );
 };
 

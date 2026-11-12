@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Text,
 } from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {
   deleteDoc,
   doc,
@@ -29,17 +28,29 @@ import {balanceEffect, majorOf} from '../src/utils/amounts';
 import {useTheme} from '../src/theme';
 import TagChips from '../src/components/TagChips';
 import {sanitizeTags} from '../src/utils/tags';
-import type {McIconName} from '../src/types/icons';
+import AlignLeft from 'lucide-react-native/icons/align-left';
+import Calendar from 'lucide-react-native/icons/calendar';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
+import CircleAlert from 'lucide-react-native/icons/circle-alert';
+import CircleMinus from 'lucide-react-native/icons/circle-minus';
+import CirclePlus from 'lucide-react-native/icons/circle-plus';
+import Pencil from 'lucide-react-native/icons/pencil';
+import Tag from 'lucide-react-native/icons/tag';
+import Tags from 'lucide-react-native/icons/tags';
+import Trash2 from 'lucide-react-native/icons/trash-2';
+import TrendingDown from 'lucide-react-native/icons/trending-down';
+import TrendingUp from 'lucide-react-native/icons/trending-up';
+import type {AppIcon} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
 import {useRouter} from 'expo-router';
 import type {TransactionDocument} from '../src/types';
 
 const DetailRow = ({
-  icon,
+  icon: Icon,
   label,
   children,
 }: {
-  icon: McIconName;
+  icon: AppIcon;
   label: string;
   children: ReactNode;
 }) => {
@@ -47,7 +58,7 @@ const DetailRow = ({
   return (
     <View className="mb-5 flex-row items-start">
       <View className="mr-[15px] h-10 w-10 items-center justify-center rounded-xl bg-primary-soft">
-        <MaterialCommunityIcons name={icon} size={20} color={colors.primary} />
+        <Icon size={20} color={colors.primary} />
       </View>
       <View className="flex-1">
         <Text className="mb-1.5 font-sans text-sm font-medium text-text-secondary">
@@ -157,11 +168,11 @@ const TransactionDetailScreen = ({
       <View className="border-b border-divider bg-surface px-5 py-[25px]">
         <View className="flex-row items-center">
           <View className="mr-5 h-[60px] w-[60px] items-center justify-center rounded-[20px] bg-surface-muted">
-            <MaterialCommunityIcons
-              name={isIncome ? 'trending-up' : 'trending-down'}
-              size={24}
-              color={accentColor}
-            />
+            {isIncome ? (
+              <TrendingUp size={24} color={accentColor} />
+            ) : (
+              <TrendingDown size={24} color={accentColor} />
+            )}
           </View>
           <View className="flex-1">
             <Text className="mb-1.5 font-heading text-xl font-bold text-text-strong">
@@ -187,27 +198,25 @@ const TransactionDetailScreen = ({
               Transaction Details
             </Text>
 
-            <DetailRow icon="calendar" label="Date">
+            <DetailRow icon={Calendar} label="Date">
               <Text className="font-sans-bold text-base font-semibold text-text-strong">
                 {transaction.date}
               </Text>
             </DetailRow>
 
-            <DetailRow icon="tag" label="Category">
+            <DetailRow icon={Tag} label="Category">
               <Text className="font-sans-bold text-base font-semibold text-text-strong">
                 {transaction.category}
               </Text>
             </DetailRow>
 
             {tagList.length > 0 ? (
-              <DetailRow icon="tag-multiple" label="Tags">
+              <DetailRow icon={Tags} label="Tags">
                 <TagChips tags={tagList} />
               </DetailRow>
             ) : null}
 
-            <DetailRow
-              icon={isIncome ? 'plus-circle' : 'minus-circle'}
-              label="Type">
+            <DetailRow icon={isIncome ? CirclePlus : CircleMinus} label="Type">
               <View
                 className={`self-start rounded-lg px-3 py-1.5 ${
                   isIncome ? 'bg-income-soft' : 'bg-expense-soft'
@@ -223,7 +232,7 @@ const TransactionDetailScreen = ({
             </DetailRow>
 
             {transaction.description ? (
-              <DetailRow icon="text" label="Description">
+              <DetailRow icon={AlignLeft} label="Description">
                 <Text className="font-sans-bold text-base font-semibold text-text-strong">
                   {transaction.description}
                 </Text>
@@ -253,11 +262,7 @@ const TransactionDetailScreen = ({
                   Tap to view full size
                 </Text>
               </View>
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={24}
-                color={colors.primary}
-              />
+              <ChevronRight size={24} color={colors.primary} />
             </TouchableOpacity>
           </View>
         ) : null}
@@ -267,11 +272,7 @@ const TransactionDetailScreen = ({
             className="flex-row items-center justify-center rounded-xl bg-primary-fill py-4 ios:shadow-md"
             accessibilityRole="button"
             onPress={handleEdit}>
-            <MaterialCommunityIcons
-              name="pencil"
-              size={20}
-              color={colors.onPrimary}
-            />
+            <Pencil size={20} color={colors.onPrimary} />
             <Text className="ml-2 font-sans-bold text-base font-semibold text-on-primary">
               Edit Transaction
             </Text>
@@ -280,11 +281,7 @@ const TransactionDetailScreen = ({
             className="flex-row items-center justify-center rounded-xl bg-expense-fill py-4 ios:shadow-md"
             accessibilityRole="button"
             onPress={handleDelete}>
-            <MaterialCommunityIcons
-              name="delete"
-              size={20}
-              color={colors.onPrimary}
-            />
+            <Trash2 size={20} color={colors.onPrimary} />
             <Text className="ml-2 font-sans-bold text-base font-semibold text-on-primary">
               Delete Transaction
             </Text>
@@ -295,11 +292,7 @@ const TransactionDetailScreen = ({
           <View
             accessibilityRole="alert"
             className="mx-5 mb-5 flex-row items-center rounded-xl border-l-4 border-expense bg-expense-soft p-[15px]">
-            <MaterialCommunityIcons
-              name="alert-circle"
-              size={20}
-              color={colors.expenseText}
-            />
+            <CircleAlert size={20} color={colors.expenseText} />
             <Text className="ml-2.5 flex-1 font-sans text-sm text-expense-text">
               {error}
             </Text>

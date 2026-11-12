@@ -45,6 +45,10 @@ import {useKnownTags} from '../src/hooks/useKnownTags';
 import {recordTagUse} from '../src/services/TagService';
 import {sanitizeTags} from '../src/utils/tags';
 import {snackbar} from '../src/utils/snackbarStore';
+import AlignLeft from 'lucide-react-native/icons/align-left';
+import BanknoteArrowDown from 'lucide-react-native/icons/banknote-arrow-down';
+import BanknoteArrowUp from 'lucide-react-native/icons/banknote-arrow-up';
+import FileText from 'lucide-react-native/icons/file-text';
 import {useRouter} from 'expo-router';
 import type {TransactionDocument} from '../src/types';
 
@@ -240,7 +244,11 @@ const EditTransactionScreen = ({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <FormHeader
-            icon={transaction.type === 'expense' ? 'cash-minus' : 'cash-plus'}
+            icon={
+              transaction.type === 'expense'
+                ? BanknoteArrowDown
+                : BanknoteArrowUp
+            }
             iconColor={accentColor}
             title="Edit Transaction"
             subtitle={
@@ -255,7 +263,7 @@ const EditTransactionScreen = ({
 
             <TextField
               label="Title"
-              icon="text"
+              icon={AlignLeft}
               placeholder={`Enter ${transaction.type} title`}
               value={title}
               onChangeText={setTitle}
@@ -266,7 +274,7 @@ const EditTransactionScreen = ({
             <TextField
               label="Description"
               optional
-              icon="text-box"
+              icon={FileText}
               placeholder="Enter description"
               value={description}
               onChangeText={setDescription}

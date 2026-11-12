@@ -1,5 +1,5 @@
 import type {Timestamp} from '@react-native-firebase/firestore';
-import type {McIconName} from './icons';
+import type {AppIcon} from './icons';
 
 // ─── Firestore Documents ───────────────────────────────────────────────────
 
@@ -197,7 +197,7 @@ export interface Currency {
 export interface Category {
   value: string;
   label: string;
-  icon: McIconName;
+  icon: AppIcon;
 }
 
 // ─── Settle Up ────────────────────────────────────────────────────────────

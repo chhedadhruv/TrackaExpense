@@ -1,7 +1,11 @@
 import {View, Text, ActivityIndicator, TouchableOpacity} from 'react-native';
 import React, {useState, useContext} from 'react';
 import {useRouter} from 'expo-router';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import CircleAlert from 'lucide-react-native/icons/circle-alert';
+import CircleCheck from 'lucide-react-native/icons/circle-check';
+import Info from 'lucide-react-native/icons/info';
+import LockKeyhole from 'lucide-react-native/icons/lock-keyhole';
+import Mail from 'lucide-react-native/icons/mail';
 import FormInput from '../components/FormInput';
 import FormButton from '../components/FormButton';
 import {AuthContext} from '../navigation/AuthProvider';
@@ -57,11 +61,7 @@ const ForgotPasswordScreen = () => {
         <View className="flex-1 px-5 pb-5 pt-10">
           <View className="mb-[30px] items-center">
             <View className="mb-5 h-[100px] w-[100px] items-center justify-center rounded-full bg-primary-soft">
-              <MaterialCommunityIcons
-                name="lock-reset"
-                size={60}
-                color={colors.primary}
-              />
+              <LockKeyhole size={60} color={colors.primary} />
             </View>
             <Text className="mb-2.5 font-heading text-[28px] font-bold text-primary">
               Forgot Password?
@@ -78,11 +78,7 @@ const ForgotPasswordScreen = () => {
                 <View
                   accessibilityRole="alert"
                   className="mb-5 flex-row items-center rounded-xl border-l-4 border-expense bg-expense-soft p-[15px]">
-                  <MaterialCommunityIcons
-                    name="alert-circle"
-                    size={20}
-                    color={colors.expenseText}
-                  />
+                  <CircleAlert size={20} color={colors.expenseText} />
                   <Text className="ml-2.5 flex-1 font-sans text-sm leading-[18px] text-expense-text">
                     {errorMessage}
                   </Text>
@@ -92,11 +88,7 @@ const ForgotPasswordScreen = () => {
                 <View
                   accessibilityRole="alert"
                   className="mb-5 flex-row items-center rounded-xl border-l-4 border-income bg-income-soft p-[15px]">
-                  <MaterialCommunityIcons
-                    name="check-circle"
-                    size={20}
-                    color={colors.incomeText}
-                  />
+                  <CircleCheck size={20} color={colors.incomeText} />
                   <Text className="ml-2.5 flex-1 font-sans text-sm leading-[18px] text-income-text">
                     {successMessage}
                   </Text>
@@ -110,7 +102,7 @@ const ForgotPasswordScreen = () => {
                   labelValue={email}
                   onChangeText={setEmail}
                   placeholderText="Enter your email address"
-                  iconType="mail"
+                  icon={Mail}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -134,11 +126,7 @@ const ForgotPasswordScreen = () => {
 
           <View className="mb-5 rounded-[15px] border border-card-border bg-surface ios:shadow-md">
             <View className="flex-row items-start p-5">
-              <MaterialCommunityIcons
-                name="information"
-                size={24}
-                color={colors.primary}
-              />
+              <Info size={24} color={colors.primary} />
               <View className="ml-[15px] flex-1">
                 <Text className="mb-[5px] font-sans-bold text-base font-semibold text-primary">
                   Need Help?

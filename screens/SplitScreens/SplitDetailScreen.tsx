@@ -10,7 +10,11 @@ import {
 } from 'react-native';
 import {Text, Card} from 'react-native-paper';
 import UserAvatar from '../../src/components/Avatar';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Coins from 'lucide-react-native/icons/coins';
+import Landmark from 'lucide-react-native/icons/landmark';
+import Pencil from 'lucide-react-native/icons/pencil';
+import Repeat from 'lucide-react-native/icons/repeat';
+import Trash2 from 'lucide-react-native/icons/trash-2';
 import {getAuth} from '@react-native-firebase/auth';
 import {
   addDoc,
@@ -358,11 +362,11 @@ const SplitDetailScreen = ({
           showsVerticalScrollIndicator={false}>
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
-              <MaterialCommunityIcons
-                name={isSettlement ? 'bank-transfer' : 'cash-multiple'}
-                size={32}
-                color={colors.primary}
-              />
+              {isSettlement ? (
+                <Landmark size={32} color={colors.primary} />
+              ) : (
+                <Coins size={32} color={colors.primary} />
+              )}
               <Text style={styles.headerTitle}>
                 {isSettlement ? 'Settlement Details' : 'Split Details'}
               </Text>
@@ -382,11 +386,11 @@ const SplitDetailScreen = ({
             <View style={styles.cardContent}>
               <View style={styles.summaryHeader}>
                 <View style={styles.summaryIcon}>
-                  <MaterialCommunityIcons
-                    name={isSettlement ? 'bank-transfer' : 'cash-multiple'}
-                    color={colors.onPrimary}
-                    size={24}
-                  />
+                  {isSettlement ? (
+                    <Landmark size={24} color={colors.onPrimary} />
+                  ) : (
+                    <Coins size={24} color={colors.onPrimary} />
+                  )}
                 </View>
                 <View style={styles.summaryInfo}>
                   <Text style={styles.summaryTitle}>
@@ -397,11 +401,7 @@ const SplitDetailScreen = ({
                   </Text>
                   {split.recurring?.enabled ? (
                     <View style={styles.recurringBadge}>
-                      <MaterialCommunityIcons
-                        name="repeat"
-                        size={12}
-                        color={colors.primary}
-                      />
+                      <Repeat size={12} color={colors.primary} />
                       <Text style={styles.recurringBadgeText}>
                         {split.recurring.frequency === 'weekly'
                           ? 'Weekly'
@@ -484,21 +484,13 @@ const SplitDetailScreen = ({
                   params: {groupId: group.id, splitId: split.id},
                 })
               }>
-              <MaterialCommunityIcons
-                name="pencil"
-                size={20}
-                color={colors.onPrimary}
-              />
+              <Pencil size={20} color={colors.onPrimary} />
               <Text style={styles.buttonText}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={confirmAndDelete}>
-              <MaterialCommunityIcons
-                name="trash-can"
-                size={20}
-                color={colors.onPrimary}
-              />
+              <Trash2 size={20} color={colors.onPrimary} />
               <Text style={styles.buttonText}>Delete</Text>
             </TouchableOpacity>
           </View>

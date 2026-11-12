@@ -10,7 +10,14 @@ import {
   Share,
 } from 'react-native';
 import {Card, Searchbar} from 'react-native-paper';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Calendar from 'lucide-react-native/icons/calendar';
+import History from 'lucide-react-native/icons/history';
+import ListFilter from 'lucide-react-native/icons/list-filter';
+import ShareIcon from 'lucide-react-native/icons/share';
+import {
+  renderClearIcon,
+  renderSearchIcon,
+} from '../../src/components/icons/searchbarIcons';
 import moment from 'moment';
 import {DatePickerModal} from 'react-native-paper-dates';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
@@ -320,11 +327,7 @@ const SplitTransactionScreen = ({group}: SplitTransactionScreenProps) => {
                 ]}
                 elevation={Platform.OS === 'android' ? 0 : 1}>
                 <View style={styles.emptyState}>
-                  <MaterialCommunityIcons
-                    name="history"
-                    size={64}
-                    color={colors.iconMuted}
-                  />
+                  <History size={64} color={colors.iconMuted} />
                   <Text style={styles.emptyStateText}>
                     No transactions found
                   </Text>
@@ -342,11 +345,7 @@ const SplitTransactionScreen = ({group}: SplitTransactionScreenProps) => {
             <>
               <View style={styles.headerSection}>
                 <View style={styles.headerTitleRow}>
-                  <MaterialCommunityIcons
-                    name="history"
-                    size={32}
-                    color={colors.primary}
-                  />
+                  <History size={32} color={colors.primary} />
                   <Text style={styles.headerTitle}>All Transactions</Text>
                 </View>
                 <Text style={styles.headerSubtitle}>
@@ -362,6 +361,8 @@ const SplitTransactionScreen = ({group}: SplitTransactionScreenProps) => {
                   style={styles.searchBar}
                   inputStyle={styles.searchInput}
                   iconColor={colors.primary}
+                  icon={renderSearchIcon}
+                  clearIcon={renderClearIcon}
                 />
               </View>
               <Card
@@ -424,11 +425,7 @@ const SplitTransactionScreen = ({group}: SplitTransactionScreenProps) => {
                                 ? moment(customStartDate).format('MMM DD, YYYY')
                                 : 'Start Date'}
                             </Text>
-                            <MaterialCommunityIcons
-                              name="calendar"
-                              size={20}
-                              color={colors.primary}
-                            />
+                            <Calendar size={20} color={colors.primary} />
                           </TouchableOpacity>
                         </View>
                         <View style={styles.dateInputWrapper}>
@@ -445,11 +442,7 @@ const SplitTransactionScreen = ({group}: SplitTransactionScreenProps) => {
                                 ? moment(customEndDate).format('MMM DD, YYYY')
                                 : 'End Date'}
                             </Text>
-                            <MaterialCommunityIcons
-                              name="calendar"
-                              size={20}
-                              color={colors.primary}
-                            />
+                            <Calendar size={20} color={colors.primary} />
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -494,11 +487,7 @@ const SplitTransactionScreen = ({group}: SplitTransactionScreenProps) => {
                       <TouchableOpacity
                         style={styles.applyButton}
                         onPress={filterTransactions}>
-                        <MaterialCommunityIcons
-                          name="filter"
-                          size={18}
-                          color={colors.onPrimary}
-                        />
+                        <ListFilter size={18} color={colors.onPrimary} />
                         <Text style={styles.applyButtonText}>Apply Filter</Text>
                       </TouchableOpacity>
                     </View>
@@ -514,11 +503,7 @@ const SplitTransactionScreen = ({group}: SplitTransactionScreenProps) => {
                     <TouchableOpacity
                       onPress={handleExportCSV}
                       style={styles.exportButton}>
-                      <MaterialCommunityIcons
-                        name="export"
-                        size={24}
-                        color={colors.primary}
-                      />
+                      <ShareIcon size={24} color={colors.primary} />
                     </TouchableOpacity>
                   )}
                 </View>

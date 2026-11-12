@@ -1,6 +1,8 @@
 import React from 'react';
 import {Image, Text, TouchableOpacity, View} from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import ImagePlus from 'lucide-react-native/icons/image-plus';
+import RefreshCw from 'lucide-react-native/icons/refresh-cw';
+import Trash2 from 'lucide-react-native/icons/trash-2';
 import {useTheme} from '../../theme';
 import {FormSection} from './FormParts';
 
@@ -42,11 +44,7 @@ const ReceiptField = ({
               accessibilityRole="button"
               onPress={pick}
               disabled={disabled}>
-              <MaterialCommunityIcons
-                name="camera-switch"
-                size={20}
-                color={colors.primary}
-              />
+              <RefreshCw size={20} color={colors.primary} />
               <Text className="ml-2 font-sans-bold text-sm font-semibold text-primary">
                 Change
               </Text>
@@ -56,11 +54,7 @@ const ReceiptField = ({
               accessibilityRole="button"
               onPress={onRemove}
               disabled={disabled}>
-              <MaterialCommunityIcons
-                name="delete"
-                size={20}
-                color={colors.expense}
-              />
+              <Trash2 size={20} color={colors.expense} />
               <Text className="ml-2 font-sans-bold text-sm font-semibold text-expense-text">
                 Remove
               </Text>
@@ -74,11 +68,7 @@ const ReceiptField = ({
           accessibilityLabel="Add receipt image"
           onPress={pick}
           disabled={disabled}>
-          <MaterialCommunityIcons
-            name="camera-plus"
-            size={32}
-            color={colors.primary}
-          />
+          <ImagePlus size={32} color={colors.primary} />
           <Text className="mt-3 font-sans-bold text-base font-semibold text-primary">
             Add Receipt Image
           </Text>

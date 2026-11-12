@@ -8,7 +8,8 @@ import {
   Alert,
 } from 'react-native';
 import {Text, Card, ActivityIndicator} from 'react-native-paper';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Handshake from 'lucide-react-native/icons/handshake';
+import Plus from 'lucide-react-native/icons/plus';
 import UserAvatar from '../../src/components/Avatar';
 import {
   addDoc,
@@ -267,11 +268,7 @@ const IOUScreen = () => {
           }>
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
-              <MaterialCommunityIcons
-                name="handshake"
-                size={32}
-                color={colors.primary}
-              />
+              <Handshake size={32} color={colors.primary} />
               <Text style={styles.headerTitle}>IOUs</Text>
             </View>
             <Text style={styles.headerSubtitle}>
@@ -310,11 +307,7 @@ const IOUScreen = () => {
               ]}
               elevation={Platform.OS === 'android' ? 0 : 2}>
               <View style={styles.emptyState}>
-                <MaterialCommunityIcons
-                  name="handshake"
-                  size={64}
-                  color={colors.iconMuted}
-                />
+                <Handshake size={64} color={colors.iconMuted} />
                 <Text style={styles.emptyTitle}>
                   {tab === 'iowe' ? 'You owe nothing!' : 'Nobody owes you'}
                 </Text>
@@ -331,11 +324,7 @@ const IOUScreen = () => {
         <TouchableOpacity
           style={styles.fab}
           onPress={() => router.navigate('/split/iou/new')}>
-          <MaterialCommunityIcons
-            name="plus"
-            size={28}
-            color={colors.onPrimary}
-          />
+          <Plus size={28} color={colors.onPrimary} />
         </TouchableOpacity>
       </View>
     </SafeAreaProvider>
