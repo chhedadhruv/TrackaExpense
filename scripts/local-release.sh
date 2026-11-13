@@ -16,10 +16,11 @@
 #      .env file is always put back.
 #   3. Takes SENTRY_AUTH_TOKEN from the local .env (it is a secret variable on EAS, which cannot be
 #      pulled), so the source maps and the R8 mapping are uploaded to Sentry as on EAS.
-#   4. Regenerates android/ with `expo prebuild --clean`, then runs `./gradlew bundleRelease`,
-#      signed with credentials/android (the upload key).
-#   5. Checks the result: the signing certificate, the ABIs, and that the notification server
-#      address is not in the bundle.
+#   4. Regenerates android/ with `expo prebuild --clean` (with the EAS Update channel
+#      "production" written into the manifest, as `eas build` does), then runs
+#      `./gradlew bundleRelease`, signed with credentials/android (the upload key).
+#   5. Checks the result: the signing certificate, the ABIs, the update channel and runtime
+#      version, and that the notification server address is not in the bundle.
 #
 # Needs: the EAS CLI logged in, JDK 17, the Android SDK, credentials/android/keystore.properties
 # and its keystore, google-services.json at the repo root, and SENTRY_AUTH_TOKEN in .env.
@@ -33,6 +34,9 @@ cd "$ROOT"
 # SHA-1 of the Play upload key (the project guidance file, section 1).
 UPLOAD_KEY_SHA1="3D:59:93:EA:7E:7B:0A:00:C6:80:B4:58:4E:79:DA:08:4E:53:5D:FD"
 AAB="android/app/build/outputs/bundle/release/app-release.aab"
+MANIFEST="android/app/src/main/AndroidManifest.xml"
+# The EAS Update channel of the production profile in eas.json.
+UPDATE_CHANNEL="production"
 ENVTMP="$(mktemp -t trackaexpense-prod-env.XXXXXX)"
 ENV_BACKUP=".env.release-bak"
 
@@ -75,8 +79,16 @@ echo "step 2: moving .env aside so only the production variables are used"
 mv .env "$ENV_BACKUP"
 
 echo "step 3: regenerating the Android project"
+# `eas build` writes the update channel into the manifest; here plugins/with-update-channel.js
+# does it from this variable. Without it the installed app can never receive an EAS Update.
+export RELEASE_UPDATE_CHANNEL="$UPDATE_CHANNEL"
 yarn -s expo prebuild --clean --platform android --no-install || { echo "prebuild failed"; exit 1; }
 grep -nE "^reactNativeArchitectures|^org.gradle" android/gradle.properties
+if ! grep -q "expo-channel-name&quot;:&quot;$UPDATE_CHANNEL&quot;" "$MANIFEST"; then
+  echo "the update channel \"$UPDATE_CHANNEL\" is not in $MANIFEST: stopping before the build"
+  exit 1
+fi
+echo "update channel in the manifest: $UPDATE_CHANNEL"
 
 echo "step 4: Gradle bundleRelease"
 # The generated gradle.properties turns Gradle parallelism off so the small EAS builder survives;
@@ -100,6 +112,16 @@ else
 fi
 echo "  ABIs: $(unzip -l "$AAB" | grep -oE 'base/lib/[a-z0-9_-]+/' | sort -u | sed 's#base/lib/##; s#/##' | tr '\n' ' ')"
 echo "  version: $(grep -m2 -E 'versionCode|versionName' android/app/build.gradle | tr -s ' ' | tr '\n' ' ')"
+# The merged manifest is what ships; an update only reaches this build on this channel and with
+# this runtime version (the fingerprint).
+MERGED_MANIFEST="android/app/build/intermediates/merged_manifest/release/processReleaseMainManifest/AndroidManifest.xml"
+if grep -q "expo-channel-name&quot;:&quot;$UPDATE_CHANNEL&quot;" "$MERGED_MANIFEST" 2>/dev/null; then
+  echo "  update channel: $UPDATE_CHANNEL"
+else
+  echo "  update channel: NOT FOUND in the merged manifest"
+  status=1
+fi
+echo "  runtime version: $(unzip -p "$AAB" base/assets/fingerprint 2>/dev/null || echo unknown)"
 # The notification server address lives only in the local .env; it must not be in the bundle.
 NSU="$(grep '^NOTIFICATION_SERVER_URL=' "$ENV_BACKUP" | cut -d= -f2- | tr -d "\"'")"
 if [ -n "$NSU" ]; then
