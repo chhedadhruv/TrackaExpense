@@ -1,6 +1,6 @@
 import React, {useState, useEffect, useRef} from 'react';
 import {useRouter} from 'expo-router';
-import type {LendingDetail} from '../../src/utils/lending';
+import {sameEmail, type LendingDetail} from '../../src/utils/lending';
 import {
   View,
   Text,
@@ -89,10 +89,10 @@ const SettleUpScreen = ({
     const members = group.members || [];
     if (preselect) {
       setSelectedBorrower(
-        members.find(m => m.email === preselect.borrower.email) ?? null,
+        members.find(m => sameEmail(m.email, preselect.borrower.email)) ?? null,
       );
       setSelectedLender(
-        members.find(m => m.email === preselect.lender.email) ?? null,
+        members.find(m => sameEmail(m.email, preselect.lender.email)) ?? null,
       );
       setAmount(preselect.amount.toString());
     }
@@ -309,9 +309,9 @@ const SettleUpScreen = ({
                 {lendingDetails!.map((item, idx) => {
                   const currentEmail = getAuth().currentUser?.email;
                   const isActive =
-                    selectedBorrower?.email === item.borrower.email &&
-                    selectedLender?.email === item.lender.email;
-                  const isMyDebt = item.borrower.email === currentEmail;
+                    sameEmail(selectedBorrower?.email, item.borrower.email) &&
+                    sameEmail(selectedLender?.email, item.lender.email);
+                  const isMyDebt = sameEmail(item.borrower.email, currentEmail);
                   return (
                     <TouchableOpacity
                       key={idx}
@@ -322,12 +322,14 @@ const SettleUpScreen = ({
                       onPress={() => {
                         const members = group.members || [];
                         setSelectedBorrower(
-                          members.find(m => m.email === item.borrower.email) ??
-                            null,
+                          members.find(m =>
+                            sameEmail(m.email, item.borrower.email),
+                          ) ?? null,
                         );
                         setSelectedLender(
-                          members.find(m => m.email === item.lender.email) ??
-                            null,
+                          members.find(m =>
+                            sameEmail(m.email, item.lender.email),
+                          ) ?? null,
                         );
                         setAmount(item.amount.toString());
                       }}>

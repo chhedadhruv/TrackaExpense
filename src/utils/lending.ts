@@ -20,90 +20,90 @@ export interface LendingDetail {
   amount: number;
 }
 
+/** Emails are compared without regard to case or surrounding spaces. */
+export const sameEmail = (
+  a: string | null | undefined,
+  b: string | null | undefined,
+): boolean =>
+  typeof a === 'string' &&
+  typeof b === 'string' &&
+  a.trim().toLowerCase() === b.trim().toLowerCase();
+
+const PAIR_SEPARATOR = '|';
+
 export const calculateNetLendingBalances = (
   splitsArr: readonly LendingSplit[],
   currencyCode: string,
 ): LendingDetail[] => {
-  const balances: Record<string, Record<string, number>> = {};
+  // One signed total per pair of people, in integer minor units, keyed by the two lowercased
+  // emails in alphabetical order: positive means the second one owes the first.
+  const pairs = new Map<string, number>();
+  const names = new Map<string, string>();
+
+  const remember = (person?: {email?: string; name?: string}): void => {
+    const email = person?.email?.trim().toLowerCase();
+    const name = person?.name?.trim();
+    if (email && name && !names.has(email)) {
+      names.set(email, name);
+    }
+  };
+  const nameOf = (email: string): string =>
+    names.get(email) ?? email.split('@')[0];
+
+  /** `borrower` owes `lender` this much more (negative: less). */
+  const addDebt = (lender: string, borrower: string, minor: number): void => {
+    const lenderFirst = lender < borrower;
+    const key = lenderFirst
+      ? `${lender}${PAIR_SEPARATOR}${borrower}`
+      : `${borrower}${PAIR_SEPARATOR}${lender}`;
+    pairs.set(key, (pairs.get(key) ?? 0) + (lenderFirst ? minor : -minor));
+  };
+
   splitsArr.forEach(split => {
-    // Skip settlements — they are already recorded in the splits list and handled separately
+    const paidByEmail = split.paidBy?.email?.trim().toLowerCase();
+    const splitUsers = split.splitUsers || [];
+    remember(split.paidBy);
+    splitUsers.forEach(remember);
+
+    // A settlement is an entry in the splits list: the borrower (paidBy) paid the lender (the
+    // first splitUsers entry), so the borrower owes the lender that much less.
     if (split.type === 'settlement' || split.isSettlement) {
-      const fromEmail = split.paidBy?.email?.toLowerCase();
-      const toEmail = split.splitUsers?.[0]?.email?.toLowerCase();
+      const toEmail = splitUsers[0]?.email?.trim().toLowerCase();
       const amt = minorOf(split, currencyCode);
-      if (!fromEmail || !toEmail || fromEmail === toEmail || amt === null) {
+      if (!paidByEmail || !toEmail || paidByEmail === toEmail || amt === null) {
         return;
       }
-      // Borrower paid lender: reduce what borrower owes lender
-      if (!balances[toEmail]) {
-        balances[toEmail] = {};
-      }
-      balances[toEmail][fromEmail] = (balances[toEmail][fromEmail] || 0) - amt;
+      addDebt(toEmail, paidByEmail, -amt);
       return;
     }
-    const paidByEmail = split.paidBy?.email?.toLowerCase();
-    const splitUsers = split.splitUsers || [];
+
     // Integer minor units: the shares of a split always add up to its total.
     const shares = sharesMinor(split, currencyCode);
     if (!paidByEmail || shares === null) {
       return;
     }
-    if (!balances[paidByEmail]) {
-      balances[paidByEmail] = {};
-    }
     splitUsers.forEach((u, index) => {
-      const uEmail = u.email?.toLowerCase();
+      const uEmail = u.email?.trim().toLowerCase();
       if (!uEmail || uEmail === paidByEmail) {
         return;
       }
-      balances[paidByEmail][uEmail] =
-        (balances[paidByEmail][uEmail] || 0) + shares[index];
+      addDebt(paidByEmail, uEmail, shares[index]);
     });
   });
-  const net: LendingDetail[] = [];
-  Object.keys(balances).forEach(lenderEmail => {
-    Object.keys(balances[lenderEmail]).forEach(borrowerEmail => {
-      if (lenderEmail >= borrowerEmail) {
-        return;
-      }
-      const lTob = balances[lenderEmail][borrowerEmail] || 0;
-      const bToL = balances[borrowerEmail]?.[lenderEmail] || 0;
-      const netAmt = lTob - bToL;
-      if (netAmt !== 0) {
-        const lenderName =
-          splitsArr.find(s => s.paidBy?.email === lenderEmail)?.paidBy?.name ||
-          lenderEmail.split('@')[0];
-        const borrowerName =
-          splitsArr
-            .find(s => s.splitUsers?.some(u => u.email === borrowerEmail))
-            ?.splitUsers?.find(u => u.email === borrowerEmail)?.name ||
-          borrowerEmail.split('@')[0];
-        net.push({
-          lender: {
-            email: netAmt > 0 ? lenderEmail : borrowerEmail,
-            name: netAmt > 0 ? lenderName : borrowerName,
-          },
-          borrower: {
-            email: netAmt > 0 ? borrowerEmail : lenderEmail,
-            name: netAmt > 0 ? borrowerName : lenderName,
-          },
-          amount: toMajorNumber(Math.abs(netAmt), currencyCode),
-        });
-      }
-    });
-  });
-  const result = net.reduce<LendingDetail[]>((acc, cur) => {
-    const exists = acc.find(
-      e =>
-        (e.lender.email === cur.lender.email &&
-          e.borrower.email === cur.borrower.email) ||
-        (e.lender.email === cur.borrower.email &&
-          e.borrower.email === cur.lender.email),
-    );
-    if (!exists) {
-      acc.push(cur);
+
+  const result: LendingDetail[] = [];
+  pairs.forEach((net, key) => {
+    if (net === 0) {
+      return;
     }
-    return acc;
-  }, []);
+    const [first, second] = key.split(PAIR_SEPARATOR);
+    const lender = net > 0 ? first : second;
+    const borrower = net > 0 ? second : first;
+    result.push({
+      lender: {email: lender, name: nameOf(lender)},
+      borrower: {email: borrower, name: nameOf(borrower)},
+      amount: toMajorNumber(Math.abs(net), currencyCode),
+    });
+  });
   return result;
 };
