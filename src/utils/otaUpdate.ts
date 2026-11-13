@@ -75,6 +75,17 @@ export const applyUpdateWithin = (
 };
 
 /**
+ * The line shown under the version and build number on Profile: which over-the-air update the
+ * app is running. The id is cut to its first eight characters, which is enough to find the
+ * update on the EAS dashboard (its "Android update ID" starts with them). "Built in" means the
+ * JavaScript that came with the store build, with no update applied.
+ */
+export const updateLabel = (updateId: string | null | undefined): string => {
+  const id = (updateId ?? '').trim();
+  return id ? `Update ${id.slice(0, 8)}` : 'Update: built in';
+};
+
+/**
  * Whether the restart sheet should be on screen: an update is downloaded, and the person has not
  * already chosen "Later" for that same update since the app started.
  */
