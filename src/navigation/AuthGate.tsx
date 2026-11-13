@@ -1,4 +1,4 @@
-import React, {useContext, useEffect, useMemo, useState} from 'react';
+import React, {useContext, useEffect, useMemo, useRef, useState} from 'react';
 import {Stack, useRootNavigationState} from 'expo-router';
 import {
   DefaultTheme,
@@ -25,15 +25,24 @@ import {markNavigationReady, openPath, pathFromLink} from './openPath';
 import DataSync from '../data/DataSync';
 import {clearCachedData} from '../data/queryClient';
 import {useSyncStore} from '../data/syncStore';
+import appUpdate from '../services/AppUpdate';
+import {applyUpdateWithin} from '../utils/otaUpdate';
+import UpdatePrompt from '../components/UpdatePrompt';
+
+// How long to stay on the splash screen after asking for the restart into an update.
+const RESTART_GRACE_MS = 3000;
 
 /**
  * Follows the Firebase sign-in state and shows only the group of screens that fits it: the app
  * when signed in, the sign-in screens otherwise. The native splash screen stays up until the
- * first answer from Firebase, so nothing flashes.
+ * first answer from Firebase (and, with nobody signed in, until the update check is done), so
+ * nothing flashes.
  */
 const AuthGate = () => {
   const {user, setUser} = useContext(AuthContext);
   const [initializing, setInitializing] = useState(true);
+  const [updateSettled, setUpdateSettled] = useState(false);
+  const updateCheckStarted = useRef(false);
   const {colors, isDark} = useTheme();
 
   useEffect(() => {
@@ -59,11 +68,36 @@ const AuthGate = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Over-the-air update at launch (src/utils/otaUpdate.ts). With nobody signed in the splash
+  // screen stays up while the update is fetched, for at most five seconds, and the app restarts
+  // into it. A signed-in person is never kept waiting: they get the sheet from UpdatePrompt once
+  // the update is downloaded. Decided once, on the first answer from Firebase; signing out later
+  // in the same session does not hold the screen again.
   useEffect(() => {
-    if (!initializing) {
+    if (initializing || updateCheckStarted.current) {
+      return;
+    }
+    updateCheckStarted.current = true;
+    if (user !== null) {
+      setUpdateSettled(true);
+      return;
+    }
+    applyUpdateWithin(appUpdate).then(outcome => {
+      if (outcome === 'applied') {
+        // The app is restarting. If the restart does not happen, do not stay on the splash.
+        setTimeout(() => setUpdateSettled(true), RESTART_GRACE_MS);
+        return;
+      }
+      setUpdateSettled(true);
+    });
+  }, [initializing, user]);
+
+  const ready = !initializing && updateSettled;
+  useEffect(() => {
+    if (ready) {
       SplashScreen.hideAsync().catch(() => {});
     }
-  }, [initializing]);
+  }, [ready]);
 
   // Nobody is signed in: drop the cached data, in memory and on disk, so the next person to sign
   // in on this phone never sees it (also clears a copy left by a session that ended abruptly).
@@ -117,13 +151,14 @@ const AuthGate = () => {
     [colors, isDark],
   );
 
-  if (initializing) {
+  if (!ready) {
     return null;
   }
 
   return (
     <NavigationThemeProvider value={navigationTheme}>
       {user ? <DataSync uid={user.uid} /> : null}
+      {user ? <UpdatePrompt /> : null}
       <Stack screenOptions={{headerShown: false}}>
         <Stack.Protected guard={user !== null}>
           <Stack.Screen name="(app)" />
