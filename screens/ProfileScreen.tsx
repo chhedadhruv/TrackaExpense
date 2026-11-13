@@ -19,6 +19,8 @@ import {useRouter} from 'expo-router';
 import {useUserData} from '../src/data/hooks';
 import * as Application from 'expo-application';
 import {version as appVersion} from '../package.json';
+import {runningUpdateId} from '../src/services/AppUpdate';
+import {updateLabel} from '../src/utils/otaUpdate';
 import {View, Text, TouchableOpacity, ScrollView, Alert} from 'react-native';
 import {ActivityIndicator} from 'react-native';
 import ChevronDown from 'lucide-react-native/icons/chevron-down';
@@ -439,6 +441,11 @@ const ProfileScreen = () => {
           </Text>
           <Text className="mt-0.5 font-sans text-xs text-text-placeholder">
             Build {Application.nativeBuildVersion ?? appVersion}
+          </Text>
+          <Text
+            selectable
+            className="mt-0.5 font-sans text-xs text-text-placeholder">
+            {updateLabel(runningUpdateId)}
           </Text>
         </View>
       </ScrollView>
