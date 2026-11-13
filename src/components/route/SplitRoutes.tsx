@@ -19,6 +19,7 @@ import SettleUpScreen, {
 } from '../../../screens/SplitScreens/SettleUpScreen';
 import {
   calculateNetLendingBalances,
+  sameEmail,
   type LendingSplit,
 } from '../../utils/lending';
 import {useCurrency} from '../../../utils/CurrencyUtil';
@@ -220,7 +221,7 @@ const SettleUpWithMembers = ({group, preselect}: SettleUpWithMembersProps) => {
   }
   // Without a tapped pair, prefill what the signed-in person owes, as the group screen did.
   const myEmail = getAuth().currentUser?.email;
-  const myDebt = lendingDetails.find(d => d.borrower.email === myEmail);
+  const myDebt = lendingDetails.find(d => sameEmail(d.borrower.email, myEmail));
   return (
     <SettleUpScreen
       group={{id: group.id, name: group.name, members}}
