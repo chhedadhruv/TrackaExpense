@@ -3,6 +3,7 @@ import {
   applyUpdateWithin,
   shouldOfferRestart,
   SPLASH_UPDATE_TIMEOUT_MS,
+  updateLabel,
   type UpdateApi,
 } from '../src/utils/otaUpdate';
 
@@ -108,6 +109,20 @@ describe('applyUpdateWithin', () => {
       await expect(applyUpdateWithin(api)).resolves.toBe('failed');
     },
   );
+});
+
+describe('updateLabel', () => {
+  it('shows the first eight characters of the update id', () => {
+    expect(updateLabel('01a1d445-0c13-7165-9dd1-c4fd62685b6d')).toBe(
+      'Update 01a1d445',
+    );
+  });
+
+  it('says built in when no update is applied', () => {
+    expect(updateLabel(null)).toBe('Update: built in');
+    expect(updateLabel(undefined)).toBe('Update: built in');
+    expect(updateLabel('  ')).toBe('Update: built in');
+  });
 });
 
 describe('shouldOfferRestart', () => {
