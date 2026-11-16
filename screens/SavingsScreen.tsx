@@ -47,6 +47,7 @@ import {
 } from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../src/services/ErrorReporter';
+import {createActionGuard, runGuarded} from '../src/utils/actionGuard';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
@@ -130,6 +131,17 @@ const SavingsScreen = () => {
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<EditValues>(EMPTY_EDIT_VALUES);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Every write on this screen rewrites the whole goals array, so only one may run at a time. The
+  // lock is taken synchronously, before React has re-rendered the disabled buttons.
+  const submitGuard = useRef(createActionGuard()).current;
+  const once = (task: () => Promise<unknown>) => {
+    runGuarded(
+      submitGuard,
+      task,
+      () => {},
+      () => {},
+    ).catch(e => reportError(e as Error));
+  };
   const [showInputModal, setShowInputModal] = useState(false);
   const [inputAmount, setInputAmount] = useState('');
   const [inputType, setInputType] = useState<InputType>('');
@@ -616,7 +628,7 @@ const SavingsScreen = () => {
     setShowInputModal(true);
   };
 
-  const handleAmountSubmit = () => {
+  const handleAmountSubmit = async () => {
     if (
       !inputAmount ||
       isNaN(parseFloat(inputAmount)) ||
@@ -627,9 +639,9 @@ const SavingsScreen = () => {
     }
     setShowInputModal(false);
     if (inputType === 'add') {
-      addToSavings(inputAmount);
+      await addToSavings(inputAmount);
     } else if (inputType === 'withdraw') {
-      withdrawFromSavings(inputAmount);
+      await withdrawFromSavings(inputAmount);
     }
   };
 
@@ -1094,7 +1106,7 @@ const SavingsScreen = () => {
                           </TouchableOpacity>
                           <TouchableOpacity
                             style={[styles.actionButton, styles.saveButton]}
-                            onPress={handleSave}
+                            onPress={() => once(handleSave)}
                             disabled={isSubmitting}>
                             {isSubmitting ? (
                               <ActivityIndicator
@@ -1291,7 +1303,7 @@ const SavingsScreen = () => {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalSubmitButton]}
-                onPress={handleAmountSubmit}
+                onPress={() => once(handleAmountSubmit)}
                 disabled={isSubmitting}>
                 {isSubmitting ? (
                   <ActivityIndicator size="small" color={colors.onPrimary} />
@@ -1443,7 +1455,7 @@ const SavingsScreen = () => {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalSubmitButton]}
-                onPress={createNewGoal}
+                onPress={() => once(createNewGoal)}
                 disabled={isSubmitting}>
                 {isSubmitting ? (
                   <ActivityIndicator size="small" color={colors.onPrimary} />
@@ -1477,7 +1489,7 @@ const SavingsScreen = () => {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.deleteButton]}
-                  onPress={() => deleteGoal(goalToDelete?.id)}
+                  onPress={() => once(() => deleteGoal(goalToDelete?.id))}
                   disabled={isSubmitting}>
                   {isSubmitting ? (
                     <ActivityIndicator size="small" color={colors.onPrimary} />

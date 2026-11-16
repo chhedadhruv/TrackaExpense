@@ -1,15 +1,9 @@
 import React, {useContext, useState} from 'react';
 import {useRouter} from 'expo-router';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  Image,
-  Platform,
-} from 'react-native';
+import {View, Text, TouchableOpacity, Image, Platform} from 'react-native';
 import FormInput from '../components/FormInput';
 import FormButton from '../components/FormButton';
+import {useAsyncAction} from '../src/hooks/useAsyncAction';
 import {AuthContext} from '../navigation/AuthProvider';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import {
@@ -66,7 +60,10 @@ const SignupScreen = () => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  // One lock for email, Google and Apple sign-up: only one of them runs at a time.
+  const {run: runAuth, pending: loading} = useAsyncAction(
+    (task: () => Promise<void>) => task(),
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordValidation, setPasswordValidation] =
@@ -109,70 +106,57 @@ const SignupScreen = () => {
   const getSelectedCurrencyInfo = () =>
     CURRENCIES.find(c => c.code === selectedCurrency) || CURRENCIES[0];
 
-  const handleSignup = async () => {
+  const signUpWithEmail = async () => {
     setErrorMessage(null);
-    setLoading(true);
     if (!email) {
       setErrorMessage('Please enter an email address');
-      setLoading(false);
       return;
     }
     if (!isValidEmail(email)) {
       setErrorMessage('Please enter a valid email address');
-      setLoading(false);
       return;
     }
     if (!password) {
       setErrorMessage('Please enter a password');
-      setLoading(false);
       return;
     }
     if (!confirmPassword) {
       setErrorMessage('Please confirm your password');
-      setLoading(false);
       return;
     }
     if (password !== confirmPassword) {
       setErrorMessage('Passwords do not match');
-      setLoading(false);
       return;
     }
     if (!isPasswordValid()) {
       setErrorMessage('Password must meet all requirements');
-      setLoading(false);
       return;
     }
     if (!name) {
       setErrorMessage('Please enter your name');
-      setLoading(false);
       return;
     }
     if (!isValidName(name)) {
       setErrorMessage('Please enter a valid name');
-      setLoading(false);
       return;
     }
     if (phone && !isValidPhone(phone)) {
       setErrorMessage('Please enter a valid phone number');
-      setLoading(false);
       return;
     }
     try {
       await register(email, password, name, phone, selectedCurrency);
-      setLoading(false);
     } catch (error: any) {
       setErrorMessage(
         error.code === 'auth/email-already-in-use'
           ? 'This email is already registered. Please use a different email or login.'
           : error.message || 'Registration failed',
       );
-      setLoading(false);
     }
   };
 
-  const handleGoogleSignUp = async () => {
+  const signUpWithGoogle = async () => {
     try {
-      setLoading(true);
       setErrorMessage(null);
       if (Platform.OS === 'android') {
         await GoogleSignin.hasPlayServices({
@@ -205,9 +189,7 @@ const SignupScreen = () => {
       } else {
         setErrorMessage('Google sign-up failed. Please try again.');
       }
-      setLoading(false);
     } catch (error: any) {
-      setLoading(false);
       if (error.code === statusCodes.IN_PROGRESS) {
         setErrorMessage('Sign-up is already in progress');
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
@@ -220,9 +202,8 @@ const SignupScreen = () => {
     }
   };
 
-  const handleAppleSignUp = async () => {
+  const signUpWithApple = async () => {
     try {
-      setLoading(true);
       setErrorMessage(null);
       const result = await performAppleSignIn();
       if (result.success) {
@@ -260,9 +241,7 @@ const SignupScreen = () => {
             : result.error || 'Apple sign-up failed. Please try again.',
         );
       }
-      setLoading(false);
     } catch (error: any) {
-      setLoading(false);
       if (error.code === 'auth/account-exists-with-different-credential') {
         setErrorMessage(
           'An account already exists with this email address using a different sign-in method.',
@@ -284,6 +263,10 @@ const SignupScreen = () => {
     [passwordValidation.lowercase, 'At least 1 lowercase letter'],
     [passwordValidation.uppercase, 'At least 1 uppercase letter'],
   ];
+
+  const handleSignup = () => runAuth(signUpWithEmail);
+  const handleGoogleSignUp = () => runAuth(signUpWithGoogle);
+  const handleAppleSignUp = () => runAuth(signUpWithApple);
 
   const googleButton = (
     <TouchableOpacity
@@ -462,18 +445,11 @@ const SignupScreen = () => {
                   </TouchableOpacity>
                 </View>
               </View>
-              {loading ? (
-                <ActivityIndicator
-                  size="large"
-                  color={colors.primary}
-                  className="my-5"
-                />
-              ) : (
-                <FormButton
-                  buttonTitle="Create Account"
-                  onPress={handleSignup}
-                />
-              )}
+              <FormButton
+                buttonTitle="Create Account"
+                onPress={handleSignup}
+                loading={loading}
+              />
               <View className="my-5 flex-row items-center">
                 <View className="h-px flex-1 bg-border" />
                 <Text className="mx-[15px] font-sans text-sm text-text-secondary">

@@ -26,6 +26,7 @@ import * as AnalyticsService from '../src/services/AnalyticsService';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import FormButton from '../components/FormButton';
+import {useAsyncAction} from '../src/hooks/useAsyncAction';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {EXPENSE_CATEGORIES, EXPENSE_KEYWORD_MAP} from '../utils/CategoryData';
 import {useTheme} from '../src/theme';
@@ -82,7 +83,6 @@ const AddExpense = () => {
   const [uploading, setUploading] = useState(false);
   const [transferred, setTransferred] = useState(0);
   const [imagePickerVisible, setImagePickerVisible] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Auto-suggest category from title keywords
   useEffect(() => {
@@ -132,14 +132,21 @@ const AddExpense = () => {
     }
   };
 
-  const handleSubmit = async () => {
+  const saveExpense = async () => {
     if (!validateForm('expense')) {
       return;
     }
-    setUploading(true);
-    setIsSubmitting(true);
     try {
-      const imageUrl = image ? await uploadImageAsync() : null;
+      let imageUrl: string | null = null;
+      if (image) {
+        // The full-screen progress view is only for the photo upload; the button shows the rest.
+        setUploading(true);
+        try {
+          imageUrl = await uploadImageAsync();
+        } finally {
+          setUploading(false);
+        }
+      }
       const uid = getUid();
       const userDocRef = doc(getFirestore(), 'users', uid);
       await runTransaction(getFirestore(), async transaction => {
@@ -183,11 +190,10 @@ const AddExpense = () => {
       setErrorMessage(
         'An error occurred while adding the expense. Please try again.',
       );
-    } finally {
-      setUploading(false);
-      setIsSubmitting(false);
     }
   };
+  const {run: handleSubmit, pending: isSubmitting} =
+    useAsyncAction(saveExpense);
 
   if (uploading) {
     return (
@@ -286,21 +292,13 @@ const AddExpense = () => {
             />
 
             <View className="mt-5">
-              {isSubmitting ? (
-                <View className="flex-row items-center justify-center py-[15px]">
-                  <ActivityIndicator size="small" color={colors.primary} />
-                  <Text className="ml-2.5 font-sans text-base text-primary">
-                    Adding Expense...
-                  </Text>
-                </View>
-              ) : (
-                <FormButton
-                  buttonTitle="Add Expense"
-                  onPress={handleSubmit}
-                  disabled={!isFormValid()}
-                  style={!isFormValid() ? DISABLED_BUTTON : undefined}
-                />
-              )}
+              <FormButton
+                buttonTitle="Add Expense"
+                onPress={handleSubmit}
+                loading={isSubmitting}
+                disabled={!isFormValid()}
+                style={!isFormValid() ? DISABLED_BUTTON : undefined}
+              />
             </View>
           </FormCard>
         </KeyboardAwareScrollView>

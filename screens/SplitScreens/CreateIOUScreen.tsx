@@ -27,6 +27,7 @@ import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {formatInputAmount} from '../../src/utils/formatters';
 import {transactionMoneyFields} from '../../src/utils/amounts';
 import {snackbar} from '../../src/utils/snackbarStore';
+import {useAsyncAction} from '../../src/hooks/useAsyncAction';
 
 type Direction = 'iowe' | 'owesme';
 
@@ -39,10 +40,9 @@ const CreateIOUScreen = () => {
   const [toName] = useState('');
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
-  const [loading, setLoading] = useState(false);
   const [direction, setDirection] = useState<Direction>('iowe');
 
-  const handleSubmit = async () => {
+  const createIOU = async () => {
     const emailTrimmed = toEmail.trim().toLowerCase();
     if (!emailTrimmed || !emailTrimmed.includes('@')) {
       snackbar.error('Please enter a valid email address');
@@ -52,13 +52,11 @@ const CreateIOUScreen = () => {
       snackbar.error('Please enter a valid amount');
       return;
     }
-    setLoading(true);
     try {
       const currentUser = getAuth().currentUser;
       const currentEmail = currentUser?.email?.toLowerCase();
       if (emailTrimmed === currentEmail) {
         snackbar.error('You cannot create an IOU with yourself');
-        setLoading(false);
         return;
       }
       let resolvedName = toName.trim();
@@ -102,10 +100,9 @@ const CreateIOUScreen = () => {
       router.back();
     } catch (_) {
       snackbar.error('Failed to create IOU');
-    } finally {
-      setLoading(false);
     }
   };
+  const {run: handleSubmit, pending: loading} = useAsyncAction(createIOU);
 
   return (
     <SafeAreaProvider>

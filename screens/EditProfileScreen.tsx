@@ -10,6 +10,7 @@ import User from 'lucide-react-native/icons/user';
 import UserPen from 'lucide-react-native/icons/user-pen';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import FormButton from '../components/FormButton';
+import {useAsyncAction} from '../src/hooks/useAsyncAction';
 import FormInput from '../components/FormInput';
 import {doc, getFirestore, updateDoc} from '@react-native-firebase/firestore';
 import {useUserData} from '../src/data/hooks';
@@ -33,7 +34,6 @@ const EditProfileScreen = () => {
     email: '',
     phone: '',
   });
-  const [updating, setUpdating] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   // The form is filled once, from the shared profile cache, and only after the live listener has
@@ -73,15 +73,13 @@ const EditProfileScreen = () => {
     return true;
   };
 
-  const handleUpdate = async () => {
+  const updateProfile = async () => {
     setErrorMessage('');
     if (!validateInputs()) {
       return;
     }
-    setUpdating(true);
     const currentUser = getAuth().currentUser;
     if (!currentUser) {
-      setUpdating(false);
       return;
     }
     try {
@@ -95,12 +93,12 @@ const EditProfileScreen = () => {
       snackbar.success('Profile updated successfully');
       router.back();
     } catch (_) {
-      setUpdating(false);
       setErrorMessage(
         'Failed to update profile. Please check your connection and try again.',
       );
     }
   };
+  const {run: handleUpdate, pending: updating} = useAsyncAction(updateProfile);
 
   // An empty form must never stand in for a profile that could not be loaded.
   if (!ready && (profile.failed || (profile.live && !profile.data))) {
@@ -194,16 +192,11 @@ const EditProfileScreen = () => {
                 maxLength={15}
               />
             </View>
-            {updating ? (
-              <View className="items-center justify-center py-5">
-                <ActivityIndicator size="large" color={colors.primary} />
-                <Text className="mt-3 font-sans text-base text-text-secondary">
-                  Updating your profile...
-                </Text>
-              </View>
-            ) : (
-              <FormButton buttonTitle="Update Profile" onPress={handleUpdate} />
-            )}
+            <FormButton
+              buttonTitle="Update Profile"
+              onPress={handleUpdate}
+              loading={updating}
+            />
           </View>
         </View>
 

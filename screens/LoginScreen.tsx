@@ -1,15 +1,9 @@
 import React, {useContext, useState} from 'react';
 import {useRouter} from 'expo-router';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-  ActivityIndicator,
-  Platform,
-} from 'react-native';
+import {View, Text, TouchableOpacity, Image, Platform} from 'react-native';
 import FormInput from '../components/FormInput';
 import FormButton from '../components/FormButton';
+import {useAsyncAction} from '../src/hooks/useAsyncAction';
 import {AuthContext} from '../navigation/AuthProvider';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import {
@@ -59,7 +53,10 @@ const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  // One lock for email, Google and Apple sign-in: only one of them runs at a time.
+  const {run: runAuth, pending: loading} = useAsyncAction(
+    (task: () => Promise<void>) => task(),
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [passwordValidation, setPasswordValidation] =
     useState<PasswordValidation>({
@@ -94,7 +91,7 @@ const LoginScreen = () => {
   const isPasswordValid = () =>
     Object.values(passwordValidation).every(Boolean);
 
-  const handleSignIn = async () => {
+  const signInWithEmail = async () => {
     setErrorMessage(null);
     if (!email) {
       setErrorMessage('Please enter an email address');
@@ -112,21 +109,17 @@ const LoginScreen = () => {
       setErrorMessage('Password must meet all requirements');
       return;
     }
-    setLoading(true);
     try {
       await login(email, password);
     } catch (_) {
       setErrorMessage(
         'Login failed. Please check your credentials or try again later.',
       );
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const signInWithGoogle = async () => {
     try {
-      setLoading(true);
       setErrorMessage(null);
       if (Platform.OS === 'android') {
         await GoogleSignin.hasPlayServices({
@@ -165,9 +158,7 @@ const LoginScreen = () => {
           'Google sign-in failed. No authentication token received.',
         );
       }
-      setLoading(false);
     } catch (error: any) {
-      setLoading(false);
       if (error.code === statusCodes.IN_PROGRESS) {
         setErrorMessage('Sign-in is already in progress');
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
@@ -191,9 +182,8 @@ const LoginScreen = () => {
     }
   };
 
-  const handleAppleSignIn = async () => {
+  const signInWithApple = async () => {
     try {
-      setLoading(true);
       setErrorMessage(null);
       const result = await performAppleSignIn();
       if (result.success) {
@@ -235,9 +225,7 @@ const LoginScreen = () => {
             : result.error || 'Apple sign-in failed. Please try again.',
         );
       }
-      setLoading(false);
     } catch (error: any) {
-      setLoading(false);
       if (error.code === 'auth/account-exists-with-different-credential') {
         setErrorMessage(
           'An account already exists with this email address using a different sign-in method.',
@@ -251,6 +239,10 @@ const LoginScreen = () => {
       }
     }
   };
+
+  const handleSignIn = () => runAuth(signInWithEmail);
+  const handleGoogleSignIn = () => runAuth(signInWithGoogle);
+  const handleAppleSignIn = () => runAuth(signInWithApple);
 
   const googleButton = (
     <TouchableOpacity
@@ -379,15 +371,11 @@ const LoginScreen = () => {
                   ))}
                 </View>
               )}
-              {loading ? (
-                <ActivityIndicator
-                  size="large"
-                  color={colors.primary}
-                  className="my-5"
-                />
-              ) : (
-                <FormButton buttonTitle="Sign In" onPress={handleSignIn} />
-              )}
+              <FormButton
+                buttonTitle="Sign In"
+                onPress={handleSignIn}
+                loading={loading}
+              />
               <View className="my-5 flex-row items-center">
                 <View className="h-px flex-1 bg-border" />
                 <Text className="mx-[15px] font-sans text-sm text-text-secondary">
