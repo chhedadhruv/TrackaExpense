@@ -21,6 +21,7 @@ import {
   ref as createStorageRef,
 } from '@react-native-firebase/storage';
 import {reportError} from '../src/services/ErrorReporter';
+import {useAsyncAction} from '../src/hooks/useAsyncAction';
 import {receiptUrlOf} from '../src/utils/receipt';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import {useCurrency} from '../utils/CurrencyUtil';
@@ -89,7 +90,6 @@ const TransactionDetailScreen = ({
   // Receipts are stored as imageUrl or the older image field; accept either.
   const receiptUrl = receiptUrlOf(transaction);
   const tagList = sanitizeTags(transaction.tags);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const onImagePress = () => {
@@ -107,8 +107,7 @@ const TransactionDetailScreen = ({
     );
   };
 
-  const deleteTransaction = async () => {
-    setLoading(true);
+  const removeTransaction = async () => {
     setError('');
     const {userId, id, type} = transaction;
     // Deleting reverses what the transaction did to the balance.
@@ -132,10 +131,10 @@ const TransactionDetailScreen = ({
       reportError(e as Error);
       setError('An error occurred while deleting the transaction.');
       snackbar.error('An error occurred while deleting the transaction.');
-    } finally {
-      setLoading(false);
     }
   };
+  const {run: deleteTransaction, pending: loading} =
+    useAsyncAction(removeTransaction);
 
   const handleDelete = () => {
     Alert.alert(
@@ -143,7 +142,7 @@ const TransactionDetailScreen = ({
       'Are you sure you want to delete this transaction?',
       [
         {text: 'Cancel', style: 'cancel'},
-        {text: 'Delete', onPress: deleteTransaction},
+        {text: 'Delete', style: 'destructive', onPress: deleteTransaction},
       ],
       {cancelable: false},
     );
@@ -151,17 +150,6 @@ const TransactionDetailScreen = ({
 
   const isIncome = transaction.type === 'income';
   const accentColor = isIncome ? colors.income : colors.expense;
-
-  if (loading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text className="mt-[15px] font-sans text-base text-primary">
-          Deleting transaction...
-        </Text>
-      </View>
-    );
-  }
 
   return (
     <View className="flex-1 bg-background">
@@ -271,6 +259,7 @@ const TransactionDetailScreen = ({
           <TouchableOpacity
             className="flex-row items-center justify-center rounded-xl bg-primary-fill py-4 ios:shadow-md"
             accessibilityRole="button"
+            disabled={loading}
             onPress={handleEdit}>
             <Pencil size={20} color={colors.onPrimary} />
             <Text className="ml-2 font-sans-bold text-base font-semibold text-on-primary">
@@ -278,13 +267,23 @@ const TransactionDetailScreen = ({
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className="flex-row items-center justify-center rounded-xl bg-expense-fill py-4 ios:shadow-md"
+            className={`flex-row items-center justify-center rounded-xl bg-expense-fill py-4 ios:shadow-md ${
+              loading ? 'opacity-70' : ''
+            }`}
             accessibilityRole="button"
+            accessibilityState={{disabled: loading, busy: loading}}
+            disabled={loading}
             onPress={handleDelete}>
-            <Trash2 size={20} color={colors.onPrimary} />
-            <Text className="ml-2 font-sans-bold text-base font-semibold text-on-primary">
-              Delete Transaction
-            </Text>
+            {loading ? (
+              <ActivityIndicator size="small" color={colors.onPrimary} />
+            ) : (
+              <>
+                <Trash2 size={20} color={colors.onPrimary} />
+                <Text className="ml-2 font-sans-bold text-base font-semibold text-on-primary">
+                  Delete Transaction
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
 

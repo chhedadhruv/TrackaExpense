@@ -1,6 +1,7 @@
 import React, {useCallback} from 'react';
-import {View, StyleSheet, TouchableOpacity, Platform} from 'react-native';
-import {ActivityIndicator} from 'react-native';
+import {View, StyleSheet, Platform, ActivityIndicator} from 'react-native';
+import IconButtonSpinner from '../../src/components/IconButtonSpinner';
+import {useAsyncActionByKey} from '../../src/hooks/useAsyncAction';
 import Card from '../../src/components/Card';
 import Text from '../../src/components/Text';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
@@ -34,6 +35,10 @@ const InvitationsScreen = () => {
   // A failed listener must not read as "No invitations yet".
   const failed = invitationsData.error;
   const currentUser = getAuth().currentUser;
+  // One response at a time across all rows; `busyKey` is 'accept:<id>' or 'decline:<id>'.
+  const {run: runResponse, pendingKey: busyKey} = useAsyncActionByKey(
+    (_key: string, task: () => Promise<void>) => task(),
+  );
 
   const acceptInvitation = useCallback(
     async (invite: Invitation) => {
@@ -107,16 +112,34 @@ const InvitationsScreen = () => {
                         </View>
                       </View>
                       <View style={styles.inviteActions}>
-                        <TouchableOpacity
+                        <IconButtonSpinner
+                          icon={Check}
+                          size={18}
+                          color={colors.onPrimary}
                           style={styles.acceptBtn}
-                          onPress={() => acceptInvitation(invite)}>
-                          <Check size={18} color={colors.onPrimary} />
-                        </TouchableOpacity>
-                        <TouchableOpacity
+                          accessibilityLabel="Accept invitation"
+                          loading={busyKey === `accept:${invite.id}`}
+                          disabled={busyKey !== null}
+                          onPress={() =>
+                            runResponse(`accept:${invite.id}`, () =>
+                              acceptInvitation(invite),
+                            )
+                          }
+                        />
+                        <IconButtonSpinner
+                          icon={X}
+                          size={18}
+                          color={colors.expense}
                           style={styles.declineBtn}
-                          onPress={() => declineInvitation(invite)}>
-                          <X size={18} color={colors.expense} />
-                        </TouchableOpacity>
+                          accessibilityLabel="Decline invitation"
+                          loading={busyKey === `decline:${invite.id}`}
+                          disabled={busyKey !== null}
+                          onPress={() =>
+                            runResponse(`decline:${invite.id}`, () =>
+                              declineInvitation(invite),
+                            )
+                          }
+                        />
                       </View>
                     </View>
                   </Card>

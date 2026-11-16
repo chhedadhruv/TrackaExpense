@@ -1,7 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {useRouter} from 'expo-router';
 import {View, Text, TextInput, TouchableOpacity, Linking} from 'react-native';
-import {ActivityIndicator} from 'react-native';
 import {
   Timestamp,
   addDoc,
@@ -22,6 +21,7 @@ import ShieldCheck from 'lucide-react-native/icons/shield-check';
 import Users from 'lucide-react-native/icons/users';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import FormButton from '../components/FormButton';
+import {useAsyncAction} from '../src/hooks/useAsyncAction';
 import {useTheme} from '../src/theme';
 import {FormError} from '../src/components/form/FormParts';
 import type {AppIcon} from '../src/types/icons';
@@ -71,7 +71,6 @@ const ContactUsScreen = () => {
   const {colors} = useTheme();
   const [feedbackText, setFeedbackText] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('feedback');
-  const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -79,7 +78,7 @@ const ContactUsScreen = () => {
     setUser(getAuth().currentUser);
   }, []);
 
-  const handleSubmitMessage = async () => {
+  const submitMessage = async () => {
     setErrorMessage(null);
     if (!feedbackText.trim()) {
       setErrorMessage('Please provide your message before submitting');
@@ -92,7 +91,6 @@ const ContactUsScreen = () => {
       return;
     }
     try {
-      setLoading(true);
       await addDoc(collection(getFirestore(), 'contact_messages'), {
         userId: user.uid,
         name: user.displayName || user.email,
@@ -109,10 +107,10 @@ const ContactUsScreen = () => {
       setErrorMessage(
         'Failed to send message. Please check your connection and try again.',
       );
-    } finally {
-      setLoading(false);
     }
   };
+  const {run: handleSubmitMessage, pending: loading} =
+    useAsyncAction(submitMessage);
 
   const handleQuickContact = (type: string) => {
     if (type === 'email') {
@@ -281,19 +279,11 @@ const ContactUsScreen = () => {
                 {feedbackText.length}/1000 characters
               </Text>
             </View>
-            {loading ? (
-              <View className="items-center py-5">
-                <ActivityIndicator size="large" color={colors.primary} />
-                <Text className="mt-3 font-sans text-base text-text-secondary">
-                  Sending your message...
-                </Text>
-              </View>
-            ) : (
-              <FormButton
-                buttonTitle="Send Message"
-                onPress={handleSubmitMessage}
-              />
-            )}
+            <FormButton
+              buttonTitle="Send Message"
+              onPress={handleSubmitMessage}
+              loading={loading}
+            />
           </View>
         </View>
 

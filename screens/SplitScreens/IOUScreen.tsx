@@ -24,6 +24,7 @@ import {
   updateDoc,
 } from '@react-native-firebase/firestore';
 import {lookupUserByEmail} from '../../src/services/UserLookup';
+import {useAsyncActionByKey} from '../../src/hooks/useAsyncAction';
 import {getAuth} from '@react-native-firebase/auth';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {useRouter} from 'expo-router';
@@ -67,7 +68,10 @@ const IOUScreen = () => {
   // A failed load must not read as "You owe nothing": show the error state instead.
   const failed = ious.error;
   const [refreshing, setRefreshing] = useState(false);
-  const [settlingId, setSettlingId] = useState<string | null>(null);
+  // One IOU is settled at a time; `settlingId` names the row that is running.
+  const {run: runSettle, pendingKey: settlingId} = useAsyncActionByKey(
+    (_id: string, task: () => Promise<void>) => task(),
+  );
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -76,15 +80,11 @@ const IOUScreen = () => {
   };
 
   const settleIOU = async (iou: IOU) => {
-    if (settlingId) {
-      return;
-    }
     // The writes below use the amount shown, so settle only from the live copy.
     if (!ious.live) {
       snackbar.info('Still syncing your IOUs. Try again in a moment.');
       return;
     }
-    setSettlingId(iou.id);
     try {
       const currentUser = getAuth().currentUser;
       if (!currentUser) {
@@ -180,8 +180,6 @@ const IOUScreen = () => {
       }
     } catch (_) {
       snackbar.error('Failed to mark as settled');
-    } finally {
-      setSettlingId(null);
     }
   };
 
@@ -191,7 +189,10 @@ const IOUScreen = () => {
       'Mark this IOU as settled? This records matching income/expense entries and updates both balances.',
       [
         {text: 'Cancel', style: 'cancel'},
-        {text: 'Settle', onPress: () => settleIOU(iou)},
+        {
+          text: 'Settle',
+          onPress: () => runSettle(iou.id, () => settleIOU(iou)),
+        },
       ],
     );
   };
@@ -231,8 +232,17 @@ const IOUScreen = () => {
             </Text>
             <TouchableOpacity
               onPress={() => markSettled(iou)}
-              disabled={settlingId === iou.id}
-              style={styles.settleButton}>
+              disabled={settlingId !== null}
+              accessibilityState={{
+                disabled: settlingId !== null,
+                busy: settlingId === iou.id,
+              }}
+              style={[
+                styles.settleButton,
+                settlingId !== null &&
+                  settlingId !== iou.id &&
+                  styles.settleButtonOff,
+              ]}>
               {settlingId === iou.id ? (
                 <ActivityIndicator size={16} color={colors.onPrimary} />
               ) : (
@@ -433,6 +443,9 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: 12,
       paddingVertical: 5,
       borderRadius: 8,
+    },
+    settleButtonOff: {
+      opacity: 0.5,
     },
     settleButtonText: {
       fontSize: 12,

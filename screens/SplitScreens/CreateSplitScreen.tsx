@@ -45,6 +45,7 @@ import {
 } from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../../src/services/ErrorReporter';
+import {useAsyncAction} from '../../src/hooks/useAsyncAction';
 import * as PerformanceService from '../../src/services/PerformanceService';
 import * as AnalyticsService from '../../src/services/AnalyticsService';
 import DatePickerModal from '../../src/components/DatePickerModal';
@@ -357,7 +358,7 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
     setDate(params.date);
   };
 
-  const handleSubmit = async () => {
+  const saveSplit = async () => {
     if (!title) {
       snackbar.error('Please enter a split title');
       return;
@@ -407,7 +408,6 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
       }
     }
 
-    setLoading(true);
     try {
       const currentUser = getAuth().currentUser;
       if (!currentUser) {
@@ -734,7 +734,6 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
           member_count: selectedUsersList.length,
         });
       }
-      setLoading(false);
       // Back to the group, which reads its splits again each time it comes into focus.
       if (isEditMode) {
         snackbar.success('Split updated successfully');
@@ -745,7 +744,6 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
       }
     } catch (error) {
       reportError(error as Error);
-      setLoading(false);
       snackbar.error(
         `Failed to ${
           isEditMode ? 'update' : 'create'
@@ -753,6 +751,7 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
       );
     }
   };
+  const {run: handleSubmit, pending: submitting} = useAsyncAction(saveSplit);
 
   const writeSplitTransaction = async (
     splitId: string,
@@ -1345,13 +1344,20 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity
-              style={styles.submitButton}
+              style={[styles.submitButton, submitting && styles.submitBusy]}
               onPress={handleSubmit}
-              disabled={loading}>
-              <Text style={styles.submitButtonText}>
-                {isEditMode ? 'Update Split' : 'Create Split'}
-              </Text>
-              <Check size={20} color={colors.onPrimary} />
+              accessibilityState={{disabled: submitting, busy: submitting}}
+              disabled={loading || submitting}>
+              {submitting ? (
+                <ActivityIndicator size="small" color={colors.onPrimary} />
+              ) : (
+                <>
+                  <Text style={styles.submitButtonText}>
+                    {isEditMode ? 'Update Split' : 'Create Split'}
+                  </Text>
+                  <Check size={20} color={colors.onPrimary} />
+                </>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -1738,6 +1744,9 @@ const createStyles = (colors: ThemeColors) =>
       shadowOffset: {width: 0, height: 1},
       shadowOpacity: 0.15,
       shadowRadius: 2,
+    },
+    submitBusy: {
+      opacity: 0.7,
     },
     submitButtonText: {
       color: colors.onPrimary,

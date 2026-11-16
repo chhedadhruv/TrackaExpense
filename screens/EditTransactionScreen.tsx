@@ -23,6 +23,7 @@ import * as AnalyticsService from '../src/services/AnalyticsService';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import FormButton from '../components/FormButton';
+import {useAsyncAction} from '../src/hooks/useAsyncAction';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {EXPENSE_CATEGORIES, INCOME_CATEGORIES} from '../utils/CategoryData';
 import {useTheme} from '../src/theme';
@@ -101,7 +102,6 @@ const EditTransactionScreen = ({
   const [uploading, setUploading] = useState(false);
   const [transferred, setTransferred] = useState(0);
   const [imagePickerVisible, setImagePickerVisible] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const getUid = (): string => getAuth().currentUser!.uid;
 
@@ -136,11 +136,10 @@ const EditTransactionScreen = ({
     }
   };
 
-  const handleSubmit = async () => {
+  const saveTransaction = async () => {
     if (!validateForm(transaction.type)) {
       return;
     }
-    setIsSubmitting(true);
 
     const isLocalFile = image && !image.startsWith('http');
     if (isLocalFile) {
@@ -216,9 +215,10 @@ const EditTransactionScreen = ({
       );
     } finally {
       setUploading(false);
-      setIsSubmitting(false);
     }
   };
+  const {run: handleSubmit, pending: isSubmitting} =
+    useAsyncAction(saveTransaction);
 
   const accentColor =
     transaction.type === 'expense' ? colors.expense : colors.income;
@@ -335,21 +335,13 @@ const EditTransactionScreen = ({
             )}
 
             <View className="mt-5">
-              {isSubmitting ? (
-                <View className="flex-row items-center justify-center py-[15px]">
-                  <ActivityIndicator size="small" color={colors.primary} />
-                  <Text className="ml-2.5 font-sans text-base text-primary">
-                    Updating Transaction...
-                  </Text>
-                </View>
-              ) : (
-                <FormButton
-                  buttonTitle="Update Transaction"
-                  onPress={handleSubmit}
-                  disabled={!isFormValid()}
-                  style={!isFormValid() ? DISABLED_BUTTON : undefined}
-                />
-              )}
+              <FormButton
+                buttonTitle="Update Transaction"
+                onPress={handleSubmit}
+                loading={isSubmitting}
+                disabled={!isFormValid()}
+                style={!isFormValid() ? DISABLED_BUTTON : undefined}
+              />
             </View>
           </FormCard>
         </KeyboardAwareScrollView>
