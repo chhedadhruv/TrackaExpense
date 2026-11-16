@@ -1,7 +1,6 @@
-import {View, Text} from 'react-native';
-import React, {useState, useEffect} from 'react';
+import {View} from 'react-native';
+import React, {useEffect} from 'react';
 import {useRouter} from 'expo-router';
-import {ActivityIndicator} from 'react-native';
 import {getAuth} from '@react-native-firebase/auth';
 import {
   Timestamp,
@@ -17,6 +16,7 @@ import * as AnalyticsService from '../src/services/AnalyticsService';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import FormButton from '../components/FormButton';
+import {useAsyncAction} from '../src/hooks/useAsyncAction';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {INCOME_CATEGORIES, INCOME_KEYWORD_MAP} from '../utils/CategoryData';
 import {useTheme} from '../src/theme';
@@ -66,8 +66,6 @@ const AddIncome = () => {
   const knownTags = useKnownTags();
   const recordTags = useRecordTags();
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   useEffect(() => {
     if (title.trim().length < 3 || category) {
       return;
@@ -84,11 +82,10 @@ const AddIncome = () => {
 
   const getUid = (): string => getAuth().currentUser!.uid;
 
-  const handleSubmit = async () => {
+  const saveIncome = async () => {
     if (!validateForm('income')) {
       return;
     }
-    setIsSubmitting(true);
     try {
       const uid = getUid();
       const userDocRef = doc(getFirestore(), 'users', uid);
@@ -127,21 +124,9 @@ const AddIncome = () => {
       setErrorMessage(
         'An error occurred while adding the income. Please try again.',
       );
-    } finally {
-      setIsSubmitting(false);
     }
   };
-
-  if (isSubmitting) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text className="mt-[15px] font-sans text-base text-primary">
-          Adding your income...
-        </Text>
-      </View>
-    );
-  }
+  const {run: handleSubmit, pending: isSubmitting} = useAsyncAction(saveIncome);
 
   return (
     <SafeAreaProvider>
@@ -220,21 +205,13 @@ const AddIncome = () => {
             />
 
             <View className="mt-5">
-              {isSubmitting ? (
-                <View className="flex-row items-center justify-center py-[15px]">
-                  <ActivityIndicator size="small" color={colors.primary} />
-                  <Text className="ml-2.5 font-sans text-base text-primary">
-                    Adding Income...
-                  </Text>
-                </View>
-              ) : (
-                <FormButton
-                  buttonTitle="Add Income"
-                  onPress={handleSubmit}
-                  disabled={!isFormValid()}
-                  style={!isFormValid() ? DISABLED_BUTTON : undefined}
-                />
-              )}
+              <FormButton
+                buttonTitle="Add Income"
+                onPress={handleSubmit}
+                loading={isSubmitting}
+                disabled={!isFormValid()}
+                style={!isFormValid() ? DISABLED_BUTTON : undefined}
+              />
             </View>
           </FormCard>
         </KeyboardAwareScrollView>

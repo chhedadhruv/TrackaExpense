@@ -1,4 +1,4 @@
-import {View, Text, ActivityIndicator, TouchableOpacity} from 'react-native';
+import {View, Text, TouchableOpacity} from 'react-native';
 import React, {useState, useContext} from 'react';
 import {useRouter} from 'expo-router';
 import CircleAlert from 'lucide-react-native/icons/circle-alert';
@@ -8,6 +8,7 @@ import LockKeyhole from 'lucide-react-native/icons/lock-keyhole';
 import Mail from 'lucide-react-native/icons/mail';
 import FormInput from '../components/FormInput';
 import FormButton from '../components/FormButton';
+import {useAsyncAction} from '../src/hooks/useAsyncAction';
 import {AuthContext} from '../navigation/AuthProvider';
 import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView';
 import {useTheme} from '../src/theme';
@@ -18,12 +19,11 @@ const ForgotPasswordScreen = () => {
   const [email, setEmail] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const {forgotPassword} = useContext(AuthContext);
 
   const isValidEmail = (e: string) => /\S+@\S+\.\S+/.test(e);
 
-  const handleForgotPassword = async () => {
+  const sendResetEmail = async () => {
     setErrorMessage(null);
     setSuccessMessage(null);
 
@@ -36,7 +36,6 @@ const ForgotPasswordScreen = () => {
       return;
     }
 
-    setIsLoading(true);
     try {
       await forgotPassword(email);
       setSuccessMessage(
@@ -47,10 +46,10 @@ const ForgotPasswordScreen = () => {
       setErrorMessage(
         'Error sending reset email. Please check your email address and try again.',
       );
-    } finally {
-      setIsLoading(false);
     }
   };
+  const {run: handleForgotPassword, pending: isLoading} =
+    useAsyncAction(sendResetEmail);
 
   return (
     <View className="flex-1 bg-background">
@@ -108,19 +107,11 @@ const ForgotPasswordScreen = () => {
                   autoCorrect={false}
                 />
               </View>
-              {isLoading ? (
-                <View className="items-center py-5">
-                  <ActivityIndicator size="large" color={colors.primary} />
-                  <Text className="mt-2.5 font-sans text-base text-primary">
-                    Sending reset email...
-                  </Text>
-                </View>
-              ) : (
-                <FormButton
-                  buttonTitle="Send Reset Email"
-                  onPress={handleForgotPassword}
-                />
-              )}
+              <FormButton
+                buttonTitle="Send Reset Email"
+                onPress={handleForgotPassword}
+                loading={isLoading}
+              />
             </View>
           </View>
 
