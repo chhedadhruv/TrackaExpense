@@ -1,4 +1,5 @@
 import React, {useState, useEffect, useMemo} from 'react';
+import {useAsyncAction} from '../../src/hooks/useAsyncAction';
 import {
   ActivityIndicator,
   FlatList,
@@ -174,7 +175,6 @@ const SplitScreen = () => {
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [category, setCategory] = useState<string | null>(null);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
   const [_unregisteredName, setUnregisteredName] = useState('');
   const currentUser = getAuth().currentUser;
 
@@ -280,7 +280,7 @@ const SplitScreen = () => {
     setEditingGroupId(null);
   };
 
-  const createGroup = async () => {
+  const saveGroup = async () => {
     if (!groupName.trim()) {
       snackbar.error('Group name is required');
       return;
@@ -297,10 +297,6 @@ const SplitScreen = () => {
       snackbar.error('Please select at least one user to add to the group');
       return;
     }
-    if (saving) {
-      return;
-    }
-    setSaving(true);
     try {
       const prevGroup = editingGroupId
         ? groups.find(g => g.id === editingGroupId)
@@ -463,10 +459,9 @@ const SplitScreen = () => {
       }
     } catch (err) {
       snackbar.error('Failed to create/update group');
-    } finally {
-      setSaving(false);
     }
   };
+  const {run: createGroup, pending: saving} = useAsyncAction(saveGroup);
 
   // Currently unused (group deletion lives in the group detail screen); kept for reference.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

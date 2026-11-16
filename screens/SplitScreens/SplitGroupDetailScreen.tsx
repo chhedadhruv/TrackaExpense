@@ -6,7 +6,9 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
+import {useAsyncActionByKey} from '../../src/hooks/useAsyncAction';
 import Card from '../../src/components/Card';
 import {useLocalSearchParams, useRouter} from 'expo-router';
 import ArrowRight from 'lucide-react-native/icons/arrow-right';
@@ -187,6 +189,11 @@ const SplitGroupDetailScreen = () => {
   const loading = splitsData.loading;
   // A failed load must not read as "No splits yet" with no settlement suggestions.
   const failed = splitsData.error;
+  // Leave, delete and resend share one lock, so only one of them runs at a time. `busyKey` names
+  // the one that is running: 'leave', 'delete' or 'resend:<email>'.
+  const {run: runGroupAction, pendingKey: busyKey} = useAsyncActionByKey(
+    (_key: string, task: () => Promise<void>) => task(),
+  );
 
   if (!group || !group.id) {
     return (
@@ -273,6 +280,44 @@ const SplitGroupDetailScreen = () => {
     }
   };
 
+  const leaveGroup = async () => {
+    try {
+      const userEmail = (user?.email || '').toLowerCase();
+      if (!userEmail) {
+        snackbar.error('User not found');
+        return;
+      }
+      await updateDoc(fsDoc(getFirestore(), 'groups', group!.id), {
+        members: arrayRemove(userEmail),
+        [`memberNames.${userEmail}`]: deleteField(),
+      });
+      snackbar.info('You have left the group.');
+      router.back();
+    } catch (_) {
+      snackbar.error('Failed to leave group');
+    }
+  };
+
+  const deleteGroup = async () => {
+    try {
+      const splitsRef = collection(
+        getFirestore(),
+        'groups',
+        group!.id,
+        'splits',
+      );
+      const snapshot = await getDocs(splitsRef);
+      const batch = writeBatch(getFirestore());
+      snapshot.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+      await deleteDoc(fsDoc(getFirestore(), 'groups', group!.id));
+      snackbar.success('Group deleted successfully');
+      router.back();
+    } catch (_) {
+      snackbar.error('Failed to delete group');
+    }
+  };
+
   const renderGroupSummaryCard = () => (
     <Card
       style={[
@@ -317,10 +362,25 @@ const SplitGroupDetailScreen = () => {
                   {email}
                 </Text>
                 <TouchableOpacity
-                  onPress={() => handleResendInvite(email)}
+                  onPress={() =>
+                    runGroupAction(`resend:${email}`, () =>
+                      handleResendInvite(email),
+                    )
+                  }
+                  disabled={busyKey !== null}
+                  accessibilityState={{
+                    disabled: busyKey !== null,
+                    busy: busyKey === `resend:${email}`,
+                  }}
                   style={styles.resendButton}>
-                  <MailCheck size={16} color={colors.onPrimary} />
-                  <Text style={styles.resendText}>Resend</Text>
+                  {busyKey === `resend:${email}` ? (
+                    <ActivityIndicator size="small" color={colors.onPrimary} />
+                  ) : (
+                    <>
+                      <MailCheck size={16} color={colors.onPrimary} />
+                      <Text style={styles.resendText}>Resend</Text>
+                    </>
+                  )}
                 </TouchableOpacity>
               </View>
             ))}
@@ -350,33 +410,23 @@ const SplitGroupDetailScreen = () => {
                   {
                     text: 'Leave',
                     style: 'destructive',
-                    onPress: async () => {
-                      try {
-                        const userEmail = (user?.email || '').toLowerCase();
-                        if (!userEmail) {
-                          snackbar.error('User not found');
-                          return;
-                        }
-                        await updateDoc(
-                          fsDoc(getFirestore(), 'groups', group!.id),
-                          {
-                            members: arrayRemove(userEmail),
-                            [`memberNames.${userEmail}`]: deleteField(),
-                          },
-                        );
-                        snackbar.info('You have left the group.');
-                        router.back();
-                      } catch (_) {
-                        snackbar.error('Failed to leave group');
-                      }
-                    },
+                    onPress: () => runGroupAction('leave', leaveGroup),
                   },
                 ],
               );
             }}
+            disabled={busyKey !== null}
+            accessibilityState={{
+              disabled: busyKey !== null,
+              busy: busyKey === 'leave',
+            }}
             accessibilityLabel="Leave group"
             accessibilityRole="button">
-            <LogOut size={24} color={colors.expense} />
+            {busyKey === 'leave' ? (
+              <ActivityIndicator size="small" color={colors.expense} />
+            ) : (
+              <LogOut size={24} color={colors.expense} />
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.iconButton, styles.deleteButton]}
@@ -389,34 +439,23 @@ const SplitGroupDetailScreen = () => {
                   {
                     text: 'Delete',
                     style: 'destructive',
-                    onPress: async () => {
-                      try {
-                        const splitsRef = collection(
-                          getFirestore(),
-                          'groups',
-                          group!.id,
-                          'splits',
-                        );
-                        const snapshot = await getDocs(splitsRef);
-                        const batch = writeBatch(getFirestore());
-                        snapshot.forEach(doc => batch.delete(doc.ref));
-                        await batch.commit();
-                        await deleteDoc(
-                          fsDoc(getFirestore(), 'groups', group!.id),
-                        );
-                        snackbar.success('Group deleted successfully');
-                        router.back();
-                      } catch (_) {
-                        snackbar.error('Failed to delete group');
-                      }
-                    },
+                    onPress: () => runGroupAction('delete', deleteGroup),
                   },
                 ],
               );
             }}
+            disabled={busyKey !== null}
+            accessibilityState={{
+              disabled: busyKey !== null,
+              busy: busyKey === 'delete',
+            }}
             accessibilityLabel="Delete group"
             accessibilityRole="button">
-            <Trash2 size={24} color={colors.onPrimary} />
+            {busyKey === 'delete' ? (
+              <ActivityIndicator size="small" color={colors.onPrimary} />
+            ) : (
+              <Trash2 size={24} color={colors.onPrimary} />
+            )}
           </TouchableOpacity>
         </View>
       </View>

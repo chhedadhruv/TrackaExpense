@@ -7,7 +7,9 @@ import {
   Platform,
   Image,
   Linking,
+  ActivityIndicator,
 } from 'react-native';
+import {useAsyncAction} from '../../src/hooks/useAsyncAction';
 import Card from '../../src/components/Card';
 import Text from '../../src/components/Text';
 import UserAvatar from '../../src/components/Avatar';
@@ -127,7 +129,7 @@ const SplitDetailScreen = ({
     );
   };
 
-  const handleDeleteSplit = async () => {
+  const removeSplit = async () => {
     try {
       if (isSettlement) {
         // The server removes the settlement, its splits-list entry and both people's
@@ -254,6 +256,8 @@ const SplitDetailScreen = ({
       );
     }
   };
+  const {run: handleDeleteSplit, pending: deleting} =
+    useAsyncAction(removeSplit);
 
   const formatDate = (timestamp: {toDate: () => Date} | undefined): string => {
     if (!timestamp) {
@@ -479,6 +483,7 @@ const SplitDetailScreen = ({
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={styles.editButton}
+              disabled={deleting}
               onPress={() =>
                 router.navigate({
                   pathname: '/split/group/[groupId]/create',
@@ -489,10 +494,18 @@ const SplitDetailScreen = ({
               <Text style={styles.buttonText}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.deleteButton}
+              style={[styles.deleteButton, deleting && styles.deleteBusy]}
+              disabled={deleting}
+              accessibilityState={{disabled: deleting, busy: deleting}}
               onPress={confirmAndDelete}>
-              <Trash2 size={20} color={colors.onPrimary} />
-              <Text style={styles.buttonText}>Delete</Text>
+              {deleting ? (
+                <ActivityIndicator size="small" color={colors.onPrimary} />
+              ) : (
+                <>
+                  <Trash2 size={20} color={colors.onPrimary} />
+                  <Text style={styles.buttonText}>Delete</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </KeyboardAwareScrollView>
@@ -668,6 +681,9 @@ const createStyles = (colors: ThemeColors) =>
       shadowOffset: {width: 0, height: 1},
       shadowOpacity: 0.15,
       shadowRadius: 2,
+    },
+    deleteBusy: {
+      opacity: 0.7,
     },
     buttonText: {
       color: colors.onPrimary,

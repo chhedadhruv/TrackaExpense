@@ -9,7 +9,9 @@ import {
   TouchableOpacity,
   TextInput,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
+import {useAsyncAction} from '../../src/hooks/useAsyncAction';
 import Card from '../../src/components/Card';
 import Toggle from '../../src/components/Toggle';
 import UserAvatar from '../../src/components/Avatar';
@@ -72,7 +74,6 @@ const SettleUpScreen = ({
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
   const [selectedLender, setSelectedLender] = useState<GroupMember | null>(
     null,
   );
@@ -99,10 +100,7 @@ const SettleUpScreen = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSettleUp = async () => {
-    if (loading) {
-      return;
-    }
+  const settleUp = async () => {
     if (!selectedLender || !selectedBorrower || !amount) {
       snackbar.error('Please fill in all required fields');
       return;
@@ -129,7 +127,6 @@ const SettleUpScreen = ({
     }
     const settlementAmount = toMajorNumber(settlementMinor, currency.code);
     try {
-      setLoading(true);
       const currentUser = getAuth().currentUser!;
       const currentUserEmail = currentUser.email;
       let actorNameResolved = currentUserEmail?.split('@')[0] || 'Someone';
@@ -215,10 +212,9 @@ const SettleUpScreen = ({
     } catch (e) {
       reportError(e as Error);
       snackbar.error('Failed to record settlement');
-    } finally {
-      setLoading(false);
     }
   };
+  const {run: handleSettleUp, pending: loading} = useAsyncAction(settleUp);
 
   const renderUserSelectionCard = (
     title: string,
@@ -479,10 +475,14 @@ const SettleUpScreen = ({
               disabled={
                 loading || !selectedLender || !selectedBorrower || !amount
               }>
-              <Handshake size={20} color={colors.onPrimary} />
-              <Text style={styles.settleButtonText}>
-                {loading ? 'Processing...' : 'Settle Up'}
-              </Text>
+              {loading ? (
+                <ActivityIndicator size="small" color={colors.onPrimary} />
+              ) : (
+                <>
+                  <Handshake size={20} color={colors.onPrimary} />
+                  <Text style={styles.settleButtonText}>Settle Up</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </KeyboardAwareScrollView>
