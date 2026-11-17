@@ -30,7 +30,7 @@ const MAX_TITLE = 120;
 const MAX_BODY = 500;
 const MAX_DATA_BYTES = 2048;
 const HOUR_MS = 60 * 60 * 1000;
-const ONESIGNAL_URL = 'https://api.onesignal.com/notifications?c=push';
+export const ONESIGNAL_URL = 'https://api.onesignal.com/notifications?c=push';
 
 export interface PushInput {
   emails: string[];

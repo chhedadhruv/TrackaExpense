@@ -4,8 +4,11 @@
 // Run: yarn test:triggers   (needs the Firebase CLI installed globally and JDK 21 or newer).
 // Uses a demo- project id, so no live project is ever touched.
 import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
 import {initializeApp} from 'firebase-admin/app';
 import {getFirestore} from 'firebase-admin/firestore';
+
+const require = createRequire(import.meta.url);
 
 initializeApp({
   projectId: process.env.GCLOUD_PROJECT || 'demo-trackaexpense-functions',
@@ -408,6 +411,250 @@ await step(
       idToken,
     );
     assert.equal(tooMany.status, 400);
+  },
+);
+
+// ---- Budget alerts (flag enable_budgets is forced on by .env.demo-trackaexpense-functions) ------
+const todayKolkata = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Kolkata',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+}).format(new Date());
+const periodKey = todayKolkata.slice(0, 7);
+
+const budgetUid = 'ub1';
+const budgetUser = db.collection('users').doc(budgetUid);
+const alertsOf = async () =>
+  (await budgetUser.collection('budgetAlerts').get()).docs
+    .map(d => d.id)
+    .sort();
+const addExpense = async (id, amount, extra = {}) => {
+  // The way an old installed app writes: legacy fields only; the triggers derive the rest.
+  await budgetUser
+    .collection('transactions')
+    .doc(id)
+    .set({
+      title: id,
+      type: 'expense',
+      amount,
+      category: 'Food',
+      date: todayKolkata,
+      ...extra,
+    });
+  await waitFor(
+    budgetUser.collection('transactions').doc(id),
+    d => d.amountMinor !== undefined && d.dateISO !== undefined,
+    `${id} derived`,
+  );
+};
+
+await budgetUser.set({
+  name: 'Budget user',
+  email: 'budget@example.com',
+  currency: 'INR',
+});
+await budgetUser
+  .collection('budgets')
+  .doc('food')
+  .set({
+    name: 'Food',
+    category: 'Food',
+    period: 'monthly',
+    limitMinor: 10000,
+    currency: 'INR',
+    thresholds: {50: true, 80: true, 100: true, 120: true},
+    enabled: true,
+  });
+
+await step('budgets: below 50 percent raises no alert', async () => {
+  await addExpense('e1', '45');
+  await sleep(4000);
+  assert.deepEqual(await alertsOf(), []);
+});
+
+await step('budgets: 55 percent raises the 50 alert only', async () => {
+  await addExpense('e2', '10');
+  await waitFor(
+    budgetUser.collection('budgetAlerts').doc(`food_${periodKey}_50`),
+    d => d.threshold === 50,
+    '50 alert',
+  );
+  await sleep(2000);
+  assert.deepEqual(await alertsOf(), [`food_${periodKey}_50`]);
+});
+
+await step(
+  'budgets: 85 percent adds 80, 105 percent adds 100, never 120 yet',
+  async () => {
+    await addExpense('e3', '30');
+    await waitFor(
+      budgetUser.collection('budgetAlerts').doc(`food_${periodKey}_80`),
+      d => d.threshold === 80,
+      '80 alert',
+    );
+    await addExpense('e4', '20');
+    const hundred = await waitFor(
+      budgetUser.collection('budgetAlerts').doc(`food_${periodKey}_100`),
+      d => d.threshold === 100,
+      '100 alert',
+    );
+    assert.equal(hundred.get('spentMinor'), 10500);
+    assert.equal(hundred.get('limitMinor'), 10000);
+    assert.equal(hundred.get('pushed'), false); // no OneSignal key in the emulator
+    await sleep(2000);
+    assert.deepEqual(await alertsOf(), [
+      `food_${periodKey}_100`,
+      `food_${periodKey}_50`,
+      `food_${periodKey}_80`,
+    ]);
+  },
+);
+
+await step(
+  'budgets: rewriting transactions does not fire an alert twice',
+  async () => {
+    const first = await budgetUser
+      .collection('budgetAlerts')
+      .doc(`food_${periodKey}_50`)
+      .get();
+    await budgetUser
+      .collection('transactions')
+      .doc('e1')
+      .update({notes: 'touched'});
+    await budgetUser
+      .collection('transactions')
+      .doc('e2')
+      .update({notes: 'touched'});
+    await sleep(4000);
+    assert.equal((await alertsOf()).length, 3);
+    const again = await budgetUser
+      .collection('budgetAlerts')
+      .doc(`food_${periodKey}_50`)
+      .get();
+    assert.deepEqual(again.get('createdAt'), first.get('createdAt'));
+  },
+);
+
+await step(
+  'budgets: settlements, other categories and income do not count toward 120',
+  async () => {
+    await addExpense('s1', '500', {category: 'Settlement', isSettlement: true});
+    await addExpense('t1', '500', {category: 'Travel'});
+    await addExpense('i1', '500', {type: 'income'});
+    await sleep(4000);
+    assert.equal((await alertsOf()).length, 3);
+  },
+);
+
+await step(
+  'budgets: a Food expense that really reaches 120 adds the 120 alert',
+  async () => {
+    await addExpense('e5', '20');
+    await waitFor(
+      budgetUser.collection('budgetAlerts').doc(`food_${periodKey}_120`),
+      d => d.threshold === 120,
+      '120 alert',
+    );
+  },
+);
+
+await step(
+  'budgets: core sends one push per new alert, none on a rerun, and follows the period',
+  async () => {
+    const {evaluateBudgets} = require('../lib/budgetAlerts.js');
+    const coreUid = 'ub2';
+    const coreUser = db.collection('users').doc(coreUid);
+    await coreUser.set({name: 'Core', currency: 'INR'});
+    const tx = (id, amountMinor, dateISO) =>
+      coreUser
+        .collection('transactions')
+        .doc(id)
+        .set({
+          type: 'expense',
+          amountMinor,
+          dateISO,
+          currency: 'INR',
+          category: 'Rent',
+          amount: String(amountMinor / 100),
+          date: dateISO,
+        });
+    await tx('a', 9000, '2026-11-10'); // 90 percent of a 100.00 budget in November
+    await tx('b', 5000, '2026-10-20'); // October: ignored by a November budget
+    await sleep(4000); // let the triggers finish before the budget exists
+    await coreUser
+      .collection('budgets')
+      .doc('all')
+      .set({
+        name: '',
+        period: 'monthly',
+        limitMinor: 10000,
+        currency: 'INR',
+        thresholds: {50: true, 80: true, 100: false, 120: false},
+        enabled: true,
+      });
+
+    const sent = [];
+    const deps = {
+      db,
+      apiKey: 'test-key',
+      appId: 'app',
+      fetchFn: async (url, init) => {
+        sent.push(JSON.parse(init.body));
+        return {ok: true, json: async () => ({id: `n${sent.length}`})};
+      },
+      now: () => Date.UTC(2026, 10, 15, 6, 0, 0),
+    };
+    const first = await evaluateBudgets(deps, coreUid);
+    assert.deepEqual(first.created.sort(), [
+      'all_2026-11_50',
+      'all_2026-11_80',
+    ]);
+    assert.equal(sent.length, 2);
+    assert.deepEqual(sent[0].include_aliases.external_id, [coreUid]);
+    assert.ok(sent.every(m => m.data.type === 'budget_alert'));
+    assert.match(sent[0].contents.en, /percent of your budget/);
+    const pushed = await coreUser
+      .collection('budgetAlerts')
+      .doc('all_2026-11_80')
+      .get();
+    assert.equal(pushed.get('pushed'), true);
+
+    const second = await evaluateBudgets(deps, coreUid);
+    assert.deepEqual(second.created, []);
+    assert.equal(sent.length, 2);
+
+    // Overlapping runs: only one of them creates a given alert.
+    await coreUser.collection('transactions').doc('c').set({
+      type: 'expense',
+      amountMinor: 20000,
+      dateISO: '2026-11-11',
+      currency: 'INR',
+      category: 'Rent',
+      amount: '200',
+      date: '2026-11-11',
+    });
+    await sleep(4000);
+    await coreUser
+      .collection('budgets')
+      .doc('all')
+      .update({
+        thresholds: {50: true, 80: true, 100: true, 120: true},
+      });
+    const before = sent.length;
+    const runs = await Promise.all(
+      [1, 2, 3].map(() => evaluateBudgets(deps, coreUid)),
+    );
+    const createdNow = runs.flatMap(r => r.created).sort();
+    assert.deepEqual(createdNow, ['all_2026-11_100', 'all_2026-11_120']);
+    assert.equal(sent.length - before, 2);
+
+    // December: a new period starts at zero, so nothing fires.
+    const december = await evaluateBudgets(
+      {...deps, now: () => Date.UTC(2026, 11, 2, 6, 0, 0)},
+      coreUid,
+    );
+    assert.deepEqual(december.created, []);
   },
 );
 
