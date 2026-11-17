@@ -19,5 +19,14 @@
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "recurring",
+      "fieldPath": "nextDueDate",
+      "indexes": [
+        {"order": "ASCENDING", "queryScope": "COLLECTION"},
+        {"order": "ASCENDING", "queryScope": "COLLECTION_GROUP"}
+      ]
+    }
+  ]
 }
