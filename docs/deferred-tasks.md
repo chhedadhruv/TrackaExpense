@@ -52,14 +52,10 @@ Counts only; details in `../trackaexpense-audit/09-phase-2-data-profile.md`.
 
 Candidates for the next release, 1.4.1 or similar. None blocks 1.4.0.
 
-- Statistics screen, "Financial Overview" bar chart: the y-axis labels are wrong (for example the top label ₹10708 sits below ₹71390 and the bottom label is ₹-1), and with the 30-day filter most bars sit outside the visible window because the chart scrolls sideways. Look at the `maxValue` and step settings passed to the chart in `screens/StatisticScreen.tsx`.
-- Group detail screen: "Total Spent" includes settlement entries (a 600 rupee settlement raised it from 10,350 to 10,950). Settlements are not spending.
-- Deleting a settlement from its detail screen asks "Delete Split" and says "Split deleted successfully"; the wording should say settlement.
 - The legacy `balance` can carry a third decimal from old data (for example -9.995); the home screen shows it rounded by float formatting (-9.99 or -10 depending on tiny float drift) while `balanceMinor` rounds half away from zero. Only affects accounts with three-decimal balances.
-- The login screen still uses the old logo (`assets/Tracka.png`); the app icon, splash and notification icon were replaced in PR 50.
 - No Android 13 themed (monochrome) icon was provided. It needs a single-colour mark with the rupee as a transparent cut-out.
 - The new app icon, splash and notification icon (PR 50) were merged after the 1.4.0 build. They ship with the next store build. Upload the 512 px Play listing icon (`../trackaexpense-audit/store-listing/final/play-icon-512.png`) only together with that build. iOS icon and splash are not verified (no iOS build).
-- The in-app notification pre-prompt: on the emulator, choosing Cancel on the app's own dialog still led to the system permission prompt. Confirm whether Cancel is wired to the system prompt.
+- The in-app notification pre-prompt (a Cancel that still led to the system prompt) no longer exists in code: `NotificationService` only reads the permission, and the one request is OneSignal's system prompt after the first saved expense (`requestPushPermissionAfterFirstExpense` in `src/services/PushService.ts`, once per install). Found by reading the code on 2026-11-17; the first-expense prompt itself was not re-run on a fresh install.
 - Test account note: the Yisek test account received a "Monthly Salary" income of 5,000 at about 05:40 UTC on 2026-11-10 that the test sessions did not create; the source is unknown.
 - `develop` is 82 commits behind `main`; see section 7 of the project guidance file.
 - The 12 old Sentry issues from 1.3.5 debug builds of 8 to 9 November (local file paths in the stack traces) were resolved on 2026-11-10 as noise. Release-1.4.0 issues so far: two transient `firestore/unavailable` errors and one `TOO_MANY_REGISTRATIONS` push-registration error, all from the owner's phone.
@@ -86,7 +82,7 @@ Candidates for the next release, 1.4.1 or similar. None blocks 1.4.0.
 - `expo-router`'s own `package.json` logs a harmless "invalid package.json configuration" warning (`router-store` export); it comes from the package, not from this app.
 - The two dev-only Router notices (several URI schemes, deprecated `ImageBackground`) are hidden in `index.js`. If the second one is ever traced to its source, remove the ignore.
 - The screens `PrivacyPolicy`, `Profile`, `EditProfile`, `ContactUs` and `Image` used React Native's deprecated `SafeAreaView`, which on Android is a plain view; they now use a plain view. On iOS the old component added the device insets: check the top and bottom spacing of these screens on the first iOS build.
-- The parked Maestro flow `.maestro/wip/expense-lifecycle.yaml` is still parked; the edit screen itself loads and shows its values (checked by hand).
+- The Maestro flow `.maestro/flows/expense-lifecycle.yaml` (add, edit, delete) is no longer parked: it passed three runs in a row on the emulator on 2026-11-17.
 
 ## Left over from the query cache (TanStack Query, Zustand, MMKV)
 
