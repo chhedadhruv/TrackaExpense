@@ -169,12 +169,24 @@ export const sortGoals = (goals: readonly SavingsGoal[]): SavingsGoal[] =>
   );
 
 /**
- * The goals to show: the goal documents once there are any, else the array. The fallback covers a
- * profile whose documents have not been created yet (before the backfill) and the few seconds
- * between an old app's write and the server's mirror of it.
+ * The goals to show: the goal documents when they are exactly the goals of the array, else the
+ * array. The array is what every installed app can read and write, so it is the record to trust
+ * whenever the two disagree: a profile whose documents have not all been created yet (before the
+ * backfill, or after only one goal was edited), a goal an old app added or removed that the server
+ * has not mirrored yet, or a stale leftover document. Showing the documents in those cases would
+ * hide goals, or bring back one that was deleted.
  */
 export const chooseGoals = (
   documents: readonly SavingsGoal[] | undefined,
   array: readonly SavingsGoal[],
-): readonly SavingsGoal[] =>
-  documents !== undefined && documents.length > 0 ? documents : array;
+): readonly SavingsGoal[] => {
+  if (documents === undefined || documents.length === 0) {
+    return array;
+  }
+  const ids = new Set(documents.map(g => g.id));
+  const sameGoals =
+    ids.size === documents.length &&
+    array.length === documents.length &&
+    array.every(g => ids.has(g.id));
+  return sameGoals ? documents : array;
+};
