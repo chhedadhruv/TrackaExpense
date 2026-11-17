@@ -34,6 +34,8 @@ import LockKeyhole from 'lucide-react-native/icons/lock-keyhole';
 import LogOut from 'lucide-react-native/icons/log-out';
 import Mic from 'lucide-react-native/icons/mic';
 import Pencil from 'lucide-react-native/icons/pencil';
+import PiggyBank from 'lucide-react-native/icons/piggy-bank';
+import {getConfig} from '../src/services/RemoteConfigService';
 import ShieldAlert from 'lucide-react-native/icons/shield-alert';
 import ShieldCheck from 'lucide-react-native/icons/shield-check';
 import UserX from 'lucide-react-native/icons/user-x';
@@ -362,6 +364,18 @@ const ProfileScreen = () => {
               onPress={() => setCurrencyModalVisible(true)}
             />
             <RowDivider />
+            {getConfig().enable_budgets ? (
+              <>
+                <SettingsRow
+                  icon={PiggyBank}
+                  accent={ACCENT.green}
+                  title="Budgets"
+                  subtitle="Set limits and get alerts"
+                  onPress={() => router.navigate('/profile/budgets')}
+                />
+                <RowDivider />
+              </>
+            ) : null}
             <SettingsRow
               icon={Mic}
               accent={ACCENT.blue}

@@ -11,6 +11,8 @@ export interface RemoteConfigDefaults {
   stats_default_time_range: string;
   image_upload_max_size_mb: number;
   enable_iou_feature: boolean;
+  /** Shows Budgets on Profile; the server raises budget alerts only while this is true too. */
+  enable_budgets: boolean;
   onboarding_version: number;
   /** Installed versions below this are blocked until the user updates. '0.0.0' disables the check. */
   min_supported_version: string;
@@ -24,6 +26,7 @@ const DEFAULTS: RemoteConfigDefaults = {
   stats_default_time_range: 'all',
   image_upload_max_size_mb: 5,
   enable_iou_feature: true,
+  enable_budgets: false,
   onboarding_version: 1,
   min_supported_version: '0.0.0',
   update_message:
@@ -69,6 +72,7 @@ export function getConfig(): RemoteConfigDefaults {
         getValue(cfg, 'image_upload_max_size_mb').asNumber() ||
         DEFAULTS.image_upload_max_size_mb,
       enable_iou_feature: getValue(cfg, 'enable_iou_feature').asBoolean(),
+      enable_budgets: getValue(cfg, 'enable_budgets').asBoolean(),
       onboarding_version:
         getValue(cfg, 'onboarding_version').asNumber() ||
         DEFAULTS.onboarding_version,
