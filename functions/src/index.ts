@@ -9,7 +9,9 @@ import {
   InvitationError,
   respondToInvitation as respondToInvitationCore,
 } from './invitation';
+import {evaluateBudgets} from './budgetAlerts';
 import {LookupInputError, lookupUsers} from './lookup';
+import {isFlagOn} from './remoteFlag';
 import {PushError, sendPush as sendPushCore} from './push';
 import {
   SettlementError,
@@ -205,3 +207,45 @@ export const lookupUsersByContact = onCall(async request => {
     throw new HttpsError('internal', 'Lookup failed.');
   }
 });
+
+/**
+ * Budget alerts: after a transaction is written, checks the owner's budgets and records and pushes
+ * one alert per threshold and period (see budgetAlerts.ts). Off unless the Remote Config flag
+ * `enable_budgets` is "true". A transaction without `amountMinor` is skipped; the money trigger
+ * adds it and that second write comes through here again.
+ */
+export const budgetAlertsOnTransaction = onDocumentWritten(
+  {
+    document: 'users/{uid}/transactions/{transactionId}',
+    secrets: [oneSignalApiKey],
+  },
+  async event => {
+    const after = event.data?.after;
+    if (!after || !after.exists) {
+      return;
+    }
+    const data = after.data() as Fields;
+    if (data.type !== 'expense' || typeof data.amountMinor !== 'number') {
+      return;
+    }
+    if (!(await isFlagOn('enable_budgets'))) {
+      return;
+    }
+    try {
+      await evaluateBudgets(
+        {
+          db,
+          fetchFn: fetch,
+          apiKey: process.env.ONESIGNAL_API_KEY || undefined,
+          appId: ONESIGNAL_APP_ID,
+        },
+        event.params.uid,
+      );
+    } catch (error) {
+      logger.error('Budget evaluation failed', {
+        uid: event.params.uid,
+        error: String(error),
+      });
+    }
+  },
+);
