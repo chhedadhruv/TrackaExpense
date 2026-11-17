@@ -158,11 +158,39 @@ describe('goalFromDoc and sortGoals', () => {
 });
 
 describe('chooseGoals', () => {
-  it('prefers the documents once there are any, else the array', () => {
-    const docs = [goal('d')];
-    const array = [goal('a')];
+  it('shows the documents when they are exactly the goals of the array', () => {
+    const docs = [goal('a', {current: 7}), goal('b')];
+    const array = [goal('b'), goal('a')];
     expect(chooseGoals(docs, array)).toBe(docs);
+  });
+
+  it('shows the array while there are no documents', () => {
+    const array = [goal('a')];
     expect(chooseGoals([], array)).toBe(array);
     expect(chooseGoals(undefined, array)).toBe(array);
+  });
+
+  it('shows the array when only some goals have a document (one edited goal must not hide the rest)', () => {
+    const array = [goal('a'), goal('b'), goal('c')];
+    const onlyEdited = [goal('b', {current: 99})];
+    expect(chooseGoals(onlyEdited, array)).toBe(array);
+    expect(chooseGoals([goal('a'), goal('b')], array)).toBe(array);
+  });
+
+  it('shows the array when a document is left over for a goal the array no longer has', () => {
+    const array = [goal('a')];
+    expect(chooseGoals([goal('a'), goal('gone')], array)).toBe(array);
+    // Same count, different goals.
+    expect(chooseGoals([goal('x')], array)).toBe(array);
+  });
+
+  it('shows the array when it is empty even if documents remain', () => {
+    const array: SavingsGoal[] = [];
+    expect(chooseGoals([goal('a')], array)).toBe(array);
+  });
+
+  it('never shows a repeated document twice', () => {
+    const array = [goal('a'), goal('b')];
+    expect(chooseGoals([goal('a'), goal('a')], array)).toBe(array);
   });
 });

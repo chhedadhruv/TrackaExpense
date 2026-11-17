@@ -15,9 +15,10 @@ import {statusOf, useSyncStore} from './syncStore';
 
 /**
  * The savings goals, read from the goal documents `users/{uid}/goals/{goalId}` through a shared
- * live listener, with the profile's `savingsGoals` array as the fallback while there are no
- * documents yet (a profile not backfilled, or the seconds between an old app's write and the
- * server mirroring it). See src/utils/goals.ts and src/services/GoalsService.ts.
+ * live listener. The documents are shown only when they are exactly the goals of the profile's
+ * `savingsGoals` array; whenever the two disagree (not backfilled, only some goals have a
+ * document, an old app's write not yet mirrored) the array, which every installed app reads and
+ * writes, is shown. See `chooseGoals` in src/utils/goals.ts and src/services/GoalsService.ts.
  */
 
 const NO_GOALS: readonly SavingsGoal[] = [];
