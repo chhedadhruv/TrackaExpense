@@ -5,6 +5,8 @@ import {setGlobalOptions} from 'firebase-functions/v2';
 import {defineSecret} from 'firebase-functions/params';
 import {onDocumentWritten} from 'firebase-functions/v2/firestore';
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
+import {onSchedule} from 'firebase-functions/v2/scheduler';
+import {runRecurring} from './recurringJob';
 import {
   InvitationError,
   respondToInvitation as respondToInvitationCore,
@@ -247,5 +249,32 @@ export const budgetAlertsOnTransaction = onDocumentWritten(
         error: String(error),
       });
     }
+  },
+);
+
+/**
+ * Recurring transactions: every hour (so every time zone gets its own "today") creates the
+ * transactions that are due, once each, and adjusts the owner's balance in the same Firestore
+ * transaction (see recurringJob.ts). Off unless the Remote Config flag `enable_recurring` is
+ * "true". Needs Cloud Scheduler and a collection-group index on recurring.nextDueDate to deploy.
+ */
+export const runRecurringTransactions = onSchedule(
+  {schedule: 'every 1 hours', timeZone: 'UTC', secrets: [oneSignalApiKey]},
+  async () => {
+    if (!(await isFlagOn('enable_recurring'))) {
+      return;
+    }
+    const result = await runRecurring({
+      db,
+      fetchFn: fetch,
+      apiKey: process.env.ONESIGNAL_API_KEY || undefined,
+      appId: ONESIGNAL_APP_ID,
+    });
+    logger.info('Recurring run finished', {
+      rules: result.rules,
+      created: result.created.length,
+      skipped: result.skipped,
+      failed: result.failed,
+    });
   },
 );
