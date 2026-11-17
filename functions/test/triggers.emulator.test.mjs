@@ -658,5 +658,212 @@ await step(
   },
 );
 
+// ---- Recurring transactions (the job is called directly; scheduled functions do not run here) --
+await step(
+  'recurring: creates a due rule once, moves the balance once, and reruns do nothing',
+  async () => {
+    const {runRecurring} = require('../lib/recurringJob.js');
+    const sent = [];
+    const deps = nowMs => ({
+      db,
+      apiKey: 'test-key',
+      appId: 'app',
+      fetchFn: async (_url, init) => {
+        sent.push(JSON.parse(init.body));
+        return {ok: true, json: async () => ({id: `n${sent.length}`})};
+      },
+      now: () => nowMs,
+    });
+    const ruUid = 'ur1';
+    const ruUser = db.collection('users').doc(ruUid);
+    await ruUser.set({name: 'Recurring user', currency: 'INR', balance: 1000});
+    const rules = ruUser.collection('recurring');
+    const rent = {
+      title: 'Rent',
+      type: 'expense',
+      category: 'Rent',
+      amountMinor: 1500000,
+      currency: 'INR',
+      frequency: 'monthly',
+      startDate: '2026-01-31',
+      nextDueDate: '2026-01-31',
+      timeZone: 'Asia/Kolkata',
+      enabled: true,
+    };
+    await rules.doc('rent').set(rent);
+
+    // Not due yet: January 30 in India.
+    const early = await runRecurring(deps(Date.UTC(2026, 0, 30, 6, 0, 0)));
+    assert.deepEqual(early.created, []);
+
+    // Due: January 31.
+    const jan31 = Date.UTC(2026, 0, 31, 6, 0, 0);
+    const first = await runRecurring(deps(jan31));
+    assert.deepEqual(first.created, ['rec_rent_2026-01-31']);
+    const tx = await ruUser
+      .collection('transactions')
+      .doc('rec_rent_2026-01-31')
+      .get();
+    assert.equal(tx.get('amount'), '15000.00');
+    assert.equal(tx.get('amountMinor'), 1500000);
+    assert.equal(tx.get('type'), 'expense');
+    assert.equal(tx.get('date'), '2026-01-31');
+    assert.equal(tx.get('source'), 'recurring');
+    assert.equal(tx.get('recurringId'), 'rent');
+    assert.equal((await ruUser.get()).get('balance'), -14000);
+    assert.equal(
+      (await rules.doc('rent').get()).get('nextDueDate'),
+      '2026-02-28',
+    );
+    assert.equal(sent.length, 1);
+    assert.deepEqual(sent[0].include_aliases.external_id, [ruUid]);
+    assert.equal(sent[0].data.type, 'recurring_logged');
+
+    // The same moment again, and three overlapping runs: nothing new and no second balance change.
+    const again = await runRecurring(deps(jan31));
+    assert.deepEqual(again.created, []);
+    const feb28 = Date.UTC(2026, 1, 28, 6, 0, 0);
+    const runs = await Promise.all(
+      [1, 2, 3].map(() => runRecurring(deps(feb28))),
+    );
+    assert.deepEqual(
+      runs.flatMap(r => r.created),
+      ['rec_rent_2026-02-28'],
+    );
+    assert.equal((await ruUser.get()).get('balance'), -29000);
+    assert.equal(
+      (await rules.doc('rent').get()).get('nextDueDate'),
+      '2026-03-31',
+    );
+    assert.equal((await ruUser.collection('transactions').get()).size, 2);
+  },
+);
+
+await step(
+  'recurring: income adds to the balance, late occurrences are skipped, a disabled rule is ignored',
+  async () => {
+    const {runRecurring} = require('../lib/recurringJob.js');
+    const deps = nowMs => ({
+      db,
+      apiKey: undefined,
+      appId: 'app',
+      fetchFn: async () => ({ok: false, json: async () => ({})}),
+      now: () => nowMs,
+    });
+    const u = db.collection('users').doc('ur2');
+    await u.set({name: 'Second', currency: 'INR', balance: 0});
+    const rules = u.collection('recurring');
+    await rules.doc('salary').set({
+      title: 'Salary',
+      type: 'income',
+      category: 'Salary',
+      amountMinor: 5000050,
+      currency: 'INR',
+      frequency: 'weekly',
+      startDate: '2026-11-02',
+      nextDueDate: '2026-11-02',
+      timeZone: 'Asia/Kolkata',
+      enabled: true,
+    });
+    await rules.doc('off').set({
+      title: 'Paused',
+      type: 'expense',
+      category: 'Other',
+      amountMinor: 100,
+      currency: 'INR',
+      frequency: 'weekly',
+      startDate: '2026-11-17',
+      nextDueDate: '2026-11-17',
+      timeZone: 'Asia/Kolkata',
+      enabled: false,
+    });
+    await rules
+      .doc('broken')
+      .set({title: 'No amount', type: 'expense', frequency: 'weekly'});
+
+    // Monday Nov 16 in India: Nov 2 and 9 are too late, Nov 16 is due today.
+    const out = await runRecurring(deps(Date.UTC(2026, 10, 16, 6, 0, 0)));
+    assert.ok(out.created.includes('rec_salary_2026-11-16'));
+    assert.ok(!out.created.some(id => id.startsWith('rec_off_')));
+    assert.equal(out.failed, 0);
+    assert.equal(out.skipped >= 2, true);
+    const txs = (await u.collection('transactions').get()).docs.map(d => d.id);
+    assert.deepEqual(txs, ['rec_salary_2026-11-16']);
+    assert.equal((await u.get()).get('balance'), 50000.5);
+    assert.equal(
+      (await rules.doc('salary').get()).get('nextDueDate'),
+      '2026-11-23',
+    );
+    assert.equal(
+      (await rules.doc('off').get()).get('nextDueDate'),
+      '2026-11-17',
+    );
+  },
+);
+
+await step(
+  'recurring: each rule follows its own time zone, and an end date finishes the rule',
+  async () => {
+    const {runRecurring} = require('../lib/recurringJob.js');
+    const deps = nowMs => ({
+      db,
+      apiKey: undefined,
+      appId: 'app',
+      fetchFn: async () => ({ok: false, json: async () => ({})}),
+      now: () => nowMs,
+    });
+    const u = db.collection('users').doc('ur3');
+    await u.set({name: 'Third', currency: 'USD', balance: 0});
+    const base = {
+      type: 'expense',
+      category: 'Other',
+      amountMinor: 999,
+      currency: 'USD',
+      frequency: 'monthly',
+      startDate: '2026-03-10',
+      nextDueDate: '2026-03-10',
+      enabled: true,
+    };
+    await u
+      .collection('recurring')
+      .doc('ny')
+      .set({...base, title: 'NY', timeZone: 'America/New_York'});
+    await u
+      .collection('recurring')
+      .doc('tokyo')
+      .set({...base, title: 'Tokyo', timeZone: 'Asia/Tokyo'});
+    await u
+      .collection('recurring')
+      .doc('ending')
+      .set({
+        ...base,
+        title: 'Ending',
+        timeZone: 'UTC',
+        startDate: '2026-03-10',
+        nextDueDate: '2026-03-10',
+        endDate: '2026-03-31',
+      });
+
+    // 2026-03-10 02:00 UTC is already March 10 in Tokyo, still March 9 in New York.
+    const out = await runRecurring(deps(Date.UTC(2026, 2, 10, 2, 0, 0)));
+    const ids = out.created.filter(id => id.includes('_2026-03-10')).sort();
+    assert.deepEqual(ids, ['rec_ending_2026-03-10', 'rec_tokyo_2026-03-10']);
+    assert.equal(
+      (await u.collection('recurring').doc('ny').get()).get('nextDueDate'),
+      '2026-03-10',
+    );
+
+    // April 10: the ending rule's next date is past its end, so it finishes without a new transaction.
+    const april = await runRecurring(deps(Date.UTC(2026, 3, 10, 12, 0, 0)));
+    const ending = await u.collection('recurring').doc('ending').get();
+    assert.equal(ending.get('enabled'), false);
+    assert.equal(ending.get('finished'), true);
+    assert.ok(!april.created.some(id => id.startsWith('rec_ending_2026-04')));
+    assert.ok(april.created.includes('rec_ny_2026-04-10'));
+    // USD has two decimals: four charges of 9.99 (Tokyo and Ending in March, New York and Tokyo in April).
+    assert.equal(Math.round((await u.get()).get('balance') * 100), -4 * 999);
+  },
+);
+
 console.log(`\n${passed} integration checks passed`);
 process.exit(0);
