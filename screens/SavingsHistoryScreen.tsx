@@ -20,7 +20,8 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {useTheme, useThemedStyles, type ThemeColors} from '../src/theme';
 import {ErrorState, LoadingState} from '../src/components/ScreenState';
-import {useSavingsHistory, useUserData} from '../src/data/hooks';
+import {useGoals} from '../src/data/goals';
+import {useSavingsHistory} from '../src/data/hooks';
 import type {SavingsHistoryDocument} from '../src/types';
 
 type HistoryItem = SavingsHistoryDocument;
@@ -41,13 +42,13 @@ const SavingsHistoryScreen = () => {
   const styles = useThemedStyles(createStyles);
   const {formatAmount} = useCurrency();
   // The history is read again each time the screen opens (the saved copy shows meanwhile); the
-  // goal names for the filter come from the shared profile cache.
+  // goal names for the filter come from the shared goals data (goal documents, array as fallback).
   const historyQuery = useSavingsHistory();
-  const user = useUserData();
+  const goalsState = useGoals();
   const allHistory = historyQuery.data ?? NO_HISTORY;
   const goals: GoalRef[] = useMemo(
-    () => (user.data?.savingsGoals ?? []).map(g => ({id: g.id, name: g.name})),
-    [user.data],
+    () => goalsState.goals.map(g => ({id: g.id, name: g.name})),
+    [goalsState.goals],
   );
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);

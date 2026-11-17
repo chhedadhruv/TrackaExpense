@@ -43,7 +43,6 @@ import {
   collection,
   doc,
   getFirestore,
-  updateDoc,
 } from '@react-native-firebase/firestore';
 import {getAuth} from '@react-native-firebase/auth';
 import {reportError} from '../src/services/ErrorReporter';
@@ -58,7 +57,8 @@ import {GOAL_KEYWORD_MAP} from '../utils/CategoryData';
 import ReminderNotificationService from '../services/ReminderNotificationService';
 import {useTheme, useThemedStyles, type ThemeColors} from '../src/theme';
 import {ErrorState, LoadingState} from '../src/components/ScreenState';
-import {useUserData} from '../src/data/hooks';
+import {useGoals} from '../src/data/goals';
+import {saveGoals} from '../src/services/GoalsService';
 import {formatDisplayDate} from '../src/utils/formatters';
 import {
   addMajor,
@@ -112,19 +112,19 @@ const EMPTY_EDIT_VALUES: EditValues = {
 };
 
 // A stable empty list, so the effect that creates the starter goal does not run on every render.
-const NO_GOALS: SavingsGoal[] = [];
 
 const SavingsScreen = () => {
   const router = useRouter();
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
   const {currency, formatAmount: formatCurrencyAmount} = useCurrency();
-  // The goals are part of the profile document, which the shared cache keeps current through a
-  // live listener (src/data). Every change below rewrites the whole goals array from what is on
-  // screen, so the screen shows goals only once the listener has confirmed them (`user.live`):
-  // a copy saved on the phone could be older than what another device wrote.
-  const user = useUserData();
-  const savingsGoals = user.data?.savingsGoals ?? NO_GOALS;
+  // The goals come from the goal documents (with the profile's array as the fallback), kept
+  // current by live listeners (src/data/goals.ts). Every change below is saved as the difference
+  // between what is on screen and the edit (src/services/GoalsService.ts), so the screen shows
+  // goals only once the listeners have confirmed them (`live`): a copy saved on the phone could be
+  // older than what another device wrote.
+  const goalsState = useGoals();
+  const savingsGoals = goalsState.goals as SavingsGoal[];
   const creatingDefaultGoal = useRef(false);
   const [defaultGoalFailed, setDefaultGoalFailed] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -161,8 +161,8 @@ const SavingsScreen = () => {
     const uid = getAuth().currentUser?.uid;
     if (
       !uid ||
-      !user.live ||
-      !user.data ||
+      !goalsState.live ||
+      !goalsState.hasProfile ||
       savingsGoals.length > 0 ||
       creatingDefaultGoal.current
     ) {
@@ -183,14 +183,12 @@ const SavingsScreen = () => {
       createdAt: Timestamp.fromDate(new Date()),
       updatedAt: Timestamp.fromDate(new Date()),
     };
-    updateDoc(doc(getFirestore(), 'users', uid), {
-      savingsGoals: [defaultGoal],
-    }).catch(error => {
+    saveGoals(uid, [], [defaultGoal]).catch(error => {
       reportError(error as Error);
       creatingDefaultGoal.current = false;
       setDefaultGoalFailed(true);
     });
-  }, [user.live, user.data, savingsGoals.length]);
+  }, [goalsState.live, goalsState.hasProfile, savingsGoals.length]);
 
   useEffect(() => {
     if (editValues.name.trim().length < 3 || categoryManuallySelected) {
@@ -335,7 +333,7 @@ const SavingsScreen = () => {
         return goal;
       });
 
-      await updateDoc(userDocRef, {savingsGoals: updatedGoals});
+      await saveGoals(userDocRef.id, savingsGoals, updatedGoals);
       setIsEditing(false);
       setEditingGoalId(null);
       snackbar.success('Savings goal updated successfully');
@@ -405,7 +403,7 @@ const SavingsScreen = () => {
         return goal;
       });
 
-      await updateDoc(userDocRef, {savingsGoals: updatedGoals});
+      await saveGoals(userDocRef.id, savingsGoals, updatedGoals);
       AnalyticsService.logAddFundsToGoal({
         amount_range: AnalyticsService.getAmountRange(parsed),
         goal_category:
@@ -493,7 +491,7 @@ const SavingsScreen = () => {
         return goal;
       });
 
-      await updateDoc(userDocRef, {savingsGoals: updatedGoals});
+      await saveGoals(userDocRef.id, savingsGoals, updatedGoals);
       AnalyticsService.logWithdrawFromGoal({
         amount_range: AnalyticsService.getAmountRange(parsed),
       });
@@ -685,7 +683,7 @@ const SavingsScreen = () => {
       };
 
       const updatedGoals = [...savingsGoals, newGoal];
-      await updateDoc(userDocRef, {savingsGoals: updatedGoals});
+      await saveGoals(userDocRef.id, savingsGoals, updatedGoals);
 
       await addDoc(collection(userDocRef, 'savingsHistory'), {
         goalId: newGoal.id,
@@ -728,7 +726,7 @@ const SavingsScreen = () => {
       const deletedGoal = savingsGoals.find(g => g.id === goalId);
       const updatedGoals = savingsGoals.filter(g => g.id !== goalId);
 
-      await updateDoc(userDocRef, {savingsGoals: updatedGoals});
+      await saveGoals(userDocRef.id, savingsGoals, updatedGoals);
 
       await addDoc(collection(userDocRef, 'savingsHistory'), {
         goalId,
@@ -782,7 +780,7 @@ const SavingsScreen = () => {
           ? {...goal, reminderEnabled: enabled, reminderFrequency: frequency}
           : goal,
       );
-      await updateDoc(userDocRef, {savingsGoals: updatedGoals});
+      await saveGoals(userDocRef.id, savingsGoals, updatedGoals);
 
       if (enabled) {
         const goal = updatedGoals.find(g => g.id === goalId);
@@ -830,22 +828,26 @@ const SavingsScreen = () => {
     );
   };
 
-  // A failed load must not show an empty goals list: the client rewrites the whole goals array on
-  // every change, so adding a goal on top of "no goals" could overwrite real ones.
-  if (user.failed || defaultGoalFailed || (user.live && !user.data)) {
+  // A failed load must not show an empty goals list: a starter goal added on top of "no goals" could
+  // sit beside real ones the screen failed to read.
+  if (
+    goalsState.failed ||
+    defaultGoalFailed ||
+    (goalsState.live && !goalsState.hasProfile)
+  ) {
     return (
       <ErrorState
         title="Could not load your savings"
         onRetry={() => {
           setDefaultGoalFailed(false);
-          user.retry();
+          goalsState.retry();
         }}
       />
     );
   }
 
-  // Not confirmed by the live listener yet, or the starter goal is being created.
-  if (!user.live || savingsGoals.length === 0) {
+  // Not confirmed by the live listeners yet, or the starter goal is being created.
+  if (!goalsState.live || savingsGoals.length === 0) {
     return <LoadingState message="Loading savings..." />;
   }
 

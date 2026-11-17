@@ -7,6 +7,7 @@ import {
   type QueryDocumentSnapshot,
 } from 'firebase-admin/firestore';
 import {changedFields, resolveCurrency, type Fields} from './derive';
+import {goalDocUpToDate, planGoalSync} from './goals';
 import {getCurrencyExponent} from './money';
 import {deriveForKind, makeLookups, type Kind} from './sources';
 
@@ -46,6 +47,11 @@ interface Target {
   query: (db: Firestore) => Query;
   /** Collection groups also match same-named collections elsewhere; keep only the right ones. */
   accept: (path: string) => boolean;
+  /**
+   * The savings goals pass: it does not derive fields on the scanned document, it creates the
+   * missing `users/{uid}/goals/{goalId}` documents from the user's `savingsGoals` array.
+   */
+  goals?: boolean;
 }
 
 const TARGETS: Target[] = [
@@ -90,6 +96,13 @@ const TARGETS: Target[] = [
     label: 'savingsHistory',
     query: db => db.collectionGroup('savingsHistory'),
     accept: path => path.startsWith('users/'),
+  },
+  {
+    kind: 'user',
+    label: 'goals',
+    query: db => db.collection('users'),
+    accept: () => true,
+    goals: true,
   },
 ];
 
@@ -267,7 +280,11 @@ const main = async (): Promise<void> => {
   const lookups = makeLookups(db, true);
   const writer = db.bulkWriter();
   writer.onWriteError(
-    error => error.code !== 9 && error.code !== 5 && error.failedAttempts < 3,
+    error =>
+      error.code !== 9 &&
+      error.code !== 5 &&
+      error.code !== 6 &&
+      error.failedAttempts < 3,
   );
 
   const report = {
@@ -304,6 +321,63 @@ const main = async (): Promise<void> => {
         console.log(`${target.label}: ${stats.scanned} scanned`);
       }
       const data = snap.data() as Fields;
+      if (target.goals) {
+        // Goals the user has in the array but no document for yet. Existing documents are left as
+        // they are (the trigger keeps them current); one that differs from the array is reported.
+        const plan = planGoalSync(undefined, data.savingsGoals, data.currency);
+        if (plan.upserts.length === 0) {
+          stats.upToDate += 1;
+          continue;
+        }
+        const goalsRef = snap.ref.collection('goals');
+        const refs = plan.upserts.map(u => goalsRef.doc(u.id));
+        const existing = await db.getAll(...refs);
+        const missing: number[] = [];
+        let differs = false;
+        plan.upserts.forEach((upsert, i) => {
+          if (!existing[i].exists) {
+            missing.push(i);
+          } else if (
+            !goalDocUpToDate(existing[i].data() as Fields, upsert.fields)
+          ) {
+            differs = true;
+          }
+        });
+        if (differs) {
+          stats.docsWithSkippedValues += 1;
+          bump(stats.skippedByField, 'goals.differs');
+          if (report.skippedDocuments.length < SKIPPED_LIMIT) {
+            report.skippedDocuments.push({path, fields: ['goals.differs']});
+          } else {
+            report.skippedDocumentsTruncated = true;
+          }
+        }
+        if (missing.length === 0) {
+          stats.upToDate += 1;
+          continue;
+        }
+        stats.wouldUpdate += 1;
+        for (const i of missing) {
+          bump(stats.fieldsToWrite, 'goals');
+          if (args.apply) {
+            // create() fails when the document appeared meanwhile (a trigger or the new app wrote
+            // it); that is counted as a conflict and a second run finds nothing left to do.
+            writer.create(refs[i], plan.upserts[i].fields).then(
+              () => {
+                stats.updated += 1;
+              },
+              (error: {code?: number}) => {
+                if (error.code === 6) {
+                  stats.conflicts += 1;
+                } else {
+                  stats.failed += 1;
+                }
+              },
+            );
+          }
+        }
+        continue;
+      }
       const uid = path.startsWith('users/') ? path.split('/')[1] : undefined;
       const derived = await deriveForKind(target.kind, data, uid, lookups);
 
