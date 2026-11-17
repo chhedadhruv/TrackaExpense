@@ -268,5 +268,392 @@ await step('an unknown invitation is not found', async () => {
   assert.equal(status, 404);
 });
 
+// ---- Invite links: createGroupInviteLink, previewGroupInviteLink, joinGroupByLink, revoke ------
+const callFn = async (name, data, idToken) => {
+  const response = await fetch(
+    `http://127.0.0.1:5001/${project}/asia-south1/${name}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(idToken ? {Authorization: `Bearer ${idToken}`} : {}),
+      },
+      body: JSON.stringify({data}),
+    },
+  );
+  return {status: response.status, body: await response.json()};
+};
+const sha256 = async text =>
+  Buffer.from(
+    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)),
+  ).toString('hex');
+
+const erin = await makeUser('erin@example.com', {verified: true, name: 'Erin'});
+const frank = await makeUser('frank@example.com', {
+  verified: true,
+  name: 'Frank',
+});
+const gina = await makeUser('gina@example.com', {verified: true, name: 'Gina'});
+const unverified = await makeUser('hank@example.com', {
+  verified: false,
+  name: 'Hank',
+});
+await db.doc('groups/lg1').set({
+  name: 'Goa Trip',
+  createdBy: alice.uid,
+  members: [alice.email, bob.email],
+  memberNames: {[alice.email]: 'Alice', [bob.email]: 'Bob'},
+  pendingInvites: [erin.email],
+});
+await db.doc('invitations/linv1').set({
+  email: erin.email,
+  groupId: 'lg1',
+  status: 'pending',
+  inviterUid: alice.uid,
+});
+await db.doc('groups/lg2').set({
+  name: 'Other',
+  createdBy: carol.uid,
+  members: [carol.email],
+  memberNames: {[carol.email]: 'Carol'},
+  pendingInvites: [],
+});
+
+let aliceLink = '';
+await step(
+  'links: a member makes a link; only its hash is stored',
+  async () => {
+    const made = await callFn(
+      'createGroupInviteLink',
+      {groupId: 'lg1'},
+      alice.idToken,
+    );
+    assert.equal(made.status, 200, JSON.stringify(made.body));
+    const {token, groupId, expiresAtMs} = made.body.result;
+    aliceLink = token;
+    assert.equal(groupId, 'lg1');
+    assert.match(token, /^[A-Za-z0-9_-]{22}$/);
+    const week = 7 * 24 * 3600 * 1000;
+    assert.ok(Math.abs(expiresAtMs - (Date.now() + week)) < 60000);
+    const stored = await db.doc(`groupInvites/${await sha256(token)}`).get();
+    assert.equal(stored.exists, true);
+    assert.equal(stored.get('groupId'), 'lg1');
+    assert.equal(stored.get('createdByUid'), alice.uid);
+    assert.equal(stored.get('revoked'), false);
+    // The token itself is nowhere in the database.
+    const all = await db.collection('groupInvites').get();
+    assert.ok(all.docs.every(d => !JSON.stringify(d.data()).includes(token)));
+  },
+);
+
+await step(
+  'links: signed-out callers, non-members and unverified callers cannot make one',
+  async () => {
+    assert.equal(
+      (await callFn('createGroupInviteLink', {groupId: 'lg1'})).status,
+      401,
+    );
+    assert.equal(
+      (await callFn('createGroupInviteLink', {groupId: 'lg1'}, frank.idToken))
+        .status,
+      403,
+    );
+    assert.equal(
+      (
+        await callFn(
+          'createGroupInviteLink',
+          {groupId: 'lg1'},
+          unverified.idToken,
+        )
+      ).status,
+      403,
+    );
+    assert.equal(
+      (
+        await callFn(
+          'createGroupInviteLink',
+          {groupId: 'missing'},
+          alice.idToken,
+        )
+      ).status,
+      404,
+    );
+    assert.equal(
+      (await callFn('createGroupInviteLink', {}, alice.idToken)).status,
+      400,
+    );
+  },
+);
+
+await step('links: preview shows the group name and size only', async () => {
+  const preview = await callFn(
+    'previewGroupInviteLink',
+    {groupId: 'lg1', token: aliceLink},
+    frank.idToken,
+  );
+  assert.equal(preview.status, 200, JSON.stringify(preview.body));
+  assert.deepEqual(Object.keys(preview.body.result).sort(), [
+    'alreadyMember',
+    'expiresAtMs',
+    'groupId',
+    'groupName',
+    'memberCount',
+  ]);
+  assert.equal(preview.body.result.groupName, 'Goa Trip');
+  assert.equal(preview.body.result.memberCount, 2);
+  assert.equal(preview.body.result.alreadyMember, false);
+  const forMember = await callFn(
+    'previewGroupInviteLink',
+    {groupId: 'lg1', token: aliceLink},
+    bob.idToken,
+  );
+  assert.equal(forMember.body.result.alreadyMember, true);
+});
+
+await step(
+  'links: a wrong token, a token for another group and a bad format are refused',
+  async () => {
+    const wrong = await callFn(
+      'previewGroupInviteLink',
+      {groupId: 'lg1', token: 'AAAAAAAAAAAAAAAAAAAAAA'},
+      frank.idToken,
+    );
+    assert.equal(wrong.status, 404);
+    const otherGroup = await callFn(
+      'previewGroupInviteLink',
+      {groupId: 'lg2', token: aliceLink},
+      frank.idToken,
+    );
+    assert.equal(otherGroup.status, 404);
+    const bad = await callFn(
+      'previewGroupInviteLink',
+      {groupId: 'lg1', token: 'short'},
+      frank.idToken,
+    );
+    assert.equal(bad.status, 400);
+  },
+);
+
+await step(
+  'links: joining adds the verified email and name, and is harmless when repeated',
+  async () => {
+    const joined = await callFn(
+      'joinGroupByLink',
+      {groupId: 'lg1', token: aliceLink},
+      frank.idToken,
+    );
+    assert.equal(joined.status, 200, JSON.stringify(joined.body));
+    assert.deepEqual(joined.body.result, {status: 'joined', groupId: 'lg1'});
+    const group = (await db.doc('groups/lg1').get()).data();
+    assert.deepEqual(group.members, [alice.email, bob.email, frank.email]);
+    assert.equal(group.memberNames[frank.email], 'Frank');
+    const again = await callFn(
+      'joinGroupByLink',
+      {groupId: 'lg1', token: aliceLink},
+      frank.idToken,
+    );
+    assert.deepEqual(again.body.result, {
+      status: 'already-member',
+      groupId: 'lg1',
+    });
+    assert.equal((await db.doc('groups/lg1').get()).data().members.length, 3);
+    const link = await db.doc(`groupInvites/${await sha256(aliceLink)}`).get();
+    assert.equal(link.get('uses'), 1);
+  },
+);
+
+await step(
+  'links: joining answers a pending email invitation to the same group and clears the pending entry',
+  async () => {
+    const joined = await callFn(
+      'joinGroupByLink',
+      {groupId: 'lg1', token: aliceLink},
+      erin.idToken,
+    );
+    assert.equal(joined.status, 200, JSON.stringify(joined.body));
+    const group = (await db.doc('groups/lg1').get()).data();
+    assert.ok(group.members.includes(erin.email));
+    assert.deepEqual(group.pendingInvites, []);
+    assert.equal(
+      (await db.doc('invitations/linv1').get()).get('status'),
+      'accepted',
+    );
+  },
+);
+
+await step(
+  'links: an unverified caller cannot join, and signed-out callers are refused',
+  async () => {
+    const unverifiedJoin = await callFn(
+      'joinGroupByLink',
+      {groupId: 'lg1', token: aliceLink},
+      unverified.idToken,
+    );
+    assert.equal(unverifiedJoin.status, 403);
+    assert.equal(
+      (await callFn('joinGroupByLink', {groupId: 'lg1', token: aliceLink}))
+        .status,
+      401,
+    );
+    assert.ok(
+      !(await db.doc('groups/lg1').get())
+        .data()
+        .members.includes(unverified.email),
+    );
+  },
+);
+
+await step(
+  'links: three people joining at once through one link are each added once',
+  async () => {
+    const made = await callFn(
+      'createGroupInviteLink',
+      {groupId: 'lg2'},
+      carol.idToken,
+    );
+    assert.equal(made.status, 403); // Carol's email is not verified: no link for her group
+    await db
+      .doc('groups/lg2')
+      .update({members: [alice.email], createdBy: alice.uid});
+    const own = await callFn(
+      'createGroupInviteLink',
+      {groupId: 'lg2'},
+      alice.idToken,
+    );
+    assert.equal(own.status, 200, JSON.stringify(own.body));
+    const token = own.body.result.token;
+    const results = await Promise.all(
+      [bob, dave, gina].map(user =>
+        callFn('joinGroupByLink', {groupId: 'lg2', token}, user.idToken),
+      ),
+    );
+    assert.ok(
+      results.every(r => r.status === 200),
+      JSON.stringify(results.map(r => r.body)),
+    );
+    const members = (await db.doc('groups/lg2').get()).data().members;
+    assert.deepEqual(
+      [...members].sort(),
+      [alice.email, bob.email, dave.email, gina.email].sort(),
+    );
+    assert.equal(
+      (await db.doc(`groupInvites/${await sha256(token)}`).get()).get('uses'),
+      3,
+    );
+  },
+);
+
+await step(
+  'links: an expired link and a cancelled link say so and add nobody',
+  async () => {
+    // Expired: move its expiry into the past.
+    const made = await callFn(
+      'createGroupInviteLink',
+      {groupId: 'lg1'},
+      alice.idToken,
+    );
+    const token = made.body.result.token;
+    await db
+      .doc(`groupInvites/${await sha256(token)}`)
+      .update({expiresAt: new Date(Date.now() - 1000)});
+    const expired = await callFn(
+      'joinGroupByLink',
+      {groupId: 'lg1', token},
+      gina.idToken,
+    );
+    assert.equal(expired.status, 400); // failed-precondition
+    assert.match(expired.body.error.message, /expired/);
+    assert.ok(
+      !(await db.doc('groups/lg1').get()).data().members.includes(gina.email),
+    );
+  },
+);
+
+await step(
+  'links: a member cancels their own links; the creator cancels every link; others cancel nothing of theirs',
+  async () => {
+    const bobLink = await callFn(
+      'createGroupInviteLink',
+      {groupId: 'lg1'},
+      bob.idToken,
+    );
+    assert.equal(bobLink.status, 200, JSON.stringify(bobLink.body));
+    const bobToken = bobLink.body.result.token;
+
+    // Bob cancels his own: Alice's links stay valid.
+    const byBob = await callFn(
+      'revokeGroupInviteLinks',
+      {groupId: 'lg1'},
+      bob.idToken,
+    );
+    assert.equal(byBob.status, 200, JSON.stringify(byBob.body));
+    assert.equal(byBob.body.result.revoked, 1);
+    const bobPreview = await callFn(
+      'previewGroupInviteLink',
+      {groupId: 'lg1', token: bobToken},
+      gina.idToken,
+    );
+    assert.equal(bobPreview.status, 400);
+    assert.match(bobPreview.body.error.message, /cancelled/);
+    const alicePreview = await callFn(
+      'previewGroupInviteLink',
+      {groupId: 'lg1', token: aliceLink},
+      gina.idToken,
+    );
+    assert.equal(alicePreview.status, 200);
+
+    // A non-member cannot cancel anything.
+    const byOutsider = await callFn(
+      'revokeGroupInviteLinks',
+      {groupId: 'lg1'},
+      dave.idToken,
+    );
+    assert.equal(byOutsider.status, 403);
+
+    // The creator cancels every link of the group.
+    const byCreator = await callFn(
+      'revokeGroupInviteLinks',
+      {groupId: 'lg1'},
+      alice.idToken,
+    );
+    assert.equal(byCreator.status, 200);
+    assert.ok(byCreator.body.result.revoked >= 1);
+    const afterRevoke = await callFn(
+      'joinGroupByLink',
+      {groupId: 'lg1', token: aliceLink},
+      gina.idToken,
+    );
+    assert.equal(afterRevoke.status, 400);
+    assert.match(afterRevoke.body.error.message, /cancelled/);
+    assert.ok(
+      !(await db.doc('groups/lg1').get()).data().members.includes(gina.email),
+    );
+  },
+);
+
+await step('links: no more than 20 active links per group', async () => {
+  await db.doc('groups/lg3').set({
+    name: 'Busy',
+    createdBy: alice.uid,
+    members: [alice.email],
+    memberNames: {[alice.email]: 'Alice'},
+    pendingInvites: [],
+  });
+  for (let i = 0; i < 20; i += 1) {
+    const made = await callFn(
+      'createGroupInviteLink',
+      {groupId: 'lg3'},
+      alice.idToken,
+    );
+    assert.equal(made.status, 200, JSON.stringify(made.body));
+  }
+  const extra = await callFn(
+    'createGroupInviteLink',
+    {groupId: 'lg3'},
+    alice.idToken,
+  );
+  assert.equal(extra.status, 429);
+});
+
 console.log(`\n${passed} invitation checks passed`);
 process.exit(0);

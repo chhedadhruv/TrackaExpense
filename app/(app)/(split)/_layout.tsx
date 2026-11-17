@@ -30,6 +30,10 @@ const SplitLayout = () => {
         name="split/group/[groupId]/transactions"
         options={{title: 'Transactions'}}
       />
+      <Stack.Screen
+        name="split/join/[groupId]/[token]"
+        options={{title: 'Join Group'}}
+      />
       <Stack.Screen name="split/history" options={{title: 'Split History'}} />
       <Stack.Screen name="split/invitations" options={{title: 'Invitations'}} />
       <Stack.Screen

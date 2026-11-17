@@ -1,5 +1,9 @@
 import {initializeApp} from 'firebase-admin/app';
-import {DocumentReference, getFirestore} from 'firebase-admin/firestore';
+import {
+  DocumentReference,
+  getFirestore,
+  type Firestore,
+} from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import {setGlobalOptions} from 'firebase-functions/v2';
 import {defineSecret} from 'firebase-functions/params';
@@ -12,6 +16,14 @@ import {
   respondToInvitation as respondToInvitationCore,
 } from './invitation';
 import {evaluateBudgets} from './budgetAlerts';
+import {
+  InviteLinkError,
+  createInviteLink,
+  joinGroupByLink as joinGroupByLinkCore,
+  previewInviteLink,
+  revokeInviteLinks,
+  type CallerIdentity as InviteLinkCaller,
+} from './inviteLinks';
 import {mirrorGoals} from './goalsSync';
 import {LookupInputError, lookupUsers} from './lookup';
 import {isFlagOn} from './remoteFlag';
@@ -191,6 +203,59 @@ export const respondToInvitation = onCall(async request => {
     throw new HttpsError('internal', 'The invitation could not be answered.');
   }
 });
+
+type InviteLinkRun = (
+  db: Firestore,
+  caller: InviteLinkCaller,
+  input: unknown,
+) => Promise<unknown>;
+
+const inviteLinkCallable = (name: string, run: InviteLinkRun) =>
+  onCall(async request => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Sign in to use invite links.');
+    }
+    const token = request.auth.token;
+    try {
+      return await run(
+        db,
+        {
+          uid: request.auth.uid,
+          email: token.email,
+          emailVerified: token.email_verified === true,
+          name: typeof token.name === 'string' ? token.name : undefined,
+        },
+        request.data,
+      );
+    } catch (error) {
+      if (error instanceof InviteLinkError) {
+        throw new HttpsError(error.code, error.message);
+      }
+      logger.error(`${name} failed`, {error: String(error)});
+      throw new HttpsError('internal', 'The invite link could not be used.');
+    }
+  });
+
+/** Makes an invite link (a random token, stored as a hash) for a group the caller is in. */
+export const createGroupInviteLink = inviteLinkCallable(
+  'createGroupInviteLink',
+  createInviteLink,
+);
+/** The group name and size behind a link, for the confirm screen. */
+export const previewGroupInviteLink = inviteLinkCallable(
+  'previewGroupInviteLink',
+  previewInviteLink,
+);
+/** Joins the caller to the group the link belongs to, in one transaction. */
+export const joinGroupByLink = inviteLinkCallable(
+  'joinGroupByLink',
+  joinGroupByLinkCore,
+);
+/** Cancels the caller's links of a group (every link of the group for its creator). */
+export const revokeGroupInviteLinks = inviteLinkCallable(
+  'revokeGroupInviteLinks',
+  revokeInviteLinks,
+);
 
 /**
  * Finds other users by email or phone and returns only uid, email, name and avatar. Signed-in
