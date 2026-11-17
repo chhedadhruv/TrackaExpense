@@ -286,6 +286,53 @@ await step(
   },
 );
 
+await step(
+  'goals: the full run created the goal document from the array',
+  async () => {
+    const goal = await db.doc('users/u1/goals/g1').get();
+    assert.equal(goal.exists, true);
+    assert.equal(goal.get('current'), 100);
+    assert.equal(goal.get('currentMinor'), 10000);
+    assert.equal(goal.get('targetMinor'), 50000);
+    assert.equal(goal.get('monthlyMinor'), 5000);
+    assert.equal(goal.get('currency'), 'USD');
+    // The array is untouched and a user without goals gets no collection.
+    assert.equal(
+      (await db.doc('users/u1').get()).get('savingsGoals').length,
+      1,
+    );
+    assert.equal((await db.collection('users/u2/goals').get()).size, 0);
+  },
+);
+
+await step(
+  'goals: a document that differs is reported and left alone, a missing one is recreated',
+  async () => {
+    await db.doc('users/u1/goals/g1').update({current: 1});
+    let result = run(['--only', 'goals', '--report', reportFile]);
+    assert.equal(result.status, 0, result.stderr);
+    let report = readReport();
+    assert.equal(report.targets.goals.wouldUpdate, 0);
+    assert.equal(report.targets.goals.skippedByField['goals.differs'], 1);
+    assert.equal((await db.doc('users/u1/goals/g1').get()).get('current'), 1);
+
+    await db.doc('users/u1/goals/g1').delete();
+    result = run(['--only', 'goals', '--report', reportFile]);
+    assert.equal(result.status, 0, result.stderr);
+    report = readReport();
+    assert.equal(report.targets.goals.wouldUpdate, 1);
+    assert.equal((await db.doc('users/u1/goals/g1').get()).exists, false); // dry run writes nothing
+
+    result = run(['--only', 'goals', '--apply', '--report', reportFile]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(readReport().targets.goals.updated, 1);
+    assert.equal((await db.doc('users/u1/goals/g1').get()).get('current'), 100);
+
+    result = run(['--only', 'goals', '--expect-clean', '--report', reportFile]);
+    assert.equal(result.status, 0, result.stderr);
+  },
+);
+
 fs.rmSync(reportFile, {force: true});
 console.log(`\n${passed} backfill checks passed`);
 process.exit(0);
