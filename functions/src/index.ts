@@ -12,6 +12,7 @@ import {
   respondToInvitation as respondToInvitationCore,
 } from './invitation';
 import {evaluateBudgets} from './budgetAlerts';
+import {mirrorGoals} from './goalsSync';
 import {LookupInputError, lookupUsers} from './lookup';
 import {isFlagOn} from './remoteFlag';
 import {PushError, sendPush as sendPushCore} from './push';
@@ -278,3 +279,38 @@ export const runRecurringTransactions = onSchedule(
     });
   },
 );
+
+/**
+ * Savings goals: old installed apps still write the whole `savingsGoals` array on the user document.
+ * This mirrors what changed in it into `users/{uid}/goals/{goalId}`, the documents the new app
+ * reads (see goals.ts and goalsSync.ts). It only acts when the array itself changed, so the many
+ * other writes to the user document (balance, profile) cost one comparison and nothing else.
+ */
+export const goalsFromUser = onDocumentWritten('users/{uid}', async event => {
+  const after = event.data?.after;
+  if (!after || !after.exists) {
+    return;
+  }
+  const afterData = after.data() as Fields;
+  const before = event.data?.before;
+  const beforeGoals = before?.exists
+    ? (before.data() as Fields).savingsGoals
+    : undefined;
+  if (!Array.isArray(afterData.savingsGoals) && !Array.isArray(beforeGoals)) {
+    return;
+  }
+  try {
+    await mirrorGoals(
+      db,
+      event.params.uid,
+      beforeGoals,
+      afterData.savingsGoals,
+      afterData.currency,
+    );
+  } catch (error) {
+    logger.error('Could not mirror savings goals', {
+      uid: event.params.uid,
+      error: String(error),
+    });
+  }
+});

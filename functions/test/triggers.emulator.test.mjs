@@ -865,5 +865,141 @@ await step(
   },
 );
 
+// ---- Savings goals: the array an old app writes is mirrored into users/{uid}/goals ------------
+const goalUser = db.collection('users').doc('ug1');
+const goalsOf = id => goalUser.collection('goals').doc(id);
+const waitGone = async (ref, label, timeoutMs = 45000) => {
+  const start = Date.now();
+  for (;;) {
+    if (!(await ref.get()).exists) return;
+    if (Date.now() - start > timeoutMs)
+      throw new Error(`timed out waiting for: ${label}`);
+    await sleep(500);
+  }
+};
+const oldGoal = (id, over = {}) => ({
+  id,
+  name: id === 'g1' ? 'Trip' : 'Phone',
+  description: '',
+  category: 'travel',
+  targetDate: '',
+  reminderEnabled: false,
+  reminderFrequency: null,
+  current: 100.5,
+  target: 5000,
+  monthly: 250,
+  ...over,
+});
+
+await step(
+  'goals: an old app writing the array creates the goal documents',
+  async () => {
+    await goalUser.set({
+      name: 'Goal user',
+      currency: 'INR',
+      balance: 0,
+      savingsGoals: [
+        oldGoal('g1'),
+        oldGoal('g2', {current: 0, target: 900, monthly: 0}),
+      ],
+    });
+    const g1 = await waitFor(
+      goalsOf('g1'),
+      d => d.currentMinor !== undefined,
+      'g1 mirrored',
+    );
+    await waitFor(
+      goalsOf('g2'),
+      d => d.targetMinor !== undefined,
+      'g2 mirrored',
+    );
+    assert.equal(g1.get('name'), 'Trip');
+    assert.equal(g1.get('current'), 100.5);
+    assert.equal(g1.get('currentMinor'), 10050);
+    assert.equal(g1.get('currency'), 'INR');
+    assert.equal(g1.get('monthlyMinor'), 25000);
+  },
+);
+
+await step('goals: an edit rewrites only the goal that changed', async () => {
+  const g2Before = (await goalsOf('g2').get()).updateTime.toMillis();
+  await goalUser.update({
+    savingsGoals: [
+      oldGoal('g1', {current: 200}),
+      oldGoal('g2', {current: 0, target: 900, monthly: 0}),
+    ],
+  });
+  await waitFor(
+    goalsOf('g1'),
+    d => d.current === 200 && d.currentMinor === 20000,
+    'g1 edited',
+  );
+  await sleep(3000);
+  assert.equal((await goalsOf('g2').get()).updateTime.toMillis(), g2Before);
+});
+
+await step(
+  'goals: a goal an old app removes from the array loses its document',
+  async () => {
+    await goalUser.update({savingsGoals: [oldGoal('g1', {current: 200})]});
+    await waitGone(goalsOf('g2'), 'g2 removed');
+    assert.equal((await goalsOf('g1').get()).exists, true);
+  },
+);
+
+await step(
+  'goals: a document the new app created is not removed by an old app write that does not know it',
+  async () => {
+    // The new app writes the goal document and the array element in one transaction; here only the
+    // document exists when the old app's whole-array write arrives.
+    await goalsOf('g4').set({
+      name: 'New app goal',
+      current: 1,
+      target: 10,
+      monthly: 0,
+      currency: 'INR',
+    });
+    await goalUser.update({savingsGoals: [oldGoal('g1', {current: 300})]});
+    await waitFor(goalsOf('g1'), d => d.current === 300, 'g1 edited again');
+    await sleep(3000);
+    assert.equal((await goalsOf('g4').get()).exists, true);
+  },
+);
+
+await step(
+  'goals: the new app writing document and array together causes no rewrite, and unrelated user writes cost nothing',
+  async () => {
+    const entry = oldGoal('g5', {current: 7, target: 70, monthly: 1});
+    const batch = db.batch();
+    batch.set(goalsOf('g5'), {
+      name: 'Trip',
+      description: '',
+      category: 'travel',
+      targetDate: '',
+      reminderEnabled: false,
+      reminderFrequency: null,
+      current: 7,
+      target: 70,
+      monthly: 1,
+      currency: 'INR',
+      currentMinor: 700,
+      targetMinor: 7000,
+      monthlyMinor: 100,
+    });
+    batch.update(goalUser, {
+      savingsGoals: [oldGoal('g1', {current: 300}), entry],
+    });
+    await batch.commit();
+    await sleep(4000);
+    const g5Time = (await goalsOf('g5').get()).updateTime.toMillis();
+    const g1Time = (await goalsOf('g1').get()).updateTime.toMillis();
+    await goalUser.update({balance: 50});
+    await goalUser.update({phone: '123'});
+    await sleep(4000);
+    assert.equal((await goalsOf('g5').get()).updateTime.toMillis(), g5Time);
+    assert.equal((await goalsOf('g1').get()).updateTime.toMillis(), g1Time);
+  },
+);
+
 console.log(`\n${passed} integration checks passed`);
 process.exit(0);
