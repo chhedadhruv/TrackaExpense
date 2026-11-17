@@ -25,11 +25,11 @@ failed.
 |---|---|---|
 | `smoke-tabs.yaml` | Opens every tab and the transactions list and checks each heading | No |
 | `tags.yaml` | Adds an expense with a tag, filters and searches by it, deletes it | Yes, nets to zero (one tag document stays) |
+| `expense-lifecycle.yaml` | Adds an expense, edits its amount (3 to 4), checks the list shows it, deletes it | Yes, nets to zero |
 
-`wip/expense-lifecycle.yaml` (add, edit the amount, delete) is not in the suite yet: on the last
-run the edited amount never showed in the list (it still read 3 instead of 4), so the flow stopped
-before the delete and left the expense behind. Run it by hand with `maestro test .maestro/wip/expense-lifecycle.yaml`
-while debugging, then clean up with the tool below.
+`expense-lifecycle.yaml` was parked while the edited amount did not show in the list. It passed
+three runs in a row on 2026-11-17 against the current debug build (listener-based data layer), so it
+is in the suite. If a run fails halfway, clean up with the tool below.
 
 The test expenses are titled `Maestro <timestamp>`. If a run fails halfway, delete what it left
 behind with `maestro test .maestro/tools/cleanup-leftovers.yaml`.
