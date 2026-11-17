@@ -35,6 +35,7 @@ import LogOut from 'lucide-react-native/icons/log-out';
 import Mic from 'lucide-react-native/icons/mic';
 import Pencil from 'lucide-react-native/icons/pencil';
 import PiggyBank from 'lucide-react-native/icons/piggy-bank';
+import Repeat from 'lucide-react-native/icons/repeat';
 import {getConfig} from '../src/services/RemoteConfigService';
 import ShieldAlert from 'lucide-react-native/icons/shield-alert';
 import ShieldCheck from 'lucide-react-native/icons/shield-check';
@@ -372,6 +373,18 @@ const ProfileScreen = () => {
                   title="Budgets"
                   subtitle="Set limits and get alerts"
                   onPress={() => router.navigate('/profile/budgets')}
+                />
+                <RowDivider />
+              </>
+            ) : null}
+            {getConfig().enable_recurring ? (
+              <>
+                <SettingsRow
+                  icon={Repeat}
+                  accent={ACCENT.blue}
+                  title="Recurring"
+                  subtitle="Rent, subscriptions and salary"
+                  onPress={() => router.navigate('/profile/recurring')}
                 />
                 <RowDivider />
               </>

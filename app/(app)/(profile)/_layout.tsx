@@ -12,6 +12,11 @@ const ProfileLayout = () => {
       <Stack.Screen name="profile/edit" options={{title: 'Edit Profile'}} />
       <Stack.Screen name="profile/budgets" options={{title: 'Budgets'}} />
       <Stack.Screen name="profile/budget" options={{title: 'Budget'}} />
+      <Stack.Screen name="profile/recurring" options={{title: 'Recurring'}} />
+      <Stack.Screen
+        name="profile/recurring-rule"
+        options={{title: 'Recurring Rule'}}
+      />
       <Stack.Screen name="profile/contact" options={{title: 'Contact Us'}} />
       <Stack.Screen
         name="profile/privacy-policy"
