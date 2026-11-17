@@ -7,6 +7,7 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  Share,
 } from 'react-native';
 import {useAsyncActionByKey} from '../../src/hooks/useAsyncAction';
 import Card from '../../src/components/Card';
@@ -16,6 +17,7 @@ import Bell from 'lucide-react-native/icons/bell';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import Clock from 'lucide-react-native/icons/clock';
 import HandCoins from 'lucide-react-native/icons/hand-coins';
+import Link2 from 'lucide-react-native/icons/link-2';
 import LogOut from 'lucide-react-native/icons/log-out';
 import MailCheck from 'lucide-react-native/icons/mail-check';
 import Pencil from 'lucide-react-native/icons/pencil';
@@ -57,6 +59,16 @@ import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {ErrorState, LoadingState} from '../../src/components/ScreenState';
 import {useGroup, useGroupSplits, useMemberDetails} from '../../src/data/split';
 import {snackbar} from '../../src/utils/snackbarStore';
+import {reportError} from '../../src/services/ErrorReporter';
+import {
+  createGroupInviteLink,
+  revokeGroupInviteLinks,
+} from '../../src/services/InviteLinkService';
+import {
+  buildInviteUrl,
+  inviteLinkErrorMessage,
+  inviteMessage,
+} from '../../src/utils/inviteLinks';
 
 interface GroupMember {
   email: string;
@@ -207,6 +219,38 @@ const SplitGroupDetailScreen = () => {
       </View>
     );
   }
+
+  // Makes a link for this group and opens the share sheet with it. Any member can; the link works
+  // for 7 days (functions/src/inviteLinks.ts).
+  const shareInviteLink = async () => {
+    try {
+      const created = await createGroupInviteLink(group!.id);
+      await Share.share({
+        message: inviteMessage(
+          group!.name,
+          buildInviteUrl(created.groupId, created.token),
+        ),
+      });
+    } catch (error) {
+      reportError(error as Error);
+      snackbar.error(inviteLinkErrorMessage(error));
+    }
+  };
+
+  // Cancels the person's own links of this group (all of them for the group's creator).
+  const cancelInviteLinks = async () => {
+    try {
+      const {revoked} = await revokeGroupInviteLinks(group!.id);
+      snackbar.success(
+        revoked === 0
+          ? 'You have no active invite links for this group'
+          : 'Invite links cancelled',
+      );
+    } catch (error) {
+      reportError(error as Error);
+      snackbar.error(inviteLinkErrorMessage(error));
+    }
+  };
 
   const handleSettleUp = (
     lender?: LendingDetail['lender'],
@@ -387,6 +431,39 @@ const SplitGroupDetailScreen = () => {
           </View>
         )}
         <View style={styles.actionButtonsRow}>
+          <TouchableOpacity
+            style={[styles.iconButton, styles.editButton]}
+            onPress={() => {
+              Alert.alert(
+                'Invite with a link',
+                'Anyone with the link can join this group for 7 days, after confirming.',
+                [
+                  {
+                    text: 'Share a new link',
+                    onPress: () => runGroupAction('invite', shareInviteLink),
+                  },
+                  {
+                    text: 'Cancel my links',
+                    style: 'destructive',
+                    onPress: () => runGroupAction('revoke', cancelInviteLinks),
+                  },
+                  {text: 'Close', style: 'cancel'},
+                ],
+              );
+            }}
+            disabled={busyKey !== null}
+            accessibilityState={{
+              disabled: busyKey !== null,
+              busy: busyKey === 'invite' || busyKey === 'revoke',
+            }}
+            accessibilityLabel="Invite with a link"
+            accessibilityRole="button">
+            {busyKey === 'invite' || busyKey === 'revoke' ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Link2 size={24} color={colors.primary} />
+            )}
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.iconButton, styles.editButton]}
             onPress={() =>
