@@ -21,7 +21,10 @@ import {useTheme} from '../theme';
 import {setErrorReportingUser} from '../services/ErrorReporter';
 import {identifyUser, resetMixpanel} from '../services/MixpanelService';
 import {loginPush, logoutPush} from '../services/PushService';
+import * as Linking from 'expo-linking';
 import {markNavigationReady, openPath, pathFromLink} from './openPath';
+import {savePendingInvite, takePendingInvite} from './pendingInvite';
+import {joinPath, parseInviteInput} from '../utils/inviteLinks';
 import DataSync from '../data/DataSync';
 import {clearCachedData} from '../data/queryClient';
 import {useSyncStore} from '../data/syncStore';
@@ -126,6 +129,41 @@ const AuthGate = () => {
       }
     });
   }, []);
+
+  // A group invite link opened while nobody is signed in would be lost (the sign-in screens replace
+  // the app screens), so it is kept and opened right after sign-in (src/navigation/pendingInvite.ts).
+  // When somebody is already signed in the router opens the link itself and nothing is kept.
+  const signedInRef = useRef(false);
+  signedInRef.current = !initializing && user !== null;
+  useEffect(() => {
+    const keep = (url: string | null) => {
+      const target = url ? parseInviteInput(url) : null;
+      if (target && !signedInRef.current) {
+        savePendingInvite(joinPath(target.groupId, target.token)).catch(
+          () => {},
+        );
+      }
+    };
+    Linking.getInitialURL()
+      .then(keep)
+      .catch(() => {});
+    const subscription = Linking.addEventListener('url', event =>
+      keep(event.url),
+    );
+    return () => subscription.remove();
+  }, []);
+  useEffect(() => {
+    if (initializing || user === null) {
+      return;
+    }
+    takePendingInvite()
+      .then(path => {
+        if (path !== null) {
+          openPath(path);
+        }
+      })
+      .catch(() => {});
+  }, [initializing, user]);
 
   const rootState = useRootNavigationState();
   const navigationReady = Boolean(rootState?.key);
