@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {isQuietWeek, summarizeWeek, weekToSummarize} from './weekly';
+import {
+  isQuietWeek,
+  monthToSummarize,
+  summarizeWeek,
+  weekToSummarize,
+} from './weekly';
 import type {Fields} from './derive';
 
 const tx = (
@@ -99,5 +104,30 @@ describe('summarizeWeek', () => {
       tx('expense', 100, '2026-11-17', {category: 'Art'}),
     ]);
     assert.equal(s.topCategory, 'Art');
+  });
+});
+
+describe('monthToSummarize', () => {
+  it('returns the month that ended, on the 1st at 9 local', () => {
+    // 2026-12-01 03:30 UTC is 09:00 in India.
+    assert.deepEqual(
+      monthToSummarize(Date.UTC(2026, 11, 1, 3, 30), 'Asia/Kolkata'),
+      {key: '2026-11', start: '2026-11-01', end: '2026-11-30'},
+    );
+  });
+
+  it('handles January (previous year) and other days or hours', () => {
+    assert.equal(
+      monthToSummarize(Date.UTC(2027, 0, 1, 3, 30), 'Asia/Kolkata')?.key,
+      '2026-12',
+    );
+    assert.equal(
+      monthToSummarize(Date.UTC(2026, 11, 2, 3, 30), 'Asia/Kolkata'),
+      null,
+    );
+    assert.equal(
+      monthToSummarize(Date.UTC(2026, 11, 1, 5, 30), 'Asia/Kolkata'),
+      null,
+    );
   });
 });
