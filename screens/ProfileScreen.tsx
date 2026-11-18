@@ -35,6 +35,7 @@ import LogOut from 'lucide-react-native/icons/log-out';
 import Mic from 'lucide-react-native/icons/mic';
 import Pencil from 'lucide-react-native/icons/pencil';
 import PiggyBank from 'lucide-react-native/icons/piggy-bank';
+import MessageSquareText from 'lucide-react-native/icons/message-square-text';
 import Repeat from 'lucide-react-native/icons/repeat';
 import {getConfig} from '../src/services/RemoteConfigService';
 import ShieldAlert from 'lucide-react-native/icons/shield-alert';
@@ -385,6 +386,18 @@ const ProfileScreen = () => {
                   title="Recurring"
                   subtitle="Rent, subscriptions and salary"
                   onPress={() => router.navigate('/profile/recurring')}
+                />
+                <RowDivider />
+              </>
+            ) : null}
+            {getConfig().enable_sms_import ? (
+              <>
+                <SettingsRow
+                  icon={MessageSquareText}
+                  accent={ACCENT.amber}
+                  title="Bank message"
+                  subtitle="Add from a pasted bank SMS"
+                  onPress={() => router.navigate('/profile/sms-import')}
                 />
                 <RowDivider />
               </>

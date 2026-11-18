@@ -1,6 +1,7 @@
 import {View, Text} from 'react-native';
 import React, {useState, useEffect, useRef} from 'react';
-import {useRouter} from 'expo-router';
+import {useLocalSearchParams, useRouter} from 'expo-router';
+import {prefillFromParams} from '../src/utils/smsImport';
 import {ActivityIndicator} from 'react-native';
 import {getAuth} from '@react-native-firebase/auth';
 import {
@@ -64,6 +65,9 @@ const DISABLED_BUTTON = {opacity: 0.5} as const;
 
 const AddExpense = () => {
   const router = useRouter();
+  // A bank message opens this form with values filled in (see SmsImportScreen); the form still
+  // has to be confirmed with the add button.
+  const params = useLocalSearchParams();
   const {colors} = useTheme();
   const {currency} = useCurrency();
   const {
@@ -85,7 +89,7 @@ const AddExpense = () => {
     setErrorMessage,
     isFormValid,
     validateForm,
-  } = useTransactionForm();
+  } = useTransactionForm(prefillFromParams(params));
   const knownTags = useKnownTags();
   const recordTags = useRecordTags();
 

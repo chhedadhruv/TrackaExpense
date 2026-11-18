@@ -17,6 +17,10 @@ const ProfileLayout = () => {
         name="profile/recurring-rule"
         options={{title: 'Recurring Rule'}}
       />
+      <Stack.Screen
+        name="profile/sms-import"
+        options={{title: 'Bank Message'}}
+      />
       <Stack.Screen name="profile/contact" options={{title: 'Contact Us'}} />
       <Stack.Screen
         name="profile/privacy-policy"
