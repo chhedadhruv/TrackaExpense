@@ -11,7 +11,9 @@ import {onDocumentWritten} from 'firebase-functions/v2/firestore';
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import {runRecurring} from './recurringJob';
-import {runWeekly} from './weeklyJob';
+import {runMonthly, runWeekly} from './weeklyJob';
+import {runSettleReminders} from './settleJob';
+import {runFun} from './funJob';
 import {
   InvitationError,
   respondToInvitation as respondToInvitationCore,
@@ -416,6 +418,73 @@ export const weeklySummary = onSchedule(
       created: result.created.length,
       failed: result.failed,
     });
+  },
+);
+
+/**
+ * Monthly summary push: on the 1st at 9 AM local time, last month's spending, once per user
+ * (`users/{uid}/monthlyAlerts/{yyyy-mm}`). Off unless `enable_monthly_summary` is "true".
+ */
+export const monthlySummary = onSchedule(
+  {schedule: 'every 1 hours', timeZone: 'UTC', secrets: [oneSignalApiKey]},
+  async () => {
+    if (!(await isFlagOn('enable_monthly_summary'))) {
+      return;
+    }
+    const result = await runMonthly({
+      db,
+      fetchFn: fetch,
+      apiKey: process.env.ONESIGNAL_API_KEY || undefined,
+      appId: ONESIGNAL_APP_ID,
+    });
+    logger.info('Monthly summary run finished', {
+      users: result.users,
+      created: result.created.length,
+      failed: result.failed,
+    });
+  },
+);
+
+/**
+ * Settle-up reminders: Sunday 10 AM local time, to people who owe at least one whole unit across
+ * groups and IOUs, at most once every 13 days (settleJob.ts). Off unless
+ * `enable_settle_reminders` is "true".
+ */
+export const settlementReminders = onSchedule(
+  {schedule: 'every 1 hours', timeZone: 'UTC', secrets: [oneSignalApiKey]},
+  async () => {
+    if (!(await isFlagOn('enable_settle_reminders'))) {
+      return;
+    }
+    const result = await runSettleReminders({
+      db,
+      fetchFn: fetch,
+      apiKey: process.env.ONESIGNAL_API_KEY || undefined,
+      appId: ONESIGNAL_APP_ID,
+    });
+    logger.info('Settle reminders run finished', {
+      reminded: result.reminded.length,
+    });
+  },
+);
+
+/**
+ * Evening nudge: once a day per person at a local hour between 18 and 21 (funJob.ts). Off unless
+ * `enable_fun_notifications` is "true". There is no per-user opt-out yet.
+ */
+export const funNudge = onSchedule(
+  {schedule: 'every 1 hours', timeZone: 'UTC', secrets: [oneSignalApiKey]},
+  async () => {
+    if (!(await isFlagOn('enable_fun_notifications'))) {
+      return;
+    }
+    const result = await runFun({
+      db,
+      fetchFn: fetch,
+      apiKey: process.env.ONESIGNAL_API_KEY || undefined,
+      appId: ONESIGNAL_APP_ID,
+    });
+    logger.info('Fun nudge run finished', {sent: result.sent.length});
   },
 );
 

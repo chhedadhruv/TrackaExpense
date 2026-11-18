@@ -1181,5 +1181,133 @@ await step(
   },
 );
 
+const recorder = () => {
+  const sent = [];
+  const deps = nowMs => ({
+    db,
+    apiKey: 'test-key',
+    appId: 'app',
+    fetchFn: async (_url, init) => {
+      sent.push(JSON.parse(init.body));
+      return {ok: true, json: async () => ({id: `m${sent.length}`})};
+    },
+    now: () => nowMs,
+  });
+  return {sent, deps};
+};
+
+await step(
+  'monthly summary: sends last month once on the 1st at 9 AM local',
+  async () => {
+    const {runMonthly} = require('../lib/weeklyJob.js');
+    const {sent, deps} = recorder();
+    const u = db.collection('users').doc('um1');
+    await u.set({name: 'Monthly', currency: 'INR'});
+    await u.collection('transactions').doc('t1').set({
+      type: 'expense',
+      amountMinor: 123450,
+      dateISO: '2026-11-05',
+      category: 'Rent',
+      currency: 'INR',
+    });
+    const first = Date.UTC(2026, 11, 1, 3, 30);
+    const run = await runMonthly(deps(first));
+    assert.ok(run.created.includes('users/um1/monthlyAlerts/2026-11'));
+    const mine = sent.filter(m => m.include_aliases.external_id[0] === 'um1');
+    assert.equal(mine.length, 1);
+    assert.equal(mine[0].data.type, 'monthly_summary');
+    assert.match(mine[0].contents.en, /1234\.50 INR/);
+    await runMonthly(deps(first));
+    assert.equal(
+      sent.filter(m => m.include_aliases.external_id[0] === 'um1').length,
+      1,
+    );
+  },
+);
+
+await step(
+  'settle reminders: one push to a debtor on Sunday 10 AM, then a 13 day cooldown',
+  async () => {
+    const {runSettleReminders} = require('../lib/settleJob.js');
+    const {sent, deps} = recorder();
+    await db
+      .collection('users')
+      .doc('us-a')
+      .set({name: 'Lender', email: 'lender@example.com', currency: 'INR'});
+    await db
+      .collection('users')
+      .doc('us-b')
+      .set({name: 'Debtor', email: 'Debtor@example.com', currency: 'INR'});
+    const group = db.collection('groups').doc('gs1');
+    await group.set({name: 'Trip', members: ['lender@example.com']});
+    await group
+      .collection('splits')
+      .doc('s1')
+      .set({
+        paidBy: {email: 'lender@example.com'},
+        splitUsers: [
+          {email: 'lender@example.com'},
+          {email: 'debtor@example.com'},
+        ],
+        amountMinor: 50000,
+        currency: 'INR',
+      });
+    // Sunday 2026-11-22, 10:00 in India is 04:30 UTC.
+    const sunday = Date.UTC(2026, 10, 22, 4, 30);
+    const first = await runSettleReminders(deps(sunday));
+    // Other fixture users from earlier steps may owe money too, so look at this debtor only.
+    const toDebtor = () =>
+      sent.filter(m => m.include_aliases.external_id[0] === 'us-b');
+    assert.ok(first.reminded.includes('us-b'));
+    assert.ok(!first.reminded.includes('us-a'));
+    assert.equal(toDebtor().length, 1);
+    assert.equal(toDebtor()[0].data.type, 'settlement_reminder');
+    assert.match(toDebtor()[0].contents.en, /250\.00 INR/);
+
+    await Promise.all([1, 2, 3].map(() => runSettleReminders(deps(sunday))));
+    assert.equal(toDebtor().length, 1);
+
+    // A week later: still inside the 13 day cooldown. Two weeks later: sent again.
+    const week = await runSettleReminders(deps(sunday + 7 * 86_400_000));
+    assert.ok(!week.reminded.includes('us-b'));
+    const two = await runSettleReminders(deps(sunday + 14 * 86_400_000));
+    assert.ok(two.reminded.includes('us-b'));
+
+    // Wrong hour: nothing.
+    const wrong = await runSettleReminders(
+      deps(sunday + 28 * 86_400_000 + 3_600_000),
+    );
+    assert.deepEqual(wrong.reminded, []);
+  },
+);
+
+await step(
+  'fun nudge: one push in the chosen local hour, praise when active today',
+  async () => {
+    const {runFun} = require('../lib/funJob.js');
+    const {funHourFor} = require('../lib/fun.js');
+    const {sent, deps} = recorder();
+    const u = db.collection('users').doc('uf1');
+    await u.set({name: 'Fun', currency: 'INR'});
+    await u
+      .collection('transactions')
+      .doc('t1')
+      .set({type: 'expense', amountMinor: 100, dateISO: '2026-11-18'});
+    const hour = funHourFor('uf1', '2026-11-18');
+    // Local hour h at :30 in India is (h - 6) UTC at :00.
+    const due = Date.UTC(2026, 10, 18, hour - 6, 0);
+    const out = await runFun(deps(due + 30 * 60_000));
+    assert.ok(out.sent.includes('uf1'));
+    const mine = sent.filter(m => m.include_aliases.external_id[0] === 'uf1');
+    assert.equal(mine.length, 1);
+    assert.equal(mine[0].data.context, 'motivational');
+    await runFun(deps(due + 30 * 60_000));
+    assert.equal(
+      sent.filter(m => m.include_aliases.external_id[0] === 'uf1').length,
+      1,
+    );
+  },
+);
+
 console.log(`\n${passed} integration checks passed`);
 process.exit(0);

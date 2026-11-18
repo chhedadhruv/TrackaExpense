@@ -135,3 +135,26 @@ export const summarizeWeek = (
 /** True when the week had nothing worth a push. */
 export const isQuietWeek = (summary: WeekSummary): boolean =>
   summary.spentMinor === 0 && summary.earnedMinor === 0;
+
+export const MONTHLY_SUMMARY_DAY = 1;
+
+/**
+ * The calendar month to summarize when it is the 1st at SUMMARY_HOUR in the user's zone: the
+ * month that just ended. `key` is "2026-10" (the month summarized).
+ */
+export const monthToSummarize = (
+  nowMs: number,
+  timeZone: string,
+): WeekRange | null => {
+  const local = localMoment(nowMs, timeZone);
+  const [y, m, d] = local.date.split('-').map(Number);
+  if (d !== MONTHLY_SUMMARY_DAY || local.hour !== SUMMARY_HOUR) {
+    return null;
+  }
+  const last = addDays(local.date, -1);
+  const prev = new Date(Date.UTC(y, m - 2, 1));
+  const key = `${prev.getUTCFullYear()}-${String(
+    prev.getUTCMonth() + 1,
+  ).padStart(2, '0')}`;
+  return {key, start: `${key}-01`, end: last};
+};

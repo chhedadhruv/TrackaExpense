@@ -49,6 +49,7 @@ export function notificationPath(data: NotificationData): string | null {
       return '/home';
     case 'achievement':
     case 'weekly_summary':
+    case 'monthly_summary':
     case 'monthly_goal':
       return '/statistic';
     default:
