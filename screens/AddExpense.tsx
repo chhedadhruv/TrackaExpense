@@ -54,6 +54,8 @@ import {
 import TextField from '../src/components/form/TextField';
 import ReceiptField from '../src/components/form/ReceiptField';
 import TagField from '../src/components/form/TagField';
+import CardField from '../src/components/form/CardField';
+import {useCards} from '../src/hooks/useCards';
 import ScanNote from '../src/components/form/ScanNote';
 import {useKnownTags, useRecordTags} from '../src/hooks/useKnownTags';
 import {snackbar} from '../src/utils/snackbarStore';
@@ -92,6 +94,13 @@ const AddExpense = () => {
   } = useTransactionForm(prefillFromParams(params));
   const knownTags = useKnownTags();
   const recordTags = useRecordTags();
+
+  // "Paid with" (behind the Remote Config flag). It always starts on Cash / UPI; a card is picked
+  // on purpose and a card purchase does not change the balance until the bill is paid.
+  const [cardsEnabled] = useState(() => getConfig().enable_cards);
+  const cards = useCards().data;
+  const [cardId, setCardId] = useState<string | null>(null);
+  const pickableCards = (cards ?? []).filter(c => !c.archived);
 
   const [uploading, setUploading] = useState(false);
   const [transferred, setTransferred] = useState(0);
@@ -255,15 +264,23 @@ const AddExpense = () => {
           ...receiptFields(imageUrl),
           // Only written when there are tags; documents without the field are valid.
           ...(tags.length > 0 ? {tags} : {}),
+          // Only written for a card purchase; cash and UPI documents stay as they always were.
+          ...(cardId !== null ? {cardId} : {}),
           createdAt: Timestamp.fromDate(new Date()),
           type: 'expense',
         };
         const expenseDocRef = await addDoc(transactionRef, expenseData);
         transaction.update(expenseDocRef, {documentId: expenseDocRef.id});
-        const balanceDelta = balanceEffect('expense', {amount}, currency.code);
-        transaction.update(userDocRef, {
-          balance: increment(balanceDelta),
-        });
+        const balanceDelta = balanceEffect(
+          'expense',
+          {amount, cardId},
+          currency.code,
+        );
+        if (balanceDelta !== 0) {
+          transaction.update(userDocRef, {
+            balance: increment(balanceDelta),
+          });
+        }
       });
       AnalyticsService.logAddExpense({
         amount_range: AnalyticsService.getAmountRange(parseFloat(amount)),
@@ -369,6 +386,15 @@ const AddExpense = () => {
                 label="Date"
               />
             </FormSection>
+
+            {cardsEnabled && pickableCards.length > 0 ? (
+              <CardField
+                cards={pickableCards}
+                value={cardId}
+                onChange={setCardId}
+                disabled={isSubmitting}
+              />
+            ) : null}
 
             <TagField
               tags={tags}

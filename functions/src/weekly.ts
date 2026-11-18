@@ -94,7 +94,13 @@ export const summarizeWeek = (
     if (tx.type !== 'expense' && tx.type !== 'income') {
       continue;
     }
-    if (tx.isSettlement === true || tx.category === 'Settlement') {
+    // Settlements and a paid card bill are transfers; the card purchases counted when made.
+    if (
+      tx.isSettlement === true ||
+      tx.category === 'Settlement' ||
+      tx.source === 'card_payment' ||
+      tx.source === 'balance_adjustment'
+    ) {
       continue;
     }
     if (resolveCurrency(tx.currency) !== currency) {

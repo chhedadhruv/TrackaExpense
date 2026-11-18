@@ -43,6 +43,9 @@ import TrendingDown from 'lucide-react-native/icons/trending-down';
 import TrendingUp from 'lucide-react-native/icons/trending-up';
 import type {AppIcon} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
+import {isCardPayment} from '../src/utils/cards';
+import {isBalanceAdjustment} from '../src/utils/balanceAdjust';
+import {undoBillPayment} from '../src/services/CardService';
 import {useRouter} from 'expo-router';
 import type {TransactionDocument} from '../src/types';
 
@@ -110,13 +113,24 @@ const TransactionDetailScreen = ({
   const removeTransaction = async () => {
     setError('');
     const {userId, id, type} = transaction;
-    // Deleting reverses what the transaction did to the balance.
+    // Deleting reverses what the transaction did to the balance. A card purchase never moved it
+    // (the effect is 0), so only the money the card bill took is given back, and only through
+    // undoing the payment, which also frees that period to be paid again.
     const balanceIncrement = -balanceEffect(type, transaction, currency.code);
+    const paymentId = (transaction as {cardPaymentId?: unknown}).cardPaymentId;
     try {
+      if (isCardPayment(transaction) && typeof paymentId === 'string') {
+        await undoBillPayment(userId, paymentId);
+        snackbar.success('Card bill payment undone');
+        router.back();
+        return;
+      }
       await deleteDoc(doc(getFirestore(), 'users', userId, 'transactions', id));
-      await updateDoc(doc(getFirestore(), 'users', userId), {
-        balance: increment(balanceIncrement),
-      });
+      if (balanceIncrement !== 0) {
+        await updateDoc(doc(getFirestore(), 'users', userId), {
+          balance: increment(balanceIncrement),
+        });
+      }
       if (receiptUrl) {
         const imageRef = createStorageRef(getStorage(), receiptUrl);
         await deleteObject(imageRef);
@@ -256,16 +270,19 @@ const TransactionDetailScreen = ({
         ) : null}
 
         <View className="gap-[15px] px-5 pb-[30px]">
-          <TouchableOpacity
-            className="flex-row items-center justify-center rounded-xl bg-primary-fill py-4 ios:shadow-md"
-            accessibilityRole="button"
-            disabled={loading}
-            onPress={handleEdit}>
-            <Pencil size={20} color={colors.onPrimary} />
-            <Text className="ml-2 font-sans-bold text-base font-semibold text-on-primary">
-              Edit Transaction
-            </Text>
-          </TouchableOpacity>
+          {isCardPayment(transaction) ||
+          isBalanceAdjustment(transaction) ? null : (
+            <TouchableOpacity
+              className="flex-row items-center justify-center rounded-xl bg-primary-fill py-4 ios:shadow-md"
+              accessibilityRole="button"
+              disabled={loading}
+              onPress={handleEdit}>
+              <Pencil size={20} color={colors.onPrimary} />
+              <Text className="ml-2 font-sans-bold text-base font-semibold text-on-primary">
+                Edit Transaction
+              </Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             className={`flex-row items-center justify-center rounded-xl bg-expense-fill py-4 ios:shadow-md ${
               loading ? 'opacity-70' : ''

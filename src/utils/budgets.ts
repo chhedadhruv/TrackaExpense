@@ -148,7 +148,10 @@ export const spentMinorOf = (
     }
     if (
       tx.category === 'Settlement' ||
-      (tx as {isSettlement?: boolean}).isSettlement === true
+      (tx as {isSettlement?: boolean}).isSettlement === true ||
+      // A paid card bill is a transfer: the purchases counted on the day they were made.
+      tx.source === 'card_payment' ||
+      tx.source === 'balance_adjustment'
     ) {
       continue;
     }
