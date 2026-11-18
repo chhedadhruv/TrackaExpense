@@ -142,7 +142,14 @@ export const spentMinor = (
     if (tx.type !== 'expense') {
       continue;
     }
-    if (tx.isSettlement === true || tx.category === 'Settlement') {
+    // Settlements and a paid card bill are transfers, not spending (the card purchases already
+    // counted on the day they were made). Mirrors src/utils/budgets.ts.
+    if (
+      tx.isSettlement === true ||
+      tx.category === 'Settlement' ||
+      tx.source === 'card_payment' ||
+      tx.source === 'balance_adjustment'
+    ) {
       continue;
     }
     if (budget.category !== null && tx.category !== budget.category) {

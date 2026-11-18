@@ -28,6 +28,9 @@ import Handshake from 'lucide-react-native/icons/handshake';
 import List from 'lucide-react-native/icons/list';
 import NotebookText from 'lucide-react-native/icons/notebook-text';
 import Pencil from 'lucide-react-native/icons/pencil';
+import CatchUpPrompt from '../src/components/CatchUpPrompt';
+import {getConfig} from '../src/services/RemoteConfigService';
+import {isTransferEntry} from '../src/utils/balanceAdjust';
 import Users from 'lucide-react-native/icons/users';
 import {getAuth} from '@react-native-firebase/auth';
 import {
@@ -173,13 +176,18 @@ const HomeScreen = () => {
     // Summed as integer minor units so the totals are exact.
     setTotalIncome(
       totalMajor(
-        filteredTransactions.filter(t => t.type === 'income'),
+        filteredTransactions.filter(
+          t => t.type === 'income' && !isTransferEntry(t),
+        ),
         currency.code,
       ),
     );
     setTotalExpense(
       totalMajor(
-        filteredTransactions.filter(t => t.type === 'expense'),
+        // A paid card bill and a balance adjustment only move money: they are not spending.
+        filteredTransactions.filter(
+          t => t.type === 'expense' && !isTransferEntry(t),
+        ),
         currency.code,
       ),
     );
@@ -279,6 +287,12 @@ const HomeScreen = () => {
               </Text>
               <TouchableOpacity
                 onPress={() => {
+                  // With the feature on, correcting the balance goes through an adjustment entry
+                  // so income and expense totals stay true; otherwise the old direct edit.
+                  if (getConfig().enable_balance_adjust) {
+                    router.navigate('/profile/fix-balance');
+                    return;
+                  }
                   setBalanceSaved(false);
                   // Round to the currency's decimals so stored float noise such as
                   // -9.994999999999997 is not shown in the field.
@@ -297,6 +311,8 @@ const HomeScreen = () => {
             </View>
           </View>
         </View>
+
+        <CatchUpPrompt />
 
         {/* Summary Cards */}
         <View style={styles.cardSection}>

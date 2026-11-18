@@ -89,6 +89,7 @@ describe('summarizeWeek', () => {
     const s = summarizeWeek('INR', range, [
       tx('expense', 100, '2026-11-17', {category: 'Settlement'}),
       tx('expense', 100, '2026-11-17', {isSettlement: true}),
+      tx('expense', 100, '2026-11-17', {source: 'card_payment'}),
       tx('expense', 100, '2026-11-17', {currency: 'USD'}),
       {type: 'expense', dateISO: '2026-11-17', currency: 'INR'},
       tx('expense', 100, '2026-11-15'),
