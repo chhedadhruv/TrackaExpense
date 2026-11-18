@@ -37,6 +37,8 @@ import Pencil from 'lucide-react-native/icons/pencil';
 import PiggyBank from 'lucide-react-native/icons/piggy-bank';
 import MessageSquareText from 'lucide-react-native/icons/message-square-text';
 import Repeat from 'lucide-react-native/icons/repeat';
+import CreditCard from 'lucide-react-native/icons/credit-card';
+import Scale from 'lucide-react-native/icons/scale';
 import {getConfig} from '../src/services/RemoteConfigService';
 import ShieldAlert from 'lucide-react-native/icons/shield-alert';
 import ShieldCheck from 'lucide-react-native/icons/shield-check';
@@ -386,6 +388,30 @@ const ProfileScreen = () => {
                   title="Recurring"
                   subtitle="Rent, subscriptions and salary"
                   onPress={() => router.navigate('/profile/recurring')}
+                />
+                <RowDivider />
+              </>
+            ) : null}
+            {getConfig().enable_balance_adjust ? (
+              <>
+                <SettingsRow
+                  icon={Scale}
+                  accent={ACCENT.green}
+                  title="Fix my balance"
+                  subtitle="Match the app to your real balance"
+                  onPress={() => router.navigate('/profile/fix-balance')}
+                />
+                <RowDivider />
+              </>
+            ) : null}
+            {getConfig().enable_cards ? (
+              <>
+                <SettingsRow
+                  icon={CreditCard}
+                  accent={ACCENT.amber}
+                  title="Cards"
+                  subtitle="Credit card bills and due dates"
+                  onPress={() => router.navigate('/profile/cards')}
                 />
                 <RowDivider />
               </>

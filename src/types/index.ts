@@ -58,8 +58,13 @@ export interface TransactionDocument {
   createdAt: Timestamp;
   /** Firestore document ID (also available as `id` after client-side mapping) */
   id?: string;
-  /** 'split' when this transaction was created via a split settlement */
+  /** 'split' when this transaction was created via a split settlement; 'card_payment' for a paid card bill */
   source?: string;
+  /**
+   * The credit card (`users/{uid}/cards/{id}`) this was paid with; missing for cash, UPI or a bank
+   * account and on every older document. Read through `cardIdOf` in `src/utils/cards.ts`.
+   */
+  cardId?: string | null;
   /** Role of the current user in a split transaction */
   splitRole?: 'payer' | 'participant' | 'settled';
 }
