@@ -1,4 +1,7 @@
-import {initializeApp} from 'firebase-admin/app';
+import {getApp, initializeApp} from 'firebase-admin/app';
+import {getStorage} from 'firebase-admin/storage';
+import {ReceiptScanError, scanReceipt as scanReceiptCore} from './receipt';
+import {recognizeText} from './vision';
 import {
   DocumentReference,
   getFirestore,
@@ -181,6 +184,70 @@ export const sendPush = onCall({secrets: [oneSignalApiKey]}, async request => {
     throw new HttpsError('internal', 'The notification could not be sent.');
   }
 });
+
+/**
+ * Reads a receipt photo the caller uploaded to `bills/{uid}/` and proposes the amount, date and
+ * merchant (see receipt.ts). Off unless the Remote Config flag `enable_receipt_scan` is "true";
+ * needs the Cloud Vision API enabled on the project. Never saves a transaction.
+ */
+export const scanReceipt = onCall(
+  {memory: '512MiB', timeoutSeconds: 60},
+  async request => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Sign in to scan a receipt.');
+    }
+    if (request.auth.token.email_verified !== true) {
+      throw new HttpsError(
+        'permission-denied',
+        'Verify your email to scan receipts.',
+      );
+    }
+    if (!(await isFlagOn('enable_receipt_scan'))) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Receipt scanning is not available yet.',
+      );
+    }
+    const bucket = getStorage().bucket();
+    try {
+      return await scanReceiptCore(
+        {
+          db,
+          statImage: async path => {
+            const file = bucket.file(path);
+            const [exists] = await file.exists();
+            if (!exists) {
+              return null;
+            }
+            const [meta] = await file.getMetadata();
+            return {
+              size: Number(meta.size ?? 0),
+              contentType: String(meta.contentType ?? ''),
+            };
+          },
+          readImage: async path => (await bucket.file(path).download())[0],
+          recognize: image =>
+            recognizeText(image, async () => {
+              const credential = getApp().options.credential;
+              const token = await credential?.getAccessToken();
+              if (!token) {
+                throw new Error('No service account token');
+              }
+              return token.access_token;
+            }),
+        },
+        request.auth.uid,
+        request.data,
+      );
+    } catch (error) {
+      if (error instanceof ReceiptScanError) {
+        throw new HttpsError(error.code, error.message);
+      }
+      logger.error('scanReceipt failed', {error: String(error)});
+      throw new HttpsError('internal', 'The receipt could not be scanned.');
+    }
+  },
+);
 
 /** Accepts or declines a group invitation addressed to the (verified) caller. */
 export const respondToInvitation = onCall(async request => {
@@ -470,12 +537,13 @@ export const settlementReminders = onSchedule(
 
 /**
  * Evening nudge: once a day per person at a local hour between 18 and 21 (funJob.ts). Off unless
- * `enable_fun_notifications` is "true". There is no per-user opt-out yet.
+ * `enable_fun_nudge` is "true" (not `enable_fun_notifications`, which the app's older client-side
+ * notifications already use and may be on). There is no per-user opt-out yet.
  */
 export const funNudge = onSchedule(
   {schedule: 'every 1 hours', timeZone: 'UTC', secrets: [oneSignalApiKey]},
   async () => {
-    if (!(await isFlagOn('enable_fun_notifications'))) {
+    if (!(await isFlagOn('enable_fun_nudge'))) {
       return;
     }
     const result = await runFun({

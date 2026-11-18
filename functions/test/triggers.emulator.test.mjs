@@ -1309,5 +1309,143 @@ await step(
   },
 );
 
+await step(
+  'receipt scan: reads the caller own image once per allowance, and enforces both limits',
+  async () => {
+    const {
+      scanReceipt,
+      DAILY_LIMIT_PER_USER,
+      MONTHLY_LIMIT_ALL,
+    } = require('../lib/receipt.js');
+    let recognized = 0;
+    const deps = (nowMs, over = {}) => ({
+      db,
+      statImage: async () => ({size: 1000, contentType: 'image/jpeg'}),
+      readImage: async () => Buffer.from('x'),
+      recognize: async () => {
+        recognized += 1;
+        return 'CHAI POINT\nDate 14/11/2026\nTOTAL 120.00';
+      },
+      now: () => nowMs,
+      ...over,
+    });
+    const t0 = Date.UTC(2026, 10, 18, 6, 0);
+    const input = {storagePath: 'bills/usc1/r.jpg'};
+    const guess = await scanReceipt(deps(t0), 'usc1', input);
+    assert.deepEqual(guess, {
+      amounts: ['120.00'],
+      date: '2026-11-14',
+      merchant: 'CHAI POINT',
+    });
+    assert.equal(
+      (await db.collection('scanLimits').doc('usc1').get()).get('count'),
+      1,
+    );
+    assert.equal(
+      (await db.collection('scanLimits').doc('_month_2026-11').get()).get(
+        'count',
+      ),
+      1,
+    );
+
+    const code = async p => {
+      try {
+        await p;
+        return 'ok';
+      } catch (e) {
+        return e.code;
+      }
+    };
+    // Someone else's file, a missing file and a non-image spend nothing.
+    assert.equal(
+      await code(
+        scanReceipt(deps(t0), 'usc1', {storagePath: 'bills/other/r.jpg'}),
+      ),
+      'permission-denied',
+    );
+    assert.equal(
+      await code(
+        scanReceipt(deps(t0, {statImage: async () => null}), 'usc1', input),
+      ),
+      'not-found',
+    );
+    assert.equal(
+      await code(
+        scanReceipt(
+          deps(t0, {
+            statImage: async () => ({size: 10, contentType: 'application/pdf'}),
+          }),
+          'usc1',
+          input,
+        ),
+      ),
+      'invalid-argument',
+    );
+    assert.equal(
+      await code(
+        scanReceipt(
+          deps(t0, {
+            statImage: async () => ({
+              size: 11 * 1024 * 1024,
+              contentType: 'image/png',
+            }),
+          }),
+          'usc1',
+          input,
+        ),
+      ),
+      'invalid-argument',
+    );
+    assert.equal(
+      (await db.collection('scanLimits').doc('usc1').get()).get('count'),
+      1,
+    );
+
+    // Daily limit for one person, then a fresh window after 24 hours.
+    for (let i = 1; i < DAILY_LIMIT_PER_USER; i += 1) {
+      await scanReceipt(deps(t0), 'usc1', input);
+    }
+    assert.equal(
+      await code(scanReceipt(deps(t0), 'usc1', input)),
+      'resource-exhausted',
+    );
+    assert.equal(
+      await code(scanReceipt(deps(t0 + 86_400_000), 'usc1', input)),
+      'ok',
+    );
+
+    // A failed recognition is reported as unavailable.
+    assert.equal(
+      await code(
+        scanReceipt(
+          deps(t0, {
+            recognize: async () => {
+              throw new Error('boom');
+            },
+          }),
+          'usc2',
+          {storagePath: 'bills/usc2/r.jpg'},
+        ),
+      ),
+      'unavailable',
+    );
+
+    // The monthly cap for the whole app stops everyone.
+    await db
+      .collection('scanLimits')
+      .doc('_month_2026-12')
+      .set({count: MONTHLY_LIMIT_ALL});
+    const dec = Date.UTC(2026, 11, 3, 6, 0);
+    const before = recognized;
+    assert.equal(
+      await code(
+        scanReceipt(deps(dec), 'usc3', {storagePath: 'bills/usc3/r.jpg'}),
+      ),
+      'resource-exhausted',
+    );
+    assert.equal(recognized, before);
+  },
+);
+
 console.log(`\n${passed} integration checks passed`);
 process.exit(0);
