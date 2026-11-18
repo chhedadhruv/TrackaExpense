@@ -15,6 +15,10 @@ export interface RemoteConfigDefaults {
   enable_budgets: boolean;
   /** Shows Recurring on Profile; the server creates recurring transactions only while this is true too. */
   enable_recurring: boolean;
+  /** Shows "Scan receipt" on Add Expense; the server scans only while this is true too. */
+  enable_receipt_scan: boolean;
+  /** Shows "Bank message" on Profile (add an expense or income from a pasted bank SMS). */
+  enable_sms_import: boolean;
   onboarding_version: number;
   /** Installed versions below this are blocked until the user updates. '0.0.0' disables the check. */
   min_supported_version: string;
@@ -30,6 +34,8 @@ const DEFAULTS: RemoteConfigDefaults = {
   enable_iou_feature: true,
   enable_budgets: false,
   enable_recurring: false,
+  enable_receipt_scan: false,
+  enable_sms_import: false,
   onboarding_version: 1,
   min_supported_version: '0.0.0',
   update_message:
@@ -77,6 +83,8 @@ export function getConfig(): RemoteConfigDefaults {
       enable_iou_feature: getValue(cfg, 'enable_iou_feature').asBoolean(),
       enable_budgets: getValue(cfg, 'enable_budgets').asBoolean(),
       enable_recurring: getValue(cfg, 'enable_recurring').asBoolean(),
+      enable_receipt_scan: getValue(cfg, 'enable_receipt_scan').asBoolean(),
+      enable_sms_import: getValue(cfg, 'enable_sms_import').asBoolean(),
       onboarding_version:
         getValue(cfg, 'onboarding_version').asNumber() ||
         DEFAULTS.onboarding_version,

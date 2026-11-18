@@ -77,7 +77,12 @@ describe('notificationPath', () => {
   });
 
   it('opens Statistic for achievements and summaries', () => {
-    for (const type of ['achievement', 'weekly_summary', 'monthly_goal']) {
+    for (const type of [
+      'achievement',
+      'weekly_summary',
+      'monthly_summary',
+      'monthly_goal',
+    ]) {
       expect(notificationPath({type})).toBe('/statistic');
     }
   });

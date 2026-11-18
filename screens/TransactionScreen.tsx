@@ -12,8 +12,9 @@ import Download from 'lucide-react-native/icons/download';
 import List from 'lucide-react-native/icons/list';
 import moment from 'moment';
 import DatePickerModal from '../src/components/DatePickerModal';
-import Share from 'react-native-share';
-import {File, Paths} from 'expo-file-system';
+import {reportError} from '../src/services/ErrorReporter';
+import {shareCsv} from '../src/services/ExportService';
+import {buildTransactionsCsv, exportFileName} from '../src/utils/exportCsv';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {majorOf} from '../src/utils/amounts';
 import {getCategoryIcon} from '../utils/CategoryData';
@@ -141,65 +142,28 @@ const TransactionScreen = () => {
     ],
   );
 
-  const generateCSV = (): string | undefined => {
-    if (filteredTransactions.length === 0) {
+  // The export covers everything the current period, search and tag filters match, not just the
+  // newest rows the list shows (the list is capped by `max_transactions_displayed`).
+  const downloadCSV = async () => {
+    const toExport = filterTransactions(data ?? NO_TRANSACTIONS, {
+      period: filter,
+      customStart: customStartDate,
+      customEnd: customEndDate,
+      query: searchQuery,
+      tag: activeTag,
+    });
+    if (toExport.length === 0) {
       snackbar.info('No transactions to export');
       return;
     }
-    const headers = [
-      'Date',
-      'Title',
-      'Type',
-      'Category',
-      'Amount',
-      'Description',
-    ];
-    const rows = filteredTransactions.map(t =>
-      [
-        moment((t.createdAt as any).toDate()).format('YYYY-MM-DD'),
-        `"${t.title || ''}"`,
-        t.type || '',
-        t.category || '',
-        t.amount || 0,
-        `"${t.description || ''}"`,
-      ].join(','),
-    );
-    return [headers.join(','), ...rows].join('\n');
-  };
-
-  const downloadCSV = async () => {
     try {
-      const csvContent = generateCSV();
-      if (!csvContent) {
-        return;
-      }
-      const fileName = `transactions_${moment().format(
-        'YYYY-MM-DD_HH-mm-ss',
-      )}.csv`;
-
-      const file = new File(Paths.document, fileName);
-      file.create({overwrite: true});
-      file.write(csvContent);
-      if (!file.exists) {
-        snackbar.error('Failed to create CSV file');
-        return;
-      }
-      try {
-        await Share.open({
-          title: 'Export Transactions',
-          message: 'Your transaction data',
-          url: file.uri,
-          type: 'text/csv',
-        });
-      } catch (shareError: any) {
-        if (
-          shareError.message !== 'User did not share' &&
-          shareError.message !== 'User cancelled'
-        ) {
-          snackbar.error('Failed to share file');
-        }
-      }
-    } catch (_) {
+      await shareCsv(
+        exportFileName('transactions'),
+        buildTransactionsCsv(toExport, currency.code),
+        'Export Transactions',
+      );
+    } catch (exportError) {
+      reportError(exportError);
       snackbar.error('Failed to export transactions. Please try again.');
     }
   };

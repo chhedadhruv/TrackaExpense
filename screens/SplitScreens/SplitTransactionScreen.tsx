@@ -7,7 +7,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
-  Share,
 } from 'react-native';
 import Card from '../../src/components/Card';
 import SearchField from '../../src/components/SearchField';
@@ -20,8 +19,10 @@ import DatePickerModal from '../../src/components/DatePickerModal';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {majorOf} from '../../src/utils/amounts';
-import {fromMinor} from '../../src/utils/money';
-import {shareOfMinor} from '../../src/utils/splitMath';
+import {reportError} from '../../src/services/ErrorReporter';
+import {shareCsv} from '../../src/services/ExportService';
+import {buildSplitsCsv, exportFileName} from '../../src/utils/exportCsv';
+import {snackbar} from '../../src/utils/snackbarStore';
 import {AuthContext} from '../../navigation/AuthProvider';
 import {useRouter} from 'expo-router';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
@@ -189,48 +190,21 @@ const SplitTransactionScreen = ({group}: SplitTransactionScreenProps) => {
       return;
     }
     const groupName = group.name || 'Group';
-    const exportDate = new Date().toLocaleDateString();
-    const currentEmail = user?.email?.toLowerCase() || '';
-    const header = `# ${groupName} splits export - ${exportDate}`;
-    const csvHeader =
-      'Title,Amount,Paid By,Category,Date,Split Type,Your Share';
-    const escapeCSV = (val: unknown): string => {
-      const str = String(val);
-      return str.includes(',') || str.includes('"') || str.includes('\n')
-        ? `"${str.replace(/"/g, '""')}"`
-        : str;
-    };
-    const rows = filteredTransactions.map(t => {
-      const date = moment((t.date || t.createdAt)!.toDate()).format(
-        'YYYY-MM-DD',
-      );
-      const paidBy = t.paidBy?.name || t.paidBy?.email || '';
-      const category = t.category || '';
-      const splitType = t.splitType || 'equal';
-      let yourShare = '';
-      if (t.type !== 'settlement' && !t.isSettlement) {
-        // Divided in integer minor units, so everyone's shares add up to the split total.
-        const myShare = shareOfMinor(t, currentEmail, currency.code);
-        if (myShare !== null) {
-          yourShare = fromMinor(myShare, currency.code);
-        }
-      }
-      return [
-        escapeCSV(t.title),
-        t.amount,
-        escapeCSV(paidBy),
-        escapeCSV(category),
-        date,
-        splitType,
-        yourShare,
-      ].join(',');
-    });
     try {
-      await Share.share({
-        message: [header, csvHeader, ...rows].join('\n'),
-        title: `${groupName} Splits`,
-      });
-    } catch (_) {}
+      // Shares are divided in integer minor units, so everyone's shares add up to the total.
+      await shareCsv(
+        exportFileName(`${groupName}_splits`),
+        buildSplitsCsv(
+          filteredTransactions,
+          user?.email?.toLowerCase() || '',
+          currency.code,
+        ),
+        `${groupName} Splits`,
+      );
+    } catch (error) {
+      reportError(error);
+      snackbar.error('Failed to export splits. Please try again.');
+    }
   };
 
   if (loading) {

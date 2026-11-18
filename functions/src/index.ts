@@ -1,4 +1,7 @@
-import {initializeApp} from 'firebase-admin/app';
+import {getApp, initializeApp} from 'firebase-admin/app';
+import {getStorage} from 'firebase-admin/storage';
+import {ReceiptScanError, scanReceipt as scanReceiptCore} from './receipt';
+import {recognizeText} from './vision';
 import {
   DocumentReference,
   getFirestore,
@@ -11,6 +14,9 @@ import {onDocumentWritten} from 'firebase-functions/v2/firestore';
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import {runRecurring} from './recurringJob';
+import {runMonthly, runWeekly} from './weeklyJob';
+import {runSettleReminders} from './settleJob';
+import {runFun} from './funJob';
 import {
   InvitationError,
   respondToInvitation as respondToInvitationCore,
@@ -178,6 +184,70 @@ export const sendPush = onCall({secrets: [oneSignalApiKey]}, async request => {
     throw new HttpsError('internal', 'The notification could not be sent.');
   }
 });
+
+/**
+ * Reads a receipt photo the caller uploaded to `bills/{uid}/` and proposes the amount, date and
+ * merchant (see receipt.ts). Off unless the Remote Config flag `enable_receipt_scan` is "true";
+ * needs the Cloud Vision API enabled on the project. Never saves a transaction.
+ */
+export const scanReceipt = onCall(
+  {memory: '512MiB', timeoutSeconds: 60},
+  async request => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Sign in to scan a receipt.');
+    }
+    if (request.auth.token.email_verified !== true) {
+      throw new HttpsError(
+        'permission-denied',
+        'Verify your email to scan receipts.',
+      );
+    }
+    if (!(await isFlagOn('enable_receipt_scan'))) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Receipt scanning is not available yet.',
+      );
+    }
+    const bucket = getStorage().bucket();
+    try {
+      return await scanReceiptCore(
+        {
+          db,
+          statImage: async path => {
+            const file = bucket.file(path);
+            const [exists] = await file.exists();
+            if (!exists) {
+              return null;
+            }
+            const [meta] = await file.getMetadata();
+            return {
+              size: Number(meta.size ?? 0),
+              contentType: String(meta.contentType ?? ''),
+            };
+          },
+          readImage: async path => (await bucket.file(path).download())[0],
+          recognize: image =>
+            recognizeText(image, async () => {
+              const credential = getApp().options.credential;
+              const token = await credential?.getAccessToken();
+              if (!token) {
+                throw new Error('No service account token');
+              }
+              return token.access_token;
+            }),
+        },
+        request.auth.uid,
+        request.data,
+      );
+    } catch (error) {
+      if (error instanceof ReceiptScanError) {
+        throw new HttpsError(error.code, error.message);
+      }
+      logger.error('scanReceipt failed', {error: String(error)});
+      throw new HttpsError('internal', 'The receipt could not be scanned.');
+    }
+  },
+);
 
 /** Accepts or declines a group invitation addressed to the (verified) caller. */
 export const respondToInvitation = onCall(async request => {
@@ -390,6 +460,99 @@ export const runRecurringTransactions = onSchedule(
       skipped: result.skipped,
       failed: result.failed,
     });
+  },
+);
+
+/**
+ * Weekly summary push: every hour, for each user whose local time is Sunday 9 AM, sends the last
+ * seven days' spending once (marker document `users/{uid}/weeklyAlerts/{weekEnd}`, see
+ * weeklyJob.ts). Off unless the Remote Config flag `enable_weekly_summary` is "true".
+ */
+export const weeklySummary = onSchedule(
+  {schedule: 'every 1 hours', timeZone: 'UTC', secrets: [oneSignalApiKey]},
+  async () => {
+    if (!(await isFlagOn('enable_weekly_summary'))) {
+      return;
+    }
+    const result = await runWeekly({
+      db,
+      fetchFn: fetch,
+      apiKey: process.env.ONESIGNAL_API_KEY || undefined,
+      appId: ONESIGNAL_APP_ID,
+    });
+    logger.info('Weekly summary run finished', {
+      users: result.users,
+      created: result.created.length,
+      failed: result.failed,
+    });
+  },
+);
+
+/**
+ * Monthly summary push: on the 1st at 9 AM local time, last month's spending, once per user
+ * (`users/{uid}/monthlyAlerts/{yyyy-mm}`). Off unless `enable_monthly_summary` is "true".
+ */
+export const monthlySummary = onSchedule(
+  {schedule: 'every 1 hours', timeZone: 'UTC', secrets: [oneSignalApiKey]},
+  async () => {
+    if (!(await isFlagOn('enable_monthly_summary'))) {
+      return;
+    }
+    const result = await runMonthly({
+      db,
+      fetchFn: fetch,
+      apiKey: process.env.ONESIGNAL_API_KEY || undefined,
+      appId: ONESIGNAL_APP_ID,
+    });
+    logger.info('Monthly summary run finished', {
+      users: result.users,
+      created: result.created.length,
+      failed: result.failed,
+    });
+  },
+);
+
+/**
+ * Settle-up reminders: Sunday 10 AM local time, to people who owe at least one whole unit across
+ * groups and IOUs, at most once every 13 days (settleJob.ts). Off unless
+ * `enable_settle_reminders` is "true".
+ */
+export const settlementReminders = onSchedule(
+  {schedule: 'every 1 hours', timeZone: 'UTC', secrets: [oneSignalApiKey]},
+  async () => {
+    if (!(await isFlagOn('enable_settle_reminders'))) {
+      return;
+    }
+    const result = await runSettleReminders({
+      db,
+      fetchFn: fetch,
+      apiKey: process.env.ONESIGNAL_API_KEY || undefined,
+      appId: ONESIGNAL_APP_ID,
+    });
+    logger.info('Settle reminders run finished', {
+      reminded: result.reminded.length,
+    });
+  },
+);
+
+/**
+ * Evening nudge: once a day per person at a local hour between 18 and 21 (funJob.ts). Off unless
+ * `enable_fun_nudge` is "true" (not `enable_fun_notifications`, which the app's older client-side
+ * notifications already use and may be on). There is no per-user opt-out yet.
+ */
+export const funNudge = onSchedule(
+  {schedule: 'every 1 hours', timeZone: 'UTC', secrets: [oneSignalApiKey]},
+  async () => {
+    if (!(await isFlagOn('enable_fun_nudge'))) {
+      return;
+    }
+    const result = await runFun({
+      db,
+      fetchFn: fetch,
+      apiKey: process.env.ONESIGNAL_API_KEY || undefined,
+      appId: ONESIGNAL_APP_ID,
+    });
+    logger.info('Fun nudge run finished', {sent: result.sent.length});
   },
 );
 

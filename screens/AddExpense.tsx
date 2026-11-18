@@ -1,6 +1,7 @@
 import {View, Text} from 'react-native';
-import React, {useState, useEffect} from 'react';
-import {useRouter} from 'expo-router';
+import React, {useState, useEffect, useRef} from 'react';
+import {useLocalSearchParams, useRouter} from 'expo-router';
+import {prefillFromParams} from '../src/utils/smsImport';
 import {ActivityIndicator} from 'react-native';
 import {getAuth} from '@react-native-firebase/auth';
 import {
@@ -20,6 +21,14 @@ import {
 } from '@react-native-firebase/storage';
 import {reportError} from '../src/services/ErrorReporter';
 import {receiptFields} from '../src/utils/receipt';
+import {getConfig} from '../src/services/RemoteConfigService';
+import {
+  discardUploadedReceipt,
+  requestScan,
+  uploadReceipt,
+  type UploadedReceipt,
+} from '../src/services/ReceiptScanService';
+import {applyGuess, scanErrorMessage} from '../src/utils/receiptScan';
 import {requestPushPermissionAfterFirstExpense} from '../src/services/PushService';
 import * as PerformanceService from '../src/services/PerformanceService';
 import * as AnalyticsService from '../src/services/AnalyticsService';
@@ -45,6 +54,7 @@ import {
 import TextField from '../src/components/form/TextField';
 import ReceiptField from '../src/components/form/ReceiptField';
 import TagField from '../src/components/form/TagField';
+import ScanNote from '../src/components/form/ScanNote';
 import {useKnownTags, useRecordTags} from '../src/hooks/useKnownTags';
 import {snackbar} from '../src/utils/snackbarStore';
 import AlignLeft from 'lucide-react-native/icons/align-left';
@@ -55,6 +65,9 @@ const DISABLED_BUTTON = {opacity: 0.5} as const;
 
 const AddExpense = () => {
   const router = useRouter();
+  // A bank message opens this form with values filled in (see SmsImportScreen); the form still
+  // has to be confirmed with the add button.
+  const params = useLocalSearchParams();
   const {colors} = useTheme();
   const {currency} = useCurrency();
   const {
@@ -76,13 +89,88 @@ const AddExpense = () => {
     setErrorMessage,
     isFormValid,
     validateForm,
-  } = useTransactionForm();
+  } = useTransactionForm(prefillFromParams(params));
   const knownTags = useKnownTags();
   const recordTags = useRecordTags();
 
   const [uploading, setUploading] = useState(false);
   const [transferred, setTransferred] = useState(0);
   const [imagePickerVisible, setImagePickerVisible] = useState(false);
+
+  // Receipt scanning (behind the Remote Config flag). A scan uploads the photo to the person's
+  // own receipt folder; if it is still the receipt when the expense is saved, that upload is
+  // reused. A scan only fills the form: the person checks it and taps Add Expense.
+  const [scanEnabled] = useState(() => getConfig().enable_receipt_scan);
+  const [scanning, setScanning] = useState(false);
+  const [scanned, setScanned] = useState<UploadedReceipt | null>(null);
+  const [scanNote, setScanNote] = useState<{
+    filled: string[];
+    alternatives: string[];
+  } | null>(null);
+  const scannedRef = useRef<UploadedReceipt | null>(null);
+  const savedRef = useRef(false);
+
+  const rememberScan = (value: UploadedReceipt | null) => {
+    scannedRef.current = value;
+    setScanned(value);
+  };
+
+  // A photo uploaded only for a scan is removed again if the person leaves without saving.
+  useEffect(
+    () => () => {
+      const leftover = scannedRef.current;
+      if (leftover && !savedRef.current) {
+        discardUploadedReceipt(leftover).catch(() => undefined);
+      }
+    },
+    [],
+  );
+
+  const changeImage = (next: string | null) => {
+    if (scanned && scanned.localUri !== next) {
+      discardUploadedReceipt(scanned).catch(() => undefined);
+      rememberScan(null);
+    }
+    setScanNote(null);
+    setImage(next);
+  };
+
+  const handleScan = async () => {
+    if (!image || scanning) {
+      return;
+    }
+    setScanning(true);
+    try {
+      let uploaded = scanned && scanned.localUri === image ? scanned : null;
+      if (!uploaded) {
+        uploaded = await uploadReceipt(image);
+        rememberScan(uploaded);
+      }
+      const fill = applyGuess(await requestScan(uploaded.storagePath), {
+        title,
+        amount,
+        date,
+      });
+      if (fill.title !== undefined) {
+        setTitle(fill.title);
+      }
+      if (fill.amount !== undefined) {
+        setAmount(fill.amount);
+      }
+      if (fill.date !== undefined) {
+        setDate(fill.date);
+      }
+      setScanNote({filled: fill.filled, alternatives: fill.alternatives});
+    } catch (scanError) {
+      const code = String((scanError as {code?: unknown})?.code ?? '');
+      if (!/resource-exhausted|failed-precondition/.test(code)) {
+        reportError(scanError);
+      }
+      snackbar.error(scanErrorMessage(scanError));
+    } finally {
+      setScanning(false);
+    }
+  };
 
   // Auto-suggest category from title keywords
   useEffect(() => {
@@ -104,6 +192,10 @@ const AddExpense = () => {
   const uploadImageAsync = async (): Promise<string | null> => {
     if (!image) {
       return null;
+    }
+    if (scanned && scanned.localUri === image) {
+      // Already uploaded for the scan.
+      return scanned.downloadUrl;
     }
     const uploadUri = image;
     let filename = uploadUri.substring(uploadUri.lastIndexOf('/') + 1);
@@ -183,6 +275,7 @@ const AddExpense = () => {
       recordTags(tags, knownTags).catch(reportError);
       // Deferred notification prompt: asked once, right after a saved expense.
       requestPushPermissionAfterFirstExpense();
+      savedRef.current = true;
       snackbar.success('Expense added');
       router.back();
     } catch (e) {
@@ -288,8 +381,17 @@ const AddExpense = () => {
               image={image}
               disabled={isSubmitting}
               onPick={() => setImagePickerVisible(true)}
-              onRemove={() => setImage(null)}
+              onRemove={() => changeImage(null)}
+              onScan={scanEnabled ? handleScan : undefined}
+              scanning={scanning}
             />
+            {scanNote ? (
+              <ScanNote
+                filled={scanNote.filled}
+                alternatives={scanNote.alternatives}
+                onPickAmount={setAmount}
+              />
+            ) : null}
 
             <View className="mt-5">
               <FormButton
@@ -306,7 +408,7 @@ const AddExpense = () => {
         <ImagePickerModal
           visible={imagePickerVisible}
           onDismiss={() => setImagePickerVisible(false)}
-          onImageSelected={uri => setImage(uri)}
+          onImageSelected={uri => changeImage(uri)}
         />
       </View>
     </SafeAreaProvider>
