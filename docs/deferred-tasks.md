@@ -116,3 +116,17 @@ Candidates for the next release, 1.4.1 or similar. None blocks 1.4.0.
 - The 15 values the backfill skipped on purpose (5 absurd transaction amounts, 4 unparseable user balances, 6 groups with an unresolved member email) are listed by path in the backfill report; what to do with them is an owner decision.
 - A balance reconciliation report was never built (`balance` also moves through splits, settlements and savings, so it is a report, never an automatic fix).
 - The Express server in `server/` is no longer used for push; remove it in a later phase.
+
+## Left over from Phase 4 (ticked 2026-11-18)
+
+Deployed on 2026-11-17: `budgetAlertsOnTransaction`, `runRecurringTransactions` (Cloud Scheduler API enabled, `recurring.nextDueDate` index override deployed), `goalsFromUser` and the four invite-link callables; the app screens went out over the air (Android update id `01a1eaec-6c47-76f7-8719-55f7f7809e5d`); the website invite page is live (website PR 3). Details in `CLAUDE.md` section 12.
+
+- Set `enable_budgets` and `enable_recurring` in Remote Config. Until then the Budgets and Recurring screens are hidden and the server functions do nothing. Both are live changes that need the owner's approval; test each on the throwaway account first (add a budget or rule, check an alert or a transaction appears) before enabling for everyone.
+- Confirm the over-the-air update on a phone: Profile should show update id `01a1eaec-...` after a cold start (and the Restart now sheet if signed in).
+- Run the goals backfill (`yarn --cwd functions backfill --project trackaexpense --only goals`): dry run first, then `--apply` only with the owner's approval and a fresh Firestore export. It is optional, because `chooseGoals` shows the array whenever the goal documents are not exactly its goals, but it makes every profile consistent.
+- Device checks not done: a real join through an invite link on a phone, the signed-out hold through an actual sign-in (the emulator was taken over by another app mid-test), and the Share button on a real group.
+- The "savings goal reached" notification (a trigger on the goal document, behind its own flag) was left for a follow-up.
+- The Artifact Registry cleanup policy for `asia-south1` is not set (both function deploys ended with an error only for that step, the functions themselves were created): `firebase functions:artifacts:setpolicy --project trackaexpense`. Without it old container images pile up for a small monthly cost.
+- Direct Android App Links for invite links (no landing page) need intent filters in `app.json` and `assetlinks.json` with the signing certificate's SHA-256: a native change, so a store build. Not done.
+- Budget alerts and the recurring job send push through `functions/src/notify.ts` by uid; check the OneSignal dashboard shows them delivered once a flag is on.
+- The website repo has a leftover local branch `feat/join-page-rebased` (never pushed); safe to delete.
