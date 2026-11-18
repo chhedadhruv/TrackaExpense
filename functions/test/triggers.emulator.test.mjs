@@ -1001,5 +1001,111 @@ await step(
   },
 );
 
+// ---- Savings goal reached (flag enable_goal_reached is forced on by .env.demo-trackaexpense-functions) --
+const reachedUser = db.collection('users').doc('ugr1');
+const reachedGoal = reachedUser.collection('goals').doc('g1');
+const reachedAlerts = async () =>
+  (await reachedUser.collection('goalAlerts').get()).docs.map(d => d.data());
+const goalDoc = (currentMinor, extra = {}) => ({
+  name: 'Trip',
+  currency: 'INR',
+  currentMinor,
+  targetMinor: 10000,
+  ...extra,
+});
+
+await step('goal reached: no alert while below the target', async () => {
+  await reachedUser.set({name: 'Reached user', currency: 'INR'});
+  await reachedGoal.set(goalDoc(2000));
+  await reachedGoal.update({currentMinor: 9999});
+  await sleep(4000);
+  assert.deepEqual(await reachedAlerts(), []);
+});
+
+await step('goal reached: crossing the target records one alert', async () => {
+  await reachedGoal.update({currentMinor: 10000});
+  const start = Date.now();
+  while ((await reachedAlerts()).length === 0) {
+    if (Date.now() - start > 45000)
+      throw new Error('timed out waiting for the goal alert');
+    await sleep(500);
+  }
+  const alerts = await reachedAlerts();
+  assert.equal(alerts.length, 1);
+  assert.equal(alerts[0].goalId, 'g1');
+  assert.equal(alerts[0].goalName, 'Trip');
+  assert.equal(alerts[0].targetMinor, 10000);
+  assert.equal(alerts[0].pushed, false); // no OneSignal key in the emulator
+});
+
+await step(
+  'goal reached: edits of a goal that is already reached add nothing, a new fill after a withdrawal adds one',
+  async () => {
+    await reachedGoal.update({currentMinor: 15000});
+    await reachedGoal.update({description: 'edited'});
+    await sleep(4000);
+    assert.equal((await reachedAlerts()).length, 1);
+
+    await reachedGoal.update({currentMinor: 3000});
+    await sleep(2000);
+    await reachedGoal.update({currentMinor: 10000});
+    const start = Date.now();
+    while ((await reachedAlerts()).length < 2) {
+      if (Date.now() - start > 45000)
+        throw new Error('timed out waiting for the second alert');
+      await sleep(500);
+    }
+    assert.equal((await reachedAlerts()).length, 2);
+  },
+);
+
+await step(
+  'goal reached: core sends one push, and a redelivered event adds nothing',
+  async () => {
+    const {notifyGoalReached} = require('../lib/goalReached.js');
+    const sent = [];
+    const deps = {
+      db,
+      apiKey: 'test-key',
+      appId: 'app',
+      fetchFn: async (_url, init) => {
+        sent.push(JSON.parse(init.body));
+        return {ok: true, json: async () => ({id: `n${sent.length}`})};
+      },
+    };
+    const goal = {
+      name: 'Laptop',
+      currency: 'INR',
+      currentMinor: 90000,
+      targetMinor: 90000,
+    };
+    const first = await notifyGoalReached(deps, 'ugr2', 'gx', goal, 'event-1');
+    assert.equal(first, 'pushed');
+    assert.equal(sent.length, 1);
+    assert.deepEqual(sent[0].include_aliases.external_id, ['ugr2']);
+    assert.equal(sent[0].data.type, 'goal_reached');
+    assert.equal(sent[0].data.goalId, 'gx');
+    assert.match(sent[0].contents.en, /"Laptop"/);
+    const alert = await db.doc('users/ugr2/goalAlerts/event-1').get();
+    assert.equal(alert.get('pushed'), true);
+
+    // The same event delivered again, even by overlapping runs, sends nothing more.
+    const again = await Promise.all(
+      [1, 2, 3].map(() =>
+        notifyGoalReached(deps, 'ugr2', 'gx', goal, 'event-1'),
+      ),
+    );
+    assert.deepEqual(again, ['duplicate', 'duplicate', 'duplicate']);
+    assert.equal(sent.length, 1);
+
+    // A different event for the same goal is a new alert.
+    assert.equal(
+      await notifyGoalReached(deps, 'ugr2', 'gx', goal, 'event-2'),
+      'pushed',
+    );
+    assert.equal(sent.length, 2);
+  },
+);
+
 console.log(`\n${passed} integration checks passed`);
 process.exit(0);

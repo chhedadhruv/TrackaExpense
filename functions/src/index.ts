@@ -25,6 +25,7 @@ import {
   type CallerIdentity as InviteLinkCaller,
 } from './inviteLinks';
 import {mirrorGoals} from './goalsSync';
+import {crossedTarget, notifyGoalReached} from './goalReached';
 import {LookupInputError, lookupUsers} from './lookup';
 import {isFlagOn} from './remoteFlag';
 import {PushError, sendPush as sendPushCore} from './push';
@@ -312,6 +313,53 @@ export const budgetAlertsOnTransaction = onDocumentWritten(
     } catch (error) {
       logger.error('Budget evaluation failed', {
         uid: event.params.uid,
+        error: String(error),
+      });
+    }
+  },
+);
+
+/**
+ * "Savings goal reached": when a goal document goes from below its target to at or above it, records
+ * one alert and sends one push (see goalReached.ts). Off unless the Remote Config flag
+ * `enable_goal_reached` is "true".
+ */
+export const goalReachedOnGoal = onDocumentWritten(
+  {
+    document: 'users/{uid}/goals/{goalId}',
+    secrets: [oneSignalApiKey],
+  },
+  async event => {
+    const after = event.data?.after;
+    if (!after || !after.exists) {
+      return;
+    }
+    const before = event.data?.before;
+    const afterData = after.data() as Fields;
+    const beforeData = before?.exists ? (before.data() as Fields) : undefined;
+    if (!crossedTarget(beforeData, afterData)) {
+      return;
+    }
+    if (!(await isFlagOn('enable_goal_reached'))) {
+      return;
+    }
+    try {
+      await notifyGoalReached(
+        {
+          db,
+          fetchFn: fetch,
+          apiKey: process.env.ONESIGNAL_API_KEY || undefined,
+          appId: ONESIGNAL_APP_ID,
+        },
+        event.params.uid,
+        event.params.goalId,
+        afterData,
+        event.id,
+      );
+    } catch (error) {
+      logger.error('Goal reached alert failed', {
+        uid: event.params.uid,
+        goalId: event.params.goalId,
         error: String(error),
       });
     }
