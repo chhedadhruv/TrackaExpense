@@ -1,7 +1,14 @@
 import React from 'react';
-import {Image, Text, TouchableOpacity, View} from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import ImagePlus from 'lucide-react-native/icons/image-plus';
 import RefreshCw from 'lucide-react-native/icons/refresh-cw';
+import ScanText from 'lucide-react-native/icons/scan-text';
 import Trash2 from 'lucide-react-native/icons/trash-2';
 import {useTheme} from '../../theme';
 import {FormSection} from './FormParts';
@@ -13,6 +20,9 @@ interface ReceiptFieldProps {
   /** Open the picker (add or change the photo). */
   onPick: () => void;
   onRemove: () => void;
+  /** When given, the preview shows a "Scan receipt" button. */
+  onScan?: () => void;
+  scanning?: boolean;
 }
 
 /** The optional receipt photo on an expense: an empty drop area, or a preview with two actions. */
@@ -21,6 +31,8 @@ const ReceiptField = ({
   disabled = false,
   onPick,
   onRemove,
+  onScan,
+  scanning = false,
 }: ReceiptFieldProps) => {
   const {colors} = useTheme();
   const pick = () => {
@@ -60,6 +72,23 @@ const ReceiptField = ({
               </Text>
             </TouchableOpacity>
           </View>
+          {onScan ? (
+            <TouchableOpacity
+              className="mt-3 flex-row items-center justify-center rounded-lg bg-primary-fill px-4 py-3"
+              accessibilityRole="button"
+              accessibilityLabel="Scan receipt to fill the amount, date and title"
+              onPress={onScan}
+              disabled={disabled || scanning}>
+              {scanning ? (
+                <ActivityIndicator size="small" color={colors.onPrimary} />
+              ) : (
+                <ScanText size={20} color={colors.onPrimary} />
+              )}
+              <Text className="ml-2 font-sans-bold text-sm font-semibold text-on-primary">
+                {scanning ? 'Reading receipt...' : 'Scan receipt'}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       ) : (
         <TouchableOpacity
