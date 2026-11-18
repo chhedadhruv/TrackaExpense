@@ -19,6 +19,10 @@ export interface RemoteConfigDefaults {
   enable_receipt_scan: boolean;
   /** Shows "Bank message" on Profile (add an expense or income from a pasted bank SMS). */
   enable_sms_import: boolean;
+  /** Shows Cards on Profile and the "Paid with" choice when adding an expense. */
+  enable_cards: boolean;
+  /** Shows "Fix my balance" (a balance adjustment that leaves income and expense totals alone). */
+  enable_balance_adjust: boolean;
   onboarding_version: number;
   /** Installed versions below this are blocked until the user updates. '0.0.0' disables the check. */
   min_supported_version: string;
@@ -36,6 +40,8 @@ const DEFAULTS: RemoteConfigDefaults = {
   enable_recurring: false,
   enable_receipt_scan: false,
   enable_sms_import: false,
+  enable_cards: false,
+  enable_balance_adjust: false,
   onboarding_version: 1,
   min_supported_version: '0.0.0',
   update_message:
@@ -85,6 +91,8 @@ export function getConfig(): RemoteConfigDefaults {
       enable_recurring: getValue(cfg, 'enable_recurring').asBoolean(),
       enable_receipt_scan: getValue(cfg, 'enable_receipt_scan').asBoolean(),
       enable_sms_import: getValue(cfg, 'enable_sms_import').asBoolean(),
+      enable_cards: getValue(cfg, 'enable_cards').asBoolean(),
+      enable_balance_adjust: getValue(cfg, 'enable_balance_adjust').asBoolean(),
       onboarding_version:
         getValue(cfg, 'onboarding_version').asNumber() ||
         DEFAULTS.onboarding_version,

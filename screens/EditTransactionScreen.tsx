@@ -5,6 +5,7 @@ import {getAuth} from '@react-native-firebase/auth';
 import {
   Timestamp,
   collection,
+  deleteField,
   doc,
   getFirestore,
   increment,
@@ -42,6 +43,10 @@ import {
 import TextField from '../src/components/form/TextField';
 import ReceiptField from '../src/components/form/ReceiptField';
 import TagField from '../src/components/form/TagField';
+import CardField from '../src/components/form/CardField';
+import {useCards} from '../src/hooks/useCards';
+import {cardIdOf} from '../src/utils/cards';
+import {getConfig} from '../src/services/RemoteConfigService';
 import {useKnownTags, useRecordTags} from '../src/hooks/useKnownTags';
 import {sanitizeTags} from '../src/utils/tags';
 import {snackbar} from '../src/utils/snackbarStore';
@@ -98,6 +103,21 @@ const EditTransactionScreen = ({
   });
   const knownTags = useKnownTags();
   const recordTags = useRecordTags();
+
+  // "Paid with" is only offered for expenses while cards are switched on. A transaction that
+  // already has a card keeps showing it, even if that card was archived since.
+  const [cardsEnabled] = useState(() => getConfig().enable_cards);
+  const cards = useCards().data;
+  const [cardId, setCardId] = useState<string | null>(() =>
+    cardIdOf(transaction),
+  );
+  const pickableCards = (cards ?? []).filter(
+    c => !c.archived || c.id === cardIdOf(transaction),
+  );
+  const showCardField =
+    cardsEnabled &&
+    transaction.type === 'expense' &&
+    (pickableCards.length > 0 || cardIdOf(transaction) !== null);
 
   const [uploading, setUploading] = useState(false);
   const [transferred, setTransferred] = useState(0);
@@ -175,19 +195,31 @@ const EditTransactionScreen = ({
           Object.assign(updatePayload, receiptFields(imageUrl));
         }
 
+        const isExpense = existing?.type === 'expense';
+        // The card after this edit: what the form shows when the picker was offered, otherwise
+        // whatever the document already has (an edit never changes a card it did not show).
+        const existingCard = cardIdOf(existing ?? {});
+        const newCard = showCardField ? cardId : existingCard;
+        if (showCardField && newCard !== existingCard) {
+          updatePayload.cardId = newCard ?? deleteField();
+        }
+
         txn.update(transactionRef, updatePayload);
 
-        const isExpense = existing?.type === 'expense';
         // Exact integer math first; the old float subtraction only if an amount cannot be
-        // converted to minor units.
+        // converted to minor units. A card purchase never moved the balance, so changing the
+        // method moves the old amount back or takes the new one.
         const delta =
           editBalanceDelta(
             existing ?? {},
             isExpense ? 'expense' : 'income',
             amount,
             currency.code,
+            newCard,
           ) ??
-          (isExpense
+          (existingCard !== null || newCard !== null
+            ? 0
+            : isExpense
             ? parseFloat(existing?.amount) - parseFloat(amount)
             : parseFloat(amount) - parseFloat(existing?.amount));
         if (delta !== 0) {
@@ -316,6 +348,15 @@ const EditTransactionScreen = ({
                 label="Date"
               />
             </FormSection>
+
+            {showCardField ? (
+              <CardField
+                cards={pickableCards}
+                value={cardId}
+                onChange={setCardId}
+                disabled={isSubmitting}
+              />
+            ) : null}
 
             <TagField
               tags={tags}

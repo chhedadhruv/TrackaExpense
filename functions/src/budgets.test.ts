@@ -151,6 +151,7 @@ describe('spentMinor', () => {
       expense(10000, '2026-11-05', {type: 'income'}),
       expense(10000, '2026-11-05', {category: 'Settlement'}),
       expense(10000, '2026-11-05', {isSettlement: true}),
+      expense(10000, '2026-11-05', {source: 'card_payment'}),
       expense(10000, '2026-11-05', {currency: 'USD'}),
       {type: 'expense', amount: '50', dateISO: '2026-11-05', currency: 'INR'},
       expense(700, '2026-11-05'),

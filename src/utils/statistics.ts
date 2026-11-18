@@ -26,6 +26,8 @@ export interface StatsTransaction extends StoredMoney {
   dateISO?: string;
   category?: string;
   title?: string;
+  /** 'card_payment' marks a paid card bill, a transfer that is not spending. */
+  source?: unknown;
 }
 
 export interface DayRange {
@@ -134,6 +136,11 @@ export const filterByRange = <T extends StatsTransaction>(
   bounds: DayRange,
 ): T[] =>
   txns.filter(t => {
+    // A paid card bill and a balance adjustment only move money around: they are not spending or
+    // income (see isTransferEntry in balanceAdjust.ts, which this mirrors).
+    if (t.source === 'card_payment' || t.source === 'balance_adjustment') {
+      return false;
+    }
     const day = dayOf(t);
     return day !== null && inRange(day, bounds);
   });

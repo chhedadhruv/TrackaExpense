@@ -18,6 +18,13 @@ const ProfileLayout = () => {
         options={{title: 'Recurring Rule'}}
       />
       <Stack.Screen
+        name="profile/fix-balance"
+        options={{title: 'Fix My Balance'}}
+      />
+      <Stack.Screen name="profile/cards" options={{title: 'Cards'}} />
+      <Stack.Screen name="profile/card-form" options={{title: 'Card'}} />
+      <Stack.Screen name="profile/card-bill" options={{title: 'Card Bill'}} />
+      <Stack.Screen
         name="profile/sms-import"
         options={{title: 'Bank Message'}}
       />

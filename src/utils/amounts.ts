@@ -116,9 +116,13 @@ export const transactionMoneyFields = (
  */
 export const balanceEffect = (
   type: 'income' | 'expense',
-  source: StoredMoney,
+  source: StoredMoney & {cardId?: unknown},
   currencyCode: string,
 ): number => {
+  // A purchase (or refund) on a credit card does not touch the balance; paying the card bill does.
+  if (typeof source.cardId === 'string' && source.cardId !== '') {
+    return 0;
+  }
   const amount = majorOf(source, currencyCode);
   return type === 'expense' ? -amount : amount;
 };
@@ -129,18 +133,29 @@ export const balanceEffect = (
  * when either amount cannot be converted; the caller then uses the old float calculation.
  */
 export const editBalanceDelta = (
-  existing: StoredMoney,
+  existing: StoredMoney & {cardId?: unknown},
   type: 'income' | 'expense',
   newAmountText: string,
   currencyCode: string,
+  /** The card the edited transaction is paid with after the edit (null: cash, UPI or bank). */
+  newCardId: string | null = typeof existing.cardId === 'string' &&
+  existing.cardId !== ''
+    ? existing.cardId
+    : null,
 ): number | null => {
   const oldMinor = minorOf(existing, currencyCode);
   const newMinor = tryToMinor(newAmountText, currencyCode);
   if (oldMinor === null || newMinor === null) {
     return null;
   }
+  // What the balance has taken so far (nothing for a card) and what it should take now.
+  const hadEffect =
+    typeof existing.cardId === 'string' && existing.cardId !== ''
+      ? 0
+      : oldMinor;
+  const wantsEffect = newCardId !== null && newCardId !== '' ? 0 : newMinor;
   const deltaMinor =
-    type === 'expense' ? oldMinor - newMinor : newMinor - oldMinor;
+    type === 'expense' ? hadEffect - wantsEffect : wantsEffect - hadEffect;
   return toMajorNumber(deltaMinor, currencyCode);
 };
 
