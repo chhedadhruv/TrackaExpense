@@ -137,7 +137,7 @@ Done on 2026-11-18 with the owner's approval: PR 120 merged (`7f8fffa`); the Clo
 
 Still open:
 
-- Nothing in Phase 5 has been tried on a device or against live data. Check on the owner's phone once the update is running and the flags have been fetched (up to an hour): the CSV share sheet for the transactions and a group; Scan receipt on a real receipt (the first real Cloud Vision call: if it fails, read the `scanReceipt` log and check the function's service account can call the Vision API and read `bills/`); the Bank message screen with a real message; both themes.
+- Confirmed on the owner's phone on 2026-11-18: Scan receipt on a real receipt (a real Cloud Vision call through the deployed `scanReceipt`) and the Bank message screen with a real pasted message. Not yet checked on a device: the CSV share sheet for the transactions and for a group, a real push from the new functions, and both themes on the new screens.
 - Watch the function logs and the OneSignal dashboard after the first hourly runs. The evening nudge (`funNudge`) can reach real users from the first evening; the weekly summary and settle-up reminders first run on Sunday 2026-11-22 and the monthly summary on 2026-12-01.
 - The evening nudge has no per-user opt-out. Add one (a profile field the app writes and `runFun` honours) or turn `enable_fun_nudge` off.
 - Summaries and reminders use India time for everyone: the app does not store a time zone. Write the device zone to `users/{uid}.timeZone` on launch (JavaScript only); the jobs already read it.
