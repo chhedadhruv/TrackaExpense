@@ -1107,5 +1107,345 @@ await step(
   },
 );
 
+await step(
+  'weekly summary: sends once on Sunday 9 AM in the user zone, skips other hours and quiet weeks',
+  async () => {
+    const {runWeekly} = require('../lib/weeklyJob.js');
+    const sent = [];
+    const deps = nowMs => ({
+      db,
+      apiKey: 'test-key',
+      appId: 'app',
+      fetchFn: async (_url, init) => {
+        sent.push(JSON.parse(init.body));
+        return {ok: true, json: async () => ({id: `w${sent.length}`})};
+      },
+      now: () => nowMs,
+    });
+    const busy = db.collection('users').doc('uw1');
+    await busy.set({name: 'Busy', currency: 'INR'});
+    const mk = (id, type, amountMinor, dateISO, category) =>
+      busy
+        .collection('transactions')
+        .doc(id)
+        .set({type, amountMinor, dateISO, category, currency: 'INR'});
+    await mk('a', 'expense', 150000, '2026-11-17', 'Food');
+    await mk('b', 'expense', 50050, '2026-11-20', 'Fuel');
+    await mk('c', 'income', 900000, '2026-11-18', 'Salary');
+    await mk('old', 'expense', 999999, '2026-11-10', 'Food');
+    await db
+      .collection('users')
+      .doc('uw2')
+      .set({name: 'Quiet', currency: 'INR'});
+    // A user in New York: not their Sunday 9 AM at the India moment.
+    await db
+      .collection('users')
+      .doc('uw3')
+      .set({name: 'Away', currency: 'INR', timeZone: 'America/New_York'});
+
+    // Saturday in India: nothing.
+    const sat = await runWeekly(deps(Date.UTC(2026, 10, 21, 3, 30)));
+    assert.deepEqual(sat.created, []);
+
+    // Sunday 09:00 in India.
+    const sunday = Date.UTC(2026, 10, 22, 3, 30);
+    const first = await runWeekly(deps(sunday));
+    assert.ok(first.created.includes('users/uw1/weeklyAlerts/2026-11-22'));
+    assert.ok(first.created.includes('users/uw2/weeklyAlerts/2026-11-22'));
+    assert.ok(!first.created.some(p => p.startsWith('users/uw3/')));
+    assert.equal(first.failed, 0);
+    const toBusy = sent.filter(m => m.include_aliases.external_id[0] === 'uw1');
+    assert.equal(toBusy.length, 1);
+    assert.equal(toBusy[0].data.type, 'weekly_summary');
+    assert.match(toBusy[0].contents.en, /2000\.50 INR/);
+    assert.match(toBusy[0].contents.en, /Food/);
+    assert.equal(
+      sent.some(m => m.include_aliases.external_id[0] === 'uw2'),
+      false,
+    );
+    assert.equal(
+      (await busy.collection('weeklyAlerts').doc('2026-11-22').get()).get(
+        'pushed',
+      ),
+      true,
+    );
+
+    // The same moment again and overlapping runs: no second push.
+    const before = sent.length;
+    await Promise.all([1, 2, 3].map(() => runWeekly(deps(sunday))));
+    assert.equal(sent.length, before);
+
+    // Sunday 09:00 in New York is 14:00 UTC: that user gets theirs, the others do not repeat.
+    const ny = await runWeekly(deps(Date.UTC(2026, 10, 22, 14, 0)));
+    assert.deepEqual(ny.created, ['users/uw3/weeklyAlerts/2026-11-22']);
+  },
+);
+
+const recorder = () => {
+  const sent = [];
+  const deps = nowMs => ({
+    db,
+    apiKey: 'test-key',
+    appId: 'app',
+    fetchFn: async (_url, init) => {
+      sent.push(JSON.parse(init.body));
+      return {ok: true, json: async () => ({id: `m${sent.length}`})};
+    },
+    now: () => nowMs,
+  });
+  return {sent, deps};
+};
+
+await step(
+  'monthly summary: sends last month once on the 1st at 9 AM local',
+  async () => {
+    const {runMonthly} = require('../lib/weeklyJob.js');
+    const {sent, deps} = recorder();
+    const u = db.collection('users').doc('um1');
+    await u.set({name: 'Monthly', currency: 'INR'});
+    await u.collection('transactions').doc('t1').set({
+      type: 'expense',
+      amountMinor: 123450,
+      dateISO: '2026-11-05',
+      category: 'Rent',
+      currency: 'INR',
+    });
+    const first = Date.UTC(2026, 11, 1, 3, 30);
+    const run = await runMonthly(deps(first));
+    assert.ok(run.created.includes('users/um1/monthlyAlerts/2026-11'));
+    const mine = sent.filter(m => m.include_aliases.external_id[0] === 'um1');
+    assert.equal(mine.length, 1);
+    assert.equal(mine[0].data.type, 'monthly_summary');
+    assert.match(mine[0].contents.en, /1234\.50 INR/);
+    await runMonthly(deps(first));
+    assert.equal(
+      sent.filter(m => m.include_aliases.external_id[0] === 'um1').length,
+      1,
+    );
+  },
+);
+
+await step(
+  'settle reminders: one push to a debtor on Sunday 10 AM, then a 13 day cooldown',
+  async () => {
+    const {runSettleReminders} = require('../lib/settleJob.js');
+    const {sent, deps} = recorder();
+    await db
+      .collection('users')
+      .doc('us-a')
+      .set({name: 'Lender', email: 'lender@example.com', currency: 'INR'});
+    await db
+      .collection('users')
+      .doc('us-b')
+      .set({name: 'Debtor', email: 'Debtor@example.com', currency: 'INR'});
+    const group = db.collection('groups').doc('gs1');
+    await group.set({name: 'Trip', members: ['lender@example.com']});
+    await group
+      .collection('splits')
+      .doc('s1')
+      .set({
+        paidBy: {email: 'lender@example.com'},
+        splitUsers: [
+          {email: 'lender@example.com'},
+          {email: 'debtor@example.com'},
+        ],
+        amountMinor: 50000,
+        currency: 'INR',
+      });
+    // Sunday 2026-11-22, 10:00 in India is 04:30 UTC.
+    const sunday = Date.UTC(2026, 10, 22, 4, 30);
+    const first = await runSettleReminders(deps(sunday));
+    // Other fixture users from earlier steps may owe money too, so look at this debtor only.
+    const toDebtor = () =>
+      sent.filter(m => m.include_aliases.external_id[0] === 'us-b');
+    assert.ok(first.reminded.includes('us-b'));
+    assert.ok(!first.reminded.includes('us-a'));
+    assert.equal(toDebtor().length, 1);
+    assert.equal(toDebtor()[0].data.type, 'settlement_reminder');
+    assert.match(toDebtor()[0].contents.en, /250\.00 INR/);
+
+    await Promise.all([1, 2, 3].map(() => runSettleReminders(deps(sunday))));
+    assert.equal(toDebtor().length, 1);
+
+    // A week later: still inside the 13 day cooldown. Two weeks later: sent again.
+    const week = await runSettleReminders(deps(sunday + 7 * 86_400_000));
+    assert.ok(!week.reminded.includes('us-b'));
+    const two = await runSettleReminders(deps(sunday + 14 * 86_400_000));
+    assert.ok(two.reminded.includes('us-b'));
+
+    // Wrong hour: nothing.
+    const wrong = await runSettleReminders(
+      deps(sunday + 28 * 86_400_000 + 3_600_000),
+    );
+    assert.deepEqual(wrong.reminded, []);
+  },
+);
+
+await step(
+  'fun nudge: one push in the chosen local hour, praise when active today',
+  async () => {
+    const {runFun} = require('../lib/funJob.js');
+    const {funHourFor} = require('../lib/fun.js');
+    const {sent, deps} = recorder();
+    const u = db.collection('users').doc('uf1');
+    await u.set({name: 'Fun', currency: 'INR'});
+    await u
+      .collection('transactions')
+      .doc('t1')
+      .set({type: 'expense', amountMinor: 100, dateISO: '2026-11-18'});
+    const hour = funHourFor('uf1', '2026-11-18');
+    // Local hour h at :30 in India is (h - 6) UTC at :00.
+    const due = Date.UTC(2026, 10, 18, hour - 6, 0);
+    const out = await runFun(deps(due + 30 * 60_000));
+    assert.ok(out.sent.includes('uf1'));
+    const mine = sent.filter(m => m.include_aliases.external_id[0] === 'uf1');
+    assert.equal(mine.length, 1);
+    assert.equal(mine[0].data.context, 'motivational');
+    await runFun(deps(due + 30 * 60_000));
+    assert.equal(
+      sent.filter(m => m.include_aliases.external_id[0] === 'uf1').length,
+      1,
+    );
+  },
+);
+
+await step(
+  'receipt scan: reads the caller own image once per allowance, and enforces both limits',
+  async () => {
+    const {
+      scanReceipt,
+      DAILY_LIMIT_PER_USER,
+      MONTHLY_LIMIT_ALL,
+    } = require('../lib/receipt.js');
+    let recognized = 0;
+    const deps = (nowMs, over = {}) => ({
+      db,
+      statImage: async () => ({size: 1000, contentType: 'image/jpeg'}),
+      readImage: async () => Buffer.from('x'),
+      recognize: async () => {
+        recognized += 1;
+        return 'CHAI POINT\nDate 14/11/2026\nTOTAL 120.00';
+      },
+      now: () => nowMs,
+      ...over,
+    });
+    const t0 = Date.UTC(2026, 10, 18, 6, 0);
+    const input = {storagePath: 'bills/usc1/r.jpg'};
+    const guess = await scanReceipt(deps(t0), 'usc1', input);
+    assert.deepEqual(guess, {
+      amounts: ['120.00'],
+      date: '2026-11-14',
+      merchant: 'CHAI POINT',
+    });
+    assert.equal(
+      (await db.collection('scanLimits').doc('usc1').get()).get('count'),
+      1,
+    );
+    assert.equal(
+      (await db.collection('scanLimits').doc('_month_2026-11').get()).get(
+        'count',
+      ),
+      1,
+    );
+
+    const code = async p => {
+      try {
+        await p;
+        return 'ok';
+      } catch (e) {
+        return e.code;
+      }
+    };
+    // Someone else's file, a missing file and a non-image spend nothing.
+    assert.equal(
+      await code(
+        scanReceipt(deps(t0), 'usc1', {storagePath: 'bills/other/r.jpg'}),
+      ),
+      'permission-denied',
+    );
+    assert.equal(
+      await code(
+        scanReceipt(deps(t0, {statImage: async () => null}), 'usc1', input),
+      ),
+      'not-found',
+    );
+    assert.equal(
+      await code(
+        scanReceipt(
+          deps(t0, {
+            statImage: async () => ({size: 10, contentType: 'application/pdf'}),
+          }),
+          'usc1',
+          input,
+        ),
+      ),
+      'invalid-argument',
+    );
+    assert.equal(
+      await code(
+        scanReceipt(
+          deps(t0, {
+            statImage: async () => ({
+              size: 11 * 1024 * 1024,
+              contentType: 'image/png',
+            }),
+          }),
+          'usc1',
+          input,
+        ),
+      ),
+      'invalid-argument',
+    );
+    assert.equal(
+      (await db.collection('scanLimits').doc('usc1').get()).get('count'),
+      1,
+    );
+
+    // Daily limit for one person, then a fresh window after 24 hours.
+    for (let i = 1; i < DAILY_LIMIT_PER_USER; i += 1) {
+      await scanReceipt(deps(t0), 'usc1', input);
+    }
+    assert.equal(
+      await code(scanReceipt(deps(t0), 'usc1', input)),
+      'resource-exhausted',
+    );
+    assert.equal(
+      await code(scanReceipt(deps(t0 + 86_400_000), 'usc1', input)),
+      'ok',
+    );
+
+    // A failed recognition is reported as unavailable.
+    assert.equal(
+      await code(
+        scanReceipt(
+          deps(t0, {
+            recognize: async () => {
+              throw new Error('boom');
+            },
+          }),
+          'usc2',
+          {storagePath: 'bills/usc2/r.jpg'},
+        ),
+      ),
+      'unavailable',
+    );
+
+    // The monthly cap for the whole app stops everyone.
+    await db
+      .collection('scanLimits')
+      .doc('_month_2026-12')
+      .set({count: MONTHLY_LIMIT_ALL});
+    const dec = Date.UTC(2026, 11, 3, 6, 0);
+    const before = recognized;
+    assert.equal(
+      await code(
+        scanReceipt(deps(dec), 'usc3', {storagePath: 'bills/usc3/r.jpg'}),
+      ),
+      'resource-exhausted',
+    );
+    assert.equal(recognized, before);
+  },
+);
+
 console.log(`\n${passed} integration checks passed`);
 process.exit(0);
