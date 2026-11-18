@@ -11,6 +11,7 @@ import {onDocumentWritten} from 'firebase-functions/v2/firestore';
 import {HttpsError, onCall} from 'firebase-functions/v2/https';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import {runRecurring} from './recurringJob';
+import {runWeekly} from './weeklyJob';
 import {
   InvitationError,
   respondToInvitation as respondToInvitationCore,
@@ -388,6 +389,31 @@ export const runRecurringTransactions = onSchedule(
       rules: result.rules,
       created: result.created.length,
       skipped: result.skipped,
+      failed: result.failed,
+    });
+  },
+);
+
+/**
+ * Weekly summary push: every hour, for each user whose local time is Sunday 9 AM, sends the last
+ * seven days' spending once (marker document `users/{uid}/weeklyAlerts/{weekEnd}`, see
+ * weeklyJob.ts). Off unless the Remote Config flag `enable_weekly_summary` is "true".
+ */
+export const weeklySummary = onSchedule(
+  {schedule: 'every 1 hours', timeZone: 'UTC', secrets: [oneSignalApiKey]},
+  async () => {
+    if (!(await isFlagOn('enable_weekly_summary'))) {
+      return;
+    }
+    const result = await runWeekly({
+      db,
+      fetchFn: fetch,
+      apiKey: process.env.ONESIGNAL_API_KEY || undefined,
+      appId: ONESIGNAL_APP_ID,
+    });
+    logger.info('Weekly summary run finished', {
+      users: result.users,
+      created: result.created.length,
       failed: result.failed,
     });
   },
