@@ -1107,5 +1107,79 @@ await step(
   },
 );
 
+await step(
+  'weekly summary: sends once on Sunday 9 AM in the user zone, skips other hours and quiet weeks',
+  async () => {
+    const {runWeekly} = require('../lib/weeklyJob.js');
+    const sent = [];
+    const deps = nowMs => ({
+      db,
+      apiKey: 'test-key',
+      appId: 'app',
+      fetchFn: async (_url, init) => {
+        sent.push(JSON.parse(init.body));
+        return {ok: true, json: async () => ({id: `w${sent.length}`})};
+      },
+      now: () => nowMs,
+    });
+    const busy = db.collection('users').doc('uw1');
+    await busy.set({name: 'Busy', currency: 'INR'});
+    const mk = (id, type, amountMinor, dateISO, category) =>
+      busy
+        .collection('transactions')
+        .doc(id)
+        .set({type, amountMinor, dateISO, category, currency: 'INR'});
+    await mk('a', 'expense', 150000, '2026-11-17', 'Food');
+    await mk('b', 'expense', 50050, '2026-11-20', 'Fuel');
+    await mk('c', 'income', 900000, '2026-11-18', 'Salary');
+    await mk('old', 'expense', 999999, '2026-11-10', 'Food');
+    await db
+      .collection('users')
+      .doc('uw2')
+      .set({name: 'Quiet', currency: 'INR'});
+    // A user in New York: not their Sunday 9 AM at the India moment.
+    await db
+      .collection('users')
+      .doc('uw3')
+      .set({name: 'Away', currency: 'INR', timeZone: 'America/New_York'});
+
+    // Saturday in India: nothing.
+    const sat = await runWeekly(deps(Date.UTC(2026, 10, 21, 3, 30)));
+    assert.deepEqual(sat.created, []);
+
+    // Sunday 09:00 in India.
+    const sunday = Date.UTC(2026, 10, 22, 3, 30);
+    const first = await runWeekly(deps(sunday));
+    assert.ok(first.created.includes('users/uw1/weeklyAlerts/2026-11-22'));
+    assert.ok(first.created.includes('users/uw2/weeklyAlerts/2026-11-22'));
+    assert.ok(!first.created.some(p => p.startsWith('users/uw3/')));
+    assert.equal(first.failed, 0);
+    const toBusy = sent.filter(m => m.include_aliases.external_id[0] === 'uw1');
+    assert.equal(toBusy.length, 1);
+    assert.equal(toBusy[0].data.type, 'weekly_summary');
+    assert.match(toBusy[0].contents.en, /2000\.50 INR/);
+    assert.match(toBusy[0].contents.en, /Food/);
+    assert.equal(
+      sent.some(m => m.include_aliases.external_id[0] === 'uw2'),
+      false,
+    );
+    assert.equal(
+      (await busy.collection('weeklyAlerts').doc('2026-11-22').get()).get(
+        'pushed',
+      ),
+      true,
+    );
+
+    // The same moment again and overlapping runs: no second push.
+    const before = sent.length;
+    await Promise.all([1, 2, 3].map(() => runWeekly(deps(sunday))));
+    assert.equal(sent.length, before);
+
+    // Sunday 09:00 in New York is 14:00 UTC: that user gets theirs, the others do not repeat.
+    const ny = await runWeekly(deps(Date.UTC(2026, 10, 22, 14, 0)));
+    assert.deepEqual(ny.created, ['users/uw3/weeklyAlerts/2026-11-22']);
+  },
+);
+
 console.log(`\n${passed} integration checks passed`);
 process.exit(0);
