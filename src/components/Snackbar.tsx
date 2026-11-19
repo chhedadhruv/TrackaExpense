@@ -150,15 +150,23 @@ export const SnackbarHost = ({inModal = false}: SnackbarHostProps) => {
 
   return (
     <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-      {current && visible ? (
-        <Animated.View
-          key={current.id}
-          entering={FadeInDown.duration(200)}
-          exiting={FadeOutDown.duration(150)}
-          style={[styles.host, positionStyle, liftStyle]}>
-          <SnackbarView item={current} />
-        </Animated.View>
-      ) : null}
+      {/* Two views on purpose: the outer one carries the keyboard lift (a transform), the inner
+          one the enter and exit animations. Both on one view makes Reanimated warn that the
+          transform may be overwritten by the layout animation. The outer view stays mounted, so
+          the exit animation of the inner one still runs. */}
+      <Animated.View
+        pointerEvents="box-none"
+        style={[styles.host, positionStyle, liftStyle]}>
+        {current && visible ? (
+          <Animated.View
+            key={current.id}
+            entering={FadeInDown.duration(200)}
+            exiting={FadeOutDown.duration(150)}
+            style={styles.entry}>
+            <SnackbarView item={current} />
+          </Animated.View>
+        ) : null}
+      </Animated.View>
     </View>
   );
 };
@@ -177,6 +185,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: MARGIN,
     right: MARGIN,
+    alignItems: 'center',
+  },
+  // The animated wrapper must fill the host's width, as the host used to be the bar's parent.
+  entry: {
+    width: '100%',
     alignItems: 'center',
   },
 });
