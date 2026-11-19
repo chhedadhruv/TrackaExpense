@@ -5,10 +5,11 @@
   
   ### Your Smart Personal Finance Companion
   
-  [![React Native](https://img.shields.io/badge/React%20Native-0.76.5-61DAFB?style=for-the-badge&logo=react&logoColor=white)](https://reactnative.dev/)
-  [![Firebase](https://img.shields.io/badge/Firebase-21.6.1-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
+  [![React Native](https://img.shields.io/badge/React%20Native-0.88.1-61DAFB?style=for-the-badge&logo=react&logoColor=white)](https://reactnative.dev/)
+  [![Expo](https://img.shields.io/badge/Expo%20SDK-58-000020?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
+  [![Firebase](https://img.shields.io/badge/RN%20Firebase-27.1.0-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://rnfirebase.io/)
   [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
-  [![Version](https://img.shields.io/badge/Version-1.2.0-blue.svg?style=for-the-badge)](package.json)
+  [![Version](https://img.shields.io/badge/Version-1.5.1-blue.svg?style=for-the-badge)](package.json)
   
   **A comprehensive, ad-free personal finance app built with React Native and Firebase**
   
