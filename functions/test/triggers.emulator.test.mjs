@@ -1466,6 +1466,32 @@ await step(
 );
 
 await step(
+  'receipt scan: the optional currency selects zero-decimal reading, absent keeps two decimals',
+  async () => {
+    const {scanReceipt} = require('../lib/receipt.js');
+    // December, so the monthly allowance counted by the next step (November) is untouched.
+    const now = Date.UTC(2026, 11, 5, 6, 0);
+    const deps = {
+      db,
+      statImage: async () => ({size: 1000, contentType: 'image/jpeg'}),
+      readImage: async () => Buffer.from('x'),
+      recognize: async () =>
+        'ファミリーマート\n2026年11月14日 20:41\n小計 ¥270\n消費税 8% ¥21\n合計 ¥291\nお釣り ¥709',
+      now: () => now,
+    };
+    const path = 'bills/usc-jpy/r.jpg';
+    const jpy = await scanReceipt(deps, 'usc-jpy', {
+      storagePath: path,
+      currency: 'JPY',
+    });
+    assert.equal(jpy.amounts[0], '291');
+    assert.equal(jpy.date, '2026-11-14');
+    const old = await scanReceipt(deps, 'usc-jpy', {storagePath: path});
+    assert.equal(old.amounts[0], '291.00');
+  },
+);
+
+await step(
   'receipt scan: reads the caller own image once per allowance, and enforces both limits',
   async () => {
     const {
