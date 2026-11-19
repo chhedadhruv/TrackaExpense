@@ -8,6 +8,9 @@
     "icon": "./assets/icon.png",
     "scheme": ["trackaexpense", "com.dhruvchheda.trackaexpense"],
     "userInterfaceStyle": "automatic",
+    "experiments": {
+      "typedRoutes": true
+    },
     "ios": {
       "bundleIdentifier": "com.dhruvchheda.trackaexpense",
       "buildNumber": "26111309",
@@ -45,6 +48,7 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon-foreground.png",
         "backgroundImage": "./assets/icon-background.png",
+        "monochromeImage": "./assets/icon-monochrome.png",
         "backgroundColor": "#2b3787"
       },
       "permissions": [
@@ -114,6 +118,12 @@
         {
           "cameraPermission": "This app uses the camera to capture receipt photos for your transactions.",
           "photosPermission": "This app needs access to your photo library to let you choose receipt images."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Use Face ID to unlock TrackaExpense."
         }
       ],
       [
