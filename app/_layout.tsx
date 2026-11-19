@@ -23,6 +23,7 @@ import {getConfig, initRemoteConfig} from '../src/services/RemoteConfigService';
 import {isVersionBelow} from '../src/utils/version';
 import AppProviders from '../src/navigation/AppProviders';
 import AuthGate from '../src/navigation/AuthGate';
+import {AppLockProvider} from '../src/lock/AppLockProvider';
 import {PersistQueryClientProvider} from '@tanstack/react-query-persist-client';
 import {persistOptions, queryClient} from '../src/data/queryClient';
 
@@ -106,7 +107,9 @@ const Shell = ({forceUpdateMessage}: {forceUpdateMessage: string | null}) => {
             client={queryClient}
             persistOptions={persistOptions}>
             <AppProviders>
-              <AuthGate />
+              <AppLockProvider>
+                <AuthGate />
+              </AppLockProvider>
             </AppProviders>
           </PersistQueryClientProvider>
         )}

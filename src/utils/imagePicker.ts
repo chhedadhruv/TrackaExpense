@@ -1,5 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import {Alert, Linking} from 'react-native';
+import {suppressNextLock} from '../lock/suppress';
 
 const OPTIONS: ImagePicker.ImagePickerOptions = {
   mediaTypes: ['images'],
@@ -12,6 +13,8 @@ const firstUri = (result: ImagePicker.ImagePickerResult): string | null =>
 
 /** Opens the camera and returns the photo URI, or null if cancelled or denied. */
 export const pickImageFromCamera = async (): Promise<string | null> => {
+  // The permission prompt and the camera both leave the app; coming back must not lock it.
+  suppressNextLock();
   const permission = await ImagePicker.requestCameraPermissionsAsync();
   if (!permission.granted) {
     Alert.alert(
@@ -24,9 +27,12 @@ export const pickImageFromCamera = async (): Promise<string | null> => {
     );
     return null;
   }
+  suppressNextLock();
   return firstUri(await ImagePicker.launchCameraAsync(OPTIONS));
 };
 
 /** Opens the photo library and returns the chosen image URI, or null if cancelled. */
-export const pickImageFromLibrary = async (): Promise<string | null> =>
-  firstUri(await ImagePicker.launchImageLibraryAsync(OPTIONS));
+export const pickImageFromLibrary = async (): Promise<string | null> => {
+  suppressNextLock();
+  return firstUri(await ImagePicker.launchImageLibraryAsync(OPTIONS));
+};
