@@ -5,14 +5,20 @@
  */
 
 export interface ReceiptGuess {
-  /** Up to three candidate totals, best first, as exact decimal text ("1234.50"). */
+  /**
+   * Up to three candidate totals, best first, as exact decimal text: "1234.50", or "1234" for a
+   * zero-decimal currency (JPY, KRW).
+   */
   amounts: string[];
   /** YYYY-MM-DD, or null when no plausible date was found. */
   date: string | null;
   merchant: string | null;
 }
 
-const MAX_AMOUNT_MINOR = 1_000_000_000; // 10,000,000.00
+/** Largest total proposed, in whole units of the currency (10,000,000). */
+const MAX_AMOUNT_MAJOR = 10_000_000;
+/** Decimal places of the usual minor unit; zero-decimal currencies (JPY, KRW) pass 0. */
+const DEFAULT_EXPONENT = 2;
 const MAX_CANDIDATES = 3;
 const FIVE_YEARS_DAYS = 5 * 366;
 const DAY_MS = 86_400_000;
@@ -23,37 +29,98 @@ const PLAIN_TOTAL = /\btotal\b/i;
 const NOT_A_TOTAL =
   /\b(sub\s*-?\s*total|tax|gst|cgst|sgst|igst|vat|discount|change|round(ing)?\s*off|saving|mrp|rate|price|qty|quantity|items?|points?|gstin|phone|tel|mobile|invoice|bill\s*no|order\s*(no|id)|ref|card\s*no)\b/i;
 const PAID = /\b(paid|tendered|cash|card|upi|visa|master|net)\b/i;
-const CURRENCY_MARK = /(₹|\bRs\b\.?|\bINR\b|\$|€|£|\bUSD\b|\bEUR\b)/i;
+const CURRENCY_MARK =
+  /(₹|\bRs\b\.?|\bINR\b|\$|€|£|\bUSD\b|\bEUR\b|¥|￥|₩|円|원|\bJPY\b|\bKRW\b)/i;
 
-const NUMBER = /\d[\d,]*(?:\.\d{1,2})?/g;
+// Japanese and Korean receipts (the zero-decimal currencies the app supports). The words have no
+// \b boundaries because those scripts are not word characters. Tax words are listed as whole
+// words only (消費税, not 税) so a total such as "合計(税込)" is not read as a tax line.
+const STRONG_TOTAL_CJK =
+  /(総合計|合計金額|税込合計|ご請求額|お会計|お支払い?金額|합계금액|총\s*금액|총액|결제\s*금액|받을\s*금액)/;
+const PLAIN_TOTAL_CJK = /(合計|합계)/;
+const NOT_A_TOTAL_CJK =
+  /(小計|소계|消費税|内税|外税|부가세|세금|공급가액|お釣り?|おつり|釣銭|거스름돈|割引|할인|ポイント|포인트)/;
+const PAID_CJK =
+  /(お預り|お預かり|現金|クレジット|お支払|현금|카드|받은\s*금액)/;
+
+const isStrongTotal = (line: string): boolean =>
+  STRONG_TOTAL.test(line) || STRONG_TOTAL_CJK.test(line);
+const isPlainTotal = (line: string): boolean =>
+  PLAIN_TOTAL.test(line) || PLAIN_TOTAL_CJK.test(line);
+const isNotATotal = (line: string): boolean =>
+  NOT_A_TOTAL.test(line) || NOT_A_TOTAL_CJK.test(line);
+const isPaidLine = (line: string): boolean =>
+  PAID.test(line) || PAID_CJK.test(line);
+
+/**
+ * A number in a line. Two decimals (or `exponent`) at most; a zero-decimal currency reads any
+ * fraction so it can be rejected (see toMinor) instead of being cut into two separate numbers.
+ */
+const numberPattern = (exponent: number): RegExp =>
+  exponent === 0
+    ? /\d[\d,]*(?:\.\d+)?/g
+    : new RegExp(`\\d[\\d,]*(?:\\.\\d{1,${exponent}})?`, 'g');
 const EUROPEAN = /\b\d{1,3}(?:\.\d{3})+,\d{2}\b/g;
 
-/** "1,23,456.50" -> 12345650 minor units; null when it is not a usable amount. */
-const toMinor = (raw: string): number | null => {
+/**
+ * "1,23,456.50" -> 12345650 minor units (exponent 2); null when it is not a usable amount. For a
+ * zero-decimal currency ("1,234" -> 1234) a figure with a real fraction ("8.5", a tax rate or a
+ * date part) is not an amount; "1234.00" is accepted as 1234.
+ */
+const toMinor = (raw: string, exponent: number): number | null => {
   const text = raw.replace(/,/g, '');
   const [whole, fraction = ''] = text.split('.');
-  if (whole === '' || !/^\d+$/.test(whole) || !/^\d{0,2}$/.test(fraction)) {
+  if (whole === '' || !/^\d+$/.test(whole)) {
     return null;
   }
-  const minor = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
-  return Number.isSafeInteger(minor) && minor > 0 && minor <= MAX_AMOUNT_MINOR
+  let minor: number;
+  if (exponent === 0) {
+    if (!/^0*$/.test(fraction)) {
+      return null;
+    }
+    minor = Number(whole);
+  } else {
+    if (!new RegExp(`^\\d{0,${exponent}}$`).test(fraction)) {
+      return null;
+    }
+    minor =
+      Number(whole) * 10 ** exponent + Number(fraction.padEnd(exponent, '0'));
+  }
+  return Number.isSafeInteger(minor) &&
+    minor > 0 &&
+    minor <= MAX_AMOUNT_MAJOR * 10 ** exponent
     ? minor
     : null;
 };
 
-const minorText = (minor: number): string =>
-  `${Math.floor(minor / 100)}.${String(minor % 100).padStart(2, '0')}`;
+/** Exact decimal text: 119700 -> "1197.00" (exponent 2), 1197 -> "1197" (exponent 0). */
+const minorText = (minor: number, exponent: number): string => {
+  if (exponent === 0) {
+    return String(minor);
+  }
+  const scale = 10 ** exponent;
+  return `${Math.floor(minor / scale)}.${String(minor % scale).padStart(
+    exponent,
+    '0',
+  )}`;
+};
 
-const numbersIn = (line: string): {minor: number; hasDecimal: boolean}[] => {
+const numbersIn = (
+  line: string,
+  exponent: number,
+): {minor: number; hasDecimal: boolean}[] => {
   // "1.234,50" (European grouping) becomes "1234.50" before the general scan.
-  const normalised = line.replace(EUROPEAN, m =>
-    m.replace(/\./g, '').replace(',', '.'),
-  );
+  const normalised =
+    exponent === 2
+      ? line.replace(EUROPEAN, m => m.replace(/\./g, '').replace(',', '.'))
+      : line;
   const out: {minor: number; hasDecimal: boolean}[] = [];
-  for (const match of normalised.matchAll(NUMBER)) {
-    const minor = toMinor(match[0]);
+  for (const match of normalised.matchAll(numberPattern(exponent))) {
+    const minor = toMinor(match[0], exponent);
     if (minor !== null) {
-      out.push({minor, hasDecimal: match[0].includes('.')});
+      // A decimal point makes a figure believable on its own (prices have decimals). With no
+      // decimals in the currency, "10.0" (a tax rate) is no more an amount than a bare "10".
+      out.push({minor, hasDecimal: exponent > 0 && match[0].includes('.')});
     }
   }
   return out;
@@ -64,20 +131,27 @@ interface Candidate {
   score: number;
 }
 
-/** Ranks the amounts on the receipt: totals first, then paid lines, then the largest figure. */
-export const guessAmounts = (text: string): string[] => {
+/**
+ * Ranks the amounts on the receipt: totals first, then paid lines, then the largest figure.
+ * `exponent` is the number of decimal places of the person's currency (0 for JPY and KRW); the
+ * amounts come back as exact text with that many decimals.
+ */
+export const guessAmounts = (
+  text: string,
+  exponent: number = DEFAULT_EXPONENT,
+): string[] => {
   const lines = text.split(/\r?\n/);
   const found: Candidate[] = [];
   let carry = 0;
   lines.forEach(line => {
-    const nums = numbersIn(line);
-    const blocked = NOT_A_TOTAL.test(line) && !STRONG_TOTAL.test(line);
+    const nums = numbersIn(line, exponent);
+    const blocked = isNotATotal(line) && !isStrongTotal(line);
     let keyword = 0;
-    if (STRONG_TOTAL.test(line)) {
+    if (isStrongTotal(line)) {
       keyword = 100;
-    } else if (PLAIN_TOTAL.test(line) && !blocked) {
+    } else if (isPlainTotal(line) && !blocked) {
       keyword = 60;
-    } else if (PAID.test(line) && !blocked) {
+    } else if (isPaidLine(line) && !blocked) {
       keyword = 20;
     }
     if (nums.length === 0) {
@@ -108,7 +182,7 @@ export const guessAmounts = (text: string): string[] => {
     .filter(([, score]) => score > -50)
     .sort((a, b) => b[1] - a[1] || b[0] - a[0])
     .slice(0, MAX_CANDIDATES)
-    .map(([minor]) => minorText(minor));
+    .map(([minor]) => minorText(minor, exponent));
 };
 
 const MONTHS: Record<string, number> = {
@@ -169,6 +243,15 @@ export const guessDate = (text: string, now: Date): string | null => {
   const matches: Match[] = [];
 
   for (const m of text.matchAll(/\b(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\b/g)) {
+    const d = validDate(Number(m[1]), Number(m[2]), Number(m[3]), todayMs);
+    if (d) {
+      matches.push({index: m.index ?? 0, date: d});
+    }
+  }
+  // Japanese and Korean: 2026年11月14日, 2026년 11월 14일.
+  for (const m of text.matchAll(
+    /(\d{4})\s*[年년]\s*(\d{1,2})\s*[月월]\s*(\d{1,2})\s*[日일]/g,
+  )) {
     const d = validDate(Number(m[1]), Number(m[2]), Number(m[3]), todayMs);
     if (d) {
       matches.push({index: m.index ?? 0, date: d});
@@ -237,8 +320,9 @@ export const guessMerchant = (text: string): string | null => {
 export const parseReceiptText = (
   text: string,
   now: Date = new Date(),
+  exponent: number = DEFAULT_EXPONENT,
 ): ReceiptGuess => ({
-  amounts: guessAmounts(text),
+  amounts: guessAmounts(text, exponent),
   date: guessDate(text, now),
   merchant: guessMerchant(text),
 });
