@@ -174,8 +174,21 @@ Still open: confirm the published update on a phone (Profile shows the update id
 
 Not in this update: typed routes (changes the fingerprint, see the Expo Router section) and the app lock (below).
 
+## 1.6.0 store build (branch `release/1.6.0`, set up 2026-11-19)
+
+Native changes for the next store build go into `release/1.6.0` (see section 7 of `CLAUDE.md` for why they stay out of `main`). Plan and state:
+
+1. App lock, PR 127: retargeted to `release/1.6.0`, mergeable, conflict with `main` already resolved. Not run on a device.
+2. Typed routes, PR 134 into `release/1.6.0`: 0 type errors across 63 call sites.
+3. Android App Links for invite links: not started. Needs the SHA-256 of the Play app signing key and of the upload key (Play Console > App integrity > Play app signing), then `intentFilters` in `app.json`, `public/.well-known/assetlinks.json` in the website repo, and an Expo Router `+native-intent` redirect to the Join screen. The invite secret is in the URL fragment, so first check on a device that the router passes the fragment through.
+4. Android 13 themed (monochrome) icon: not started; needs a single-colour mark with the rupee as a transparent cut-out (`adaptiveIcon.monochromeImage`).
+5. Optional: remove `react-native-gifted-charts`, only if a release build shows startup is safe without it.
+6. Checks on a build: the app lock, a verified App Link opening the Join screen, the R8 build (Google sign-in, push tap, camera and gallery photos, settle-up), a readable native trace in Sentry, the MMKV cache file, the Play size report.
+7. Ship: `yarn version:bump`, `yarn release:android:local`, the owner uploads to Internal testing, then a staged rollout (about 20 percent held 48 hours).
+8. Review the Play Data safety answers against what changed since 1.5.1 (card details, receipt scanning through Google Cloud Vision, the stored time zone), and update the docs for the new runtime.
+
 ## App lock (PR 127, open, store build only)
 
-Optional lock (Profile > Security) with fingerprint, face or the device passcode: asked on a cold start and after 30 seconds in the background; the camera, gallery, share sheet and permission prompts do not re-lock. It adds `expo-local-authentication`, a native module, so the Android fingerprint becomes `486bd9de...` and it can only ship in a store build (1.6.0). Do not merge PR 127 before that build is planned: once it is on `main`, an over-the-air publish from `main` is stopped by the fingerprint check.
+Optional lock (Profile > Security) with fingerprint, face or the device passcode: asked on a cold start and after 30 seconds in the background; the camera, gallery, share sheet and permission prompts do not re-lock. It adds `expo-local-authentication`, a native module, so the Android fingerprint becomes `486bd9de...` and it can only ship in a store build (1.6.0). It targets `release/1.6.0` and must not go into `main` before that build is cut: once it is on `main`, an over-the-air publish from `main` is stopped by the fingerprint check.
 
 Still open: nothing has been run on a device (the checklist is in the PR), the merged Android manifest must be checked for any new permission (the plugin adds `USE_BIOMETRIC`), iOS is unverified, no Mixpanel events were added (new event names need approval), and the privacy policy was not changed (the system handles the biometrics and the app stores nothing from them; a one-line note is optional).
