@@ -404,5 +404,87 @@ await step(
   },
 );
 
+await step(
+  'a card repayment keeps the borrower balance, and deleting it gives nothing back',
+  async () => {
+    await db.doc(`users/${alice.uid}/cards/card1`).set({
+      name: 'HDFC',
+      statementDay: 15,
+      currency: 'INR',
+    });
+    const aliceBefore = await balanceOf(alice.uid);
+    const bobBefore = await balanceOf(bob.uid);
+    const {status, body} = await record(alice, {
+      requestId: 'req-card-aaaa-1',
+      amount: '40',
+      cardId: 'card1',
+    });
+    assert.equal(status, 200, JSON.stringify(body));
+    near(await balanceOf(alice.uid), aliceBefore);
+    near(await balanceOf(bob.uid), bobBefore + 40);
+    const aliceTx = (
+      await db.doc(`users/${alice.uid}/transactions/req-card-aaaa-1`).get()
+    ).data();
+    assert.equal(aliceTx.cardId, 'card1');
+    const bobTx = (
+      await db.doc(`users/${bob.uid}/transactions/req-card-aaaa-1`).get()
+    ).data();
+    assert.equal(bobTx.cardId, undefined);
+    assert.equal(
+      (await db.doc('groups/g1/splits/req-card-aaaa-1').get()).get(
+        'payerCardId',
+      ),
+      'card1',
+    );
+
+    const gone = await call(
+      'deleteSettlement',
+      {groupId: 'g1', splitId: 'req-card-aaaa-1'},
+      alice.idToken,
+    );
+    assert.equal(gone.status, 200, JSON.stringify(gone.body));
+    near(await balanceOf(alice.uid), aliceBefore);
+    near(await balanceOf(bob.uid), bobBefore);
+  },
+);
+
+await step(
+  'a card is ignored for the receiver or without a transaction, and an unknown card is refused',
+  async () => {
+    const bobBefore = await balanceOf(bob.uid);
+    const aliceBefore = await balanceOf(alice.uid);
+    // The receiver chose a card: it does not apply, balances move as usual.
+    await db.doc(`users/${bob.uid}/cards/bobcard`).set({
+      name: 'Axis',
+      statementDay: 5,
+      currency: 'INR',
+    });
+    const asReceiver = await record(bob, {
+      requestId: 'req-card-bbbb-2',
+      amount: '10',
+      cardId: 'bobcard',
+    });
+    assert.equal(asReceiver.status, 200, JSON.stringify(asReceiver.body));
+    near(await balanceOf(alice.uid), aliceBefore - 10);
+    near(await balanceOf(bob.uid), bobBefore + 10);
+    // Not added to transactions: the card is ignored and the balance drops as usual.
+    const noTx = await record(alice, {
+      requestId: 'req-card-cccc-3',
+      amount: '5',
+      cardId: 'card1',
+      includeInTransactions: false,
+    });
+    assert.equal(noTx.status, 200, JSON.stringify(noTx.body));
+    near(await balanceOf(alice.uid), aliceBefore - 15);
+    // A card that does not exist is an error.
+    const unknown = await record(alice, {
+      requestId: 'req-card-dddd-4',
+      amount: '5',
+      cardId: 'nope',
+    });
+    assert.equal(unknown.status, 400);
+  },
+);
+
 console.log(`\n${passed} settlement checks passed`);
 process.exit(0);

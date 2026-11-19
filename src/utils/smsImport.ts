@@ -10,7 +10,32 @@ export interface FormPrefill {
   amount?: string;
   date?: string;
   description?: string;
+  /** A card the message was matched to; Add Expense uses it only if the card still exists. */
+  cardId?: string;
 }
+
+/**
+ * The card a bank message belongs to: only for a card payment (a debit by card) whose last digits
+ * match exactly one of the person's active cards. No digits, no match or more than one match
+ * returns null, so a card is never guessed.
+ */
+export const matchCard = (
+  parsed: ParsedSms,
+  cards: readonly {id: string; last4: string | null; archived: boolean}[],
+): string | null => {
+  if (
+    parsed.method !== 'card' ||
+    parsed.direction !== 'debit' ||
+    parsed.account === null
+  ) {
+    return null;
+  }
+  const digits = parsed.account;
+  const matches = cards.filter(
+    c => !c.archived && c.last4 !== null && c.last4.endsWith(digits),
+  );
+  return matches.length === 1 ? matches[0].id : null;
+};
 
 const MAX_TITLE = 100;
 const MAX_DESCRIPTION = 200;
@@ -81,6 +106,10 @@ export const prefillFromParams = (
   const description = first(params.description)?.trim();
   if (description) {
     out.description = description.slice(0, MAX_DESCRIPTION);
+  }
+  const cardId = first(params.cardId)?.trim();
+  if (cardId && /^[A-Za-z0-9_-]{1,64}$/.test(cardId)) {
+    out.cardId = cardId;
   }
   return out;
 };

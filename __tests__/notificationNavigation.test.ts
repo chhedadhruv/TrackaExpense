@@ -87,6 +87,13 @@ describe('notificationPath', () => {
     }
   });
 
+  it('opens the card bill for a card reminder', () => {
+    expect(notificationPath({type: 'card_due', cardId: 'c 1'})).toBe(
+      '/profile/card-bill?id=c%201',
+    );
+    expect(notificationPath({type: 'card_due'})).toBe('/profile/cards');
+  });
+
   it('opens Home for an unknown type', () => {
     expect(notificationPath({type: 'something_new'})).toBe('/home');
   });

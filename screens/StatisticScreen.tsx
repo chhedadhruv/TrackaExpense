@@ -27,7 +27,9 @@ import CategoryDonut, {
   sliceColor,
 } from '../src/components/statistics/CategoryDonut';
 import Heatmap from '../src/components/statistics/Heatmap';
+import {useCards} from '../src/hooks/useCards';
 import {
+  byPaymentMethod,
   categoryBreakdown,
   dailyHeatmap,
   dayKeyOfDate,
@@ -91,6 +93,14 @@ const StatisticScreen = () => {
       ),
     [data],
   );
+  const cardList = useCards().data;
+  const cardNames = useMemo(() => {
+    const names: Record<string, string> = {};
+    for (const c of cardList ?? []) {
+      names[c.id] = c.last4 ? `${c.name} ${c.last4}` : c.name;
+    }
+    return names;
+  }, [cardList]);
   const [today, setToday] = useState(() => dayKeyOfDate(new Date()));
   const configured = getConfig().stats_default_time_range;
   const [range, setRange] = useState<StatsRangeKey>(
@@ -142,10 +152,11 @@ const StatisticScreen = () => {
       trend,
       breakdown: categoryBreakdown(inside, kind, code),
       merchants: topMerchants(inside, kind, code),
+      payments: byPaymentMethod(inside, kind, code, cardNames),
       heatmap: dailyHeatmap(inside, kind, code, bounds, today),
       largest: largestTransactions(inside, kind, code),
     };
-  }, [allTransactions, bounds, code, kind, today]);
+  }, [allTransactions, bounds, code, kind, today, cardNames]);
 
   const money = (minor: number) => formatAmount(toMajorNumber(minor, code));
 
@@ -157,7 +168,10 @@ const StatisticScreen = () => {
     return <ErrorState title="Could not load statistics" onRetry={retry} />;
   }
 
-  const {summary, breakdown, merchants, heatmap, largest, trend} = stats;
+  const {summary, breakdown, merchants, heatmap, largest, trend, payments} =
+    stats;
+  // Only worth a section when more than one way of paying was used.
+  const showPayments = getConfig().enable_cards && payments.length > 1;
   const kindTotal =
     kind === 'income' ? summary.incomeMinor : summary.expenseMinor;
   const hasAny = summary.count > 0;
@@ -508,6 +522,39 @@ const StatisticScreen = () => {
                         </View>
                         <Text className="font-sans-bold text-[15px] text-text-strong">
                           {money(m.minor)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* Payment method */}
+                {showPayments && (
+                  <View className="mx-5 mb-4 rounded-[20px] border border-card-border bg-surface p-5">
+                    <Text className="font-sans-bold text-lg font-bold text-text-strong">
+                      By payment method
+                    </Text>
+                    <Text className="mb-2 mt-0.5 font-sans text-[13px] text-text-secondary">
+                      Cash and UPI against each card
+                    </Text>
+                    {payments.map((p, index) => (
+                      <View
+                        key={p.key}
+                        className={`flex-row items-center py-3 ${
+                          index > 0 ? 'border-t border-divider' : ''
+                        }`}>
+                        <View className="flex-1">
+                          <Text
+                            className="font-sans-bold text-[15px] text-text-strong"
+                            numberOfLines={1}>
+                            {p.name}
+                          </Text>
+                          <Text className="font-sans text-xs text-text-secondary">
+                            {p.count} transaction{p.count === 1 ? '' : 's'}
+                          </Text>
+                        </View>
+                        <Text className="font-sans-bold text-[15px] text-text-strong">
+                          {money(p.minor)}
                         </Text>
                       </View>
                     ))}
