@@ -1,7 +1,36 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {ReceiptScanError, checkPath} from './receipt';
+import {ReceiptScanError, checkPath, exponentOf} from './receipt';
 import {recognizeText} from './vision';
+
+describe('exponentOf', () => {
+  it('is 0 for the zero-decimal currencies the app supports, any letter case', () => {
+    assert.equal(exponentOf({currency: 'JPY'}), 0);
+    assert.equal(exponentOf({currency: 'KRW'}), 0);
+    assert.equal(exponentOf({currency: 'jpy'}), 0);
+  });
+
+  it('is 2 for other currencies', () => {
+    assert.equal(exponentOf({currency: 'INR'}), 2);
+    assert.equal(exponentOf({currency: 'USD'}), 2);
+  });
+
+  it('is 2 when the field is missing or malformed, as before the field existed', () => {
+    for (const input of [
+      undefined,
+      null,
+      {},
+      {currency: 5},
+      {currency: ''},
+      {currency: 'JP'},
+      {currency: 'JPYX'},
+      {currency: 'J1Y'},
+      'JPY',
+    ]) {
+      assert.equal(exponentOf(input), 2);
+    }
+  });
+});
 
 describe('checkPath', () => {
   it('accepts the caller own file one level down', () => {

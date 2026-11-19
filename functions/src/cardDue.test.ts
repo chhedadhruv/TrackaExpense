@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {
   alertId,
+  cardRemindersAllowed,
   dueDateFor,
   owedMinor,
   parseCard,
@@ -20,6 +21,17 @@ const card = (over: Partial<Card> = {}): Card => ({
   currency: 'INR',
   archived: false,
   ...over,
+});
+
+describe('card reminder switch', () => {
+  it('is off only for an explicit false', () => {
+    assert.equal(cardRemindersAllowed(false), false);
+    assert.equal(cardRemindersAllowed(true), true);
+    assert.equal(cardRemindersAllowed(undefined), true);
+    assert.equal(cardRemindersAllowed(null), true);
+    assert.equal(cardRemindersAllowed('false'), true);
+    assert.equal(cardRemindersAllowed(0), true);
+  });
 });
 
 describe('card periods (mirror of the app)', () => {
