@@ -21,6 +21,7 @@ const form: RecurringForm = {
   amountText: '15000.50',
   currency: 'INR',
   enabled: true,
+  cardId: null,
 };
 
 const existing: RecurringDocument = {
@@ -38,6 +39,7 @@ const existing: RecurringDocument = {
   timeZone: 'Asia/Kolkata',
   enabled: true,
   finished: false,
+  cardId: null,
 };
 
 describe('occurrences', () => {
@@ -119,8 +121,24 @@ describe('buildRecurringWrite', () => {
         nextDueDate: '2026-12-31',
         timeZone: 'Asia/Kolkata',
         enabled: true,
+        cardId: null,
       },
     });
+  });
+
+  it('keeps a card on an expense rule and drops it from an income rule', () => {
+    const expense = buildRecurringWrite(
+      {...form, cardId: 'c1'},
+      'Asia/Kolkata',
+      '2026-11-17',
+    );
+    expect(expense.ok && expense.data.cardId).toBe('c1');
+    const income = buildRecurringWrite(
+      {...form, type: 'income', cardId: 'c1'},
+      'Asia/Kolkata',
+      '2026-11-17',
+    );
+    expect(income.ok && income.data.cardId).toBeNull();
   });
 
   it('never starts in the past: a past start date moves to the first occurrence from today', () => {

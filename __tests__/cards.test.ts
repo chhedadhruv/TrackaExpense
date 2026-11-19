@@ -259,3 +259,142 @@ describe('statistics and a paid card bill', () => {
     expect(kept).toHaveLength(1);
   });
 });
+
+describe('payment method views', () => {
+  const {byPaymentMethod} = require('../src/utils/statistics');
+  const {
+    filterTransactions,
+    CASH_FILTER,
+  } = require('../src/utils/transactionFilter');
+  const ts = (iso: string) => ({toDate: () => new Date(iso)});
+  const txs = [
+    {
+      type: 'expense',
+      amountMinor: 1000,
+      currency: 'INR',
+      date: '2026-11-02',
+      cardId: 'c1',
+    },
+    {
+      type: 'expense',
+      amountMinor: 500,
+      currency: 'INR',
+      date: '2026-11-03',
+      cardId: 'c1',
+    },
+    {type: 'expense', amountMinor: 700, currency: 'INR', date: '2026-11-04'},
+    {type: 'income', amountMinor: 9999, currency: 'INR', date: '2026-11-04'},
+  ];
+
+  it('splits spending by card and cash, adding up to the total', () => {
+    const rows = byPaymentMethod(txs, 'expense', 'INR', {c1: 'HDFC'});
+    expect(rows.map((r: {name: string}) => r.name)).toEqual([
+      'HDFC',
+      'Cash / UPI',
+    ]);
+    expect(rows.reduce((s: number, r: {minor: number}) => s + r.minor, 0)).toBe(
+      2200,
+    );
+  });
+
+  it('filters by card and by cash only', () => {
+    const base = {
+      period: 'all',
+      customStart: null,
+      customEnd: null,
+      query: '',
+      tag: null,
+    };
+    const list = txs.map((t, i) => ({
+      ...t,
+      title: `t${i}`,
+      amount: '1',
+      createdAt: ts('2026-11-02T00:00:00Z'),
+    }));
+    expect(filterTransactions(list, {...base, card: 'c1'})).toHaveLength(2);
+    expect(filterTransactions(list, {...base, card: CASH_FILTER})).toHaveLength(
+      2,
+    );
+    expect(filterTransactions(list, {...base, card: null})).toHaveLength(4);
+  });
+});
+
+describe('bills still to pay', () => {
+  const {unpaidBills} = require('../src/utils/cards');
+  const cards = [
+    {
+      id: 'a',
+      name: 'A',
+      last4: null,
+      statementDay: 15,
+      dueDay: 3,
+      currency: 'INR',
+      archived: false,
+    },
+    {
+      id: 'b',
+      name: 'B',
+      last4: null,
+      statementDay: 15,
+      dueDay: 25,
+      currency: 'INR',
+      archived: false,
+    },
+    {
+      id: 'z',
+      name: 'Z',
+      last4: null,
+      statementDay: 15,
+      dueDay: 3,
+      currency: 'INR',
+      archived: true,
+    },
+  ];
+  const txs = [
+    {
+      type: 'expense',
+      cardId: 'a',
+      amountMinor: 1000,
+      currency: 'INR',
+      date: '2026-11-02',
+    },
+    {
+      type: 'expense',
+      cardId: 'b',
+      amountMinor: 2000,
+      currency: 'INR',
+      date: '2026-11-03',
+    },
+    {
+      type: 'expense',
+      cardId: 'z',
+      amountMinor: 3000,
+      currency: 'INR',
+      date: '2026-11-03',
+    },
+  ];
+
+  it('lists made, unpaid bills soonest due first, skipping archived cards', () => {
+    const bills = unpaidBills(cards, new Set(), txs, '2026-11-20');
+    expect(bills.map((b: {card: {id: string}}) => b.card.id)).toEqual([
+      'b',
+      'a',
+    ]);
+    expect(bills[0].dueDate).toBe('2026-11-25');
+    expect(bills[1].owedMinor).toBe(1000);
+  });
+
+  it('leaves out a paid bill and an empty period, and counts a statement made today', () => {
+    expect(
+      unpaidBills(cards, new Set(['a_2026-11-15']), txs, '2026-11-20').map(
+        (b: {card: {id: string}}) => b.card.id,
+      ),
+    ).toEqual(['b']);
+    expect(unpaidBills(cards, new Set(), txs, '2026-12-20')).toEqual([]);
+    expect(
+      unpaidBills(cards, new Set(), txs, '2026-11-15').map(
+        (b: {card: {id: string}}) => b.card.id,
+      ),
+    ).toEqual(['b', 'a']);
+  });
+});

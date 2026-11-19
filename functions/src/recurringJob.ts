@@ -95,7 +95,9 @@ const processRule = async (
       });
       created.push(refs[i].id);
     });
-    if (created.length > 0) {
+    // A card expense does not touch the balance (it drops when the card bill is paid), the same
+    // rule as the app's balanceEffect in src/utils/amounts.ts.
+    if (created.length > 0 && rule.cardId === null) {
       // Same effect as Add Expense and Add Income: expense takes away, income adds. The total is
       // summed in integer minor units first, so there is no float noise from repeated addition.
       const total = toMajorNumber(

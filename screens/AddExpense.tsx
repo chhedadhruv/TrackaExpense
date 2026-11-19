@@ -101,6 +101,24 @@ const AddExpense = () => {
   const cards = useCards().data;
   const [cardId, setCardId] = useState<string | null>(null);
   const pickableCards = (cards ?? []).filter(c => !c.archived);
+  // A bank message matched to a card pre-selects it, once, when the cards have loaded. The
+  // person can still change it, and a card that no longer exists is ignored.
+  const prefillCardId = prefillFromParams(params).cardId;
+  const prefillApplied = useRef(false);
+  useEffect(() => {
+    if (
+      prefillApplied.current ||
+      !cardsEnabled ||
+      !prefillCardId ||
+      cards === undefined
+    ) {
+      return;
+    }
+    prefillApplied.current = true;
+    if (cards.some(c => c.id === prefillCardId && !c.archived)) {
+      setCardId(prefillCardId);
+    }
+  }, [cards, cardsEnabled, prefillCardId]);
 
   const [uploading, setUploading] = useState(false);
   const [transferred, setTransferred] = useState(0);

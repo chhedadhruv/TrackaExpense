@@ -28,11 +28,16 @@ import {ActivityIndicator} from 'react-native';
 import Card from '../../src/components/Card';
 import TickBox from '../../src/components/TickBox';
 import Toggle from '../../src/components/Toggle';
+import CardField from '../../src/components/form/CardField';
+import {useCards} from '../../src/hooks/useCards';
+import {cardIdOf} from '../../src/utils/cards';
+import {getConfig} from '../../src/services/RemoteConfigService';
 import {
   Timestamp,
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -179,6 +184,44 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
     useState<RecurringFrequency>('monthly');
   const [includeInTransactions, setIncludeInTransactions] = useState(true);
   const isEditMode = !!split;
+
+  // "Paid with": a card for the payer's own entry in their transactions. It starts on Cash / UPI,
+  // and a card purchase does not change the balance until the card bill is paid. Other members'
+  // shares and balances are not affected.
+  const cardsEnabled = getConfig().enable_cards;
+  const cards = useCards().data;
+  const pickableCards = (cards ?? []).filter(
+    c => !c.archived || c.id === cardId,
+  );
+  const [cardId, setCardId] = useState<string | null>(null);
+
+  // Editing: show the card the payer's own entry already has.
+  useEffect(() => {
+    if (!isEditMode || !split || !cardsEnabled) {
+      return;
+    }
+    const uid = getAuth().currentUser?.uid;
+    if (!uid) {
+      return;
+    }
+    let active = true;
+    getDocs(
+      query(
+        collection(getFirestore(), 'users', uid, 'transactions'),
+        where('splitId', '==', split.id),
+      ),
+    )
+      .then(snap => {
+        const existing = snap.docs[0]?.data();
+        if (active && existing) {
+          setCardId(cardIdOf(existing));
+        }
+      })
+      .catch(e => reportError(e as Error));
+    return () => {
+      active = false;
+    };
+  }, [isEditMode, split, cardsEnabled]);
 
   useEffect(() => {
     if (!group || !group.id) {
@@ -862,6 +905,8 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
         groupName: group.name,
         splitRole: 'payer',
         createdAt: serverTimestamp(),
+        // Only written for a card; an edit sets or clears it below.
+        ...(cardsEnabled && cardId !== null ? {cardId} : {}),
       };
 
       if (isEdit) {
@@ -872,10 +917,24 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
           const existing = snap.docs[0].data();
           // Exact integer math first; the old float subtraction only if an amount cannot be
           // converted to minor units.
+          // The card after this edit: the form's choice while cards are on, otherwise what the
+          // entry already had (an edit never changes a card it did not show).
+          const newCard = cardsEnabled ? cardId : cardIdOf(existing);
           const delta =
-            editBalanceDelta(existing, 'expense', txAmount, currencyCode) ??
-            parseFloat(existing.amount || '0') - amount;
-          await updateDoc(snap.docs[0].ref, txData);
+            editBalanceDelta(
+              existing,
+              'expense',
+              txAmount,
+              currencyCode,
+              newCard,
+            ) ??
+            (cardIdOf(existing) !== null || newCard !== null
+              ? 0
+              : parseFloat(existing.amount || '0') - amount);
+          await updateDoc(snap.docs[0].ref, {
+            ...txData,
+            ...(cardsEnabled ? {cardId: newCard ?? deleteField()} : {}),
+          });
           if (Math.abs(delta) > 0.001) {
             await updateDoc(userRef, {
               balance: increment(delta),
@@ -886,7 +945,11 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
           await addDoc(txCol, txData);
           await updateDoc(userRef, {
             balance: increment(
-              balanceEffect('expense', {amount: txAmount}, currencyCode),
+              balanceEffect(
+                'expense',
+                {amount: txAmount, cardId: cardsEnabled ? cardId : null},
+                currencyCode,
+              ),
             ),
           });
         }
@@ -894,7 +957,11 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
         await addDoc(txCol, txData);
         await updateDoc(userRef, {
           balance: increment(
-            balanceEffect('expense', {amount: txAmount}, currencyCode),
+            balanceEffect(
+              'expense',
+              {amount: txAmount, cardId: cardsEnabled ? cardId : null},
+              currencyCode,
+            ),
           ),
         });
       }
@@ -1265,6 +1332,21 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
                   />
                 </View>
               </View>
+
+              {cardsEnabled &&
+              includeInTransactions &&
+              pickableCards.length > 0 &&
+              paidBy?.email?.toLowerCase() ===
+                getAuth().currentUser?.email?.toLowerCase() ? (
+                <View style={styles.inputContainer}>
+                  <CardField
+                    cards={pickableCards}
+                    value={cardId}
+                    onChange={setCardId}
+                    disabled={submitting}
+                  />
+                </View>
+              ) : null}
             </View>
           </Card>
 

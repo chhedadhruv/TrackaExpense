@@ -10,7 +10,12 @@ export interface FilterableTransaction {
   amount: string | number;
   createdAt: {toDate: () => Date};
   tags?: unknown;
+  /** The credit card it was paid with; missing for cash, UPI or a bank account. */
+  cardId?: unknown;
 }
+
+/** The "paid with" filter value that matches only transactions with no card. */
+export const CASH_FILTER = '__cash__';
 
 export interface FilterCriteria {
   period: PeriodFilter;
@@ -21,6 +26,11 @@ export interface FilterCriteria {
   query: string;
   /** A tag the transaction must carry (ignoring case), or null for any. */
   tag: string | null;
+  /**
+   * Paid with: a card id, `CASH_FILTER` for no card, or null/undefined for any. Applies together
+   * with the other filters.
+   */
+  card?: string | null;
   /** The moment "last 7 days" counts back from; defaults to now. */
   now?: Date;
 }
@@ -69,6 +79,20 @@ const matchesQuery = (
   return titleMatch || dateMatch || categoryMatch || amountMatch || tagMatch;
 };
 
+const matchesCard = (
+  transaction: FilterableTransaction,
+  card: string | null,
+): boolean => {
+  if (card === null) {
+    return true;
+  }
+  const own =
+    typeof transaction.cardId === 'string' && transaction.cardId !== ''
+      ? transaction.cardId
+      : null;
+  return card === CASH_FILTER ? own === null : own === card;
+};
+
 /**
  * The transactions that pass every active filter: the period, the search text and the tag. The
  * filters combine (a search inside "Last 30 days" with a tag only shows rows passing all three),
@@ -82,6 +106,7 @@ export function filterTransactions<T extends FilterableTransaction>(
     t =>
       inPeriod(t, criteria) &&
       matchesQuery(t, criteria.query) &&
-      (criteria.tag === null || hasTag(t, criteria.tag)),
+      (criteria.tag === null || hasTag(t, criteria.tag)) &&
+      matchesCard(t, criteria.card ?? null),
   );
 }

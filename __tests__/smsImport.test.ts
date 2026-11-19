@@ -1,5 +1,6 @@
 import {describe, expect, it} from '@jest/globals';
 import {
+  matchCard,
   prefillFor,
   prefillFromParams,
   prefillParams,
@@ -95,5 +96,48 @@ describe('prefillFromParams', () => {
   it('round-trips through route params', () => {
     const fill = prefillFor(parsed, 'INR')!;
     expect(prefillFromParams(prefillParams(fill))).toEqual(fill);
+  });
+});
+
+describe('matching a bank message to a card', () => {
+  const msg = (over: Partial<ParsedSms> = {}): ParsedSms => ({
+    id: 'm',
+    bank: 'hdfc',
+    direction: 'debit',
+    currency: 'INR',
+    amountMinor: 100,
+    amount: '1.00',
+    merchant: null,
+    account: '1234',
+    date: '2026-11-19',
+    method: 'card',
+    reference: null,
+    ...over,
+  });
+  const cards = [
+    {id: 'a', last4: '1234', archived: false},
+    {id: 'b', last4: '9999', archived: false},
+    {id: 'c', last4: null, archived: false},
+  ];
+
+  it('picks the one card whose digits match a card payment', () => {
+    expect(matchCard(msg(), cards)).toBe('a');
+    expect(matchCard(msg({account: '234'}), cards)).toBe('a');
+  });
+
+  it('never guesses: no digits, UPI, credits, archived or two matches give null', () => {
+    expect(matchCard(msg({account: null}), cards)).toBeNull();
+    expect(matchCard(msg({method: 'upi'}), cards)).toBeNull();
+    expect(matchCard(msg({direction: 'credit'}), cards)).toBeNull();
+    expect(matchCard(msg(), [{...cards[0], archived: true}])).toBeNull();
+    expect(
+      matchCard(msg(), [cards[0], {id: 'd', last4: '1234', archived: false}]),
+    ).toBeNull();
+    expect(matchCard(msg({account: '5555'}), cards)).toBeNull();
+  });
+
+  it('accepts only a well-formed card id from route params', () => {
+    expect(prefillFromParams({cardId: 'abc_12-3'}).cardId).toBe('abc_12-3');
+    expect(prefillFromParams({cardId: 'a/b'}).cardId).toBeUndefined();
   });
 });

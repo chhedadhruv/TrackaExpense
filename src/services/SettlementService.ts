@@ -18,6 +18,11 @@ export interface RecordSettlementArgs {
   note: string;
   includeInTransactions: boolean;
   /**
+   * A credit card the caller repaid with. Counts only when the caller is the one paying and adds
+   * the payment to their transactions; their balance is then left alone.
+   */
+  cardId?: string | null;
+  /**
    * Identifies this attempt. Send the same value again when retrying so the settlement can never
    * be applied twice.
    */
