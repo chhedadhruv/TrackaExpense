@@ -24,6 +24,3 @@ export const traceFetchTransactions = (): Promise<StopFn | null> =>
 
 export const traceUploadReceipt = (): Promise<StopFn | null> =>
   startTrace('upload_receipt');
-
-export const traceCalculateStatistics = (): Promise<StopFn | null> =>
-  startTrace('calculate_statistics');
