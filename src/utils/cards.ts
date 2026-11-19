@@ -3,6 +3,7 @@ import {
   dueDateFor,
   inPeriod,
   isValidCardDay,
+  paymentIdFor,
   periodFor,
   type CardPeriod,
 } from './cardPeriods';
@@ -218,4 +219,62 @@ const addDaysBack = (date: string): string => {
   const d = new Date(`${date}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() - 1);
   return d.toISOString().slice(0, 10);
+};
+
+export interface UnpaidBill {
+  card: CardDocument;
+  period: CardPeriod;
+  owedMinor: number;
+  /** Null when the card has no due day. */
+  dueDate: string | null;
+}
+
+/**
+ * The bills still to pay: for each active card, its latest finished period when something is owed
+ * and no payment is recorded for it. Sorted by due date (soonest first; cards without one last).
+ */
+export const unpaidBills = (
+  cards: readonly CardDocument[],
+  paidPaymentIds: ReadonlySet<string>,
+  transactions: readonly CardTransaction[],
+  today: string,
+): UnpaidBill[] => {
+  const bills: UnpaidBill[] = [];
+  for (const card of cards) {
+    if (card.archived) {
+      continue;
+    }
+    const current = periodFor(card.statementDay, today);
+    if (!current) {
+      continue;
+    }
+    // The current period ends today or later; the bill is the one before it, unless the
+    // statement day is today, when the period that ends today is already a bill.
+    const finished =
+      current.end === today
+        ? current
+        : periodFor(card.statementDay, addDaysBack(current.start));
+    if (!finished || paidPaymentIds.has(paymentIdFor(card.id, finished))) {
+      continue;
+    }
+    const owed = periodOwedMinor(card, finished, transactions);
+    if (owed <= 0) {
+      continue;
+    }
+    bills.push({
+      card,
+      period: finished,
+      owedMinor: owed,
+      dueDate: dueDateFor(card.statementDay, card.dueDay, finished),
+    });
+  }
+  return bills.sort((a, b) =>
+    a.dueDate === null && b.dueDate === null
+      ? 0
+      : a.dueDate === null
+      ? 1
+      : b.dueDate === null
+      ? -1
+      : a.dueDate.localeCompare(b.dueDate),
+  );
 };

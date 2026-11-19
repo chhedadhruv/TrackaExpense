@@ -31,6 +31,8 @@ export interface RecurringRule {
   timeZone: string;
   enabled: boolean;
   tags: string[];
+  /** Credit card the expenses are paid with, or null. A card expense does not move the balance. */
+  cardId: string | null;
 }
 
 const pad = (n: number): string => String(n).padStart(2, '0');
@@ -153,6 +155,12 @@ export const parseRule = (id: string, data: unknown): RecurringRule | null => {
     tags: Array.isArray(data.tags)
       ? data.tags.filter((t): t is string => typeof t === 'string').slice(0, 5)
       : [],
+    cardId:
+      data.type === 'expense' &&
+      typeof data.cardId === 'string' &&
+      data.cardId !== ''
+        ? data.cardId
+        : null,
   };
 };
 
@@ -224,4 +232,5 @@ export const buildTransaction = (
   source: 'recurring',
   recurringId: rule.id,
   ...(rule.tags.length > 0 ? {tags: rule.tags} : {}),
+  ...(rule.cardId !== null ? {cardId: rule.cardId} : {}),
 });

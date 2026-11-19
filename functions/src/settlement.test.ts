@@ -18,7 +18,24 @@ const valid = {
 
 describe('parseRecordInput', () => {
   it('accepts a valid request and trims text', () => {
-    assert.deepEqual(parseRecordInput(valid), {...valid, note: 'Dinner'});
+    assert.deepEqual(parseRecordInput(valid), {
+      ...valid,
+      note: 'Dinner',
+      cardId: null,
+    });
+  });
+
+  it('reads an optional card id and refuses a bad one', () => {
+    assert.equal(parseRecordInput({...valid, cardId: 'c1'}).cardId, 'c1');
+    assert.equal(parseRecordInput({...valid, cardId: null}).cardId, null);
+    assert.throws(
+      () => parseRecordInput({...valid, cardId: 'a/b'}),
+      SettlementError,
+    );
+    assert.throws(
+      () => parseRecordInput({...valid, cardId: 5}),
+      SettlementError,
+    );
   });
 
   it('treats a missing note as empty and a missing include flag as false', () => {

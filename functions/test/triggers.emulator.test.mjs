@@ -740,6 +740,96 @@ await step(
 );
 
 await step(
+  'card due: one reminder per stage at 9 local, none for a paid bill, reruns send nothing',
+  async () => {
+    const {runCardDue} = require('../lib/cardDueJob.js');
+    const sentBodies = [];
+    const deps = nowMs => ({
+      db,
+      apiKey: 'test-key',
+      appId: 'app',
+      fetchFn: async (_url, init) => {
+        sentBodies.push(JSON.parse(init.body));
+        return {ok: true, json: async () => ({id: 'n1'})};
+      },
+      now: () => nowMs,
+    });
+    const u = db.collection('users').doc('ucd');
+    await u.set({name: 'Card due', currency: 'INR', balance: 0});
+    await u.collection('cards').doc('cd1').set({
+      name: 'HDFC',
+      last4: '1234',
+      statementDay: 15,
+      dueDay: 3,
+      currency: 'INR',
+    });
+    await u.collection('transactions').doc('p1').set({
+      type: 'expense',
+      cardId: 'cd1',
+      amountMinor: 123450,
+      currency: 'INR',
+      date: '2026-11-10',
+    });
+    // 2026-11-30 09:00 in India is 03:30 UTC: three days before the due date of 2026-12-03.
+    const soon = Date.UTC(2026, 10, 30, 3, 30, 0);
+    const first = await runCardDue(deps(soon));
+    assert.ok(first.sent.includes('cd1_2026-11-15_soon'));
+    assert.equal(sentBodies.length >= 1, true);
+    const before = sentBodies.length;
+    const again = await runCardDue(deps(soon));
+    assert.equal(again.sent.includes('cd1_2026-11-15_soon'), false);
+    assert.equal(sentBodies.length, before);
+    // Another hour of the day: nothing.
+    const wrongHour = await runCardDue(deps(Date.UTC(2026, 10, 30, 7, 30, 0)));
+    assert.equal(wrongHour.sent.includes('cd1_2026-11-15_soon'), false);
+    // A paid bill gets no reminder on the due day.
+    await u
+      .collection('cardPayments')
+      .doc('cd1_2026-11-15')
+      .set({cardId: 'cd1', amountMinor: 123450});
+    const due = await runCardDue(deps(Date.UTC(2026, 11, 3, 3, 30, 0)));
+    assert.equal(due.sent.includes('cd1_2026-11-15_today'), false);
+  },
+);
+
+await step(
+  'recurring: a card rule creates the transaction with its card and leaves the balance alone',
+  async () => {
+    const {runRecurring} = require('../lib/recurringJob.js');
+    const u = db.collection('users').doc('ur-card');
+    await u.set({name: 'Card user', currency: 'INR', balance: 1000});
+    await u.collection('recurring').doc('netflix').set({
+      title: 'Netflix',
+      type: 'expense',
+      category: 'Entertainment',
+      amountMinor: 64900,
+      currency: 'INR',
+      frequency: 'monthly',
+      startDate: '2026-11-16',
+      nextDueDate: '2026-11-16',
+      timeZone: 'Asia/Kolkata',
+      enabled: true,
+      cardId: 'card1',
+    });
+    const out = await runRecurring({
+      db,
+      apiKey: undefined,
+      appId: 'app',
+      fetchFn: async () => ({ok: false, json: async () => ({})}),
+      now: () => Date.UTC(2026, 10, 16, 6, 0, 0),
+    });
+    assert.ok(out.created.includes('rec_netflix_2026-11-16'));
+    const tx = await u
+      .collection('transactions')
+      .doc('rec_netflix_2026-11-16')
+      .get();
+    assert.equal(tx.get('cardId'), 'card1');
+    assert.equal(tx.get('amountMinor'), 64900);
+    assert.equal((await u.get()).get('balance'), 1000);
+  },
+);
+
+await step(
   'recurring: income adds to the balance, late occurrences are skipped, a disabled rule is ignored',
   async () => {
     const {runRecurring} = require('../lib/recurringJob.js');

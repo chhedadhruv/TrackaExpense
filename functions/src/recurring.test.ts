@@ -27,7 +27,35 @@ const rule = (over: Partial<RecurringRule> = {}): RecurringRule => ({
   timeZone: 'Asia/Kolkata',
   enabled: true,
   tags: [],
+  cardId: null,
   ...over,
+});
+
+describe('card rules', () => {
+  it('reads a card only on an expense rule', () => {
+    const base = {
+      title: 'Netflix',
+      type: 'expense',
+      amountMinor: 64900,
+      frequency: 'monthly',
+      startDate: '2026-12-01',
+      cardId: 'c1',
+    };
+    assert.equal(parseRule('r', base)?.cardId, 'c1');
+    assert.equal(parseRule('r', {...base, type: 'income'})?.cardId, null);
+    assert.equal(parseRule('r', {...base, cardId: ''})?.cardId, null);
+  });
+
+  it('puts the card on the transaction it creates, only when there is one', () => {
+    assert.equal(
+      buildTransaction(rule({cardId: 'c1'}), 'u1', '2026-02-28', 't1').cardId,
+      'c1',
+    );
+    assert.equal(
+      'cardId' in buildTransaction(rule(), 'u1', '2026-02-28', 't1'),
+      false,
+    );
+  });
 });
 
 describe('addDays', () => {

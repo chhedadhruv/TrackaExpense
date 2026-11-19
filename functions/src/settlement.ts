@@ -59,6 +59,11 @@ export interface RecordSettlementInput {
   note: string;
   includeInTransactions: boolean;
   requestId: string;
+  /**
+   * A credit card the caller paid with, when the caller is the one repaying and adds the payment
+   * to their transactions. Their balance is then left alone (it drops when the card bill is paid).
+   */
+  cardId: string | null;
 }
 
 export const parseRecordInput = (input: unknown): RecordSettlementInput => {
@@ -73,7 +78,11 @@ export const parseRecordInput = (input: unknown): RecordSettlementInput => {
     note,
     includeInTransactions,
     requestId,
+    cardId,
   } = input;
+  if (cardId !== undefined && cardId !== null && !isId(cardId)) {
+    throw new SettlementError('invalid-argument', 'cardId is invalid');
+  }
   if (!isId(groupId)) {
     throw new SettlementError('invalid-argument', 'groupId is required');
   }
@@ -105,6 +114,7 @@ export const parseRecordInput = (input: unknown): RecordSettlementInput => {
     note: (note ?? '').trim(),
     includeInTransactions: includeInTransactions === true,
     requestId,
+    cardId: typeof cardId === 'string' ? cardId : null,
   };
 };
 
@@ -175,6 +185,8 @@ const transactionFor = (
     minor: number;
     currency: string;
     date: string;
+    /** The borrower's card, on the borrower's own entry only. */
+    cardId?: string | null;
   },
 ): Fields => ({
   title: args.note || `Settlement: ${args.groupName}`,
@@ -190,6 +202,7 @@ const transactionFor = (
   groupName: args.groupName,
   splitRole: type === 'expense' ? 'settlement_payer' : 'settlement_receiver',
   createdAt: FieldValue.serverTimestamp(),
+  ...(type === 'expense' && args.cardId ? {cardId: args.cardId} : {}),
 });
 
 export interface RecordResult {
@@ -215,11 +228,16 @@ export const recordSettlement = async (
   ]);
 
   return db.runTransaction(async tx => {
-    const [groupSnap, callerSnap, settlementSnap] = await Promise.all([
-      tx.get(groupRef),
-      tx.get(callerRef),
-      tx.get(settlementRef),
-    ]);
+    const [groupSnap, callerSnap, settlementSnap, cardSnap] = await Promise.all(
+      [
+        tx.get(groupRef),
+        tx.get(callerRef),
+        tx.get(settlementRef),
+        input.cardId
+          ? tx.get(callerRef.collection('cards').doc(input.cardId))
+          : Promise.resolve(null),
+      ],
+    );
     if (settlementSnap.exists) {
       return {settlementId: id, splitId: id, alreadyRecorded: true};
     }
@@ -254,6 +272,21 @@ export const recordSettlement = async (
         'permission-denied',
         'You can only record a settlement you are part of, unless you created the group.',
       );
+    }
+
+    // A card counts only for the person repaying, and only when they add the payment to their
+    // transactions (that entry is where the card is recorded). Otherwise it is ignored and the
+    // balance changes as usual. A card that is not theirs is an error, not a silent change.
+    let cardId: string | null = null;
+    if (input.cardId !== null) {
+      if (!cardSnap || !cardSnap.exists) {
+        throw new SettlementError(
+          'invalid-argument',
+          'That card was not found.',
+        );
+      }
+      cardId =
+        callerIsFrom && input.includeInTransactions ? input.cardId : null;
     }
 
     const currency = resolveCurrency(callerData.currency);
@@ -293,6 +326,7 @@ export const recordSettlement = async (
       minor,
       currency,
       date,
+      cardId,
     };
 
     tx.set(settlementRef, {
@@ -306,6 +340,7 @@ export const recordSettlement = async (
       createdAt: FieldValue.serverTimestamp(),
       groupId: input.groupId,
       recordedBy: callerUid,
+      ...(cardId ? {payerCardId: cardId} : {}),
     });
     tx.set(splitRef, {
       title: input.note || 'Settlement Payment',
@@ -321,10 +356,13 @@ export const recordSettlement = async (
       isSettlement: true,
       settlement: {from, to, amount: major},
       settlementId: id,
+      // Remembered so deleting the settlement knows the borrower's balance was never lowered.
+      ...(cardId ? {payerCardId: cardId} : {}),
     });
 
-    // The borrower pays (balance goes down), the lender receives (balance goes up).
-    if (borrower.uid) {
+    // The borrower pays (balance goes down), the lender receives (balance goes up). A borrower
+    // who paid with a card keeps their balance: it drops when the card bill is paid.
+    if (borrower.uid && cardId === null) {
       tx.update(db.collection('users').doc(borrower.uid), {
         balance: FieldValue.increment(-major),
       });
@@ -524,8 +562,9 @@ export const deleteSettlement = async (
       tx.delete(settlementRef);
     }
     transactionRefs.forEach(ref => tx.delete(ref));
-    // Undo the balance change: the borrower gets the money back, the lender loses it.
-    if (borrowerExists) {
+    // Undo the balance change: the borrower gets the money back, the lender loses it. A borrower
+    // who paid with a card never lost it from the balance, so nothing is given back.
+    if (borrowerExists && text(split.payerCardId) === null) {
       tx.update(db.collection('users').doc(borrowerUid!), {
         balance: FieldValue.increment(major),
       });

@@ -14,6 +14,9 @@ import {
 import {useAsyncAction} from '../../src/hooks/useAsyncAction';
 import Card from '../../src/components/Card';
 import Toggle from '../../src/components/Toggle';
+import CardField from '../../src/components/form/CardField';
+import {useCards} from '../../src/hooks/useCards';
+import {getConfig} from '../../src/services/RemoteConfigService';
 import UserAvatar from '../../src/components/Avatar';
 import {
   addDoc,
@@ -83,6 +86,14 @@ const SettleUpScreen = ({
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [includeInTransactions, setIncludeInTransactions] = useState(true);
+  // "Paid with": only when the signed-in person is the one repaying. Starts on Cash / UPI.
+  const cardsEnabled = getConfig().enable_cards;
+  const cards = useCards().data;
+  const [cardId, setCardId] = useState<string | null>(null);
+  const pickableCards = (cards ?? []).filter(c => !c.archived);
+  const payingMyself =
+    selectedBorrower?.email?.toLowerCase() ===
+    getAuth().currentUser?.email?.toLowerCase();
   // Kept across a failed attempt so a retry cannot record the settlement twice.
   const requestIdRef = useRef<string | null>(null);
 
@@ -155,6 +166,8 @@ const SettleUpScreen = ({
         amount,
         note: note.trim(),
         includeInTransactions,
+        cardId:
+          cardsEnabled && payingMyself && includeInTransactions ? cardId : null,
         requestId: requestIdRef.current,
       });
       const splitRef = {id: recorded.splitId};
@@ -429,6 +442,16 @@ const SettleUpScreen = ({
                   onValueChange={setIncludeInTransactions}
                 />
               </View>
+              {cardsEnabled &&
+              payingMyself &&
+              includeInTransactions &&
+              pickableCards.length > 0 ? (
+                <CardField
+                  cards={pickableCards}
+                  value={cardId}
+                  onChange={setCardId}
+                />
+              ) : null}
             </View>
           </Card>
           {selectedLender && selectedBorrower && amount ? (

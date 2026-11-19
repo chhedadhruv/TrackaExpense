@@ -466,6 +466,58 @@ export const topMerchants = (
 };
 
 // ---------------------------------------------------------------------------------------------
+// Payment method
+
+export interface PaymentRow {
+  /** The card id, or 'cash' for cash, UPI and bank payments. */
+  key: string;
+  name: string;
+  minor: number;
+  count: number;
+}
+
+/**
+ * Spending (or income) split by how it was paid: one row per card plus Cash / UPI, largest first.
+ * Summed in integer minor units over the same transactions as every other figure, so the rows add
+ * up to the same total. `cardNames` maps card ids to the name shown; an unknown card is "Card".
+ */
+export const byPaymentMethod = (
+  txns: readonly (StatsTransaction & {cardId?: unknown})[],
+  kind: StatsKind,
+  currency: string,
+  cardNames: Readonly<Record<string, string>>,
+): PaymentRow[] => {
+  const rows = new Map<string, PaymentRow>();
+  for (const t of txns) {
+    if (kindOf(t) !== kind) {
+      continue;
+    }
+    const minor = minorOf(t, currency);
+    if (minor === null) {
+      continue;
+    }
+    const card =
+      typeof t.cardId === 'string' && t.cardId !== '' ? t.cardId : null;
+    const key = card ?? 'cash';
+    const row = rows.get(key);
+    if (row) {
+      row.minor += minor;
+      row.count += 1;
+    } else {
+      rows.set(key, {
+        key,
+        name: card === null ? 'Cash / UPI' : cardNames[card] ?? 'Card',
+        minor,
+        count: 1,
+      });
+    }
+  }
+  return Array.from(rows.values()).sort(
+    (a, b) => b.minor - a.minor || a.name.localeCompare(b.name),
+  );
+};
+
+// ---------------------------------------------------------------------------------------------
 // Heatmap
 
 export interface HeatCell {

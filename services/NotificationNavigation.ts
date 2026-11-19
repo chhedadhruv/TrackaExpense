@@ -47,6 +47,10 @@ export function notificationPath(data: NotificationData): string | null {
         return '/savings';
       }
       return '/home';
+    case 'card_due':
+      return typeof data.cardId === 'string' && data.cardId !== ''
+        ? `/profile/card-bill?id=${encodeURIComponent(data.cardId)}`
+        : '/profile/cards';
     case 'achievement':
     case 'weekly_summary':
     case 'monthly_summary':

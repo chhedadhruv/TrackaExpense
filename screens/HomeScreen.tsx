@@ -29,6 +29,7 @@ import List from 'lucide-react-native/icons/list';
 import NotebookText from 'lucide-react-native/icons/notebook-text';
 import Pencil from 'lucide-react-native/icons/pencil';
 import CatchUpPrompt from '../src/components/CatchUpPrompt';
+import CardDuesStrip from '../src/components/CardDuesStrip';
 import {getConfig} from '../src/services/RemoteConfigService';
 import {isTransferEntry} from '../src/utils/balanceAdjust';
 import Users from 'lucide-react-native/icons/users';
@@ -313,6 +314,7 @@ const HomeScreen = () => {
         </View>
 
         <CatchUpPrompt />
+        <CardDuesStrip />
 
         {/* Summary Cards */}
         <View style={styles.cardSection}>

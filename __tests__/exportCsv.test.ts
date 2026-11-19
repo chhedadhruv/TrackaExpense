@@ -54,8 +54,23 @@ describe('buildTransactionsCsv', () => {
   it('writes exact amounts, the day, tags and escaped text', () => {
     const [, row] = rowsOf(buildTransactionsCsv([base], 'INR'));
     expect(row).toBe(
-      '2026-11-05,"Lunch, with team",expense,Food,150.50,INR,work; team,"He said ""nice"""',
+      '2026-11-05,"Lunch, with team",expense,Food,150.50,INR,work; team,"He said ""nice""",Cash / UPI',
     );
+  });
+
+  it('names the card a transaction was paid with', () => {
+    const csv = buildTransactionsCsv(
+      [
+        {...base, cardId: 'c1'},
+        {...base, cardId: 'gone'},
+      ],
+      'INR',
+      {c1: 'HDFC 1234'},
+    );
+    const rows = rowsOf(csv);
+    expect(rows[0].endsWith(',Payment Method')).toBe(true);
+    expect(rows[1].endsWith(',HDFC 1234')).toBe(true);
+    expect(rows[2].endsWith(',Card')).toBe(true);
   });
 
   it('uses the stored text date, padding old unpadded dates, else the creation day', () => {
@@ -79,7 +94,7 @@ describe('buildTransactionsCsv', () => {
         'INR',
       ),
     );
-    expect(row).toBe('2024-01-01,Old,,,12.30,INR,,');
+    expect(row).toBe('2024-01-01,Old,,,12.30,INR,,,Cash / UPI');
   });
 
   it('keeps an unconvertible amount as typed rather than dropping it', () => {
