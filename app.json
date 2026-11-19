@@ -8,6 +8,9 @@
     "icon": "./assets/icon.png",
     "scheme": ["trackaexpense", "com.dhruvchheda.trackaexpense"],
     "userInterfaceStyle": "automatic",
+    "experiments": {
+      "typedRoutes": true
+    },
     "ios": {
       "bundleIdentifier": "com.dhruvchheda.trackaexpense",
       "buildNumber": "26111309",
