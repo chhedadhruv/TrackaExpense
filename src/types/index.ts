@@ -25,6 +25,12 @@ export interface UserDocument {
    * on every older profile. Read it through `isFunNudgeOn` (`src/utils/notificationPrefs.ts`).
    */
   funNudgeEnabled?: boolean;
+  /**
+   * The device's IANA time zone (for example "Asia/Kolkata"), kept current by `useSyncTimeZone`.
+   * The scheduled jobs in functions/ read it for each person's local time and assume Asia/Kolkata
+   * when it is missing. Absent until the person has opened a version that writes it.
+   */
+  timeZone?: string;
 }
 
 /**
