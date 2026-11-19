@@ -57,6 +57,13 @@ export const hashText = (text: string): number => {
   return h;
 };
 
+/**
+ * The person's own switch, `users/{uid}.funNudgeEnabled` (written by the app, Profile > Notifications).
+ * Only an explicit false opts out: a missing field (everyone before the switch existed) or any other
+ * value keeps the nudge on, so nobody is silently dropped by a bad write.
+ */
+export const funNudgeAllowed = (value: unknown): boolean => value !== false;
+
 /** The local hour (18 to 21) at which this person's nudge goes out on this local date. */
 export const funHourFor = (uid: string, date: string): number =>
   FUN_FIRST_HOUR +

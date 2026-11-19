@@ -20,6 +20,11 @@ export interface UserDocument {
   verified: boolean;
   /** Savings goals are embedded in the profile document, the client rewrites the whole array. */
   savingsGoals?: SavingsGoal[];
+  /**
+   * The evening reminder switch (Profile > Notifications). Only an explicit false is off; absent
+   * on every older profile. Read it through `isFunNudgeOn` (`src/utils/notificationPrefs.ts`).
+   */
+  funNudgeEnabled?: boolean;
 }
 
 /**

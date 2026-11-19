@@ -1,7 +1,7 @@
 import {FieldValue, type Firestore} from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import {DEFAULT_TIME_ZONE} from './budgets';
-import {funContext, funDueDate, funMessage} from './fun';
+import {funContext, funDueDate, funMessage, funNudgeAllowed} from './fun';
 import {notifyUids, type NotifyDeps} from './notify';
 
 const ALREADY_EXISTS = 6;
@@ -32,9 +32,16 @@ const dayBefore = (date: string, days: number): string => {
 export const runFun = async (deps: FunDeps): Promise<FunRunResult> => {
   const nowMs = (deps.now ?? Date.now)();
   const result: FunRunResult = {sent: []};
-  const users = await deps.db.collection('users').select('timeZone').get();
+  const users = await deps.db
+    .collection('users')
+    .select('timeZone', 'funNudgeEnabled')
+    .get();
 
   for (const doc of users.docs) {
+    // Opted out: no marker, no read of their transactions, nothing.
+    if (!funNudgeAllowed(doc.get('funNudgeEnabled'))) {
+      continue;
+    }
     const zone = doc.get('timeZone');
     const due = funDueDate(
       nowMs,
