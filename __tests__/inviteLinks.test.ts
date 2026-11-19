@@ -6,10 +6,56 @@ import {
   inviteMessage,
   joinPath,
   parseInviteInput,
+  systemPathFor,
 } from '../src/utils/inviteLinks';
 
 const TOKEN = 'AbCdEfGhIjKlMnOpQrSt_-';
 const GROUP = 'h4g4mjGBjnkkqkdgIy4r';
+
+describe('systemPathFor', () => {
+  it('turns a verified invite link into the app route', () => {
+    expect(systemPathFor(buildInviteUrl(GROUP, TOKEN))).toBe(
+      joinPath(GROUP, TOKEN),
+    );
+  });
+
+  it('accepts a trailing slash, a query and a different case of the host', () => {
+    const fragment = `#g=${GROUP}&t=${TOKEN}`;
+    for (const base of [
+      'https://trackaexpense.dhruvchheda.com/join/',
+      'https://trackaexpense.dhruvchheda.com/join?utm=x',
+      'HTTPS://TrackaExpense.DhruvChheda.com/join',
+    ]) {
+      expect(systemPathFor(`${base}${fragment}`)).toBe(joinPath(GROUP, TOKEN));
+    }
+  });
+
+  it('sends a broken invite link to the Split tab, not an unmatched route', () => {
+    for (const url of [
+      'https://trackaexpense.dhruvchheda.com/join',
+      'https://trackaexpense.dhruvchheda.com/join#',
+      'https://trackaexpense.dhruvchheda.com/join#g=only',
+      `https://trackaexpense.dhruvchheda.com/join#g=${GROUP}&t=short`,
+    ]) {
+      expect(systemPathFor(url)).toBe('/split');
+    }
+  });
+
+  it('leaves every other URL unchanged', () => {
+    for (const url of [
+      'trackaexpense://split/join/h4g4mjGBjnkkqkdgIy4r/AbCdEfGhIjKlMnOpQrSt_-',
+      'trackaexpense://home',
+      '/home',
+      'https://trackaexpense.dhruvchheda.com/',
+      'https://trackaexpense.dhruvchheda.com/privacy',
+      'https://trackaexpense.dhruvchheda.com/joinus#g=a&t=b',
+      'https://evil.example.com/join#g=a&t=b',
+      'http://trackaexpense.dhruvchheda.com/join#g=a&t=b',
+    ]) {
+      expect(systemPathFor(url)).toBe(url);
+    }
+  });
+});
 
 describe('buildInviteUrl', () => {
   it('puts the group and token in the fragment, never the path or query', () => {
