@@ -9,6 +9,34 @@ import {
 
 const NOW = new Date(Date.UTC(2026, 10, 18, 12, 0));
 
+// Zero-decimal currencies. Written in each country's usual style with made-up numbers, not copied
+// from real receipts: replace or add real, anonymised samples when the owner has some.
+const KONBINI_JPY = `ファミリーマート
+2026年11月14日 20:41
+おにぎり ¥150
+コーヒー ¥120
+小計 ¥270
+消費税 8% ¥21
+合計 ¥291
+お預り ¥1,000
+お釣り ¥709`;
+
+const CONVENIENCE_KRW = `GS25 강남점
+2026-11-14 20:41
+삼각김밥 1,500
+커피 2,300
+합계 3,800
+부가세 345
+받은금액 5,000
+거스름돈 1,200`;
+
+const SHOP_JPY_EN = `TOKYO MART
+Date 2026/11/14
+Item A 1,200
+Item B 780
+TOTAL ¥1,980
+CASH ¥2,000`;
+
 const RESTAURANT = `SPICE GARDEN RESTAURANT
 12, MG Road, Pune 411001
 GSTIN: 27AABCS1234F1Z5
@@ -82,6 +110,73 @@ describe('guessAmounts', () => {
 
   it('ignores absurd values', () => {
     assert.deepEqual(guessAmounts('Total 99999999999.00'), []);
+  });
+});
+
+describe('guessAmounts for a zero-decimal currency (exponent 0)', () => {
+  it('reads a Japanese receipt: the total, not the tax, change or subtotal', () => {
+    const amounts = guessAmounts(KONBINI_JPY, 0);
+    assert.equal(amounts[0], '291');
+    for (const bad of ['21', '709', '270', '8']) {
+      assert.notEqual(amounts[0], bad);
+    }
+  });
+
+  it('reads a Korean receipt with no currency mark on the lines', () => {
+    const amounts = guessAmounts(CONVENIENCE_KRW, 0);
+    assert.equal(amounts[0], '3800');
+    assert.ok(!amounts.includes('345'));
+    assert.ok(!amounts.includes('1200'));
+  });
+
+  it('reads an English-labelled yen receipt with comma grouping', () => {
+    assert.equal(guessAmounts(SHOP_JPY_EN, 0)[0], '1980');
+  });
+
+  it('returns whole numbers with no decimals', () => {
+    for (const a of guessAmounts(KONBINI_JPY, 0)) {
+      assert.match(a, /^\d+$/);
+    }
+  });
+
+  it('does not read a fraction as an amount, but accepts .00', () => {
+    assert.deepEqual(guessAmounts('Total 8.5', 0), []);
+    // A tax rate with a decimal point is no more believable than a bare integer.
+    assert.deepEqual(guessAmounts('Rate 10.0%\nTax 8.0%', 0), []);
+    assert.deepEqual(guessAmounts('Shop\nCoffee 12.0%', 0), []);
+    assert.equal(guessAmounts('Total 1,234.00', 0)[0], '1234');
+  });
+
+  it('keeps the upper limit of 10,000,000 whole units', () => {
+    assert.equal(guessAmounts('Total ¥10,000,000', 0)[0], '10000000');
+    assert.deepEqual(guessAmounts('Total ¥10,000,001', 0), []);
+    assert.deepEqual(guessAmounts('Total 99999999999', 0), []);
+  });
+
+  it('does not change the default two-decimal reading', () => {
+    assert.equal(guessAmounts('Total 1,234.50')[0], '1234.50');
+    assert.equal(guessAmounts('Total 1,234.50', 2)[0], '1234.50');
+    // The same yen text read as a two-decimal currency keeps the old behaviour.
+    assert.equal(guessAmounts(SHOP_JPY_EN)[0], '1980.00');
+  });
+});
+
+describe('guessDate in Japanese and Korean', () => {
+  it('reads 2026年11月14日 and 2026년 11월 14일', () => {
+    assert.equal(guessDate('2026年11月14日 20:41', NOW), '2026-11-14');
+    assert.equal(guessDate('2026년 11월 14일', NOW), '2026-11-14');
+  });
+
+  it('rejects an impossible or future date in that form', () => {
+    assert.equal(guessDate('2026年2月31日', NOW), null);
+    assert.equal(guessDate('2026年12月30日', NOW), null);
+  });
+
+  it('parseReceiptText carries the exponent to the amounts', () => {
+    const guess = parseReceiptText(KONBINI_JPY, NOW, 0);
+    assert.equal(guess.amounts[0], '291');
+    assert.equal(guess.date, '2026-11-14');
+    assert.equal(parseReceiptText(KONBINI_JPY, NOW).amounts[0], '291.00');
   });
 });
 

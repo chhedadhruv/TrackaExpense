@@ -48,14 +48,20 @@ export const uploadReceipt = async (
   return {localUri, storagePath, downloadUrl: await getDownloadURL(storageRef)};
 };
 
+/**
+ * Asks the server to read the uploaded photo. `currency` is the person's own currency code: it
+ * tells the parser how many decimals to expect (none for JPY and KRW). A server that does not know
+ * the field ignores it and reads two decimals, as before.
+ */
 export const requestScan = async (
   storagePath: string,
+  currency: string,
 ): Promise<ReceiptGuess> => {
-  const call = httpsCallable<{storagePath: string}, ReceiptGuess>(
-    getFunctions(getApp(), 'asia-south1'),
-    'scanReceipt',
-  );
-  return (await call({storagePath})).data;
+  const call = httpsCallable<
+    {storagePath: string; currency: string},
+    ReceiptGuess
+  >(getFunctions(getApp(), 'asia-south1'), 'scanReceipt');
+  return (await call({storagePath, currency})).data;
 };
 
 /** Removes a photo that was uploaded for a scan but is no longer the expense's receipt. */

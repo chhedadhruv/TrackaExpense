@@ -1,4 +1,5 @@
 import type {Firestore} from 'firebase-admin/firestore';
+import {getCurrencyExponent} from './money';
 import {parseReceiptText, type ReceiptGuess} from './receiptParse';
 
 /**
@@ -75,6 +76,21 @@ export const checkPath = (uid: string, input: unknown): string => {
   return path;
 };
 
+/**
+ * Decimal places of the amounts to look for, from the optional `currency` the app sends (the
+ * person's own currency). A missing or malformed value means 2, as before the field existed, so
+ * old app versions are unchanged.
+ */
+export const exponentOf = (input: unknown): number => {
+  const currency =
+    typeof input === 'object' && input !== null
+      ? (input as {currency?: unknown}).currency
+      : undefined;
+  return typeof currency === 'string' && /^[A-Za-z]{3}$/.test(currency)
+    ? getCurrencyExponent(currency)
+    : 2;
+};
+
 const monthKey = (nowMs: number): string =>
   new Date(nowMs).toISOString().slice(0, 7);
 
@@ -141,5 +157,5 @@ export const scanReceipt = async (
       'The receipt could not be read right now. Enter it by hand.',
     );
   }
-  return parseReceiptText(text, new Date(nowMs));
+  return parseReceiptText(text, new Date(nowMs), exponentOf(input));
 };
