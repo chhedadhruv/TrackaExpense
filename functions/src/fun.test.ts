@@ -6,9 +6,19 @@ import {
   funDueDate,
   funHourFor,
   funMessage,
+  funNudgeAllowed,
 } from './fun';
 
 describe('fun nudge', () => {
+  it('is off only for an explicit false', () => {
+    assert.equal(funNudgeAllowed(false), false);
+    assert.equal(funNudgeAllowed(true), true);
+    assert.equal(funNudgeAllowed(undefined), true);
+    assert.equal(funNudgeAllowed(null), true);
+    assert.equal(funNudgeAllowed('false'), true);
+    assert.equal(funNudgeAllowed(0), true);
+  });
+
   it('picks a stable hour between 18 and 21', () => {
     for (let i = 0; i < 50; i += 1) {
       const hour = funHourFor(`user${i}`, '2026-11-18');

@@ -1396,6 +1396,28 @@ await step(
       sent.filter(m => m.include_aliases.external_id[0] === 'uf1').length,
       1,
     );
+
+    // Opted out (funNudgeEnabled false): nothing is sent and no marker is written, even in their
+    // chosen hour. A person who switched it on explicitly still gets it.
+    const off = db.collection('users').doc('uf2');
+    await off.set({name: 'Quiet', currency: 'INR', funNudgeEnabled: false});
+    const on = db.collection('users').doc('uf3');
+    await on.set({name: 'Loud', currency: 'INR', funNudgeEnabled: true});
+    for (const uid of ['uf2', 'uf3']) {
+      const h = funHourFor(uid, '2026-11-18');
+      const at = Date.UTC(2026, 10, 18, h - 6, 0) + 30 * 60_000;
+      const run = await runFun(deps(at));
+      assert.equal(run.sent.includes('uf2'), false);
+    }
+    const toUid = uid =>
+      sent.filter(m => m.include_aliases.external_id[0] === uid).length;
+    assert.equal(toUid('uf2'), 0);
+    assert.equal(toUid('uf3'), 1);
+    const marker = await off
+      .collection('reminderLogs')
+      .doc('fun_2026-11-18')
+      .get();
+    assert.equal(marker.exists, false);
   },
 );
 
