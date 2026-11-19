@@ -173,11 +173,10 @@ const AddExpense = () => {
         uploaded = await uploadReceipt(image);
         rememberScan(uploaded);
       }
-      const fill = applyGuess(await requestScan(uploaded.storagePath), {
-        title,
-        amount,
-        date,
-      });
+      const fill = applyGuess(
+        await requestScan(uploaded.storagePath, currency.code),
+        {title, amount, date},
+      );
       if (fill.title !== undefined) {
         setTitle(fill.title);
       }
