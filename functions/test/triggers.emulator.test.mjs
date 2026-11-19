@@ -789,6 +789,50 @@ await step(
       .set({cardId: 'cd1', amountMinor: 123450});
     const due = await runCardDue(deps(Date.UTC(2026, 11, 3, 3, 30, 0)));
     assert.equal(due.sent.includes('cd1_2026-11-15_today'), false);
+
+    // Opted out (cardRemindersEnabled false): nothing is sent and no marker is written, with the
+    // same card and bill. A person who switched it on explicitly still gets the reminder.
+    for (const [uid, enabled] of [
+      ['ucd-off', false],
+      ['ucd-on', true],
+    ]) {
+      const owner = db.collection('users').doc(uid);
+      await owner.set({
+        name: uid,
+        currency: 'INR',
+        balance: 0,
+        cardRemindersEnabled: enabled,
+      });
+      await owner.collection('cards').doc('c1').set({
+        name: 'ICICI',
+        statementDay: 15,
+        dueDay: 3,
+        currency: 'INR',
+      });
+      await owner.collection('transactions').doc('p1').set({
+        type: 'expense',
+        cardId: 'c1',
+        amountMinor: 50000,
+        currency: 'INR',
+        date: '2026-11-10',
+      });
+    }
+    const gated = await runCardDue(deps(soon));
+    assert.equal(gated.sent.includes('c1_2026-11-15_soon'), true);
+    const offMarker = await db
+      .collection('users')
+      .doc('ucd-off')
+      .collection('cardAlerts')
+      .doc('c1_2026-11-15_soon')
+      .get();
+    assert.equal(offMarker.exists, false);
+    const onMarker = await db
+      .collection('users')
+      .doc('ucd-on')
+      .collection('cardAlerts')
+      .doc('c1_2026-11-15_soon')
+      .get();
+    assert.equal(onMarker.exists, true);
   },
 );
 
@@ -1396,6 +1440,54 @@ await step(
       sent.filter(m => m.include_aliases.external_id[0] === 'uf1').length,
       1,
     );
+
+    // Opted out (funNudgeEnabled false): nothing is sent and no marker is written, even in their
+    // chosen hour. A person who switched it on explicitly still gets it.
+    const off = db.collection('users').doc('uf2');
+    await off.set({name: 'Quiet', currency: 'INR', funNudgeEnabled: false});
+    const on = db.collection('users').doc('uf3');
+    await on.set({name: 'Loud', currency: 'INR', funNudgeEnabled: true});
+    for (const uid of ['uf2', 'uf3']) {
+      const h = funHourFor(uid, '2026-11-18');
+      const at = Date.UTC(2026, 10, 18, h - 6, 0) + 30 * 60_000;
+      const run = await runFun(deps(at));
+      assert.equal(run.sent.includes('uf2'), false);
+    }
+    const toUid = uid =>
+      sent.filter(m => m.include_aliases.external_id[0] === uid).length;
+    assert.equal(toUid('uf2'), 0);
+    assert.equal(toUid('uf3'), 1);
+    const marker = await off
+      .collection('reminderLogs')
+      .doc('fun_2026-11-18')
+      .get();
+    assert.equal(marker.exists, false);
+  },
+);
+
+await step(
+  'receipt scan: the optional currency selects zero-decimal reading, absent keeps two decimals',
+  async () => {
+    const {scanReceipt} = require('../lib/receipt.js');
+    // December, so the monthly allowance counted by the next step (November) is untouched.
+    const now = Date.UTC(2026, 11, 5, 6, 0);
+    const deps = {
+      db,
+      statImage: async () => ({size: 1000, contentType: 'image/jpeg'}),
+      readImage: async () => Buffer.from('x'),
+      recognize: async () =>
+        'ファミリーマート\n2026年11月14日 20:41\n小計 ¥270\n消費税 8% ¥21\n合計 ¥291\nお釣り ¥709',
+      now: () => now,
+    };
+    const path = 'bills/usc-jpy/r.jpg';
+    const jpy = await scanReceipt(deps, 'usc-jpy', {
+      storagePath: path,
+      currency: 'JPY',
+    });
+    assert.equal(jpy.amounts[0], '291');
+    assert.equal(jpy.date, '2026-11-14');
+    const old = await scanReceipt(deps, 'usc-jpy', {storagePath: path});
+    assert.equal(old.amounts[0], '291.00');
   },
 );
 

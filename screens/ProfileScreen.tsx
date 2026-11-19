@@ -49,6 +49,7 @@ import type {AppIcon} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
 import AppearanceSetting from '../src/components/AppearanceSetting';
 import AppLockSetting from '../src/components/AppLockSetting';
+import NotificationSetting from '../src/components/NotificationSetting';
 import CurrencyPickerModal from '../src/components/CurrencyPickerModal';
 
 // Accent colours of the settings icons. Each icon circle is the accent at a low alpha, so one
@@ -354,6 +355,7 @@ const ProfileScreen = () => {
           </SettingsCard>
         </View>
 
+        <NotificationSetting />
         <AppLockSetting />
 
         <View className="px-5 pb-[30px]">
