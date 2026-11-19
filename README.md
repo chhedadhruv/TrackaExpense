@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./assets/Tracka.png" alt="TrackaExpense Logo" width="120" height="120">
+  <img src="./assets/icon.png" alt="TrackaExpense Logo" width="120" height="120">
 
   # TrackaExpense
 
