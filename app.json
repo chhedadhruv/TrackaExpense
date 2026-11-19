@@ -103,6 +103,12 @@
         }
       ],
       [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Use Face ID to unlock TrackaExpense."
+        }
+      ],
+      [
         "expo-font",
         {
           "fonts": [
