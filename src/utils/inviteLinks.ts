@@ -48,6 +48,26 @@ export const parseInviteInput = (input: string): InviteTarget | null => {
   return match ? valid(match[1], match[2]) : null;
 };
 
+// Our own invite page: https, our host, the /join path (a trailing slash or query is allowed).
+const INVITE_PAGE =
+  /^https:\/\/trackaexpense\.dhruvchheda\.com\/join\/?(?:[?#]|$)/i;
+
+/**
+ * Rewrites an incoming system URL for Expo Router (`app/+native-intent.ts` calls this for every
+ * link that opens the app). A verified Android App Link to our invite page carries the invite in
+ * its fragment and would otherwise reach the router as an unknown `https` path: it becomes the
+ * app route for the invite. A `/join` link whose fragment is missing or malformed goes to the
+ * Split tab instead of an "unmatched route" screen. Every other URL, including the app's own
+ * `trackaexpense://` links, is returned unchanged.
+ */
+export const systemPathFor = (url: string): string => {
+  if (!INVITE_PAGE.test(url.trim())) {
+    return url;
+  }
+  const target = parseInviteInput(url);
+  return target ? joinPath(target.groupId, target.token) : '/split';
+};
+
 const GENERIC_ERROR =
   'Could not use this invite link. Check your connection and try again.';
 
