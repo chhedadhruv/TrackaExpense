@@ -16,7 +16,10 @@ import {useCurrency} from '../utils/CurrencyUtil';
 import {formatDisplayDate} from '../src/utils/formatters';
 import {parseSms} from '../src/utils/sms/parse';
 import type {ParsedSms} from '../src/utils/sms/types';
+import {useCards} from '../src/hooks/useCards';
+import {getConfig} from '../src/services/RemoteConfigService';
 import {
+  matchCard,
   prefillFor,
   prefillParams,
   targetFor,
@@ -44,7 +47,16 @@ const SmsImportScreen = () => {
     setChecked(true);
   };
 
-  const prefill = parsed ? prefillFor(parsed, currency.code) : null;
+  const cards = useCards().data;
+  const basePrefill = parsed ? prefillFor(parsed, currency.code) : null;
+  // A card payment whose last digits match exactly one of the person's cards pre-selects that
+  // card on the form; Add Expense still lets them change it.
+  const matchedCard =
+    parsed && getConfig().enable_cards ? matchCard(parsed, cards ?? []) : null;
+  const prefill =
+    basePrefill && matchedCard
+      ? {...basePrefill, cardId: matchedCard}
+      : basePrefill;
   const target = parsed ? targetFor(parsed) : null;
 
   const review = () => {

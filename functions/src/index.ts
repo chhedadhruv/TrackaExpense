@@ -17,6 +17,7 @@ import {runRecurring} from './recurringJob';
 import {runMonthly, runWeekly} from './weeklyJob';
 import {runSettleReminders} from './settleJob';
 import {runFun} from './funJob';
+import {runCardDue} from './cardDueJob';
 import {
   InvitationError,
   respondToInvitation as respondToInvitationCore,
@@ -532,6 +533,26 @@ export const settlementReminders = onSchedule(
     logger.info('Settle reminders run finished', {
       reminded: result.reminded.length,
     });
+  },
+);
+
+/**
+ * Credit card bill reminders: three days before and on the due date, at 9 AM local, for a bill that
+ * is not marked paid (cardDueJob.ts). Off unless `enable_card_due_reminders` is "true".
+ */
+export const cardDueReminders = onSchedule(
+  {schedule: 'every 1 hours', timeZone: 'UTC', secrets: [oneSignalApiKey]},
+  async () => {
+    if (!(await isFlagOn('enable_card_due_reminders'))) {
+      return;
+    }
+    const result = await runCardDue({
+      db,
+      fetchFn: fetch,
+      apiKey: process.env.ONESIGNAL_API_KEY || undefined,
+      appId: ONESIGNAL_APP_ID,
+    });
+    logger.info('Card due reminders run finished', {sent: result.sent.length});
   },
 );
 

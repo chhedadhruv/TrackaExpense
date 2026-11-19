@@ -89,6 +89,7 @@ export interface ExportTransaction extends StoredMoney {
   date?: unknown;
   createdAt?: DateSource | null;
   tags?: unknown;
+  cardId?: unknown;
 }
 
 export const TRANSACTION_HEADER = [
@@ -100,12 +101,20 @@ export const TRANSACTION_HEADER = [
   'Currency',
   'Tags',
   'Description',
+  'Payment Method',
 ] as const;
 
-/** One row per transaction, in the order given. Tags are joined with "; ". */
+export const CASH_LABEL = 'Cash / UPI';
+
+/**
+ * One row per transaction, in the order given. Tags are joined with "; ". "Payment Method" is the
+ * card's name (from `cardNames`, by card id) or Cash / UPI; a card that is no longer known shows
+ * as "Card".
+ */
 export const buildTransactionsCsv = (
   transactions: readonly ExportTransaction[],
   currencyCode: string,
+  cardNames: Readonly<Record<string, string>> = {},
 ): string =>
   joinCsv(
     TRANSACTION_HEADER,
@@ -120,6 +129,11 @@ export const buildTransactionsCsv = (
         : textCell(currencyCode),
       textCell(sanitizeTags(t.tags).join('; ')),
       textCell(t.description),
+      textCell(
+        typeof t.cardId === 'string' && t.cardId !== ''
+          ? cardNames[t.cardId] ?? 'Card'
+          : CASH_LABEL,
+      ),
     ]),
   );
 

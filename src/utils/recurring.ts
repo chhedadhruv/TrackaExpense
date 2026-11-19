@@ -35,6 +35,8 @@ export interface RecurringDocument {
   timeZone: string;
   enabled: boolean;
   finished: boolean;
+  /** The credit card the logged expenses are paid with; null for cash, UPI or a bank account. */
+  cardId: string | null;
 }
 
 const pad = (n: number): string => String(n).padStart(2, '0');
@@ -138,6 +140,12 @@ export const parseRecurringDoc = (
         : 'Asia/Kolkata',
     enabled: data.enabled !== false,
     finished: data.finished === true,
+    cardId:
+      data.type === 'expense' &&
+      typeof data.cardId === 'string' &&
+      data.cardId !== ''
+        ? data.cardId
+        : null,
   };
 };
 
@@ -154,6 +162,8 @@ export interface RecurringForm {
   amountText: string;
   currency: string;
   enabled: boolean;
+  /** The card chosen in the form; only an expense can have one. */
+  cardId: string | null;
 }
 
 export type RecurringWrite =
@@ -231,6 +241,7 @@ export const buildRecurringWrite = (
       nextDueDate,
       timeZone: existing?.timeZone ?? timeZone,
       enabled: form.enabled,
+      cardId: form.type === 'expense' ? form.cardId : null,
     },
   };
 };

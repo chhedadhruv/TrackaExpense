@@ -15,6 +15,8 @@ import {
   FormSection,
 } from '../src/components/form/FormParts';
 import TextField from '../src/components/form/TextField';
+import CardField from '../src/components/form/CardField';
+import {useCards} from '../src/hooks/useCards';
 import {
   EmptyState,
   ErrorState,
@@ -59,6 +61,7 @@ const formFrom = (rule: RecurringDocument): RecurringForm => ({
   amountText: fromMinor(rule.amountMinor, rule.currency),
   currency: rule.currency,
   enabled: rule.enabled,
+  cardId: rule.cardId,
 });
 
 /** A row of mutually exclusive pill buttons. */
@@ -111,6 +114,7 @@ const RecurringFormScreen = () => {
   const save = useSaveRecurring();
   const remove = useDeleteRecurring();
   const editing = typeof id === 'string' && id !== '';
+  const cards = useCards().data;
 
   const [form, setForm] = useState<RecurringForm>({
     title: '',
@@ -124,6 +128,8 @@ const RecurringFormScreen = () => {
     amountText: '',
     currency: currency.code,
     enabled: true,
+    // Always starts on Cash / UPI; a card is chosen on purpose.
+    cardId: null,
   });
   const [filled, setFilled] = useState(!editing);
   const [error, setError] = useState('');
@@ -222,6 +228,11 @@ const RecurringFormScreen = () => {
   }
 
   const busy = saving || deleting;
+  // Cards are offered only while the feature is on; a rule keeps showing its card even if the
+  // card was archived since.
+  const pickableCards = getConfig().enable_cards
+    ? (cards ?? []).filter(c => !c.archived || c.id === form.cardId)
+    : [];
   const symbol = getCurrencyByCode(form.currency).symbol;
 
   return (
@@ -269,10 +280,24 @@ const RecurringFormScreen = () => {
               label={o => o.label}
               disabled={busy}
               onChange={type =>
-                change({type, category: categoriesFor(type)[0].value})
+                change({
+                  type,
+                  category: categoriesFor(type)[0].value,
+                  // Only an expense can be paid with a card.
+                  ...(type === 'income' ? {cardId: null} : {}),
+                })
               }
             />
           </FormSection>
+
+          {form.type === 'expense' && pickableCards.length > 0 ? (
+            <CardField
+              cards={pickableCards}
+              value={form.cardId}
+              onChange={cardId => change({cardId})}
+              disabled={busy}
+            />
+          ) : null}
 
           <FormSection label="Category">
             <CategorySelector

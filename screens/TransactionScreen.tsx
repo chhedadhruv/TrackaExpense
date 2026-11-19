@@ -33,9 +33,12 @@ import {useTransactions} from '../src/data/hooks';
 import TagChips from '../src/components/TagChips';
 import {collectTags, tagKey} from '../src/utils/tags';
 import {
+  CASH_FILTER,
   filterTransactions,
   type PeriodFilter,
 } from '../src/utils/transactionFilter';
+import {useCards} from '../src/hooks/useCards';
+import {cardIdOf} from '../src/utils/cards';
 
 type FilterType = PeriodFilter;
 
@@ -90,6 +93,18 @@ const TransactionScreen = () => {
   const {currency, formatAmount} = useCurrency();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  // "Paid with" filter: a card id, CASH_FILTER (no card) or null (any). Cards are only loaded and
+  // offered while the feature is on and the person has one.
+  const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const cardsEnabled = getConfig().enable_cards;
+  const cardList = useCards().data;
+  const cardNames = useMemo(() => {
+    const names: Record<string, string> = {};
+    for (const c of cardList ?? []) {
+      names[c.id] = c.last4 ? `${c.name} ${c.last4}` : c.name;
+    }
+    return names;
+  }, [cardList]);
   const [filter, setFilter] = useState<FilterType>('all');
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
   const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
@@ -122,7 +137,15 @@ const TransactionScreen = () => {
       ? selectedTag
       : null;
 
-  // One derived list: the period, the search text and the tag all apply together.
+  // The chosen card lapses when the feature is off or the card is gone, like the tag above.
+  const activeCard =
+    cardsEnabled &&
+    selectedCard !== null &&
+    (selectedCard === CASH_FILTER || selectedCard in cardNames)
+      ? selectedCard
+      : null;
+
+  // One derived list: the period, the search text, the tag and the card all apply together.
   const filteredTransactions = useMemo(
     () =>
       filterTransactions(transactions, {
@@ -131,6 +154,7 @@ const TransactionScreen = () => {
         customEnd: customEndDate,
         query: searchQuery,
         tag: activeTag,
+        card: activeCard,
       }),
     [
       transactions,
@@ -139,6 +163,7 @@ const TransactionScreen = () => {
       customEndDate,
       searchQuery,
       activeTag,
+      activeCard,
     ],
   );
 
@@ -151,6 +176,7 @@ const TransactionScreen = () => {
       customEnd: customEndDate,
       query: searchQuery,
       tag: activeTag,
+      card: activeCard,
     });
     if (toExport.length === 0) {
       snackbar.info('No transactions to export');
@@ -159,7 +185,7 @@ const TransactionScreen = () => {
     try {
       await shareCsv(
         exportFileName('transactions'),
-        buildTransactionsCsv(toExport, currency.code),
+        buildTransactionsCsv(toExport, currency.code, cardNames),
         'Export Transactions',
       );
     } catch (exportError) {
@@ -255,6 +281,12 @@ const TransactionScreen = () => {
                       </Text>
                     </View>
                   ) : null}
+                  {cardIdOf(transaction) !== null ? (
+                    <Text className="mt-1 font-sans text-xs text-text-secondary">
+                      Paid with{' '}
+                      {cardNames[cardIdOf(transaction) as string] ?? 'a card'}
+                    </Text>
+                  ) : null}
                   <TagChips tags={transaction.tags} max={3} className="mt-1" />
                 </View>
               </View>
@@ -327,6 +359,47 @@ const TransactionScreen = () => {
                 })}
               </ScrollView>
             </View>
+
+            {cardsEnabled && Object.keys(cardNames).length > 0 && (
+              <View className="px-5 pt-5">
+                <Text className="mb-2.5 font-sans-bold text-base font-semibold text-text-strong">
+                  Filter by payment method
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {[
+                    {id: CASH_FILTER, label: 'Cash / UPI'},
+                    ...Object.entries(cardNames).map(([id, label]) => ({
+                      id,
+                      label,
+                    })),
+                  ].map(option => {
+                    const active = activeCard === option.id;
+                    return (
+                      <TouchableOpacity
+                        key={option.id}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Paid with ${option.label}`}
+                        accessibilityState={{selected: active}}
+                        onPress={() =>
+                          setSelectedCard(active ? null : option.id)
+                        }
+                        className={`mr-2.5 rounded-full border px-3.5 py-2 ${
+                          active
+                            ? 'border-primary-fill bg-primary-fill'
+                            : 'border-card-border bg-surface'
+                        }`}>
+                        <Text
+                          className={`font-sans-bold text-[13px] font-semibold ${
+                            active ? 'text-on-primary' : 'text-primary'
+                          }`}>
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
 
             {availableTags.length > 0 && (
               <View className="px-5 pt-5">
