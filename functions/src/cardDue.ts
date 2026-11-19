@@ -173,6 +173,15 @@ export const owedMinor = (
   return total;
 };
 
+/**
+ * The person's own switch, `users/{uid}.cardRemindersEnabled` (written by the app, Profile >
+ * Notifications). Only an explicit false opts out: a missing field (everyone before the switch
+ * existed) or any other value keeps the reminders on. The app applies the same rule in
+ * `isCardRemindersOn` (src/utils/notificationPrefs.ts): change both together.
+ */
+export const cardRemindersAllowed = (value: unknown): boolean =>
+  value !== false;
+
 export const reminderMessage = (
   card: Card,
   stage: Stage,
