@@ -789,6 +789,50 @@ await step(
       .set({cardId: 'cd1', amountMinor: 123450});
     const due = await runCardDue(deps(Date.UTC(2026, 11, 3, 3, 30, 0)));
     assert.equal(due.sent.includes('cd1_2026-11-15_today'), false);
+
+    // Opted out (cardRemindersEnabled false): nothing is sent and no marker is written, with the
+    // same card and bill. A person who switched it on explicitly still gets the reminder.
+    for (const [uid, enabled] of [
+      ['ucd-off', false],
+      ['ucd-on', true],
+    ]) {
+      const owner = db.collection('users').doc(uid);
+      await owner.set({
+        name: uid,
+        currency: 'INR',
+        balance: 0,
+        cardRemindersEnabled: enabled,
+      });
+      await owner.collection('cards').doc('c1').set({
+        name: 'ICICI',
+        statementDay: 15,
+        dueDay: 3,
+        currency: 'INR',
+      });
+      await owner.collection('transactions').doc('p1').set({
+        type: 'expense',
+        cardId: 'c1',
+        amountMinor: 50000,
+        currency: 'INR',
+        date: '2026-11-10',
+      });
+    }
+    const gated = await runCardDue(deps(soon));
+    assert.equal(gated.sent.includes('c1_2026-11-15_soon'), true);
+    const offMarker = await db
+      .collection('users')
+      .doc('ucd-off')
+      .collection('cardAlerts')
+      .doc('c1_2026-11-15_soon')
+      .get();
+    assert.equal(offMarker.exists, false);
+    const onMarker = await db
+      .collection('users')
+      .doc('ucd-on')
+      .collection('cardAlerts')
+      .doc('c1_2026-11-15_soon')
+      .get();
+    assert.equal(onMarker.exists, true);
   },
 );
 
