@@ -23,7 +23,7 @@ Already verified on the combined branch (2026-11-19):
 ## 1. Before cutting the build
 
 - [ ] Me: merge `main` into `release/1.6.0` so it has every JavaScript fix made since the branch was cut, then rerun the gates.
-- [ ] Decide on removing `react-native-gifted-charts`. Recommendation: leave it in 1.6.0. Removing it crashed startup once for a reason nobody has traced, and it saves no feature. Do it in a later build, after finding why.
+- [x] `react-native-gifted-charts` stays in 1.6.0 (owner's decision, 2026-11-19). Removing it crashed startup once for a reason nobody has traced, and it saves no feature. Remove it in a later build, after finding why.
 - [ ] Owner: review the Play Console Data safety answers against what changed since 1.5.1: credit card details (a name, optional last four digits, statement and due days), receipt scanning through Google Cloud Vision, the device time zone saved on the profile. The in-app and website privacy policies already say all three. Biometrics are handled by the system and the app stores and sends nothing from them, so I do not expect the app lock to need a Data safety entry; confirm that while reviewing the form.
 - [ ] Owner: back up the Android upload keystore properly (`credentials/android/` is a single copy plus one loose safety copy).
 - [ ] Me: check that `.env` has `SENTRY_AUTH_TOKEN` (the build script reads it from there), that the EAS CLI is logged in, and that JDK 17 and the Android SDK are present. Say so if any is missing.
