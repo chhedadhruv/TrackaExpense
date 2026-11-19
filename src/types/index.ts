@@ -26,6 +26,11 @@ export interface UserDocument {
    */
   funNudgeEnabled?: boolean;
   /**
+   * The card bill reminder switch (Profile > Notifications, shown while cards are on). Only an
+   * explicit false is off; absent on every older profile. Read it through `isCardRemindersOn`.
+   */
+  cardRemindersEnabled?: boolean;
+  /**
    * The device's IANA time zone (for example "Asia/Kolkata"), kept current by `useSyncTimeZone`.
    * The scheduled jobs in functions/ read it for each person's local time and assume Asia/Kolkata
    * when it is missing. Absent until the person has opened a version that writes it.

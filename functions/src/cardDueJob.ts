@@ -4,6 +4,7 @@ import {DEFAULT_TIME_ZONE} from './budgets';
 import {
   CARD_REMINDER_HOUR,
   alertId,
+  cardRemindersAllowed,
   owedMinor,
   parseCard,
   paymentId,
@@ -36,18 +37,23 @@ export interface CardDueResult {
 export const runCardDue = async (deps: CardDueDeps): Promise<CardDueResult> => {
   const nowMs = (deps.now ?? Date.now)();
   const result: CardDueResult = {sent: []};
-  const zones = new Map<string, string>();
+  const owners = new Map<string, {zone: string; remindersOn: boolean}>();
 
-  const zoneOf = async (uid: string): Promise<string> => {
-    const known = zones.get(uid);
+  // One profile read per owner per run: the local time zone and their reminder switch.
+  const ownerOf = async (
+    uid: string,
+  ): Promise<{zone: string; remindersOn: boolean}> => {
+    const known = owners.get(uid);
     if (known !== undefined) {
       return known;
     }
     const snap = await deps.db.collection('users').doc(uid).get();
     const zone = snap.get('timeZone');
-    const value =
-      typeof zone === 'string' && zone !== '' ? zone : DEFAULT_TIME_ZONE;
-    zones.set(uid, value);
+    const value = {
+      zone: typeof zone === 'string' && zone !== '' ? zone : DEFAULT_TIME_ZONE,
+      remindersOn: cardRemindersAllowed(snap.get('cardRemindersEnabled')),
+    };
+    owners.set(uid, value);
     return value;
   };
 
@@ -59,7 +65,12 @@ export const runCardDue = async (deps: CardDueDeps): Promise<CardDueResult> => {
       continue;
     }
     try {
-      const local = localMoment(nowMs, await zoneOf(userRef.id));
+      const owner = await ownerOf(userRef.id);
+      // Opted out: no marker, no read of their payments or transactions, nothing.
+      if (!owner.remindersOn) {
+        continue;
+      }
+      const local = localMoment(nowMs, owner.zone);
       if (local.hour !== CARD_REMINDER_HOUR) {
         continue;
       }
