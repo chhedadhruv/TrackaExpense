@@ -7,6 +7,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Application from 'expo-application';
 import {ONESIGNAL_APP_ID} from '@env';
+import {suppressNextLock} from '../lock/suppress';
 
 const PROMPTED_KEY = 'push_permission_prompted';
 
@@ -90,6 +91,7 @@ export const requestPushPermissionAfterFirstExpense =
         return;
       }
       await AsyncStorage.setItem(PROMPTED_KEY, 'true');
+      suppressNextLock();
       await OneSignal.Notifications.requestPermission(true);
     } catch (_) {}
   };
