@@ -8,6 +8,7 @@ import {
   query,
 } from '@react-native-firebase/firestore';
 import {reportError} from '../services/ErrorReporter';
+import {useSyncTimeZone} from '../hooks/useSyncTimeZone';
 import type {TransactionDocument, UserDocument} from '../types';
 import {queryKeys} from './keys';
 import {queryClient} from './queryClient';
@@ -24,6 +25,7 @@ import {useSyncStore} from './syncStore';
  */
 const DataSync = ({uid}: {uid: string}) => {
   const restartKey = useSyncStore(state => state.restartKey);
+  useSyncTimeZone();
 
   useEffect(() => {
     const {setStatus} = useSyncStore.getState();
