@@ -1,5 +1,6 @@
 import {File, Paths} from 'expo-file-system';
 import Share from 'react-native-share';
+import {suppressNextLock} from '../lock/suppress';
 
 export type ShareCsvResult = 'shared' | 'cancelled';
 
@@ -22,6 +23,7 @@ export const shareCsv = async (
     throw new Error('The CSV file could not be created.');
   }
   try {
+    suppressNextLock();
     await Share.open({
       title,
       url: file.uri,

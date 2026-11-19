@@ -58,6 +58,7 @@ import {shareOfMinor, totalSpentMajor} from '../../src/utils/splitMath';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {ErrorState, LoadingState} from '../../src/components/ScreenState';
 import {useGroup, useGroupSplits, useMemberDetails} from '../../src/data/split';
+import {suppressNextLock} from '../../src/lock/suppress';
 import {snackbar} from '../../src/utils/snackbarStore';
 import {reportError} from '../../src/services/ErrorReporter';
 import {
@@ -225,6 +226,7 @@ const SplitGroupDetailScreen = () => {
   const shareInviteLink = async () => {
     try {
       const created = await createGroupInviteLink(group!.id);
+      suppressNextLock();
       await Share.share({
         message: inviteMessage(
           group!.name,
