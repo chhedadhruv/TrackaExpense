@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import {Text, TextInput, TouchableOpacity, View} from 'react-native';
 import {useTheme} from '../theme';
 import {useUid} from '../data/hooks';
-import {BUILT_IN_NAMES, useCategoryData} from '../data/categories';
+import {builtInNamesFor, useCategoryData} from '../data/categories';
 import {createCategory} from '../services/CategoryService';
 import {reportError} from '../services/ErrorReporter';
 import {DEFAULT_CATEGORY_ICON} from '../constants/categoryIcons';
@@ -42,7 +42,7 @@ const NewCategoryForm = ({
     const problem =
       customs.filter(c => c.type === type).length >= MAX_CUSTOM_CATEGORIES
         ? `You can have at most ${MAX_CUSTOM_CATEGORIES} of your own categories of each kind.`
-        : categoryNameError(name, BUILT_IN_NAMES, customs, type);
+        : categoryNameError(name, builtInNamesFor(type), customs, type);
     if (problem) {
       setError(problem);
       return;

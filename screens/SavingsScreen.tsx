@@ -15,28 +15,19 @@ import Card from '../src/components/Card';
 import Bell from 'lucide-react-native/icons/bell';
 import BellOff from 'lucide-react-native/icons/bell-off';
 import BellRing from 'lucide-react-native/icons/bell-ring';
-import Building2 from 'lucide-react-native/icons/building-2';
 import Calendar from 'lucide-react-native/icons/calendar';
 import Calendar1 from 'lucide-react-native/icons/calendar-1';
 import CalendarClock from 'lucide-react-native/icons/calendar-clock';
 import CalendarDays from 'lucide-react-native/icons/calendar-days';
-import CarFront from 'lucide-react-native/icons/car-front';
-import ChartLine from 'lucide-react-native/icons/chart-line';
 import ChevronDown from 'lucide-react-native/icons/chevron-down';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import CircleAlert from 'lucide-react-native/icons/circle-alert';
-import GraduationCap from 'lucide-react-native/icons/graduation-cap';
-import Gem from 'lucide-react-native/icons/gem';
 import History from 'lucide-react-native/icons/history';
 import Minus from 'lucide-react-native/icons/minus';
 import Pencil from 'lucide-react-native/icons/pencil';
 import PiggyBank from 'lucide-react-native/icons/piggy-bank';
-import Plane from 'lucide-react-native/icons/plane';
 import Plus from 'lucide-react-native/icons/plus';
-import ShieldCheck from 'lucide-react-native/icons/shield-check';
-import Smartphone from 'lucide-react-native/icons/smartphone';
 import Trash2 from 'lucide-react-native/icons/trash-2';
-import X from 'lucide-react-native/icons/x';
 import {
   Timestamp,
   addDoc,
@@ -53,7 +44,9 @@ import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView
 import {KeyboardAvoidingModal} from '../src/components/KeyboardAvoidingModal';
 import DatePickerModal from '../src/components/DatePickerModal';
 import {useCurrency} from '../utils/CurrencyUtil';
-import {GOAL_KEYWORD_MAP} from '../utils/CategoryData';
+import {DEFAULT_GOAL_CATEGORY, GOAL_KEYWORD_MAP} from '../utils/CategoryData';
+import CategorySelector from '../src/components/CategorySelector';
+import {useCategoryIcon, useCategoryLists} from '../src/data/categories';
 import {guessCategory} from '../src/utils/categorySuggest';
 import ReminderNotificationService from '../services/ReminderNotificationService';
 import {useTheme, useThemedStyles, type ThemeColors} from '../src/theme';
@@ -71,26 +64,6 @@ import type {SavingsGoal} from '../src/types';
 import type {AppIcon} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
 import {ModalSnackbar} from '../src/components/Snackbar';
-
-interface GoalCategory {
-  id: string;
-  label: string;
-  icon: AppIcon;
-}
-
-const GOAL_CATEGORIES: GoalCategory[] = [
-  {id: 'emergency', label: 'Emergency', icon: ShieldCheck},
-  {id: 'vacation', label: 'Vacation', icon: Plane},
-  {id: 'house', label: 'House', icon: Building2},
-  {id: 'car', label: 'Car', icon: CarFront},
-  {id: 'education', label: 'Education', icon: GraduationCap},
-  {id: 'investment', label: 'Investment', icon: ChartLine},
-  {id: 'wedding', label: 'Wedding', icon: Gem},
-  {id: 'electronics', label: 'Electronics', icon: Smartphone},
-  {id: 'other', label: 'Other', icon: PiggyBank},
-];
-
-const GOAL_CATEGORY_IDS = GOAL_CATEGORIES.map(c => c.id);
 
 interface EditValues {
   name: string;
@@ -154,10 +127,11 @@ const SavingsScreen = () => {
   const [goalToDelete, setGoalToDelete] = useState<SavingsGoal | null>(null);
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [reminderGoalId, setReminderGoalId] = useState<string | null>(null);
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [openDate, setOpenDate] = useState(false);
   const [categoryManuallySelected, setCategoryManuallySelected] =
     useState(false);
+  const goalLists = useCategoryLists('goal');
+  const iconFor = useCategoryIcon();
 
   // A profile with no goals at all gets one starter goal, once.
   useEffect(() => {
@@ -202,12 +176,30 @@ const SavingsScreen = () => {
     const guess =
       guessCategory(editValues.name, {
         keywordMap: GOAL_KEYWORD_MAP,
-        allowed: GOAL_CATEGORY_IDS,
-      })?.category ?? 'other';
+        allowed: goalLists.values,
+      })?.category ?? DEFAULT_GOAL_CATEGORY;
     setEditValues(prev =>
       prev.category === guess ? prev : {...prev, category: guess},
     );
-  }, [editValues.name, categoryManuallySelected]);
+  }, [editValues.name, categoryManuallySelected, goalLists.values]);
+
+  const pickGoalCategory = (category: string) => {
+    setEditValues(prev => ({...prev, category}));
+    setCategoryManuallySelected(true);
+  };
+
+  const goalCategorySelector = (
+    <CategorySelector
+      categories={goalLists.categories}
+      selectedCategory={editValues.category}
+      onSelect={pickGoalCategory}
+      guessed={
+        !categoryManuallySelected &&
+        editValues.category !== DEFAULT_GOAL_CATEGORY
+      }
+      createType="goal"
+    />
+  );
 
   const handleEdit = (goalId: string) => {
     const goal = savingsGoals.find(g => g.id === goalId);
@@ -542,10 +534,8 @@ const SavingsScreen = () => {
     return colors.expense;
   };
 
-  const getCategoryIcon = (category: string): AppIcon => {
-    const cat = GOAL_CATEGORIES.find(c => c.id === category);
-    return cat ? cat.icon : PiggyBank;
-  };
+  const getCategoryIcon = (category: string): AppIcon =>
+    iconFor(category, 'goal');
 
   const calculateTargetDateLabel = (
     targetDate: string | undefined,
@@ -824,18 +814,6 @@ const SavingsScreen = () => {
   const overallProgress =
     totalTarget > 0 ? Math.min((totalSaved / totalTarget) * 100, 100) : 0;
 
-  const renderCategoryButton = () => {
-    const cat = GOAL_CATEGORIES.find(c => c.id === editValues.category);
-    return cat ? (
-      <>
-        <cat.icon size={20} color={colors.primary} />
-        <Text style={styles.categorySelectorText}>{cat.label}</Text>
-      </>
-    ) : (
-      <Text style={styles.categorySelectorPlaceholder}>Select category</Text>
-    );
-  };
-
   // A failed load must not show an empty goals list: a starter goal added on top of "no goals" could
   // sit beside real ones the screen failed to read.
   if (
@@ -1026,15 +1004,7 @@ const SavingsScreen = () => {
                         </View>
                         <View style={styles.inputContainer}>
                           <Text style={styles.inputLabel}>Category</Text>
-                          <TouchableOpacity
-                            style={styles.categorySelectorButton}
-                            onPress={() => setShowCategoryModal(true)}>
-                            {renderCategoryButton()}
-                            <ChevronDown
-                              size={20}
-                              color={colors.textPlaceholder}
-                            />
-                          </TouchableOpacity>
+                          {goalCategorySelector}
                         </View>
                         <View style={styles.inputContainer}>
                           <Text style={styles.inputLabel}>
@@ -1381,12 +1351,7 @@ const SavingsScreen = () => {
               </View>
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Category</Text>
-                <TouchableOpacity
-                  style={styles.categorySelectorButton}
-                  onPress={() => setShowCategoryModal(true)}>
-                  {renderCategoryButton()}
-                  <ChevronDown size={20} color={colors.textPlaceholder} />
-                </TouchableOpacity>
+                {goalCategorySelector}
               </View>
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>
@@ -1576,55 +1541,6 @@ const SavingsScreen = () => {
           label="Select target date"
           minimumDate={new Date()}
         />
-
-        {/* Category Picker Modal */}
-        <Modal
-          visible={showCategoryModal}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowCategoryModal(false)}>
-          <View style={styles.categoryModalOverlay}>
-            <View style={styles.categoryModalSheet}>
-              <View style={styles.categoryModalHeader}>
-                <Text style={styles.categoryModalTitle}>Select Category</Text>
-                <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
-                  <X size={24} color={colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-              <View style={styles.categoryGrid}>
-                {GOAL_CATEGORIES.map(cat => {
-                  const isSelected = editValues.category === cat.id;
-                  return (
-                    <TouchableOpacity
-                      key={cat.id}
-                      style={[
-                        styles.categoryChip,
-                        isSelected && styles.categoryChipSelected,
-                      ]}
-                      onPress={() => {
-                        setEditValues({...editValues, category: cat.id});
-                        setCategoryManuallySelected(true);
-                        setShowCategoryModal(false);
-                      }}>
-                      <cat.icon
-                        size={22}
-                        color={isSelected ? colors.onPrimary : colors.primary}
-                      />
-                      <Text
-                        style={[
-                          styles.categoryChipText,
-                          isSelected && styles.categoryChipTextSelected,
-                        ]}>
-                        {cat.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-          </View>
-          <ModalSnackbar />
-        </Modal>
       </View>
     </SafeAreaProvider>
   );
@@ -1904,79 +1820,6 @@ const createStyles = (colors: ThemeColors) =>
       marginTop: 4,
       textAlign: 'right',
       fontFamily: 'Lato-Regular',
-    },
-    categorySelectorButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.surfaceMuted,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
-      paddingHorizontal: 15,
-      paddingVertical: 12,
-      gap: 10,
-    },
-    categorySelectorText: {
-      flex: 1,
-      fontSize: 16,
-      color: colors.textStrong,
-      fontFamily: 'Lato-Regular',
-    },
-    categorySelectorPlaceholder: {
-      flex: 1,
-      fontSize: 16,
-      color: colors.textPlaceholder,
-      fontFamily: 'Lato-Regular',
-    },
-    categoryModalOverlay: {
-      flex: 1,
-      backgroundColor: colors.overlay,
-      justifyContent: 'flex-end',
-    },
-    categoryModalSheet: {
-      backgroundColor: colors.surface,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      padding: 20,
-      paddingBottom: 34,
-    },
-    categoryModalHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 20,
-    },
-    categoryModalTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: colors.textStrong,
-      fontFamily: 'Lato-Bold',
-    },
-    categoryGrid: {flexDirection: 'row', flexWrap: 'wrap', gap: 10},
-    categoryChip: {
-      width: '30%',
-      alignItems: 'center',
-      paddingVertical: 12,
-      paddingHorizontal: 8,
-      backgroundColor: colors.surfaceMuted,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
-    },
-    categoryChipSelected: {
-      backgroundColor: colors.primaryFill,
-      borderColor: colors.primaryFill,
-    },
-    categoryChipText: {
-      fontSize: 12,
-      color: colors.textSecondary,
-      marginTop: 5,
-      fontFamily: 'Lato-Regular',
-      textAlign: 'center',
-    },
-    categoryChipTextSelected: {
-      color: colors.onPrimary,
-      fontFamily: 'Lato-Bold',
     },
     editActions: {
       flexDirection: 'row',

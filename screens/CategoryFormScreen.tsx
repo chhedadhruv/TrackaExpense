@@ -15,7 +15,8 @@ import {
 } from '../src/components/form/FormParts';
 import TextField from '../src/components/form/TextField';
 import {DEFAULT_CATEGORY_ICON} from '../src/constants/categoryIcons';
-import {BUILT_IN_NAMES, useCategoryData} from '../src/data/categories';
+import {builtInNamesFor, useCategoryData} from '../src/data/categories';
+import {useGoals} from '../src/data/goals';
 import {useUid} from '../src/data/hooks';
 import {useAsyncAction} from '../src/hooks/useAsyncAction';
 import {
@@ -52,7 +53,11 @@ const CategoryFormScreen = () => {
     ? data.customs.find(c => c.id === editingId)
     : undefined;
   const type: CategoryType =
-    existing?.type ?? (params.type === 'income' ? 'income' : 'expense');
+    existing?.type ??
+    (params.type === 'income' || params.type === 'goal'
+      ? params.type
+      : 'expense');
+  const goalsState = useGoals();
 
   const [name, setName] = useState('');
   const [icon, setIcon] = useState(DEFAULT_CATEGORY_ICON);
@@ -79,7 +84,7 @@ const CategoryFormScreen = () => {
           ? `You can have at most ${MAX_CUSTOM_CATEGORIES} of your own categories of each kind.`
           : categoryNameError(
               cleaned,
-              BUILT_IN_NAMES,
+              builtInNamesFor(type),
               data.customs,
               type,
               existing?.id ?? null,
@@ -103,6 +108,7 @@ const CategoryFormScreen = () => {
             existing,
             cleaned,
             data.prefs,
+            goalsState.goals,
           );
           snackbar.success(
             moved > 0 ? `Renamed, ${entriesText(moved)}` : 'Renamed',
@@ -128,7 +134,7 @@ const CategoryFormScreen = () => {
       return;
     }
     try {
-      const moved = await finishRename(uid, existing);
+      const moved = await finishRename(uid, existing, goalsState.goals);
       snackbar.success(`Rename finished, ${entriesText(moved)}`);
     } catch (e) {
       reportError(e as Error);
@@ -177,7 +183,13 @@ const CategoryFormScreen = () => {
   }
 
   // Saving rewrites the preferences from what is shown, so it waits for the live listener.
-  const busy = saving || deleting || finishing || !data.live;
+  // A goal rename rewrites the goals from what is shown, so it also waits for their listener.
+  const busy =
+    saving ||
+    deleting ||
+    finishing ||
+    !data.live ||
+    (type === 'goal' && !goalsState.live);
   const pendingRename = existing?.renamingFrom ?? null;
 
   return (
@@ -192,7 +204,11 @@ const CategoryFormScreen = () => {
           iconColor={colors.primary}
           title={editing ? 'Edit Category' : 'Add Category'}
           subtitle={
-            type === 'expense' ? 'An expense category' : 'An income category'
+            type === 'expense'
+              ? 'An expense category'
+              : type === 'income'
+              ? 'An income category'
+              : 'A savings goal category'
           }
         />
         <FormCard>
@@ -225,8 +241,9 @@ const CategoryFormScreen = () => {
           />
           {editing ? (
             <Text className="-mt-2 mb-4 font-sans text-xs text-text-secondary">
-              Renaming also moves your past entries, recurring rules and budgets
-              to the new name.
+              {type === 'goal'
+                ? 'Renaming also moves your savings goals to the new name.'
+                : 'Renaming also moves your past entries, recurring rules and budgets to the new name.'}
             </Text>
           ) : null}
 

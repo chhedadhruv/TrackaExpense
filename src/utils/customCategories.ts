@@ -10,7 +10,17 @@
 import {categoryIconFor, isCategoryIconKey} from '../constants/categoryIcons';
 import type {Category} from '../types';
 
-export type CategoryType = 'expense' | 'income';
+/** Expense and income categories go on transactions; goal categories on savings goals. */
+export type CategoryType = 'expense' | 'income' | 'goal';
+
+export const CATEGORY_TYPES: readonly CategoryType[] = [
+  'expense',
+  'income',
+  'goal',
+];
+
+const isCategoryType = (value: unknown): value is CategoryType =>
+  CATEGORY_TYPES.includes(value as CategoryType);
 
 export const PREFS_DOC_ID = '_prefs';
 export const MAX_CATEGORY_NAME = 24;
@@ -45,8 +55,8 @@ export interface CategoryPrefs {
 }
 
 export const EMPTY_PREFS: CategoryPrefs = {
-  hidden: {expense: [], income: []},
-  order: {expense: [], income: []},
+  hidden: {expense: [], income: [], goal: []},
+  order: {expense: [], income: [], goal: []},
 };
 
 /** One row of a category list: built-in or custom, visible or hidden. */
@@ -120,7 +130,7 @@ export const customFromDoc = (
   const name =
     typeof data.name === 'string' ? cleanCategoryName(data.name) : '';
   const type = data.type;
-  if (name === '' || (type !== 'expense' && type !== 'income')) {
+  if (name === '' || !isCategoryType(type)) {
     return null;
   }
   return {
@@ -146,7 +156,11 @@ const perType = (value: unknown): Record<CategoryType, string[]> => {
     value && typeof value === 'object'
       ? (value as Record<string, unknown>)
       : {};
-  return {expense: stringList(obj.expense), income: stringList(obj.income)};
+  return {
+    expense: stringList(obj.expense),
+    income: stringList(obj.income),
+    goal: stringList(obj.goal),
+  };
 };
 
 /** The preferences document, with anything malformed dropped. */

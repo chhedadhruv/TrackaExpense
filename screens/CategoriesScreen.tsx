@@ -9,6 +9,7 @@ import EyeOff from 'lucide-react-native/icons/eye-off';
 import Plus from 'lucide-react-native/icons/plus';
 import Shapes from 'lucide-react-native/icons/shapes';
 import {useUid} from '../src/data/hooks';
+import {useGoals} from '../src/data/goals';
 import {useCategoryData, useCategoryLists} from '../src/data/categories';
 import {finishRename, savePrefs} from '../src/services/CategoryService';
 import {reportError} from '../src/services/ErrorReporter';
@@ -26,6 +27,7 @@ import {
 const TYPES: readonly {value: CategoryType; label: string}[] = [
   {value: 'expense', label: 'Expense'},
   {value: 'income', label: 'Income'},
+  {value: 'goal', label: 'Goals'},
 ];
 
 interface RowProps {
@@ -153,11 +155,17 @@ const CategoriesScreen = () => {
   const uid = useUid();
   const [type, setType] = useState<CategoryType>('expense');
   const data = useCategoryData();
+  const goalsState = useGoals();
   const {entries} = useCategoryLists(type);
   const [busy, setBusy] = useState(false);
 
   // Writes rewrite the preferences from what is shown, so they wait for the live listener.
   const locked = busy || !data.live;
+  // Finishing a goal rename rewrites the goals from what is shown.
+  const finishLocked =
+    locked ||
+    (data.customs.some(c => c.type === 'goal' && c.renamingFrom) &&
+      !goalsState.live);
 
   const run = async (work: () => Promise<void>, failure: string) => {
     setBusy(true);
@@ -208,7 +216,7 @@ const CategoriesScreen = () => {
     run(async () => {
       let moved = 0;
       for (const c of unfinished) {
-        moved += await finishRename(uid, c);
+        moved += await finishRename(uid, c, goalsState.goals);
       }
       snackbar.success(
         `Rename finished${moved > 0 ? `, ${moved} entries updated` : ''}`,
@@ -268,7 +276,7 @@ const CategoriesScreen = () => {
           </Text>
           <TouchableOpacity
             accessibilityRole="button"
-            disabled={locked}
+            disabled={finishLocked}
             onPress={finish}
             className="mt-2 self-start">
             <Text className="font-sans-bold text-sm text-primary">
@@ -317,7 +325,7 @@ const CategoriesScreen = () => {
             className="mt-2 flex-row items-center justify-center rounded-2xl border-[1.5px] border-dashed border-primary-fill py-3.5">
             <Plus size={20} color={colors.primary} />
             <Text className="ml-2 font-sans-bold text-base text-primary">
-              Add {type} category
+              {type === 'goal' ? 'Add goal category' : `Add ${type} category`}
             </Text>
           </TouchableOpacity>
         }

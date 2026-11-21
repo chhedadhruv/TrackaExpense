@@ -18,6 +18,8 @@ import {
   type CategoryType,
   type CustomCategory,
 } from '../utils/customCategories';
+import type {SavingsGoal} from '../types';
+import {saveGoals} from './GoalsService';
 
 /**
  * Writes for the person's own categories (`users/{uid}/categories/{id}`) and their preferences
@@ -127,6 +129,28 @@ const documentsToRename = async (
 };
 
 /**
+ * Goals live in the profile's `savingsGoals` array (which old apps write) and in goal documents,
+ * so they are moved through `saveGoals`: one transaction that applies only this change on top of
+ * what the server holds. `goals` are the goals on screen, confirmed by the live listener.
+ */
+const rewriteGoalCategory = async (
+  uid: string,
+  from: string,
+  to: string,
+  goals: readonly SavingsGoal[] | undefined,
+): Promise<number> => {
+  if (!goals) {
+    throw new Error('Renaming a goal category needs the current goals');
+  }
+  const next = goals.map(g => (g.category === from ? {...g, category: to} : g));
+  const moved = goals.filter(g => g.category === from).length;
+  if (moved > 0) {
+    await saveGoals(uid, goals, next);
+  }
+  return moved;
+};
+
+/**
  * Moves every one of the person's transactions, recurring rules and budgets from category `from`
  * to `to`, in batches. Only `category` changes: no money field and no balance is touched.
  * Returns how many documents changed. Running it again is harmless (nothing is left to change).
@@ -136,7 +160,11 @@ export const rewriteCategory = async (
   type: CategoryType,
   from: string,
   to: string,
+  goals?: readonly SavingsGoal[],
 ): Promise<number> => {
+  if (type === 'goal') {
+    return rewriteGoalCategory(uid, from, to, goals);
+  }
   const refs = await documentsToRename(uid, type, from);
   for (let i = 0; i < refs.length; i += REWRITE_BATCH_SIZE) {
     const batch = writeBatch(getFirestore());
@@ -158,6 +186,8 @@ export const renameCategory = async (
   category: CustomCategory,
   newName: string,
   prefs: CategoryPrefs,
+  /** The person's goals as shown; needed for a goal category. */
+  goals?: readonly SavingsGoal[],
 ): Promise<number> => {
   const to = cleanCategoryName(newName);
   const from = category.name;
@@ -172,13 +202,14 @@ export const renameCategory = async (
     updatedAt: serverTimestamp(),
   });
   await batch.commit();
-  return finishRename(uid, {...category, name: to, renamingFrom: from});
+  return finishRename(uid, {...category, name: to, renamingFrom: from}, goals);
 };
 
 /** Finishes a rename that was interrupted (see `renameCategory`). Returns how many entries moved. */
 export const finishRename = async (
   uid: string,
   category: CustomCategory,
+  goals?: readonly SavingsGoal[],
 ): Promise<number> => {
   if (!category.renamingFrom) {
     return 0;
@@ -188,6 +219,7 @@ export const finishRename = async (
     category.type,
     category.renamingFrom,
     category.name,
+    goals,
   );
   const batch = writeBatch(getFirestore());
   batch.update(doc(categoriesCol(uid), category.id), {
