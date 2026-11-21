@@ -54,6 +54,17 @@ export const SPLIT_CATEGORIES: readonly Category[] = [
   {value: 'Others', label: 'Others', icon: Shapes},
 ] as const;
 
+/** The values of each list, for suggestions (`allowed` in `src/utils/categorySuggest.ts`). */
+export const EXPENSE_VALUES: readonly string[] = EXPENSE_CATEGORIES.map(
+  c => c.value,
+);
+export const INCOME_VALUES: readonly string[] = INCOME_CATEGORIES.map(
+  c => c.value,
+);
+export const SPLIT_VALUES: readonly string[] = SPLIT_CATEGORIES.map(
+  c => c.value,
+);
+
 export const EXPENSE_KEYWORD_MAP: Record<string, string> = {
   // Food
   lunch: 'Food',
@@ -103,7 +114,7 @@ export const EXPENSE_KEYWORD_MAP: Record<string, string> = {
   // Bills & Utilities
   electricity: 'Bills',
   'electric bill': 'Bills',
-  water: 'Bills',
+  'water bill': 'Bills',
   'gas bill': 'Bills',
   internet: 'Bills',
   broadband: 'Bills',
@@ -113,7 +124,7 @@ export const EXPENSE_KEYWORD_MAP: Record<string, string> = {
   rent: 'Rent',
   'house rent': 'Rent',
   apartment: 'Rent',
-  flat: 'Rent',
+  'flat rent': 'Rent',
   pg: 'Rent',
   hostel: 'Rent',
   // Travel
@@ -121,6 +132,13 @@ export const EXPENSE_KEYWORD_MAP: Record<string, string> = {
   ola: 'Travel',
   rapido: 'Travel',
   taxi: 'Travel',
+  cab: 'Travel',
+  auto: 'Travel',
+  petrol: 'Travel',
+  diesel: 'Travel',
+  fuel: 'Travel',
+  parking: 'Travel',
+  toll: 'Travel',
   flight: 'Travel',
   train: 'Travel',
   bus: 'Travel',
@@ -176,6 +194,42 @@ export const EXPENSE_KEYWORD_MAP: Record<string, string> = {
   dropbox: 'Subscriptions',
   'google one': 'Subscriptions',
 };
+
+/** Expense keywords that mean getting around; in a split they are Transport. */
+const TRANSPORT_KEYWORDS = new Set([
+  'uber',
+  'ola',
+  'rapido',
+  'taxi',
+  'cab',
+  'auto',
+  'petrol',
+  'diesel',
+  'fuel',
+  'parking',
+  'toll',
+  'flight',
+  'train',
+  'bus',
+  'metro',
+  'irctc',
+]);
+
+/**
+ * Keywords for split categories, derived from the expense map: transport keywords become
+ * Transport and groceries become Food. Keywords whose category is not a split category (Rent,
+ * Travel, Health, ...) are ignored because a guess must be one of `SPLIT_CATEGORIES`.
+ */
+export const SPLIT_KEYWORD_MAP: Record<string, string> = Object.fromEntries(
+  Object.entries(EXPENSE_KEYWORD_MAP).map(([keyword, category]) => [
+    keyword,
+    TRANSPORT_KEYWORDS.has(keyword)
+      ? 'Transport'
+      : category === 'Groceries'
+      ? 'Food'
+      : category,
+  ]),
+);
 
 export const INCOME_KEYWORD_MAP: Record<string, string> = {
   salary: 'Salary',

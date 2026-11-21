@@ -37,9 +37,17 @@ import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView
 import FormButton from '../components/FormButton';
 import {useAsyncAction} from '../src/hooks/useAsyncAction';
 import {useCurrency} from '../utils/CurrencyUtil';
-import {EXPENSE_CATEGORIES, EXPENSE_KEYWORD_MAP} from '../utils/CategoryData';
+import {
+  EXPENSE_CATEGORIES,
+  EXPENSE_KEYWORD_MAP,
+  EXPENSE_VALUES,
+} from '../utils/CategoryData';
 import {useTheme} from '../src/theme';
 import {useTransactionForm} from '../src/hooks/useTransactionForm';
+import {
+  useCategoryHistory,
+  useCategorySuggestion,
+} from '../src/hooks/useCategorySuggestion';
 import {balanceEffect, transactionMoneyFields} from '../src/utils/amounts';
 import CategorySelector from '../src/components/CategorySelector';
 import AmountInput from '../src/components/AmountInput';
@@ -94,6 +102,15 @@ const AddExpense = () => {
   } = useTransactionForm(prefillFromParams(params));
   const knownTags = useKnownTags();
   const recordTags = useRecordTags();
+  const categoryHistory = useCategoryHistory('expense', EXPENSE_VALUES);
+  const categorySuggestion = useCategorySuggestion({
+    title,
+    category,
+    setCategory,
+    allowed: EXPENSE_VALUES,
+    keywordMap: EXPENSE_KEYWORD_MAP,
+    history: categoryHistory,
+  });
 
   // "Paid with" (behind the Remote Config flag). It always starts on Cash / UPI; a card is picked
   // on purpose and a card purchase does not change the balance until the bill is paid.
@@ -197,21 +214,6 @@ const AddExpense = () => {
       setScanning(false);
     }
   };
-
-  // Auto-suggest category from title keywords
-  useEffect(() => {
-    if (title.trim().length < 3 || category) {
-      return;
-    }
-    const lower = title.toLowerCase();
-    const match = Object.keys(EXPENSE_KEYWORD_MAP).find(kw =>
-      lower.includes(kw),
-    );
-    if (match) {
-      setCategory(EXPENSE_KEYWORD_MAP[match]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title]);
 
   const getUid = (): string => getAuth().currentUser!.uid;
 
@@ -379,7 +381,9 @@ const AddExpense = () => {
               <CategorySelector
                 categories={EXPENSE_CATEGORIES}
                 selectedCategory={category}
-                onSelect={setCategory}
+                onSelect={categorySuggestion.pickByHand}
+                suggested={categorySuggestion.suggested}
+                guessed={categorySuggestion.guessed}
                 disabled={isSubmitting}
                 placeholder="Select expense category"
               />

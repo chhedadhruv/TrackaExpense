@@ -26,7 +26,18 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import FormButton from '../components/FormButton';
 import {useAsyncAction} from '../src/hooks/useAsyncAction';
 import {useCurrency} from '../utils/CurrencyUtil';
-import {EXPENSE_CATEGORIES, INCOME_CATEGORIES} from '../utils/CategoryData';
+import {
+  EXPENSE_CATEGORIES,
+  EXPENSE_KEYWORD_MAP,
+  EXPENSE_VALUES,
+  INCOME_CATEGORIES,
+  INCOME_KEYWORD_MAP,
+  INCOME_VALUES,
+} from '../utils/CategoryData';
+import {
+  useCategoryHistory,
+  useCategorySuggestion,
+} from '../src/hooks/useCategorySuggestion';
 import {useTheme} from '../src/theme';
 import {useTransactionForm} from '../src/hooks/useTransactionForm';
 import {editBalanceDelta, transactionMoneyFields} from '../src/utils/amounts';
@@ -103,6 +114,21 @@ const EditTransactionScreen = ({
   });
   const knownTags = useKnownTags();
   const recordTags = useRecordTags();
+  const categoryValues =
+    transaction.type === 'expense' ? EXPENSE_VALUES : INCOME_VALUES;
+  const categoryHistory = useCategoryHistory(transaction.type, categoryValues);
+  // The saved category was the person's choice, so the guess never replaces it; it only orders
+  // the picker's suggestions.
+  const categorySuggestion = useCategorySuggestion({
+    title,
+    category,
+    setCategory,
+    allowed: categoryValues,
+    keywordMap:
+      transaction.type === 'expense' ? EXPENSE_KEYWORD_MAP : INCOME_KEYWORD_MAP,
+    history: categoryHistory,
+    startPickedByHand: transaction.category !== '',
+  });
 
   // "Paid with" is only offered for expenses while cards are switched on. A transaction that
   // already has a card keeps showing it, even if that card was archived since.
@@ -324,7 +350,9 @@ const EditTransactionScreen = ({
                     : INCOME_CATEGORIES
                 }
                 selectedCategory={category}
-                onSelect={setCategory}
+                onSelect={categorySuggestion.pickByHand}
+                suggested={categorySuggestion.suggested}
+                guessed={categorySuggestion.guessed}
                 disabled={isSubmitting}
                 placeholder="Select category"
               />

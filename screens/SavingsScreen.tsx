@@ -54,6 +54,7 @@ import {KeyboardAvoidingModal} from '../src/components/KeyboardAvoidingModal';
 import DatePickerModal from '../src/components/DatePickerModal';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {GOAL_KEYWORD_MAP} from '../utils/CategoryData';
+import {guessCategory} from '../src/utils/categorySuggest';
 import ReminderNotificationService from '../services/ReminderNotificationService';
 import {useTheme, useThemedStyles, type ThemeColors} from '../src/theme';
 import {ErrorState, LoadingState} from '../src/components/ScreenState';
@@ -88,6 +89,8 @@ const GOAL_CATEGORIES: GoalCategory[] = [
   {id: 'electronics', label: 'Electronics', icon: Smartphone},
   {id: 'other', label: 'Other', icon: PiggyBank},
 ];
+
+const GOAL_CATEGORY_IDS = GOAL_CATEGORIES.map(c => c.id);
 
 interface EditValues {
   name: string;
@@ -190,17 +193,21 @@ const SavingsScreen = () => {
     });
   }, [goalsState.live, goalsState.hasProfile, savingsGoals.length]);
 
+  // The category follows the goal name (whole words, see `src/utils/categorySuggest.ts`) until the
+  // person picks one; "other" is the empty value. A saved goal's category is never changed by it.
   useEffect(() => {
-    if (editValues.name.trim().length < 3 || categoryManuallySelected) {
+    if (categoryManuallySelected) {
       return;
     }
-    const lower = editValues.name.toLowerCase();
-    const match = Object.keys(GOAL_KEYWORD_MAP).find(kw => lower.includes(kw));
-    if (match) {
-      setEditValues(prev => ({...prev, category: GOAL_KEYWORD_MAP[match]}));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editValues.name]);
+    const guess =
+      guessCategory(editValues.name, {
+        keywordMap: GOAL_KEYWORD_MAP,
+        allowed: GOAL_CATEGORY_IDS,
+      })?.category ?? 'other';
+    setEditValues(prev =>
+      prev.category === guess ? prev : {...prev, category: guess},
+    );
+  }, [editValues.name, categoryManuallySelected]);
 
   const handleEdit = (goalId: string) => {
     const goal = savingsGoals.find(g => g.id === goalId);
@@ -215,7 +222,8 @@ const SavingsScreen = () => {
         category: goal.category || 'other',
         targetDate: goal.targetDate || '',
       });
-      setCategoryManuallySelected(false);
+      // The saved category was chosen before; renaming the goal keeps it.
+      setCategoryManuallySelected(true);
       setIsEditing(true);
     }
   };

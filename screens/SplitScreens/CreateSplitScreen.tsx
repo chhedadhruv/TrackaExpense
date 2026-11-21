@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {useRouter} from 'expo-router';
 import {
   View,
@@ -57,23 +57,22 @@ import DatePickerModal from '../../src/components/DatePickerModal';
 import Calendar from 'lucide-react-native/icons/calendar';
 import Camera from 'lucide-react-native/icons/camera';
 import Check from 'lucide-react-native/icons/check';
-import ChevronDown from 'lucide-react-native/icons/chevron-down';
 import Coins from 'lucide-react-native/icons/coins';
 import ImageIcon from 'lucide-react-native/icons/image';
 import ImagePlus from 'lucide-react-native/icons/image-plus';
 import RefreshCw from 'lucide-react-native/icons/refresh-cw';
 import Trash2 from 'lucide-react-native/icons/trash-2';
-import X from 'lucide-react-native/icons/x';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardAwareScrollView} from '../../src/components/KeyboardAwareScrollView';
 import SplitNotificationService from '../../services/SplitNotificationService';
 import {useCurrency} from '../../utils/CurrencyUtil';
 import {
   SPLIT_CATEGORIES,
-  EXPENSE_KEYWORD_MAP,
-  getCategoryIcon,
-  getCategoryLabel,
+  SPLIT_KEYWORD_MAP,
+  SPLIT_VALUES,
 } from '../../utils/CategoryData';
+import CategorySelector from '../../src/components/CategorySelector';
+import {useCategorySuggestion} from '../../src/hooks/useCategorySuggestion';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {formatInputAmount} from '../../src/utils/formatters';
 import {
@@ -171,14 +170,12 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState<string | null>(null);
-  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [splitType, setSplitType] = useState<SplitType>('equal');
   const [date, setDate] = useState(new Date());
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [notes, setNotes] = useState('');
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
   const [imageModalVisible, setImageModalVisible] = useState(false);
-  const [_uploading, _setUploading] = useState(false);
   const [recurringEnabled, setRecurringEnabled] = useState(false);
   const [recurringFrequency, setRecurringFrequency] =
     useState<RecurringFrequency>('monthly');
@@ -321,21 +318,20 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
     setIsSplitByPercentage(splitType === 'percentage');
   }, [splitType]);
 
-  useEffect(() => {
-    if (title.trim().length < 3 || category) {
-      return;
-    }
-    const lower = title.toLowerCase();
-    const match = Object.keys(EXPENSE_KEYWORD_MAP).find(kw =>
-      lower.includes(kw),
-    );
-    const suggested = match ? EXPENSE_KEYWORD_MAP[match] : null;
-    const validSplitValues = SPLIT_CATEGORIES.map((c: any) => c.value);
-    if (suggested && validSplitValues.includes(suggested)) {
-      setCategory(suggested);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title]);
+  // Splits are shared, so only the keyword map guesses (no personal history). An edited split's
+  // category was chosen before, so the guess never replaces it.
+  const setSplitCategory = useCallback(
+    (value: string) => setCategory(value === '' ? null : value),
+    [],
+  );
+  const categorySuggestion = useCategorySuggestion({
+    title,
+    category: category ?? '',
+    setCategory: setSplitCategory,
+    allowed: SPLIT_VALUES,
+    keywordMap: SPLIT_KEYWORD_MAP,
+    startPickedByHand: isEditMode,
+  });
 
   const updatePercentages = (email: string, newValue: string) => {
     const selectedEmails = Object.entries(selectedUsers)
@@ -798,7 +794,7 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
 
   const writeSplitTransaction = async (
     splitId: string,
-    amount: number,
+    splitAmount: number,
     data: SplitData,
     isEdit: boolean,
     include: boolean,
@@ -812,7 +808,7 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
       const isPayer = data.paidBy?.email?.toLowerCase() === email;
       // The payer's own transaction keeps the legacy two-decimal string; the balance follows that
       // same rounded amount so adding, editing and removing it cancel exactly.
-      const txAmount = String(parseFloat(amount.toFixed(2)));
+      const txAmount = String(parseFloat(splitAmount.toFixed(2)));
       const currencyCode = (currency as any).code || 'INR';
 
       if (!isPayer && data.paidBy?.userId && include) {
@@ -930,7 +926,7 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
             ) ??
             (cardIdOf(existing) !== null || newCard !== null
               ? 0
-              : parseFloat(existing.amount || '0') - amount);
+              : parseFloat(existing.amount || '0') - splitAmount);
           await updateDoc(snap.docs[0].ref, {
             ...txData,
             ...(cardsEnabled ? {cardId: newCard ?? deleteField()} : {}),
@@ -1190,26 +1186,13 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
 
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Category</Text>
-                <TouchableOpacity
-                  style={styles.categorySelectorButton}
-                  onPress={() => setCategoryModalVisible(true)}>
-                  {category ? (
-                    <>
-                      {React.createElement(getCategoryIcon(category), {
-                        size: 20,
-                        color: colors.primary,
-                      })}
-                      <Text style={styles.categorySelectorText}>
-                        {getCategoryLabel(category, 'split')}
-                      </Text>
-                    </>
-                  ) : (
-                    <Text style={styles.categorySelectorPlaceholder}>
-                      Select category
-                    </Text>
-                  )}
-                  <ChevronDown size={20} color={colors.textPlaceholder} />
-                </TouchableOpacity>
+                <CategorySelector
+                  categories={SPLIT_CATEGORIES}
+                  selectedCategory={category ?? ''}
+                  onSelect={categorySuggestion.pickByHand}
+                  suggested={categorySuggestion.suggested}
+                  guessed={categorySuggestion.guessed}
+                />
               </View>
 
               <View style={styles.inputContainer}>
@@ -1442,57 +1425,6 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
               )}
             </TouchableOpacity>
           </View>
-
-          <Modal
-            visible={categoryModalVisible}
-            transparent={true}
-            animationType="slide"
-            onRequestClose={() => setCategoryModalVisible(false)}>
-            <TouchableOpacity
-              style={styles.categoryModalOverlay}
-              activeOpacity={1}
-              onPress={() => setCategoryModalVisible(false)}>
-              <View style={styles.categoryModalSheet}>
-                <View style={styles.categoryModalHeader}>
-                  <Text style={styles.categoryModalTitle}>Select Category</Text>
-                  <TouchableOpacity
-                    onPress={() => setCategoryModalVisible(false)}>
-                    <X size={24} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.categoryGrid}>
-                  {SPLIT_CATEGORIES.map((cat: any) => {
-                    const isSelected = category === cat.value;
-                    return (
-                      <TouchableOpacity
-                        key={cat.value}
-                        style={[
-                          styles.categoryChip,
-                          isSelected && styles.categoryChipSelected,
-                        ]}
-                        onPress={() => {
-                          setCategory(cat.value);
-                          setCategoryModalVisible(false);
-                        }}>
-                        <cat.icon
-                          size={22}
-                          color={isSelected ? colors.onPrimary : colors.primary}
-                        />
-                        <Text
-                          style={[
-                            styles.categoryChipText,
-                            isSelected && styles.categoryChipTextSelected,
-                          ]}>
-                          {cat.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            </TouchableOpacity>
-            <ModalSnackbar />
-          </Modal>
 
           <Modal
             visible={imageModalVisible}
@@ -1975,83 +1907,6 @@ const createStyles = (colors: ThemeColors) =>
     modalCancelText: {
       fontSize: 16,
       color: colors.expenseText,
-      fontFamily: 'Lato-Bold',
-    },
-    categorySelectorButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.surfaceMuted,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
-      paddingHorizontal: 15,
-      paddingVertical: 14,
-      gap: 10,
-    },
-    categorySelectorText: {
-      flex: 1,
-      fontSize: 16,
-      color: colors.textStrong,
-      fontFamily: 'Lato-Regular',
-    },
-    categorySelectorPlaceholder: {
-      flex: 1,
-      fontSize: 16,
-      color: colors.textPlaceholder,
-      fontFamily: 'Lato-Regular',
-    },
-    categoryModalOverlay: {
-      flex: 1,
-      backgroundColor: colors.overlay,
-      justifyContent: 'flex-end',
-    },
-    categoryModalSheet: {
-      backgroundColor: colors.surface,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      padding: 24,
-      paddingBottom: 40,
-    },
-    categoryModalHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 20,
-    },
-    categoryModalTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: colors.textStrong,
-      fontFamily: 'Lato-Bold',
-    },
-    categoryGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 10,
-    },
-    categoryChip: {
-      width: '30%',
-      alignItems: 'center',
-      paddingVertical: 12,
-      paddingHorizontal: 8,
-      backgroundColor: colors.surfaceMuted,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
-    },
-    categoryChipSelected: {
-      backgroundColor: colors.primaryFill,
-      borderColor: colors.primaryFill,
-    },
-    categoryChipText: {
-      fontSize: 12,
-      color: colors.textSecondary,
-      marginTop: 5,
-      fontFamily: 'Lato-Regular',
-      textAlign: 'center',
-    },
-    categoryChipTextSelected: {
-      color: colors.onPrimary,
       fontFamily: 'Lato-Bold',
     },
   });
