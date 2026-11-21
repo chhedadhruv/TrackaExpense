@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useMemo} from 'react';
 import {useRouter} from 'expo-router';
 import {
   View,
@@ -73,6 +73,14 @@ import {
 } from '../../utils/CategoryData';
 import CategorySelector from '../../src/components/CategorySelector';
 import {useCategorySuggestion} from '../../src/hooks/useCategorySuggestion';
+import {
+  useTitleIndex,
+  useTitleSuggestions,
+} from '../../src/hooks/useTitleSuggestions';
+import TitleSuggestions from '../../src/components/form/TitleSuggestions';
+import {buildCategoryHistory} from '../../src/utils/categorySuggest';
+import {splitsAsHistory} from '../../src/utils/titleSuggest';
+import {useGroupSplits} from '../../src/data/split';
 import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {formatInputAmount} from '../../src/utils/formatters';
 import {
@@ -318,8 +326,20 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
     setIsSplitByPercentage(splitType === 'percentage');
   }, [splitType]);
 
-  // Splits are shared, so only the keyword map guesses (no personal history). An edited split's
-  // category was chosen before, so the guess never replaces it.
+  // Suggestions learn from this group's own splits (already cached for the group screen), then the
+  // split keyword map. An edited split's category was chosen before, so the guess never replaces it.
+  const groupSplits = useGroupSplits(group?.id).data;
+  const splitHistorySource = useMemo(
+    () => (groupSplits ? splitsAsHistory(groupSplits) : undefined),
+    [groupSplits],
+  );
+  const splitCategoryHistory = useMemo(
+    () =>
+      splitHistorySource
+        ? buildCategoryHistory(splitHistorySource, 'expense', SPLIT_VALUES)
+        : undefined,
+    [splitHistorySource],
+  );
   const setSplitCategory = useCallback(
     (value: string) => setCategory(value === '' ? null : value),
     [],
@@ -330,7 +350,19 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
     setCategory: setSplitCategory,
     allowed: SPLIT_VALUES,
     keywordMap: SPLIT_KEYWORD_MAP,
+    history: splitCategoryHistory,
     startPickedByHand: isEditMode,
+  });
+  const splitTitleIndex = useTitleIndex(
+    splitHistorySource,
+    'expense',
+    SPLIT_VALUES,
+  );
+  const titleSuggestions = useTitleSuggestions({
+    index: splitTitleIndex,
+    title,
+    setTitle,
+    onCategory: categorySuggestion.applyGuess,
   });
 
   const updatePercentages = (email: string, newValue: string) => {
@@ -1140,8 +1172,14 @@ const CreateSplitScreen = ({group, split}: CreateSplitScreenProps) => {
                   placeholder="Enter split title"
                   value={title}
                   onChangeText={setTitle}
+                  onFocus={titleSuggestions.onFocus}
+                  onBlur={titleSuggestions.onBlur}
                   placeholderTextColor={colors.textPlaceholder}
                   maxLength={100}
+                />
+                <TitleSuggestions
+                  suggestions={titleSuggestions.suggestions}
+                  onPick={titleSuggestions.pick}
                 />
                 <Text style={styles.characterCount}>{title.length}/100</Text>
               </View>

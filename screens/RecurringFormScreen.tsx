@@ -56,6 +56,11 @@ import {
   useCategoryHistory,
   useCategorySuggestion,
 } from '../src/hooks/useCategorySuggestion';
+import {
+  useTitleSuggestions,
+  useTransactionTitleIndex,
+} from '../src/hooks/useTitleSuggestions';
+import TitleSuggestions from '../src/components/form/TitleSuggestions';
 
 const categoriesFor = (type: 'expense' | 'income') =>
   type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
@@ -182,6 +187,17 @@ const RecurringFormScreen = () => {
     history: categoryHistory,
     startPickedByHand: editing,
   });
+  const titleIndex = useTransactionTitleIndex(form.type, categoryValues);
+  const setTitle = useCallback(
+    (title: string) => setForm(current => ({...current, title})),
+    [],
+  );
+  const titleSuggestions = useTitleSuggestions({
+    index: titleIndex,
+    title: form.title,
+    setTitle,
+    onCategory: categorySuggestion.applyGuess,
+  });
 
   const submit = async () => {
     const zone = existing?.timeZone ?? deviceTimeZone();
@@ -290,9 +306,16 @@ const RecurringFormScreen = () => {
             maxLength={RECURRING_TITLE_MAX}
             value={form.title}
             onChangeText={title => change({title})}
+            onFocus={titleSuggestions.onFocus}
+            onBlur={titleSuggestions.onBlur}
             placeholder="For example, Rent"
-            disabled={busy}
-          />
+            disabled={busy}>
+            <TitleSuggestions
+              suggestions={titleSuggestions.suggestions}
+              onPick={titleSuggestions.pick}
+              disabled={busy}
+            />
+          </TextField>
 
           <FormSection label="Amount">
             <AmountInput

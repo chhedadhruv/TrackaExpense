@@ -38,6 +38,11 @@ import {
   useCategoryHistory,
   useCategorySuggestion,
 } from '../src/hooks/useCategorySuggestion';
+import {
+  useTitleSuggestions,
+  useTransactionTitleIndex,
+} from '../src/hooks/useTitleSuggestions';
+import TitleSuggestions from '../src/components/form/TitleSuggestions';
 import {useTheme} from '../src/theme';
 import {useTransactionForm} from '../src/hooks/useTransactionForm';
 import {editBalanceDelta, transactionMoneyFields} from '../src/utils/amounts';
@@ -128,6 +133,13 @@ const EditTransactionScreen = ({
       transaction.type === 'expense' ? EXPENSE_KEYWORD_MAP : INCOME_KEYWORD_MAP,
     history: categoryHistory,
     startPickedByHand: transaction.category !== '',
+  });
+  const titleIndex = useTransactionTitleIndex(transaction.type, categoryValues);
+  const titleSuggestions = useTitleSuggestions({
+    index: titleIndex,
+    title,
+    setTitle,
+    onCategory: categorySuggestion.applyGuess,
   });
 
   // "Paid with" is only offered for expenses while cards are switched on. A transaction that
@@ -325,9 +337,16 @@ const EditTransactionScreen = ({
               placeholder={`Enter ${transaction.type} title`}
               value={title}
               onChangeText={setTitle}
+              onFocus={titleSuggestions.onFocus}
+              onBlur={titleSuggestions.onBlur}
               disabled={isSubmitting}
-              maxLength={100}
-            />
+              maxLength={100}>
+              <TitleSuggestions
+                suggestions={titleSuggestions.suggestions}
+                onPick={titleSuggestions.pick}
+                disabled={isSubmitting}
+              />
+            </TextField>
 
             <TextField
               label="Description"

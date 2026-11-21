@@ -78,7 +78,7 @@ Guidance for working in this repository.
 - Use the shared `KeyboardAwareScrollView` and `KeyboardAvoidingModal` for any input. Report results with the snackbar store; use `Alert.alert` only for confirmations.
 - Dates use the native date picker through `DatePickerModal`.
 - Transaction tags, receipt photos, credit cards and budgets each have a small pure-function module in `src/utils/` that holds their rules. Add logic there first, with a test.
-- Category guesses go through `src/utils/categorySuggest.ts`: the person's own history first (from the transactions cache, without entries the app wrote itself), then the keyword maps in `utils/CategoryData.ts` matched on whole words. `useCategorySuggestion` keeps the category following the title until the person picks one by hand. Keyword map values must be categories of their list (tested).
+- Category guesses go through `src/utils/categorySuggest.ts`: the person's own history first (from the transactions cache, without entries the app wrote itself), then the keyword maps in `utils/CategoryData.ts` matched on whole words. `useCategorySuggestion` keeps the category following the title until the person picks one by hand. Keyword map values must be categories of their list (tested). Title autocomplete (`src/utils/titleSuggest.ts`, `useTitleSuggestions`, `TitleSuggestions`) offers past titles from the same history while the title field is focused; picking one also offers its last category through `applyGuess`, which never overrides a hand pick. Create Split learns from the group's own splits (settlements left out).
 - Server logic that mirrors app logic (budgets, recurring dates, goals, card periods) exists in both `src/utils/` and `functions/src/`. Change both together.
 
 ## 9. Releases

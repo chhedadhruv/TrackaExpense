@@ -48,6 +48,11 @@ import {
   useCategoryHistory,
   useCategorySuggestion,
 } from '../src/hooks/useCategorySuggestion';
+import {
+  useTitleSuggestions,
+  useTransactionTitleIndex,
+} from '../src/hooks/useTitleSuggestions';
+import TitleSuggestions from '../src/components/form/TitleSuggestions';
 import {balanceEffect, transactionMoneyFields} from '../src/utils/amounts';
 import CategorySelector from '../src/components/CategorySelector';
 import AmountInput from '../src/components/AmountInput';
@@ -110,6 +115,13 @@ const AddExpense = () => {
     allowed: EXPENSE_VALUES,
     keywordMap: EXPENSE_KEYWORD_MAP,
     history: categoryHistory,
+  });
+  const titleIndex = useTransactionTitleIndex('expense', EXPENSE_VALUES);
+  const titleSuggestions = useTitleSuggestions({
+    index: titleIndex,
+    title,
+    setTitle,
+    onCategory: categorySuggestion.applyGuess,
   });
 
   // "Paid with" (behind the Remote Config flag). It always starts on Cash / UPI; a card is picked
@@ -360,9 +372,16 @@ const AddExpense = () => {
               placeholder="Enter expense title"
               value={title}
               onChangeText={setTitle}
+              onFocus={titleSuggestions.onFocus}
+              onBlur={titleSuggestions.onBlur}
               disabled={isSubmitting}
-              maxLength={100}
-            />
+              maxLength={100}>
+              <TitleSuggestions
+                suggestions={titleSuggestions.suggestions}
+                onPick={titleSuggestions.pick}
+                disabled={isSubmitting}
+              />
+            </TextField>
 
             <TextField
               label="Description"
