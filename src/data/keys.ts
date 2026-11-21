@@ -8,6 +8,7 @@ export const queryKeys = {
   transactions: (uid: string) => ['transactions', uid] as const,
   savingsHistory: (uid: string) => ['savingsHistory', uid] as const,
   tags: (uid: string) => ['tags', uid] as const,
+  categories: (uid: string) => ['categories', uid] as const,
   budgets: (uid: string) => ['budgets', uid] as const,
   goals: (uid: string) => ['goals', uid] as const,
   recurring: (uid: string) => ['recurring', uid] as const,

@@ -35,6 +35,7 @@ export const PERSISTED_KINDS = [
   'transactions',
   'savingsHistory',
   'tags',
+  'categories',
   'groups',
   'invitations',
   'groupSplits',

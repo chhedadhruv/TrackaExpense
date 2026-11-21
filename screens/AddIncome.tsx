@@ -19,11 +19,8 @@ import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView
 import FormButton from '../components/FormButton';
 import {useAsyncAction} from '../src/hooks/useAsyncAction';
 import {useCurrency} from '../utils/CurrencyUtil';
-import {
-  INCOME_CATEGORIES,
-  INCOME_KEYWORD_MAP,
-  INCOME_VALUES,
-} from '../utils/CategoryData';
+import {INCOME_KEYWORD_MAP} from '../utils/CategoryData';
+import {useCategoryLists} from '../src/data/categories';
 import {useTheme} from '../src/theme';
 import {useTransactionForm} from '../src/hooks/useTransactionForm';
 import {
@@ -82,16 +79,17 @@ const AddIncome = () => {
   } = useTransactionForm(prefillFromParams(params));
   const knownTags = useKnownTags();
   const recordTags = useRecordTags();
-  const categoryHistory = useCategoryHistory('income', INCOME_VALUES);
+  const categoryLists = useCategoryLists('income');
+  const categoryHistory = useCategoryHistory('income', categoryLists.values);
   const categorySuggestion = useCategorySuggestion({
     title,
     category,
     setCategory,
-    allowed: INCOME_VALUES,
+    allowed: categoryLists.values,
     keywordMap: INCOME_KEYWORD_MAP,
     history: categoryHistory,
   });
-  const titleIndex = useTransactionTitleIndex('income', INCOME_VALUES);
+  const titleIndex = useTransactionTitleIndex('income', categoryLists.values);
   const titleSuggestions = useTitleSuggestions({
     index: titleIndex,
     title,
@@ -196,7 +194,8 @@ const AddIncome = () => {
 
             <FormSection label="Category">
               <CategorySelector
-                categories={INCOME_CATEGORIES}
+                categories={categoryLists.categories}
+                createType="income"
                 selectedCategory={category}
                 onSelect={categorySuggestion.pickByHand}
                 suggested={categorySuggestion.suggested}

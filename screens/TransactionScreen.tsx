@@ -17,7 +17,7 @@ import {shareCsv} from '../src/services/ExportService';
 import {buildTransactionsCsv, exportFileName} from '../src/utils/exportCsv';
 import {useCurrency} from '../utils/CurrencyUtil';
 import {majorOf} from '../src/utils/amounts';
-import {getCategoryIcon} from '../utils/CategoryData';
+import {useCategoryIcon} from '../src/data/categories';
 import {useTheme} from '../src/theme';
 import {getConfig} from '../src/services/RemoteConfigService';
 import * as AnalyticsService from '../src/services/AnalyticsService';
@@ -65,17 +65,14 @@ const FilterGlyph = ({
 };
 
 const CategoryGlyph = ({
-  category,
+  icon: Icon,
   size,
   color,
 }: {
-  category: string;
+  icon: AppIcon;
   size: number;
   color: string;
-}) => {
-  const Icon = getCategoryIcon(category);
-  return <Icon size={size} color={color} />;
-};
+}) => <Icon size={size} color={color} />;
 
 const FILTER_LABELS: Record<FilterType, string> = {
   all: 'All',
@@ -91,6 +88,7 @@ const TransactionScreen = () => {
   const router = useRouter();
   const {colors} = useTheme();
   const {currency, formatAmount} = useCurrency();
+  const iconFor = useCategoryIcon();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   // "Paid with" filter: a card id, CASH_FILTER (no card) or null (any). Cards are only loaded and
@@ -258,7 +256,7 @@ const TransactionScreen = () => {
               <View className="flex-1 flex-row items-center">
                 <View className="mr-3 h-[50px] w-[50px] items-center justify-center rounded-[14px] bg-primary-soft">
                   <CategoryGlyph
-                    category={transaction.category}
+                    icon={iconFor(transaction.category, transaction.type)}
                     size={25}
                     color={colors.primary}
                   />

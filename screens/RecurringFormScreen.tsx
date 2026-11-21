@@ -43,14 +43,8 @@ import {
   type RecurringForm,
 } from '../src/utils/recurring';
 import {snackbar} from '../src/utils/snackbarStore';
-import {
-  EXPENSE_CATEGORIES,
-  EXPENSE_KEYWORD_MAP,
-  EXPENSE_VALUES,
-  INCOME_CATEGORIES,
-  INCOME_KEYWORD_MAP,
-  INCOME_VALUES,
-} from '../utils/CategoryData';
+import {EXPENSE_KEYWORD_MAP, INCOME_KEYWORD_MAP} from '../utils/CategoryData';
+import {useCategoryLists} from '../src/data/categories';
 import {getCurrencyByCode, useCurrency} from '../utils/CurrencyUtil';
 import {
   useCategoryHistory,
@@ -61,12 +55,6 @@ import {
   useTransactionTitleIndex,
 } from '../src/hooks/useTitleSuggestions';
 import TitleSuggestions from '../src/components/form/TitleSuggestions';
-
-const categoriesFor = (type: 'expense' | 'income') =>
-  type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
-
-const valuesFor = (type: 'expense' | 'income') =>
-  type === 'expense' ? EXPENSE_VALUES : INCOME_VALUES;
 
 const formFrom = (rule: RecurringDocument): RecurringForm => ({
   title: rule.title,
@@ -170,7 +158,8 @@ const RecurringFormScreen = () => {
     }
   };
 
-  const categoryValues = valuesFor(form.type);
+  const categoryLists = useCategoryLists(form.type);
+  const categoryValues = categoryLists.values;
   const categoryHistory = useCategoryHistory(form.type, categoryValues);
   const setCategory = useCallback(
     (category: string) => setForm(current => ({...current, category})),
@@ -362,7 +351,8 @@ const RecurringFormScreen = () => {
 
           <FormSection label="Category">
             <CategorySelector
-              categories={categoriesFor(form.type)}
+              categories={categoryLists.categories}
+              createType={form.type}
               selectedCategory={form.category}
               onSelect={categorySuggestion.pickByHand}
               suggested={categorySuggestion.suggested}

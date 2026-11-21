@@ -161,6 +161,27 @@ describe('firestore: users', () => {
     await assertFails(deleteDoc(doc(dbOf(ALICE), 'users/bob')));
     await assertSucceeds(deleteDoc(doc(dbOf(BOB), 'users/bob')));
   });
+  it('custom categories and their preferences are owner-only', async () => {
+    await assertSucceeds(
+      setDoc(doc(dbOf(ALICE), 'users/alice/categories/c1'), {
+        name: 'Pets',
+        type: 'expense',
+        icon: 'pet',
+      }),
+    );
+    await assertSucceeds(
+      setDoc(doc(dbOf(ALICE), 'users/alice/categories/_prefs'), {
+        hidden: {expense: ['Rent'], income: []},
+      }),
+    );
+    await assertSucceeds(
+      getDocs(collection(dbOf(ALICE), 'users/alice/categories')),
+    );
+    await assertFails(getDocs(collection(dbOf(BOB), 'users/alice/categories')));
+    await assertFails(
+      setDoc(doc(dbOf(BOB), 'users/alice/categories/_prefs'), {hidden: {}}),
+    );
+  });
   it('subcollections are owner-only', async () => {
     await assertSucceeds(
       getDoc(doc(dbOf(ALICE), 'users/alice/transactions/t1')),
