@@ -40,7 +40,7 @@ import {
 } from '../src/utils/budgets';
 import {fromMinor} from '../src/utils/money';
 import {snackbar} from '../src/utils/snackbarStore';
-import {EXPENSE_CATEGORIES} from '../utils/CategoryData';
+import {useCategoryLists} from '../src/data/categories';
 import {getCurrencyByCode, useCurrency} from '../utils/CurrencyUtil';
 
 const ALL_ON = {50: true, 80: true, 100: true, 120: true} as const;
@@ -87,6 +87,7 @@ const BudgetFormScreen = () => {
   });
   const [filled, setFilled] = useState(!editing);
   const [error, setError] = useState('');
+  const expenseLists = useCategoryLists('expense');
 
   // An existing budget fills the form once, so later list refreshes never overwrite typing.
   const existing = editing ? budgets.data?.find(b => b.id === id) : undefined;
@@ -224,13 +225,18 @@ const BudgetFormScreen = () => {
                 value={form.category === null}
                 disabled={busy}
                 onValueChange={all =>
-                  change({category: all ? null : EXPENSE_CATEGORIES[0].value})
+                  change({
+                    category: all
+                      ? null
+                      : expenseLists.categories[0]?.value ?? 'Others',
+                  })
                 }
               />
             </View>
             {form.category !== null ? (
               <CategorySelector
-                categories={EXPENSE_CATEGORIES}
+                categories={expenseLists.categories}
+                createType="expense"
                 selectedCategory={form.category}
                 onSelect={category => change({category})}
                 disabled={busy}

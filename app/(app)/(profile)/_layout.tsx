@@ -10,6 +10,8 @@ const ProfileLayout = () => {
     <Stack screenOptions={options}>
       <Stack.Screen name="profile" options={{headerShown: false}} />
       <Stack.Screen name="profile/edit" options={{title: 'Edit Profile'}} />
+      <Stack.Screen name="profile/categories" options={{title: 'Categories'}} />
+      <Stack.Screen name="profile/category" options={{title: 'Category'}} />
       <Stack.Screen name="profile/budgets" options={{title: 'Budgets'}} />
       <Stack.Screen name="profile/budget" options={{title: 'Budget'}} />
       <Stack.Screen name="profile/recurring" options={{title: 'Recurring'}} />

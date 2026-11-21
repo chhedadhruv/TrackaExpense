@@ -26,14 +26,8 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import FormButton from '../components/FormButton';
 import {useAsyncAction} from '../src/hooks/useAsyncAction';
 import {useCurrency} from '../utils/CurrencyUtil';
-import {
-  EXPENSE_CATEGORIES,
-  EXPENSE_KEYWORD_MAP,
-  EXPENSE_VALUES,
-  INCOME_CATEGORIES,
-  INCOME_KEYWORD_MAP,
-  INCOME_VALUES,
-} from '../utils/CategoryData';
+import {EXPENSE_KEYWORD_MAP, INCOME_KEYWORD_MAP} from '../utils/CategoryData';
+import {useCategoryLists} from '../src/data/categories';
 import {
   useCategoryHistory,
   useCategorySuggestion,
@@ -119,8 +113,8 @@ const EditTransactionScreen = ({
   });
   const knownTags = useKnownTags();
   const recordTags = useRecordTags();
-  const categoryValues =
-    transaction.type === 'expense' ? EXPENSE_VALUES : INCOME_VALUES;
+  const categoryLists = useCategoryLists(transaction.type);
+  const categoryValues = categoryLists.values;
   const categoryHistory = useCategoryHistory(transaction.type, categoryValues);
   // The saved category was the person's choice, so the guess never replaces it; it only orders
   // the picker's suggestions.
@@ -363,11 +357,8 @@ const EditTransactionScreen = ({
 
             <FormSection label="Category">
               <CategorySelector
-                categories={
-                  transaction.type === 'expense'
-                    ? EXPENSE_CATEGORIES
-                    : INCOME_CATEGORIES
-                }
+                categories={categoryLists.categories}
+                createType={transaction.type}
                 selectedCategory={category}
                 onSelect={categorySuggestion.pickByHand}
                 suggested={categorySuggestion.suggested}

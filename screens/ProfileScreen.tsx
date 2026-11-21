@@ -40,6 +40,7 @@ import Repeat from 'lucide-react-native/icons/repeat';
 import CreditCard from 'lucide-react-native/icons/credit-card';
 import Scale from 'lucide-react-native/icons/scale';
 import {getConfig} from '../src/services/RemoteConfigService';
+import Shapes from 'lucide-react-native/icons/shapes';
 import ShieldAlert from 'lucide-react-native/icons/shield-alert';
 import ShieldCheck from 'lucide-react-native/icons/shield-check';
 import UserX from 'lucide-react-native/icons/user-x';
@@ -369,6 +370,14 @@ const ProfileScreen = () => {
               title="Currency"
               subtitle={`${currency.name} (${currency.symbol})`}
               onPress={() => setCurrencyModalVisible(true)}
+            />
+            <RowDivider />
+            <SettingsRow
+              icon={Shapes}
+              accent={ACCENT.blue}
+              title="Categories"
+              subtitle="Add your own, hide or reorder"
+              onPress={() => router.navigate('/profile/categories')}
             />
             <RowDivider />
             {getConfig().enable_budgets ? (

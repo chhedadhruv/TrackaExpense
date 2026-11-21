@@ -8,14 +8,17 @@ import {
   StyleSheet,
 } from 'react-native';
 import ChevronDown from 'lucide-react-native/icons/chevron-down';
+import Plus from 'lucide-react-native/icons/plus';
 import Sparkles from 'lucide-react-native/icons/sparkles';
 import X from 'lucide-react-native/icons/x';
 import {useTheme} from '../theme';
 import type {Category} from '../types';
-import {getCategoryIcon} from '../../utils/CategoryData';
 import {filterCategories} from '../utils/categorySuggest';
 import KeyboardAvoidingModal from './KeyboardAvoidingModal';
 import SearchField from './SearchField';
+import NewCategoryForm from './NewCategoryForm';
+import {useCategoryIcon} from '../data/categories';
+import type {CategoryType} from '../utils/customCategories';
 
 /** Lists longer than this get a search box in the sheet. */
 const SEARCH_THRESHOLD = 8;
@@ -31,6 +34,8 @@ interface CategorySelectorProps {
   suggested?: readonly string[];
   /** The selected value is the app's guess; the field says so. */
   guessed?: boolean;
+  /** Offer "+ New category" in the sheet, adding a category of this type. */
+  createType?: CategoryType;
 }
 
 interface ChipProps {
@@ -78,13 +83,16 @@ const CategorySelector = ({
   label,
   suggested = [],
   guessed = false,
+  createType,
 }: CategorySelectorProps) => {
   const {colors} = useTheme();
   const [visible, setVisible] = useState(false);
   const [query, setQuery] = useState('');
+  const [creating, setCreating] = useState(false);
+  const iconFor = useCategoryIcon();
 
-  // A saved entry can hold a category that is not in the list (renamed, hidden or from another
-  // version); show it as it is rather than as empty.
+  // A saved entry can hold a category that is not in the list (deleted, hidden, from another
+  // version, or made a moment ago and not yet back from the listener); show it as it is.
   const selected: Category | undefined = useMemo(
     () =>
       categories.find(c => c.value === selectedCategory) ??
@@ -92,10 +100,10 @@ const CategorySelector = ({
         ? {
             value: selectedCategory,
             label: selectedCategory,
-            icon: getCategoryIcon(selectedCategory),
+            icon: iconFor(selectedCategory, createType),
           }
         : undefined),
-    [categories, selectedCategory],
+    [categories, selectedCategory, iconFor, createType],
   );
 
   const suggestedCategories = useMemo(
@@ -116,6 +124,7 @@ const CategorySelector = ({
   const close = () => {
     setVisible(false);
     setQuery('');
+    setCreating(false);
   };
 
   const choose = (value: string) => {
@@ -189,7 +198,7 @@ const CategorySelector = ({
               <X size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
-          {searchable ? (
+          {searchable && !creating ? (
             <SearchField
               value={query}
               onChangeText={setQuery}
@@ -199,7 +208,15 @@ const CategorySelector = ({
           <ScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled">
-            {!searching && suggestedCategories.length > 0 ? (
+            {creating && createType ? (
+              <NewCategoryForm
+                type={createType}
+                initialName={query.trim()}
+                onCancel={() => setCreating(false)}
+                onCreated={choose}
+              />
+            ) : null}
+            {!creating && !searching && suggestedCategories.length > 0 ? (
               <View className="mb-4">
                 <SectionTitle>Suggested</SectionTitle>
                 <View className="flex-row flex-wrap gap-2.5">
@@ -214,20 +231,34 @@ const CategorySelector = ({
                 </View>
               </View>
             ) : null}
-            {!searching && suggestedCategories.length > 0 ? (
+            {!creating && !searching && suggestedCategories.length > 0 ? (
               <SectionTitle>All categories</SectionTitle>
             ) : null}
-            <View className="flex-row flex-wrap gap-2.5">
-              {shown.map(cat => (
-                <CategoryChip
-                  key={cat.value}
-                  category={cat}
-                  selected={selectedCategory === cat.value}
-                  onPress={() => choose(cat.value)}
-                />
-              ))}
-            </View>
-            {searching && shown.length === 0 ? (
+            {!creating ? (
+              <View className="flex-row flex-wrap gap-2.5">
+                {shown.map(cat => (
+                  <CategoryChip
+                    key={cat.value}
+                    category={cat}
+                    selected={selectedCategory === cat.value}
+                    onPress={() => choose(cat.value)}
+                  />
+                ))}
+                {createType ? (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel="New category"
+                    className="flex-row items-center gap-1.5 rounded-full border-[1.5px] border-dashed border-primary-fill px-3.5 py-2.5"
+                    onPress={() => setCreating(true)}>
+                    <Plus size={20} color={colors.primary} />
+                    <Text className="font-sans-bold text-[13px] text-primary">
+                      New category
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ) : null}
+            {!creating && searching && shown.length === 0 ? (
               <Text className="py-4 text-center font-sans text-sm text-text-secondary">
                 No category matches "{query.trim()}"
               </Text>
