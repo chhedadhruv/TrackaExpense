@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {Alert, Text, TouchableOpacity, View} from 'react-native';
 import {useLocalSearchParams, useRouter} from 'expo-router';
 import Repeat from 'lucide-react-native/icons/repeat';
@@ -43,11 +43,25 @@ import {
   type RecurringForm,
 } from '../src/utils/recurring';
 import {snackbar} from '../src/utils/snackbarStore';
-import {EXPENSE_CATEGORIES, INCOME_CATEGORIES} from '../utils/CategoryData';
+import {
+  EXPENSE_CATEGORIES,
+  EXPENSE_KEYWORD_MAP,
+  EXPENSE_VALUES,
+  INCOME_CATEGORIES,
+  INCOME_KEYWORD_MAP,
+  INCOME_VALUES,
+} from '../utils/CategoryData';
 import {getCurrencyByCode, useCurrency} from '../utils/CurrencyUtil';
+import {
+  useCategoryHistory,
+  useCategorySuggestion,
+} from '../src/hooks/useCategorySuggestion';
 
 const categoriesFor = (type: 'expense' | 'income') =>
   type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+
+const valuesFor = (type: 'expense' | 'income') =>
+  type === 'expense' ? EXPENSE_VALUES : INCOME_VALUES;
 
 const formFrom = (rule: RecurringDocument): RecurringForm => ({
   title: rule.title,
@@ -120,7 +134,8 @@ const RecurringFormScreen = () => {
     title: '',
     description: '',
     type: 'expense',
-    category: EXPENSE_CATEGORIES[0].value,
+    // Starts empty: the title suggests one, or the person picks it.
+    category: '',
     frequency: 'monthly',
     startDate: todayInZone(new Date(), deviceTimeZone()),
     hasEnd: false,
@@ -149,6 +164,24 @@ const RecurringFormScreen = () => {
       setError('');
     }
   };
+
+  const categoryValues = valuesFor(form.type);
+  const categoryHistory = useCategoryHistory(form.type, categoryValues);
+  const setCategory = useCallback(
+    (category: string) => setForm(current => ({...current, category})),
+    [],
+  );
+  // A saved rule's category was the person's choice, so the guess never replaces it.
+  const categorySuggestion = useCategorySuggestion({
+    title: form.title,
+    category: form.category,
+    setCategory,
+    allowed: categoryValues,
+    keywordMap:
+      form.type === 'expense' ? EXPENSE_KEYWORD_MAP : INCOME_KEYWORD_MAP,
+    history: categoryHistory,
+    startPickedByHand: editing,
+  });
 
   const submit = async () => {
     const zone = existing?.timeZone ?? deviceTimeZone();
@@ -279,14 +312,19 @@ const RecurringFormScreen = () => {
               value={form.type}
               label={o => o.label}
               disabled={busy}
-              onChange={type =>
+              onChange={type => {
+                if (type === form.type) {
+                  return;
+                }
+                // The other type has other categories: start empty and let the title suggest.
+                categorySuggestion.reset();
                 change({
                   type,
-                  category: categoriesFor(type)[0].value,
+                  category: '',
                   // Only an expense can be paid with a card.
                   ...(type === 'income' ? {cardId: null} : {}),
-                })
-              }
+                });
+              }}
             />
           </FormSection>
 
@@ -303,7 +341,9 @@ const RecurringFormScreen = () => {
             <CategorySelector
               categories={categoriesFor(form.type)}
               selectedCategory={form.category}
-              onSelect={category => change({category})}
+              onSelect={categorySuggestion.pickByHand}
+              suggested={categorySuggestion.suggested}
+              guessed={categorySuggestion.guessed}
               disabled={busy}
             />
           </FormSection>

@@ -1,5 +1,5 @@
 import {View} from 'react-native';
-import React, {useEffect} from 'react';
+import React from 'react';
 import {useLocalSearchParams, useRouter} from 'expo-router';
 import {prefillFromParams} from '../src/utils/smsImport';
 import {getAuth} from '@react-native-firebase/auth';
@@ -19,9 +19,17 @@ import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView
 import FormButton from '../components/FormButton';
 import {useAsyncAction} from '../src/hooks/useAsyncAction';
 import {useCurrency} from '../utils/CurrencyUtil';
-import {INCOME_CATEGORIES, INCOME_KEYWORD_MAP} from '../utils/CategoryData';
+import {
+  INCOME_CATEGORIES,
+  INCOME_KEYWORD_MAP,
+  INCOME_VALUES,
+} from '../utils/CategoryData';
 import {useTheme} from '../src/theme';
 import {useTransactionForm} from '../src/hooks/useTransactionForm';
+import {
+  useCategoryHistory,
+  useCategorySuggestion,
+} from '../src/hooks/useCategorySuggestion';
 import {balanceEffect, transactionMoneyFields} from '../src/utils/amounts';
 import CategorySelector from '../src/components/CategorySelector';
 import AmountInput from '../src/components/AmountInput';
@@ -69,20 +77,15 @@ const AddIncome = () => {
   } = useTransactionForm(prefillFromParams(params));
   const knownTags = useKnownTags();
   const recordTags = useRecordTags();
-
-  useEffect(() => {
-    if (title.trim().length < 3 || category) {
-      return;
-    }
-    const lower = title.toLowerCase();
-    const match = Object.keys(INCOME_KEYWORD_MAP).find(kw =>
-      lower.includes(kw),
-    );
-    if (match) {
-      setCategory(INCOME_KEYWORD_MAP[match]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title]);
+  const categoryHistory = useCategoryHistory('income', INCOME_VALUES);
+  const categorySuggestion = useCategorySuggestion({
+    title,
+    category,
+    setCategory,
+    allowed: INCOME_VALUES,
+    keywordMap: INCOME_KEYWORD_MAP,
+    history: categoryHistory,
+  });
 
   const getUid = (): string => getAuth().currentUser!.uid;
 
@@ -176,7 +179,9 @@ const AddIncome = () => {
               <CategorySelector
                 categories={INCOME_CATEGORIES}
                 selectedCategory={category}
-                onSelect={setCategory}
+                onSelect={categorySuggestion.pickByHand}
+                suggested={categorySuggestion.suggested}
+                guessed={categorySuggestion.guessed}
                 disabled={isSubmitting}
                 placeholder="Select income category"
               />
