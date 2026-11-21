@@ -22,6 +22,8 @@ import {
 } from '../utils/customCategories';
 import {
   EXPENSE_CATEGORIES,
+  DEFAULT_GOAL_CATEGORY,
+  GOAL_CATEGORIES,
   INCOME_CATEGORIES,
   SPLIT_CATEGORIES,
   getCategoryIcon,
@@ -108,8 +110,8 @@ export const useCategoryData = (): CategoryDataResult => {
   };
 };
 
-/** Every built-in name (expense, income and split); a custom category may not reuse one. */
-export const BUILT_IN_NAMES: readonly string[] = Array.from(
+/** Every built-in transaction name (expense, income and split). */
+const TRANSACTION_BUILT_IN_NAMES: readonly string[] = Array.from(
   new Set(
     [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES, ...SPLIT_CATEGORIES].map(
       c => c.value,
@@ -117,8 +119,30 @@ export const BUILT_IN_NAMES: readonly string[] = Array.from(
   ),
 );
 
+/** A goal whose category the app does not know shows the "Other" piggy bank, as old apps do. */
+const GOAL_FALLBACK_ICON = GOAL_CATEGORIES.find(
+  c => c.value === DEFAULT_GOAL_CATEGORY,
+)!.icon;
+
+/** Goal ids and their labels ("other" and "Other"). */
+const GOAL_BUILT_IN_NAMES: readonly string[] = GOAL_CATEGORIES.flatMap(c => [
+  c.value,
+  c.label,
+]);
+
+/**
+ * Names a custom category of this type may not reuse. Transaction categories share one set of
+ * names (icons are looked up by name); goal categories are their own set.
+ */
+export const builtInNamesFor = (type: CategoryType): readonly string[] =>
+  type === 'goal' ? GOAL_BUILT_IN_NAMES : TRANSACTION_BUILT_IN_NAMES;
+
 export const builtInsFor = (type: CategoryType): readonly Category[] =>
-  type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+  type === 'expense'
+    ? EXPENSE_CATEGORIES
+    : type === 'income'
+    ? INCOME_CATEGORIES
+    : GOAL_CATEGORIES;
 
 export interface CategoryLists {
   /** Every category of the type, hidden ones included, in the person's order. */
@@ -151,9 +175,17 @@ export const useCategoryIcon = (): ((
   const {customs} = useCategoryData();
   return useCallback(
     (value: string, type?: string) => {
+      if (type === 'goal') {
+        const goal = GOAL_CATEGORIES.find(c => c.value === value);
+        if (goal) {
+          return goal.icon;
+        }
+        const own = customs.find(c => c.name === value && c.type === 'goal');
+        return own ? categoryIconFor(own.icon) : GOAL_FALLBACK_ICON;
+      }
       const custom =
         customs.find(c => c.name === value && c.type === type) ??
-        customs.find(c => c.name === value);
+        customs.find(c => c.name === value && c.type !== 'goal');
       return custom ? categoryIconFor(custom.icon) : getCategoryIcon(value);
     },
     [customs],

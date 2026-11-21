@@ -93,13 +93,17 @@ describe('customFromDoc and prefsFromDoc', () => {
     ).toBe('shapes');
   });
 
+  it('reads a goal category', () => {
+    expect(customFromDoc('g', {name: 'Bike', type: 'goal'})?.type).toBe('goal');
+  });
+
   it('reads preferences and ignores junk', () => {
     expect(prefsFromDoc(undefined)).toEqual(EMPTY_PREFS);
     expect(
       prefsFromDoc({hidden: {expense: ['Rent', 3, '']}, order: 'bad'}),
     ).toEqual({
-      hidden: {expense: ['Rent'], income: []},
-      order: {expense: [], income: []},
+      hidden: {expense: ['Rent'], income: [], goal: []},
+      order: {expense: [], income: [], goal: []},
     });
   });
 });
@@ -133,7 +137,7 @@ describe('arrangeCategories', () => {
   it('follows the saved order and appends values it does not list', () => {
     const prefs: CategoryPrefs = {
       ...EMPTY_PREFS,
-      order: {expense: ['Kids', 'Others', 'Gone'], income: []},
+      order: {expense: ['Kids', 'Others', 'Gone'], income: [], goal: []},
     };
     expect(
       arrangeCategories(BUILT_INS, customs, prefs, 'expense').map(e => e.value),
@@ -160,16 +164,17 @@ describe('preference helpers', () => {
 
   it('renames in the order and removes a deleted value', () => {
     const prefs: CategoryPrefs = {
-      hidden: {expense: ['Pets'], income: []},
-      order: {expense: ['Food', 'Pets'], income: ['Pets']},
+      hidden: {expense: ['Pets'], income: [], goal: []},
+      order: {expense: ['Food', 'Pets'], income: ['Pets'], goal: []},
     };
     expect(withRenamed(prefs, 'expense', 'Pets', 'Animals').order).toEqual({
       expense: ['Food', 'Animals'],
       income: ['Pets'],
+      goal: [],
     });
     expect(withoutValue(prefs, 'expense', 'Pets')).toEqual({
-      hidden: {expense: [], income: []},
-      order: {expense: ['Food'], income: ['Pets']},
+      hidden: {expense: [], income: [], goal: []},
+      order: {expense: ['Food'], income: ['Pets'], goal: []},
     });
   });
 
@@ -179,7 +184,7 @@ describe('preference helpers', () => {
       [],
       {
         ...EMPTY_PREFS,
-        hidden: {expense: ['Food', 'Rent'], income: []},
+        hidden: {expense: ['Food', 'Rent'], income: [], goal: []},
       },
       'expense',
     );

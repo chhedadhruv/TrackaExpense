@@ -14,6 +14,7 @@ import {
 import {
   EXPENSE_CATEGORIES,
   EXPENSE_KEYWORD_MAP,
+  GOAL_CATEGORIES,
   GOAL_KEYWORD_MAP,
   INCOME_CATEGORIES,
   INCOME_KEYWORD_MAP,
@@ -261,6 +262,10 @@ describe('keyword maps', () => {
   it('point at real categories', () => {
     check(EXPENSE_KEYWORD_MAP, EXPENSE);
     check(INCOME_KEYWORD_MAP, INCOME);
+    check(
+      GOAL_KEYWORD_MAP,
+      GOAL_CATEGORIES.map(c => c.value),
+    );
   });
 
   it('are lowercase', () => {
