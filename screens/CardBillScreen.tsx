@@ -31,6 +31,7 @@ import {periodOwedMinor, periodTransactions} from '../src/utils/cards';
 import {fromMinor, toMajorNumber, tryToMinor} from '../src/utils/money';
 import {minorOf} from '../src/utils/amounts';
 import {snackbar} from '../src/utils/snackbarStore';
+import * as AnalyticsService from '../src/services/AnalyticsService';
 import {formatDisplayDate, todayAsYMD} from '../src/utils/formatters';
 import {formatCurrency, getCurrencyByCode} from '../utils/CurrencyUtil';
 import {dueDateFor} from '../src/utils/cardPeriods';
@@ -111,6 +112,11 @@ const CardBillScreen = () => {
         : tryToMinor(statementText, card.currency);
     try {
       await pay(card, period, amountMinor, statementMinor);
+      AnalyticsService.logCardBillPaid(
+        AnalyticsService.getAmountRange(
+          toMajorNumber(amountMinor, card.currency),
+        ),
+      );
       snackbar.success('Bill marked as paid');
     } catch (e) {
       if ((e as {code?: string}).code === 'already-paid') {

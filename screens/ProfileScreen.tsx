@@ -51,6 +51,7 @@ import type {AppIcon} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
 import AppearanceSetting from '../src/components/AppearanceSetting';
 import AppLockSetting from '../src/components/AppLockSetting';
+import AnalyticsSetting from '../src/components/AnalyticsSetting';
 import NotificationSetting from '../src/components/NotificationSetting';
 import CurrencyPickerModal from '../src/components/CurrencyPickerModal';
 
@@ -359,6 +360,7 @@ const ProfileScreen = () => {
 
         <NotificationSetting />
         <AppLockSetting />
+        <AnalyticsSetting />
 
         <View className="px-5 pb-[30px]">
           <Text

@@ -12,6 +12,7 @@ import {
   wrapWithErrorReporting,
 } from '../src/services/ErrorReporter';
 import {initMixpanel} from '../src/services/MixpanelService';
+import {useScreenTracking} from '../src/hooks/useScreenTracking';
 import {initPush} from '../src/services/PushService';
 import NotificationService from '../services/NotificationService';
 import {handleNotificationNavigation} from '../services/NotificationNavigation';
@@ -101,6 +102,7 @@ const RootLayout = () => {
 /** The themed frame: status bar area, error boundary, the app and the snackbar layer. */
 const Shell = ({forceUpdateMessage}: {forceUpdateMessage: string | null}) => {
   const {colors, isDark} = useTheme();
+  useScreenTracking();
   return (
     <SafeAreaView
       style={[styles.container, {backgroundColor: colors.headerBg}]}

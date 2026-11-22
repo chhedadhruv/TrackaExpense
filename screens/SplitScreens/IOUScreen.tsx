@@ -36,6 +36,7 @@ import {
   EXPO_PUBLIC_NOTIFICATION_SERVER_URL,
 } from '@env';
 import {snackbar} from '../../src/utils/snackbarStore';
+import * as AnalyticsService from '../../src/services/AnalyticsService';
 import {ErrorState, LoadingState} from '../../src/components/ScreenState';
 import {useIous} from '../../src/data/split';
 
@@ -108,6 +109,7 @@ const IOUScreen = () => {
         status: 'settled',
         settledAt: serverTimestamp(),
       });
+      AnalyticsService.logIouSettled(AnalyticsService.getAmountRange(amount));
 
       if (amount > 0) {
         // Current user: debtor pays (expense), creditor receives (income).

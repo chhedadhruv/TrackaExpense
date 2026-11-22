@@ -94,7 +94,7 @@ Guidance for working in this repository.
 ## 10. Third-party services
 
 - Sentry: user context is the uid only. Report handled errors through `reportError()` in `src/services/ErrorReporter.ts`. It does not start in development builds.
-- Mixpanel: add events only through `AnalyticsService`.
+- Mixpanel: add events only through `AnalyticsService`, with no names, titles, exact amounts or ids on them. The catalogue and rules are in `docs/analytics.md`; the Profile "Usage analytics" switch must keep working (`MixpanelService.setAnalyticsEnabled`).
 - OneSignal: identity is the Firebase uid. The REST key is a Cloud Functions secret, never in a file.
 - Keys live in the gitignored `.env`; names are in `env.example`.
 

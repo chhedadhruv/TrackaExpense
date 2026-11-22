@@ -21,16 +21,19 @@ export const getAmountRange = (amount: number): string => {
 
 // ─── User Properties ─────────────────────────────────────────────────────────
 
+// Aggregate facts about the person's setup only: no names, titles or exact amounts.
 export const setUserProperties = (props: {
   currency?: string;
   auth_method?: string;
-  transaction_count?: string;
-  has_splits?: string;
-  has_savings_goals?: string;
+  has_splits?: boolean;
+  has_savings_goals?: boolean;
+  savings_goal_count?: number;
+  app_lock_enabled?: boolean;
+  theme?: string;
 }): void => {
   const definedProps = Object.fromEntries(
     Object.entries(props).filter(([, value]) => value !== undefined),
-  ) as Record<string, string>;
+  ) as Record<string, string | number | boolean>;
   if (Object.keys(definedProps).length > 0) {
     setMixpanelUserProperties(definedProps);
   }
@@ -109,12 +112,19 @@ export const logStatisticsTimeRangeChanged = (range: string): void => {
 
 // ─── Split Events ─────────────────────────────────────────────────────────────
 
-export const logCreateGroup = (category: string): void => {
-  track('Group Created', {category});
+export const logCreateGroup = (params: {
+  category: string;
+  invited_count: number;
+}): void => {
+  track('Group Created', params);
+  setUserProperties({has_splits: true});
 };
 
-export const logInviteMember = (group_id: string): void => {
-  track('Group Member Invited', {group_id});
+export const logInviteMember = (params: {
+  invite_count: number;
+  source: 'group_create' | 'resend';
+}): void => {
+  track('Group Member Invited', params);
 };
 
 export const logCreateSplit = (params: {
@@ -132,6 +142,7 @@ export const logSettleUp = (amount_range: string): void => {
 
 export const logAcceptInvitation = (): void => {
   track('Invitation Accepted');
+  setUserProperties({has_splits: true});
 };
 
 export const logDeclineInvitation = (): void => {
@@ -168,4 +179,134 @@ export const logSavingsGoalCompleted = (params: {
   time_to_complete_days: number;
 }): void => {
   track('Savings Goal Completed', params);
+};
+
+// ─── Screen Events ────────────────────────────────────────────────────────────
+
+export const logScreenViewed = (screen_name: string): void => {
+  track('Screen Viewed', {screen_name});
+};
+
+// ─── Budget Events ────────────────────────────────────────────────────────────
+
+export const logBudgetCreated = (params: {
+  category: string;
+  period: string;
+}): void => {
+  track('Budget Created', params);
+};
+
+export const logBudgetEdited = (params: {category: string}): void => {
+  track('Budget Edited', params);
+};
+
+export const logBudgetDeleted = (): void => {
+  track('Budget Deleted');
+};
+
+// ─── Recurring Events ─────────────────────────────────────────────────────────
+
+export const logRecurringCreated = (params: {
+  type: string;
+  category: string;
+  frequency: string;
+}): void => {
+  track('Recurring Created', params);
+};
+
+export const logRecurringEdited = (params: {type: string}): void => {
+  track('Recurring Edited', params);
+};
+
+export const logRecurringDeleted = (params: {type: string}): void => {
+  track('Recurring Deleted', params);
+};
+
+// ─── Credit Card Events ───────────────────────────────────────────────────────
+
+export const logCardAdded = (): void => {
+  track('Card Added');
+};
+
+export const logCardDeleted = (): void => {
+  track('Card Deleted');
+};
+
+export const logCardBillPaid = (amount_range: string): void => {
+  track('Card Bill Paid', {amount_range});
+};
+
+// ─── Capture and Export Events ────────────────────────────────────────────────
+
+export const logReceiptScanned = (params: {
+  success: boolean;
+  fields_filled: number;
+}): void => {
+  track('Receipt Scanned', params);
+};
+
+export const logBankMessageParsed = (params: {
+  recognized: boolean;
+  target: string;
+}): void => {
+  track('Bank Message Parsed', params);
+};
+
+export const logDataExported = (format: string): void => {
+  track('Data Exported', {format});
+};
+
+// ─── Onboarding and Settings Events ───────────────────────────────────────────
+
+export const logOnboardingStarted = (): void => {
+  track('Onboarding Started');
+};
+
+export const logOnboardingCompleted = (): void => {
+  track('Onboarding Completed');
+};
+
+export const logOnboardingSkipped = (step: number): void => {
+  track('Onboarding Skipped', {step});
+};
+
+export const logThemeChanged = (theme: string): void => {
+  track('Theme Changed', {theme});
+};
+
+export const logAppLockToggled = (enabled: boolean): void => {
+  track('App Lock Toggled', {enabled});
+};
+
+export const logNotificationPrefChanged = (params: {
+  pref: string;
+  enabled: boolean;
+}): void => {
+  track('Notification Pref Changed', params);
+};
+
+export const logCustomCategoryCreated = (type: string): void => {
+  track('Custom Category Created', {type});
+};
+
+export const logTagAdded = (): void => {
+  track('Tag Added');
+};
+
+// ─── IOU and Invite Link Events ───────────────────────────────────────────────
+
+export const logIouCreated = (params: {
+  direction: string;
+  amount_range: string;
+}): void => {
+  track('IOU Created', params);
+};
+
+export const logIouSettled = (amount_range: string): void => {
+  track('IOU Settled', {amount_range});
+};
+
+export const logInviteLinkJoined = (): void => {
+  track('Invite Link Joined');
+  setUserProperties({has_splits: true});
 };

@@ -43,6 +43,7 @@ import {
   type RecurringForm,
 } from '../src/utils/recurring';
 import {snackbar} from '../src/utils/snackbarStore';
+import * as AnalyticsService from '../src/services/AnalyticsService';
 import {EXPENSE_KEYWORD_MAP, INCOME_KEYWORD_MAP} from '../utils/CategoryData';
 import {useCategoryLists} from '../src/data/categories';
 import {getCurrencyByCode, useCurrency} from '../utils/CurrencyUtil';
@@ -202,6 +203,15 @@ const RecurringFormScreen = () => {
     }
     try {
       await save(editing ? (id as string) : null, result.data);
+      if (editing) {
+        AnalyticsService.logRecurringEdited({type: result.data.type});
+      } else {
+        AnalyticsService.logRecurringCreated({
+          type: result.data.type,
+          category: result.data.category,
+          frequency: result.data.frequency,
+        });
+      }
       snackbar.success(editing ? 'Rule updated' : 'Rule added');
       router.back();
     } catch (e) {
@@ -214,6 +224,7 @@ const RecurringFormScreen = () => {
   const deleteIt = async () => {
     try {
       await remove(id as string);
+      AnalyticsService.logRecurringDeleted({type: existing?.type ?? 'unknown'});
       snackbar.success('Rule deleted');
       router.back();
     } catch (e) {

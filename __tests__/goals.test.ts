@@ -2,6 +2,7 @@ import {describe, expect, it} from '@jest/globals';
 import type {SavingsGoal} from '../src/types';
 import {
   chooseGoals,
+  daysToCompleteGoal,
   goalCurrency,
   goalDocFields,
   goalFromDoc,
@@ -192,5 +193,31 @@ describe('chooseGoals', () => {
   it('never shows a repeated document twice', () => {
     const array = [goal('a'), goal('b')];
     expect(chooseGoals([goal('a'), goal('a')], array)).toBe(array);
+  });
+});
+
+describe('daysToCompleteGoal', () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const base = {current: 900, target: 1000, createdAt: ts(0)} as Pick<
+    SavingsGoal,
+    'current' | 'target' | 'createdAt'
+  >;
+
+  it('returns the days taken when the deposit reaches the target', () => {
+    expect(daysToCompleteGoal(base, 1000, 10 * DAY)).toBe(10);
+    expect(daysToCompleteGoal(base, 1200, 3 * DAY)).toBe(3);
+  });
+
+  it('returns null while the goal is still short or was already complete', () => {
+    expect(daysToCompleteGoal(base, 999, 10 * DAY)).toBeNull();
+    expect(daysToCompleteGoal({...base, current: 1000}, 1100, DAY)).toBeNull();
+  });
+
+  it('reports 0 days when the goal has no creation time', () => {
+    const noDate = {current: 0, target: 10} as Pick<
+      SavingsGoal,
+      'current' | 'target' | 'createdAt'
+    >;
+    expect(daysToCompleteGoal(noDate, 10, DAY)).toBe(0);
   });
 });

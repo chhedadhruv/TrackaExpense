@@ -31,6 +31,7 @@ import {
   validateCardInput,
 } from '../src/utils/cards';
 import {snackbar} from '../src/utils/snackbarStore';
+import * as AnalyticsService from '../src/services/AnalyticsService';
 import {useCurrency} from '../utils/CurrencyUtil';
 
 const toDay = (text: string): number | null => {
@@ -89,6 +90,9 @@ const CardFormScreen = () => {
         currency: existing?.currency ?? currency.code,
         archived: existing?.archived ?? false,
       });
+      if (!editing) {
+        AnalyticsService.logCardAdded();
+      }
       snackbar.success(editing ? 'Card updated' : 'Card added');
       router.back();
     } catch (e) {
@@ -112,6 +116,7 @@ const CardFormScreen = () => {
         snackbar.success('Card archived');
       } else {
         await remove(existing.id);
+        AnalyticsService.logCardDeleted();
         snackbar.success('Card deleted');
       }
       router.back();

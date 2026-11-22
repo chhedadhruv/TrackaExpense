@@ -215,7 +215,12 @@ const AddExpense = () => {
         setDate(fill.date);
       }
       setScanNote({filled: fill.filled, alternatives: fill.alternatives});
+      AnalyticsService.logReceiptScanned({
+        success: true,
+        fields_filled: fill.filled.length,
+      });
     } catch (scanError) {
+      AnalyticsService.logReceiptScanned({success: false, fields_filled: 0});
       const code = String((scanError as {code?: unknown})?.code ?? '');
       if (!/resource-exhausted|failed-precondition/.test(code)) {
         reportError(scanError);

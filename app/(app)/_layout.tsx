@@ -1,6 +1,7 @@
 import React from 'react';
 import Tabs from 'expo-router/js-tabs';
 import {useTheme} from '../../src/theme';
+import {useAnalyticsProfile} from '../../src/hooks/useAnalyticsProfile';
 import {renderTabBar, tabIcons} from '../../src/navigation/AppTabBar';
 
 /**
@@ -9,6 +10,7 @@ import {renderTabBar, tabIcons} from '../../src/navigation/AppTabBar';
  */
 const AppLayout = () => {
   const {colors} = useTheme();
+  useAnalyticsProfile();
   return (
     <Tabs
       tabBar={renderTabBar}

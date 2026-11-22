@@ -15,6 +15,7 @@ import {
 import {inviteLinkErrorMessage} from '../../src/utils/inviteLinks';
 import {useTheme} from '../../src/theme';
 import {snackbar} from '../../src/utils/snackbarStore';
+import * as AnalyticsService from '../../src/services/AnalyticsService';
 
 /**
  * Opened from an invite link (`/split/join/<group>/<token>`). Shows the group's name and size and
@@ -48,6 +49,9 @@ const JoinGroupScreen = () => {
   const join = async () => {
     try {
       const result = await joinGroupByLink(groupId, token);
+      if (result.status === 'joined') {
+        AnalyticsService.logInviteLinkJoined();
+      }
       snackbar.success(
         result.status === 'joined'
           ? `You joined ${preview.data?.groupName ?? 'the group'}`

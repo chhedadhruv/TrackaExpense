@@ -4,6 +4,7 @@ import Moon from 'lucide-react-native/icons/moon';
 import Sun from 'lucide-react-native/icons/sun';
 import SunMoon from 'lucide-react-native/icons/sun-moon';
 import {useTheme, type ThemeMode} from '../theme';
+import * as AnalyticsService from '../services/AnalyticsService';
 import type {AppIcon} from '../types/icons';
 
 const OPTIONS: {mode: ThemeMode; label: string; icon: AppIcon}[] = [
@@ -39,7 +40,10 @@ const AppearanceSetting = () => {
               accessibilityRole="radio"
               accessibilityLabel={`${option.label} theme`}
               accessibilityState={{selected}}
-              onPress={() => setMode(option.mode)}
+              onPress={() => {
+                setMode(option.mode);
+                AnalyticsService.logThemeChanged(option.mode);
+              }}
               className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border py-3 ${
                 selected
                   ? 'border-primary-fill bg-primary-fill'

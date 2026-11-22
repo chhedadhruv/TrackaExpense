@@ -68,6 +68,7 @@ import {
 } from '../../src/data/split';
 import type {AppIcon} from '../../src/types/icons';
 import {snackbar} from '../../src/utils/snackbarStore';
+import * as AnalyticsService from '../../src/services/AnalyticsService';
 
 interface UserDetail {
   email: string;
@@ -454,6 +455,16 @@ const SplitScreen = () => {
             createdAt: Timestamp.fromDate(new Date()),
           },
         ).catch(() => {});
+        AnalyticsService.logCreateGroup({
+          category,
+          invited_count: inviteeEmails.length,
+        });
+        if (inviteeEmails.length > 0) {
+          AnalyticsService.logInviteMember({
+            invite_count: inviteeEmails.length,
+            source: 'group_create',
+          });
+        }
         snackbar.success('Group created successfully');
         resetGroupForm();
       }

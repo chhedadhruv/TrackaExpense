@@ -3,6 +3,7 @@ import {Text, TextInput, TouchableOpacity, View} from 'react-native';
 import {useTheme} from '../theme';
 import {useUid} from '../data/hooks';
 import {builtInNamesFor, useCategoryData} from '../data/categories';
+import * as AnalyticsService from '../services/AnalyticsService';
 import {createCategory} from '../services/CategoryService';
 import {reportError} from '../services/ErrorReporter';
 import {DEFAULT_CATEGORY_ICON} from '../constants/categoryIcons';
@@ -49,7 +50,9 @@ const NewCategoryForm = ({
     }
     setSaving(true);
     try {
-      onCreated(await createCategory(uid, {name, type, icon}));
+      const created = await createCategory(uid, {name, type, icon});
+      AnalyticsService.logCustomCategoryCreated(type);
+      onCreated(created);
     } catch (e) {
       reportError(e as Error);
       setError('Could not save the category. Check your connection.');

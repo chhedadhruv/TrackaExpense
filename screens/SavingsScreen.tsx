@@ -63,6 +63,7 @@ import {
 import type {SavingsGoal} from '../src/types';
 import type {AppIcon} from '../src/types/icons';
 import {snackbar} from '../src/utils/snackbarStore';
+import {daysToCompleteGoal} from '../src/utils/goals';
 import {ModalSnackbar} from '../src/components/Snackbar';
 
 interface EditValues {
@@ -404,11 +405,25 @@ const SavingsScreen = () => {
       });
 
       await saveGoals(userDocRef.id, savingsGoals, updatedGoals);
+      const goalBefore = savingsGoals.find(g => g.id === selectedGoalId);
+      const goalAfter = updatedGoals.find(g => g.id === selectedGoalId);
       AnalyticsService.logAddFundsToGoal({
         amount_range: AnalyticsService.getAmountRange(parsed),
-        goal_category:
-          savingsGoals.find(g => g.id === selectedGoalId)?.category ?? 'other',
+        goal_category: goalBefore?.category ?? 'other',
       });
+      if (goalBefore && goalAfter) {
+        const days = daysToCompleteGoal(
+          goalBefore,
+          goalAfter.current,
+          Date.now(),
+        );
+        if (days !== null) {
+          AnalyticsService.logSavingsGoalCompleted({
+            category: goalBefore.category,
+            time_to_complete_days: days,
+          });
+        }
+      }
       snackbar.success(
         `${formatCurrencyAmount(parsed)} added to ${
           savingsGoals.find(g => g.id === selectedGoalId)?.name

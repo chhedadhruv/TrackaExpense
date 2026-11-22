@@ -129,7 +129,6 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
             );
             const currentUser = userCredential.user;
             setErrorReportingTag('auth_method', 'email');
-            AnalyticsService.logLogin('email');
             if (!currentUser.emailVerified) {
               await signOutOfFirebase(getAuth());
               Alert.alert(
@@ -162,6 +161,8 @@ const AuthProvider = ({children}: {children: React.ReactNode}) => {
               );
               return;
             }
+            // Counted only after the email is verified: unverified attempts are signed out again.
+            AnalyticsService.logLogin('email');
           } catch (error) {
             handleAuthError(error as {code?: string; message: string});
             setErrorMessage((error as Error).message);

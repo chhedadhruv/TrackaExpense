@@ -3,6 +3,7 @@ import {Text, View} from 'react-native';
 import ShieldCheck from 'lucide-react-native/icons/shield-check';
 import {useAppLock} from '../lock/AppLockProvider';
 import {getLockAvailability} from '../services/AppLockService';
+import * as AnalyticsService from '../services/AnalyticsService';
 import {useTheme} from '../theme';
 import {snackbar} from '../utils/snackbarStore';
 import Toggle from './Toggle';
@@ -41,6 +42,9 @@ const AppLockSetting = () => {
     setBusy(true);
     try {
       const result = await setEnabled(next);
+      if (result === 'ok') {
+        AnalyticsService.logAppLockToggled(next);
+      }
       if (result === 'unavailable') {
         snackbar.error(
           'Set up a fingerprint, face or screen lock on your phone first.',

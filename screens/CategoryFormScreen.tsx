@@ -26,6 +26,7 @@ import {
   renameCategory,
   setCategoryIcon,
 } from '../src/services/CategoryService';
+import * as AnalyticsService from '../src/services/AnalyticsService';
 import {reportError} from '../src/services/ErrorReporter';
 import {useTheme} from '../src/theme';
 import {
@@ -97,6 +98,7 @@ const CategoryFormScreen = () => {
     try {
       if (!existing) {
         await createCategory(uid, {name: cleaned, type, icon});
+        AnalyticsService.logCustomCategoryCreated(type);
         snackbar.success('Category added');
       } else {
         if (icon !== existing.icon) {

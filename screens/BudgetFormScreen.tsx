@@ -40,6 +40,7 @@ import {
 } from '../src/utils/budgets';
 import {fromMinor} from '../src/utils/money';
 import {snackbar} from '../src/utils/snackbarStore';
+import * as AnalyticsService from '../src/services/AnalyticsService';
 import {useCategoryLists} from '../src/data/categories';
 import {getCurrencyByCode, useCurrency} from '../utils/CurrencyUtil';
 
@@ -116,6 +117,15 @@ const BudgetFormScreen = () => {
     }
     try {
       await save(editing ? (id as string) : null, result.data);
+      const budgetCategory = result.data.category ?? 'all';
+      if (editing) {
+        AnalyticsService.logBudgetEdited({category: budgetCategory});
+      } else {
+        AnalyticsService.logBudgetCreated({
+          category: budgetCategory,
+          period: result.data.period,
+        });
+      }
       snackbar.success(editing ? 'Budget updated' : 'Budget added');
       router.back();
     } catch (e) {
@@ -142,6 +152,7 @@ const BudgetFormScreen = () => {
   const deleteIt = async () => {
     try {
       await remove(id as string);
+      AnalyticsService.logBudgetDeleted();
       snackbar.success('Budget deleted');
       router.back();
     } catch (e) {
