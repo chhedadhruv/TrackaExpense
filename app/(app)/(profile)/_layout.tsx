@@ -30,6 +30,10 @@ const ProfileLayout = () => {
         name="profile/sms-import"
         options={{title: 'Bank Message'}}
       />
+      <Stack.Screen
+        name="profile/sms-inbox"
+        options={{title: 'Read My Messages'}}
+      />
       <Stack.Screen name="profile/contact" options={{title: 'Contact Us'}} />
       <Stack.Screen
         name="profile/privacy-policy"
