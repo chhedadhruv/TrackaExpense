@@ -19,6 +19,8 @@ import UpdateService from '../services/UpdateService';
 import ErrorBoundary from '../components/ErrorBoundary';
 import ForceUpdateScreen from '../components/ForceUpdateScreen';
 import {SnackbarHost} from '../src/components/Snackbar';
+import OfflineBanner from '../src/components/OfflineBanner';
+import {startConnectivity} from '../src/services/ConnectivityService';
 import {getConfig, initRemoteConfig} from '../src/services/RemoteConfigService';
 import {isVersionBelow} from '../src/utils/version';
 import AppProviders from '../src/navigation/AppProviders';
@@ -37,6 +39,9 @@ const RootLayout = () => {
   );
 
   useEffect(() => {
+    // Keeps the offline banner and the offline-aware saves current.
+    const stopConnectivity = startConnectivity();
+
     // Analytics and push start here. Neither asks for any permission on start.
     initMixpanel();
     initPush(handleNotificationNavigation);
@@ -78,6 +83,8 @@ const RootLayout = () => {
         reportError(e as Error);
       }
     })();
+
+    return stopConnectivity;
   }, []);
 
   return (
@@ -99,6 +106,7 @@ const Shell = ({forceUpdateMessage}: {forceUpdateMessage: string | null}) => {
       style={[styles.container, {backgroundColor: colors.headerBg}]}
       edges={['top']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <OfflineBanner />
       <ErrorBoundary>
         {forceUpdateMessage !== null ? (
           <ForceUpdateScreen message={forceUpdateMessage} />
