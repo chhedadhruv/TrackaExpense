@@ -13,7 +13,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.dhruvchheda.trackaexpense",
-      "buildNumber": "26112210",
+      "buildNumber": "26112212",
       "supportsTablet": false,
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
@@ -27,7 +27,7 @@
     },
     "android": {
       "package": "com.trackaexpense",
-      "versionCode": 26112210,
+      "versionCode": 26112212,
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "allowBackup": false,
@@ -73,6 +73,7 @@
       "./plugins/with-update-channel",
       "./plugins/with-gradle-memory",
       "./plugins/with-notification-icon",
+      "./plugins/with-optional-portrait",
       "./plugins/with-firebase-gradle-versions",
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
