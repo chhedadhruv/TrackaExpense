@@ -9,8 +9,10 @@ import {
   doc,
   getFirestore,
   increment,
-  runTransaction,
+  writeBatch,
 } from '@react-native-firebase/firestore';
+import {isOnline} from '../src/services/ConnectivityService';
+import {settleWrite} from '../src/utils/offlineWrite';
 import {
   getDownloadURL,
   getStorage,
@@ -207,9 +209,12 @@ const EditTransactionScreen = ({
         transaction.id,
       );
 
-      await runTransaction(getFirestore(), async txn => {
-        const snap = await txn.get(transactionRef);
-        const existing = snap.data();
+      // One atomic batch (not a transaction, which cannot run offline). The balance change is
+      // worked out from the transaction this screen was opened with: the live listener keeps it
+      // current, and offline it is the last copy the phone has.
+      const batch = writeBatch(getFirestore());
+      {
+        const existing: typeof transaction | undefined = transaction;
 
         const updatePayload: Record<string, any> = {
           title: title.trim(),
@@ -236,7 +241,7 @@ const EditTransactionScreen = ({
           updatePayload.cardId = newCard ?? deleteField();
         }
 
-        txn.update(transactionRef, updatePayload);
+        batch.update(transactionRef, updatePayload);
 
         // Exact integer math first; the old float subtraction only if an amount cannot be
         // converted to minor units. A card purchase never moved the balance, so changing the
@@ -252,14 +257,19 @@ const EditTransactionScreen = ({
           (existingCard !== null || newCard !== null
             ? 0
             : isExpense
-            ? parseFloat(existing?.amount) - parseFloat(amount)
-            : parseFloat(amount) - parseFloat(existing?.amount));
+            ? parseFloat(String(existing?.amount)) - parseFloat(amount)
+            : parseFloat(amount) - parseFloat(String(existing?.amount)));
         if (delta !== 0) {
-          txn.update(userDocRef, {
+          batch.update(userDocRef, {
             balance: increment(delta),
           });
         }
-      });
+      }
+      const {queued} = await settleWrite(
+        batch.commit(),
+        isOnline(),
+        reportError,
+      );
 
       AnalyticsService.logEditTransaction({
         type: transaction.type,
@@ -269,7 +279,11 @@ const EditTransactionScreen = ({
       });
       // The suggestion list is a convenience: record the tags without holding up the screen.
       recordTags(tags, knownTags).catch(reportError);
-      snackbar.success('Transaction updated');
+      snackbar.success(
+        queued
+          ? 'Changes saved on this phone, they will sync'
+          : 'Transaction updated',
+      );
       // Back to the list this edit started from: Home, or the Statistic tab's own page.
       router.navigate(basePath === '' ? '/home' : (basePath as '/statistic'));
     } catch (e) {

@@ -6,13 +6,14 @@ import {ActivityIndicator} from 'react-native';
 import {getAuth} from '@react-native-firebase/auth';
 import {
   Timestamp,
-  addDoc,
   collection,
   doc,
   getFirestore,
   increment,
-  runTransaction,
+  writeBatch,
 } from '@react-native-firebase/firestore';
+import {isOnline} from '../src/services/ConnectivityService';
+import {settleWrite} from '../src/utils/offlineWrite';
 import {
   getDownloadURL,
   getStorage,
@@ -279,9 +280,13 @@ const AddExpense = () => {
       }
       const uid = getUid();
       const userDocRef = doc(getFirestore(), 'users', uid);
-      await runTransaction(getFirestore(), async transaction => {
-        const transactionRef = collection(userDocRef, 'transactions');
+      // One atomic batch (not a transaction, which cannot run offline): offline it is queued on
+      // the phone and synced when the connection is back.
+      const batch = writeBatch(getFirestore());
+      {
+        const expenseDocRef = doc(collection(userDocRef, 'transactions'));
         const expenseData = {
+          documentId: expenseDocRef.id,
           userId: uid,
           title: title.trim(),
           description: description.trim(),
@@ -298,19 +303,23 @@ const AddExpense = () => {
           createdAt: Timestamp.fromDate(new Date()),
           type: 'expense',
         };
-        const expenseDocRef = await addDoc(transactionRef, expenseData);
-        transaction.update(expenseDocRef, {documentId: expenseDocRef.id});
+        batch.set(expenseDocRef, expenseData);
         const balanceDelta = balanceEffect(
           'expense',
           {amount, cardId},
           currency.code,
         );
         if (balanceDelta !== 0) {
-          transaction.update(userDocRef, {
+          batch.update(userDocRef, {
             balance: increment(balanceDelta),
           });
         }
-      });
+      }
+      const {queued} = await settleWrite(
+        batch.commit(),
+        isOnline(),
+        reportError,
+      );
       AnalyticsService.logAddExpense({
         amount_range: AnalyticsService.getAmountRange(parseFloat(amount)),
         category: category ?? 'uncategorized',
@@ -322,7 +331,9 @@ const AddExpense = () => {
       // Deferred notification prompt: asked once, right after a saved expense.
       requestPushPermissionAfterFirstExpense();
       savedRef.current = true;
-      snackbar.success('Expense added');
+      snackbar.success(
+        queued ? 'Expense saved on this phone, it will sync' : 'Expense added',
+      );
       router.back();
     } catch (e) {
       reportError(e as Error);
