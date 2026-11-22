@@ -44,7 +44,7 @@ import moment from 'moment';
 import DatePickerModal from '../src/components/DatePickerModal';
 import {KeyboardAvoidingModal} from '../src/components/KeyboardAvoidingModal';
 import {useCurrency} from '../utils/CurrencyUtil';
-import {getCategoryIcon} from '../utils/CategoryData';
+import {useCategoryIcon} from '../src/data/categories';
 import {FONT, SPACING} from '../src/constants/theme';
 import {useTheme, useThemedStyles, type ThemeColors} from '../src/theme';
 import {ErrorState, LoadingState} from '../src/components/ScreenState';
@@ -76,10 +76,12 @@ const TIME_RANGES: {key: TimeRange; label: string; icon: AppIcon}[] = [
 /** The icon of a recent transaction: a handshake for settlements, a group for splits, else its category. */
 const TransactionGlyph = ({
   transaction,
+  iconFor,
   size,
   color,
 }: {
   transaction: TransactionDocument;
+  iconFor: (value: string, type?: string) => AppIcon;
   size: number;
   color: string;
 }) => {
@@ -88,7 +90,7 @@ const TransactionGlyph = ({
       ? Handshake
       : transaction.source === 'split'
       ? Users
-      : getCategoryIcon(transaction.category);
+      : iconFor(transaction.category, transaction.type);
   return <Icon size={size} color={color} />;
 };
 
@@ -102,6 +104,7 @@ const HomeScreen = () => {
   const {colors} = useTheme();
   const styles = useThemedStyles(createStyles);
   const {currency, formatAmount} = useCurrency();
+  const iconFor = useCategoryIcon();
   // The profile and the transactions come from the shared cache, which live listeners keep
   // current (src/data); this screen opens no listeners of its own.
   const user = useUserData();
@@ -512,6 +515,7 @@ const HomeScreen = () => {
                       <View style={styles.transactionsCardIcon}>
                         <TransactionGlyph
                           transaction={transaction}
+                          iconFor={iconFor}
                           size={25}
                           color={colors.primary}
                         />

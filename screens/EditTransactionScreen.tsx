@@ -26,7 +26,17 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import FormButton from '../components/FormButton';
 import {useAsyncAction} from '../src/hooks/useAsyncAction';
 import {useCurrency} from '../utils/CurrencyUtil';
-import {EXPENSE_CATEGORIES, INCOME_CATEGORIES} from '../utils/CategoryData';
+import {EXPENSE_KEYWORD_MAP, INCOME_KEYWORD_MAP} from '../utils/CategoryData';
+import {useCategoryLists} from '../src/data/categories';
+import {
+  useCategoryHistory,
+  useCategorySuggestion,
+} from '../src/hooks/useCategorySuggestion';
+import {
+  useTitleSuggestions,
+  useTransactionTitleIndex,
+} from '../src/hooks/useTitleSuggestions';
+import TitleSuggestions from '../src/components/form/TitleSuggestions';
 import {useTheme} from '../src/theme';
 import {useTransactionForm} from '../src/hooks/useTransactionForm';
 import {editBalanceDelta, transactionMoneyFields} from '../src/utils/amounts';
@@ -103,6 +113,28 @@ const EditTransactionScreen = ({
   });
   const knownTags = useKnownTags();
   const recordTags = useRecordTags();
+  const categoryLists = useCategoryLists(transaction.type);
+  const categoryValues = categoryLists.values;
+  const categoryHistory = useCategoryHistory(transaction.type, categoryValues);
+  // The saved category was the person's choice, so the guess never replaces it; it only orders
+  // the picker's suggestions.
+  const categorySuggestion = useCategorySuggestion({
+    title,
+    category,
+    setCategory,
+    allowed: categoryValues,
+    keywordMap:
+      transaction.type === 'expense' ? EXPENSE_KEYWORD_MAP : INCOME_KEYWORD_MAP,
+    history: categoryHistory,
+    startPickedByHand: transaction.category !== '',
+  });
+  const titleIndex = useTransactionTitleIndex(transaction.type, categoryValues);
+  const titleSuggestions = useTitleSuggestions({
+    index: titleIndex,
+    title,
+    setTitle,
+    onCategory: categorySuggestion.applyGuess,
+  });
 
   // "Paid with" is only offered for expenses while cards are switched on. A transaction that
   // already has a card keeps showing it, even if that card was archived since.
@@ -299,9 +331,16 @@ const EditTransactionScreen = ({
               placeholder={`Enter ${transaction.type} title`}
               value={title}
               onChangeText={setTitle}
+              onFocus={titleSuggestions.onFocus}
+              onBlur={titleSuggestions.onBlur}
               disabled={isSubmitting}
-              maxLength={100}
-            />
+              maxLength={100}>
+              <TitleSuggestions
+                suggestions={titleSuggestions.suggestions}
+                onPick={titleSuggestions.pick}
+                disabled={isSubmitting}
+              />
+            </TextField>
 
             <TextField
               label="Description"
@@ -318,13 +357,12 @@ const EditTransactionScreen = ({
 
             <FormSection label="Category">
               <CategorySelector
-                categories={
-                  transaction.type === 'expense'
-                    ? EXPENSE_CATEGORIES
-                    : INCOME_CATEGORIES
-                }
+                categories={categoryLists.categories}
+                createType={transaction.type}
                 selectedCategory={category}
-                onSelect={setCategory}
+                onSelect={categorySuggestion.pickByHand}
+                suggested={categorySuggestion.suggested}
+                guessed={categorySuggestion.guessed}
                 disabled={isSubmitting}
                 placeholder="Select category"
               />

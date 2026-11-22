@@ -1,5 +1,5 @@
 import {View} from 'react-native';
-import React, {useEffect} from 'react';
+import React from 'react';
 import {useLocalSearchParams, useRouter} from 'expo-router';
 import {prefillFromParams} from '../src/utils/smsImport';
 import {getAuth} from '@react-native-firebase/auth';
@@ -19,9 +19,19 @@ import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView
 import FormButton from '../components/FormButton';
 import {useAsyncAction} from '../src/hooks/useAsyncAction';
 import {useCurrency} from '../utils/CurrencyUtil';
-import {INCOME_CATEGORIES, INCOME_KEYWORD_MAP} from '../utils/CategoryData';
+import {INCOME_KEYWORD_MAP} from '../utils/CategoryData';
+import {useCategoryLists} from '../src/data/categories';
 import {useTheme} from '../src/theme';
 import {useTransactionForm} from '../src/hooks/useTransactionForm';
+import {
+  useCategoryHistory,
+  useCategorySuggestion,
+} from '../src/hooks/useCategorySuggestion';
+import {
+  useTitleSuggestions,
+  useTransactionTitleIndex,
+} from '../src/hooks/useTitleSuggestions';
+import TitleSuggestions from '../src/components/form/TitleSuggestions';
 import {balanceEffect, transactionMoneyFields} from '../src/utils/amounts';
 import CategorySelector from '../src/components/CategorySelector';
 import AmountInput from '../src/components/AmountInput';
@@ -69,20 +79,23 @@ const AddIncome = () => {
   } = useTransactionForm(prefillFromParams(params));
   const knownTags = useKnownTags();
   const recordTags = useRecordTags();
-
-  useEffect(() => {
-    if (title.trim().length < 3 || category) {
-      return;
-    }
-    const lower = title.toLowerCase();
-    const match = Object.keys(INCOME_KEYWORD_MAP).find(kw =>
-      lower.includes(kw),
-    );
-    if (match) {
-      setCategory(INCOME_KEYWORD_MAP[match]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title]);
+  const categoryLists = useCategoryLists('income');
+  const categoryHistory = useCategoryHistory('income', categoryLists.values);
+  const categorySuggestion = useCategorySuggestion({
+    title,
+    category,
+    setCategory,
+    allowed: categoryLists.values,
+    keywordMap: INCOME_KEYWORD_MAP,
+    history: categoryHistory,
+  });
+  const titleIndex = useTransactionTitleIndex('income', categoryLists.values);
+  const titleSuggestions = useTitleSuggestions({
+    index: titleIndex,
+    title,
+    setTitle,
+    onCategory: categorySuggestion.applyGuess,
+  });
 
   const getUid = (): string => getAuth().currentUser!.uid;
 
@@ -155,9 +168,16 @@ const AddIncome = () => {
               placeholder="Enter income title"
               value={title}
               onChangeText={setTitle}
+              onFocus={titleSuggestions.onFocus}
+              onBlur={titleSuggestions.onBlur}
               disabled={isSubmitting}
-              maxLength={100}
-            />
+              maxLength={100}>
+              <TitleSuggestions
+                suggestions={titleSuggestions.suggestions}
+                onPick={titleSuggestions.pick}
+                disabled={isSubmitting}
+              />
+            </TextField>
 
             <TextField
               label="Description"
@@ -174,9 +194,12 @@ const AddIncome = () => {
 
             <FormSection label="Category">
               <CategorySelector
-                categories={INCOME_CATEGORIES}
+                categories={categoryLists.categories}
+                createType="income"
                 selectedCategory={category}
-                onSelect={setCategory}
+                onSelect={categorySuggestion.pickByHand}
+                suggested={categorySuggestion.suggested}
+                guessed={categorySuggestion.guessed}
                 disabled={isSubmitting}
                 placeholder="Select income category"
               />

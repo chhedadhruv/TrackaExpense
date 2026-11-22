@@ -1,4 +1,11 @@
 import BadgeCheck from 'lucide-react-native/icons/badge-check';
+import Building2 from 'lucide-react-native/icons/building-2';
+import CarFront from 'lucide-react-native/icons/car-front';
+import ChartLine from 'lucide-react-native/icons/chart-line';
+import Gem from 'lucide-react-native/icons/gem';
+import PiggyBank from 'lucide-react-native/icons/piggy-bank';
+import ShieldCheck from 'lucide-react-native/icons/shield-check';
+import Smartphone from 'lucide-react-native/icons/smartphone';
 import Briefcase from 'lucide-react-native/icons/briefcase';
 import BriefcaseMedical from 'lucide-react-native/icons/briefcase-medical';
 import Car from 'lucide-react-native/icons/car';
@@ -54,6 +61,37 @@ export const SPLIT_CATEGORIES: readonly Category[] = [
   {value: 'Others', label: 'Others', icon: Shapes},
 ] as const;
 
+/**
+ * Savings goal categories. The values are lowercase ids stored on goals (`SavingsGoal.category`),
+ * which every installed app reads, so they must never change; an unknown value shows the piggy
+ * bank. A person's own goal categories store their name as the value.
+ */
+export const GOAL_CATEGORIES: readonly Category[] = [
+  {value: 'emergency', label: 'Emergency', icon: ShieldCheck},
+  {value: 'vacation', label: 'Vacation', icon: Plane},
+  {value: 'house', label: 'House', icon: Building2},
+  {value: 'car', label: 'Car', icon: CarFront},
+  {value: 'education', label: 'Education', icon: GraduationCap},
+  {value: 'investment', label: 'Investment', icon: ChartLine},
+  {value: 'wedding', label: 'Wedding', icon: Gem},
+  {value: 'electronics', label: 'Electronics', icon: Smartphone},
+  {value: 'other', label: 'Other', icon: PiggyBank},
+] as const;
+
+/** The empty goal category: a goal with no other category. */
+export const DEFAULT_GOAL_CATEGORY = 'other';
+
+/** The values of each list, for suggestions (`allowed` in `src/utils/categorySuggest.ts`). */
+export const EXPENSE_VALUES: readonly string[] = EXPENSE_CATEGORIES.map(
+  c => c.value,
+);
+export const INCOME_VALUES: readonly string[] = INCOME_CATEGORIES.map(
+  c => c.value,
+);
+export const SPLIT_VALUES: readonly string[] = SPLIT_CATEGORIES.map(
+  c => c.value,
+);
+
 export const EXPENSE_KEYWORD_MAP: Record<string, string> = {
   // Food
   lunch: 'Food',
@@ -103,7 +141,7 @@ export const EXPENSE_KEYWORD_MAP: Record<string, string> = {
   // Bills & Utilities
   electricity: 'Bills',
   'electric bill': 'Bills',
-  water: 'Bills',
+  'water bill': 'Bills',
   'gas bill': 'Bills',
   internet: 'Bills',
   broadband: 'Bills',
@@ -113,7 +151,7 @@ export const EXPENSE_KEYWORD_MAP: Record<string, string> = {
   rent: 'Rent',
   'house rent': 'Rent',
   apartment: 'Rent',
-  flat: 'Rent',
+  'flat rent': 'Rent',
   pg: 'Rent',
   hostel: 'Rent',
   // Travel
@@ -121,6 +159,13 @@ export const EXPENSE_KEYWORD_MAP: Record<string, string> = {
   ola: 'Travel',
   rapido: 'Travel',
   taxi: 'Travel',
+  cab: 'Travel',
+  auto: 'Travel',
+  petrol: 'Travel',
+  diesel: 'Travel',
+  fuel: 'Travel',
+  parking: 'Travel',
+  toll: 'Travel',
   flight: 'Travel',
   train: 'Travel',
   bus: 'Travel',
@@ -176,6 +221,42 @@ export const EXPENSE_KEYWORD_MAP: Record<string, string> = {
   dropbox: 'Subscriptions',
   'google one': 'Subscriptions',
 };
+
+/** Expense keywords that mean getting around; in a split they are Transport. */
+const TRANSPORT_KEYWORDS = new Set([
+  'uber',
+  'ola',
+  'rapido',
+  'taxi',
+  'cab',
+  'auto',
+  'petrol',
+  'diesel',
+  'fuel',
+  'parking',
+  'toll',
+  'flight',
+  'train',
+  'bus',
+  'metro',
+  'irctc',
+]);
+
+/**
+ * Keywords for split categories, derived from the expense map: transport keywords become
+ * Transport and groceries become Food. Keywords whose category is not a split category (Rent,
+ * Travel, Health, ...) are ignored because a guess must be one of `SPLIT_CATEGORIES`.
+ */
+export const SPLIT_KEYWORD_MAP: Record<string, string> = Object.fromEntries(
+  Object.entries(EXPENSE_KEYWORD_MAP).map(([keyword, category]) => [
+    keyword,
+    TRANSPORT_KEYWORDS.has(keyword)
+      ? 'Transport'
+      : category === 'Groceries'
+      ? 'Food'
+      : category,
+  ]),
+);
 
 export const INCOME_KEYWORD_MAP: Record<string, string> = {
   salary: 'Salary',
