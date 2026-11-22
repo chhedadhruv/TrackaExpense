@@ -40,6 +40,7 @@ import Repeat from 'lucide-react-native/icons/repeat';
 import CreditCard from 'lucide-react-native/icons/credit-card';
 import Scale from 'lucide-react-native/icons/scale';
 import {getConfig} from '../src/services/RemoteConfigService';
+import {isInboxSupported} from '../src/services/SmsInboxService';
 import Shapes from 'lucide-react-native/icons/shapes';
 import ShieldAlert from 'lucide-react-native/icons/shield-alert';
 import ShieldCheck from 'lucide-react-native/icons/shield-check';
@@ -438,6 +439,18 @@ const ProfileScreen = () => {
                   title="Bank message"
                   subtitle="Add from a pasted bank SMS"
                   onPress={() => router.navigate('/profile/sms-import')}
+                />
+                <RowDivider />
+              </>
+            ) : null}
+            {getConfig().enable_sms_inbox && isInboxSupported() ? (
+              <>
+                <SettingsRow
+                  icon={MessageSquareText}
+                  accent={ACCENT.amber}
+                  title="Read my messages"
+                  subtitle="Find payments in your bank messages"
+                  onPress={() => router.navigate('/profile/sms-inbox')}
                 />
                 <RowDivider />
               </>
