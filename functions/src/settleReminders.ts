@@ -107,36 +107,74 @@ export interface Owed {
   count: number;
 }
 
+/** An IOU whose other side is not known is kept apart from every real person. */
+const UNKNOWN_PERSON = '?';
+
 /**
- * What each person owes in each currency, from group debts and pending IOUs (`fromEmail` owes
- * `amountMinor`). Key: email, then currency.
+ * What each person owes overall in each currency: everything they owe, from group debts and
+ * pending IOUs (`fromEmail` owes `toEmail` `amountMinor`), minus everything others owe them, across
+ * all groups and IOUs together. This is the figure the Friends tab shows. Key: email, then
+ * currency; a person who is owed more than they owe has no entry. `count` is the number of people
+ * they are in debt to.
  */
 export const owedByPerson = (
   debts: readonly Debt[],
   ious: readonly Fields[],
 ): Map<string, Map<string, Owed>> => {
-  const out = new Map<string, Map<string, Owed>>();
-  const add = (email: string, currency: string, minor: number): void => {
-    if (!email || minor <= 0) {
+  // email -> currency -> other person -> signed minor units (positive: the other person owes them).
+  const positions = new Map<string, Map<string, Map<string, number>>>();
+  const bump = (
+    email: string,
+    currency: string,
+    other: string,
+    minor: number,
+  ): void => {
+    const perCurrency =
+      positions.get(email) ?? new Map<string, Map<string, number>>();
+    const perOther = perCurrency.get(currency) ?? new Map<string, number>();
+    perOther.set(other, (perOther.get(other) ?? 0) + minor);
+    perCurrency.set(currency, perOther);
+    positions.set(email, perCurrency);
+  };
+  const addDebt = (
+    lender: string,
+    borrower: string,
+    currency: string,
+    minor: number,
+  ): void => {
+    if (!borrower || borrower === lender || minor <= 0) {
       return;
     }
-    const perCurrency = out.get(email) ?? new Map<string, Owed>();
-    const owed = perCurrency.get(currency) ?? {total: 0, count: 0};
-    owed.total += minor;
-    owed.count += 1;
-    perCurrency.set(currency, owed);
-    out.set(email, perCurrency);
+    bump(borrower, currency, lender, -minor);
+    bump(lender, currency, borrower, minor);
   };
   for (const d of debts) {
-    add(d.borrower, d.currency, d.minor);
+    addDebt(d.lender, d.borrower, d.currency, d.minor);
   }
   for (const iou of ious) {
     if (isSafe(iou.amountMinor)) {
-      const from =
-        typeof iou.fromEmail === 'string'
-          ? iou.fromEmail.trim().toLowerCase()
-          : '';
-      add(from, resolveCurrency(iou.currency), iou.amountMinor);
+      const from = emailOf({email: iou.fromEmail});
+      const to = emailOf({email: iou.toEmail}) || UNKNOWN_PERSON;
+      addDebt(to, from, resolveCurrency(iou.currency), iou.amountMinor);
+    }
+  }
+
+  const out = new Map<string, Map<string, Owed>>();
+  for (const [email, perCurrency] of positions) {
+    for (const [currency, perOther] of perCurrency) {
+      let net = 0;
+      let count = 0;
+      for (const signed of perOther.values()) {
+        net += signed;
+        if (signed < 0) {
+          count += 1;
+        }
+      }
+      if (net < 0) {
+        const owed = out.get(email) ?? new Map<string, Owed>();
+        owed.set(currency, {total: -net, count});
+        out.set(email, owed);
+      }
     }
   }
   return out;

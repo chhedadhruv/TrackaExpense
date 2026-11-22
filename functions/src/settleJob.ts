@@ -125,7 +125,7 @@ export const runSettleReminders = async (
         title: 'Settle Up Reminder',
         body:
           owes.count > 1
-            ? `You have ${owes.count} outstanding balances totalling ${amount}. Time to settle up!`
+            ? `You owe ${amount} overall across ${owes.count} people. Time to settle up!`
             : `You owe ${amount}. Time to settle up!`,
         data: {type: 'settlement_reminder', action: 'view_balances'},
       });
