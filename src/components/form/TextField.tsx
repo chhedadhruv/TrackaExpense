@@ -7,13 +7,21 @@ import {FormSection} from './FormParts';
 interface TextFieldProps
   extends Pick<
     TextInputProps,
-    'value' | 'onChangeText' | 'placeholder' | 'multiline' | 'numberOfLines'
+    | 'value'
+    | 'onChangeText'
+    | 'placeholder'
+    | 'multiline'
+    | 'numberOfLines'
+    | 'onFocus'
+    | 'onBlur'
   > {
   label: string;
   optional?: boolean;
   icon: AppIcon;
   maxLength: number;
   disabled?: boolean;
+  /** Shown under the field, before the counter (for example title suggestions). */
+  children?: React.ReactNode;
 }
 
 const TOP_ALIGNED = {textAlignVertical: 'top'} as const;
@@ -26,6 +34,7 @@ const TextField = ({
   maxLength,
   disabled = false,
   value = '',
+  children,
   ...inputProps
 }: TextFieldProps) => {
   const {colors} = useTheme();
@@ -48,6 +57,7 @@ const TextField = ({
           accessibilityLabel={label}
         />
       </View>
+      {children}
       <Text className="mt-1 text-right font-sans text-xs text-text-placeholder">
         {value.length}/{maxLength}
       </Text>

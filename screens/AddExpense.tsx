@@ -37,9 +37,19 @@ import {KeyboardAwareScrollView} from '../src/components/KeyboardAwareScrollView
 import FormButton from '../components/FormButton';
 import {useAsyncAction} from '../src/hooks/useAsyncAction';
 import {useCurrency} from '../utils/CurrencyUtil';
-import {EXPENSE_CATEGORIES, EXPENSE_KEYWORD_MAP} from '../utils/CategoryData';
+import {EXPENSE_KEYWORD_MAP} from '../utils/CategoryData';
+import {useCategoryLists} from '../src/data/categories';
 import {useTheme} from '../src/theme';
 import {useTransactionForm} from '../src/hooks/useTransactionForm';
+import {
+  useCategoryHistory,
+  useCategorySuggestion,
+} from '../src/hooks/useCategorySuggestion';
+import {
+  useTitleSuggestions,
+  useTransactionTitleIndex,
+} from '../src/hooks/useTitleSuggestions';
+import TitleSuggestions from '../src/components/form/TitleSuggestions';
 import {balanceEffect, transactionMoneyFields} from '../src/utils/amounts';
 import CategorySelector from '../src/components/CategorySelector';
 import AmountInput from '../src/components/AmountInput';
@@ -94,6 +104,23 @@ const AddExpense = () => {
   } = useTransactionForm(prefillFromParams(params));
   const knownTags = useKnownTags();
   const recordTags = useRecordTags();
+  const categoryLists = useCategoryLists('expense');
+  const categoryHistory = useCategoryHistory('expense', categoryLists.values);
+  const categorySuggestion = useCategorySuggestion({
+    title,
+    category,
+    setCategory,
+    allowed: categoryLists.values,
+    keywordMap: EXPENSE_KEYWORD_MAP,
+    history: categoryHistory,
+  });
+  const titleIndex = useTransactionTitleIndex('expense', categoryLists.values);
+  const titleSuggestions = useTitleSuggestions({
+    index: titleIndex,
+    title,
+    setTitle,
+    onCategory: categorySuggestion.applyGuess,
+  });
 
   // "Paid with" (behind the Remote Config flag). It always starts on Cash / UPI; a card is picked
   // on purpose and a card purchase does not change the balance until the bill is paid.
@@ -197,21 +224,6 @@ const AddExpense = () => {
       setScanning(false);
     }
   };
-
-  // Auto-suggest category from title keywords
-  useEffect(() => {
-    if (title.trim().length < 3 || category) {
-      return;
-    }
-    const lower = title.toLowerCase();
-    const match = Object.keys(EXPENSE_KEYWORD_MAP).find(kw =>
-      lower.includes(kw),
-    );
-    if (match) {
-      setCategory(EXPENSE_KEYWORD_MAP[match]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title]);
 
   const getUid = (): string => getAuth().currentUser!.uid;
 
@@ -358,9 +370,16 @@ const AddExpense = () => {
               placeholder="Enter expense title"
               value={title}
               onChangeText={setTitle}
+              onFocus={titleSuggestions.onFocus}
+              onBlur={titleSuggestions.onBlur}
               disabled={isSubmitting}
-              maxLength={100}
-            />
+              maxLength={100}>
+              <TitleSuggestions
+                suggestions={titleSuggestions.suggestions}
+                onPick={titleSuggestions.pick}
+                disabled={isSubmitting}
+              />
+            </TextField>
 
             <TextField
               label="Description"
@@ -377,9 +396,12 @@ const AddExpense = () => {
 
             <FormSection label="Category">
               <CategorySelector
-                categories={EXPENSE_CATEGORIES}
+                categories={categoryLists.categories}
+                createType="expense"
                 selectedCategory={category}
-                onSelect={setCategory}
+                onSelect={categorySuggestion.pickByHand}
+                suggested={categorySuggestion.suggested}
+                guessed={categorySuggestion.guessed}
                 disabled={isSubmitting}
                 placeholder="Select expense category"
               />

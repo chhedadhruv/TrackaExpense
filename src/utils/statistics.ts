@@ -1,4 +1,5 @@
 import {minorOf, type StoredMoney} from './amounts';
+import {normalizeTitle} from './categorySuggest';
 
 /**
  * Pure calculations behind the Statistics screen. Everything is summed in integer minor units
@@ -422,9 +423,6 @@ export interface MerchantRow {
   count: number;
 }
 
-const merchantKey = (title: string): string =>
-  title.trim().toLowerCase().replace(/\s+/g, ' ');
-
 /**
  * Titles ranked by total amount. Transactions whose title differs only by case or spacing are
  * one merchant. `limit` of Infinity returns every merchant (used to check the total).
@@ -445,7 +443,7 @@ export const topMerchants = (
     if (minor === null || !title) {
       continue;
     }
-    const key = merchantKey(title);
+    const key = normalizeTitle(title);
     const day = dayOf(t) ?? '';
     const row = rows.get(key);
     if (!row) {
