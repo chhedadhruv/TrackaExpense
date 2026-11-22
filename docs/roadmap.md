@@ -10,6 +10,9 @@
 - A CI workflow exists in `.github/workflows/ci.yml`; the local Husky hooks are the main gate.
 - Removing the legacy embedded `savingsGoals` array and the legacy `amount` and `balance` fields, after old app versions are gone.
 
+- Offline: adding, editing and deleting a transaction work offline. Settlements, card bill payments and undoing them, receipt photos and the Maestro edit and delete steps while offline are not covered yet; the offline Maestro flow only adds and then deletes online.
+- Automated store submission (`eas submit` with a staged rollout): releases are uploaded to Google Play by hand for now.
+
 ## Planned
 
 - Credit limit view and card statement parsing.
