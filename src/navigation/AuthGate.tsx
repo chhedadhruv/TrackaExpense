@@ -31,6 +31,8 @@ import {useSyncStore} from '../data/syncStore';
 import appUpdate from '../services/AppUpdate';
 import {applyUpdateWithin} from '../utils/otaUpdate';
 import UpdatePrompt from '../components/UpdatePrompt';
+import LockScreen from '../components/LockScreen';
+import {useAppLock} from '../lock/AppLockProvider';
 
 // How long to stay on the splash screen after asking for the restart into an update.
 const RESTART_GRACE_MS = 3000;
@@ -47,6 +49,15 @@ const AuthGate = () => {
   const [updateSettled, setUpdateSettled] = useState(false);
   const updateCheckStarted = useRef(false);
   const {colors, isDark} = useTheme();
+  const {locked, release} = useAppLock();
+
+  // Nobody is signed in, so there is nothing to protect: the lock must not greet the next person
+  // right after they sign in, and it never covers the sign-in screens.
+  useEffect(() => {
+    if (!initializing && user === null) {
+      release();
+    }
+  }, [initializing, user, release]);
 
   useEffect(() => {
     const subscriber = onFirebaseAuthStateChanged(
@@ -205,6 +216,7 @@ const AuthGate = () => {
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
       </Stack>
+      {user && locked ? <LockScreen /> : null}
     </NavigationThemeProvider>
   );
 };
