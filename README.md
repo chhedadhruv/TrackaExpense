@@ -73,7 +73,6 @@ firebase/       Firestore and Storage rules, indexes and rules tests
 plugins/        Local Expo config plugins
 scripts/        Release helpers
 .maestro/       End-to-end flows
-server/         Unused Express notification server (replaced by Cloud Functions)
 ```
 
 ## Getting started
