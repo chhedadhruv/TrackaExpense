@@ -5,13 +5,14 @@ import {prefillFromParams} from '../src/utils/smsImport';
 import {getAuth} from '@react-native-firebase/auth';
 import {
   Timestamp,
-  addDoc,
   collection,
   doc,
   getFirestore,
   increment,
-  runTransaction,
+  writeBatch,
 } from '@react-native-firebase/firestore';
+import {isOnline} from '../src/services/ConnectivityService';
+import {settleWrite} from '../src/utils/offlineWrite';
 import {reportError} from '../src/services/ErrorReporter';
 import * as AnalyticsService from '../src/services/AnalyticsService';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
@@ -106,9 +107,13 @@ const AddIncome = () => {
     try {
       const uid = getUid();
       const userDocRef = doc(getFirestore(), 'users', uid);
-      await runTransaction(getFirestore(), async transaction => {
-        const transactionRef = collection(userDocRef, 'transactions');
+      // One atomic batch (not a transaction, which cannot run offline): offline it is queued on
+      // the phone and synced when the connection is back.
+      const batch = writeBatch(getFirestore());
+      {
+        const incomeDocRef = doc(collection(userDocRef, 'transactions'));
         const incomeData = {
+          documentId: incomeDocRef.id,
           userId: uid,
           title: title.trim(),
           description: description.trim(),
@@ -121,20 +126,26 @@ const AddIncome = () => {
           createdAt: Timestamp.fromDate(new Date()),
           type: 'income',
         };
-        const incomeDocRef = await addDoc(transactionRef, incomeData);
-        transaction.update(incomeDocRef, {documentId: incomeDocRef.id});
+        batch.set(incomeDocRef, incomeData);
         const balanceDelta = balanceEffect('income', {amount}, currency.code);
-        transaction.update(userDocRef, {
+        batch.update(userDocRef, {
           balance: increment(balanceDelta),
         });
-      });
+      }
+      const {queued} = await settleWrite(
+        batch.commit(),
+        isOnline(),
+        reportError,
+      );
       AnalyticsService.logAddIncome({
         amount_range: AnalyticsService.getAmountRange(parseFloat(amount)),
         category: category ?? 'uncategorized',
       });
       // The suggestion list is a convenience: record the tags without holding up the screen.
       recordTags(tags, knownTags).catch(reportError);
-      snackbar.success('Income added');
+      snackbar.success(
+        queued ? 'Income saved on this phone, it will sync' : 'Income added',
+      );
       router.back();
     } catch (e) {
       reportError(e as Error);

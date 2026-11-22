@@ -1,0 +1,64 @@
+appId: com.trackaexpense
+name: Offline expense (add while offline, sync after reconnect, delete)
+tags:
+  - expense
+  - offline
+---
+# Turns airplane mode on, checks the offline banner, adds an expense while offline (it must show in
+# the list at once, from the phone), turns airplane mode off, waits for the banner to go away and
+# the write to sync, then deletes the expense so the throwaway account ends up where it started.
+# If a run fails halfway, delete the leftover with .maestro/tools/cleanup-leftovers.yaml and make
+# sure airplane mode is off on the device.
+- launchApp
+- runFlow: ../subflows/dismiss-dev-banner.yaml
+- evalScript: ${output.title = 'Maestro ' + new Date().getTime()}
+
+# Offline: the banner appears after a couple of seconds
+- setAirplaneMode: enabled
+- extendedWaitUntil:
+    visible: 'You are offline.*'
+    timeout: 20000
+
+# Add while offline
+- tapOn: 'Home'
+- tapOn: 'Add Expense'
+- tapOn: 'Enter expense title'
+- inputText: ${output.title}
+- tapOn: 'Select expense category'
+- tapOn: 'Food'
+- scrollUntilVisible:
+    element: 'Enter amount'
+- tapOn: 'Enter amount'
+- inputText: '3'
+- scrollUntilVisible:
+    element:
+      text: 'Add Expense'
+      below: 'Receipt/Image (Optional)'
+- runFlow: ../subflows/dismiss-dev-banner.yaml
+# Saving must not wait for the server: it goes back to Home with the new expense showing.
+- retry:
+    maxRetries: 2
+    commands:
+      - waitForAnimationToEnd
+      - tapOn:
+          text: 'Add Expense'
+          below: 'Receipt/Image (Optional)'
+      - extendedWaitUntil:
+          visible: ${output.title}
+          timeout: 10000
+
+# Back online: the banner goes away and the expense is still there
+- setAirplaneMode: disabled
+- extendedWaitUntil:
+    notVisible: 'You are offline.*'
+    timeout: 30000
+- runFlow: ../subflows/dismiss-dev-banner.yaml
+- tapOn: 'See All'
+- assertVisible: ${output.title}
+
+# Delete
+- tapOn: ${output.title}
+- runFlow: ../subflows/dismiss-dev-banner.yaml
+- tapOn: 'Delete Transaction'
+- tapOn: 'Delete'
+- assertNotVisible: ${output.title}

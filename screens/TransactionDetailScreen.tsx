@@ -9,12 +9,13 @@ import {
   Text,
 } from 'react-native';
 import {
-  deleteDoc,
   doc,
   getFirestore,
   increment,
-  updateDoc,
+  writeBatch,
 } from '@react-native-firebase/firestore';
+import {isOnline} from '../src/services/ConnectivityService';
+import {settleWrite} from '../src/utils/offlineWrite';
 import {
   deleteObject,
   getStorage,
@@ -120,26 +121,50 @@ const TransactionDetailScreen = ({
     const paymentId = (transaction as {cardPaymentId?: unknown}).cardPaymentId;
     try {
       if (isCardPayment(transaction) && typeof paymentId === 'string') {
+        // Undoing a bill payment is one server transaction, so it needs a connection.
+        if (!isOnline()) {
+          snackbar.error(
+            'Connect to the internet to undo a card bill payment.',
+          );
+          return;
+        }
         await undoBillPayment(userId, paymentId);
         snackbar.success('Card bill payment undone');
         router.back();
         return;
       }
-      await deleteDoc(doc(getFirestore(), 'users', userId, 'transactions', id));
+      // One atomic batch (offline it is queued on the phone and synced later).
+      const batch = writeBatch(getFirestore());
+      batch.delete(doc(getFirestore(), 'users', userId, 'transactions', id));
       if (balanceIncrement !== 0) {
-        await updateDoc(doc(getFirestore(), 'users', userId), {
+        batch.update(doc(getFirestore(), 'users', userId), {
           balance: increment(balanceIncrement),
         });
       }
+      const {queued} = await settleWrite(
+        batch.commit(),
+        isOnline(),
+        reportError,
+      );
       if (receiptUrl) {
+        // Removing the photo needs a connection. Offline, or if it fails, the transaction is
+        // already deleted, so leaving the photo behind is reported but does not undo the delete.
         const imageRef = createStorageRef(getStorage(), receiptUrl);
-        await deleteObject(imageRef);
+        if (queued) {
+          deleteObject(imageRef).catch(() => {});
+        } else {
+          await deleteObject(imageRef);
+        }
       }
       AnalyticsService.logDeleteTransaction({
         type: transaction.type,
         category: transaction.category,
       });
-      snackbar.success('Transaction deleted successfully!');
+      snackbar.success(
+        queued
+          ? 'Deleted on this phone, it will sync'
+          : 'Transaction deleted successfully!',
+      );
       router.back();
     } catch (e) {
       reportError(e as Error);
