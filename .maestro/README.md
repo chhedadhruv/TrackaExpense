@@ -26,6 +26,7 @@ failed.
 | `smoke-tabs.yaml` | Opens every tab and the transactions list and checks each heading | No |
 | `tags.yaml` | Adds an expense with a tag, filters and searches by it, deletes it | Yes, nets to zero (one tag document stays) |
 | `expense-lifecycle.yaml` | Adds an expense, edits its amount (3 to 4), checks the list shows it, deletes it | Yes, nets to zero |
+| `offline-expense.yaml` | Turns airplane mode on, checks the offline banner, adds an expense offline (it must show at once), turns airplane mode off, checks the banner goes away, deletes it | Yes, nets to zero. If a run stops halfway, turn airplane mode off on the device |
 
 `expense-lifecycle.yaml` was parked while the edited amount did not show in the list. It passed
 three runs in a row on 2026-11-17 against the current debug build (listener-based data layer), so it
