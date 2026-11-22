@@ -3,7 +3,7 @@
     "name": "TrackaExpense",
     "slug": "trackaexpense",
     "description": "TrackaExpense is the all-in-one, ad-free personal finance app. Track daily expenses, plan monthly budgets, split bills with friends, capture receipts, and reach savings goals, with real-time cloud sync across Android and iOS.",
-    "version": "1.5.1",
+    "version": "1.6.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": ["trackaexpense", "com.dhruvchheda.trackaexpense"],
@@ -13,7 +13,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.dhruvchheda.trackaexpense",
-      "buildNumber": "26111309",
+      "buildNumber": "26112210",
       "supportsTablet": false,
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
@@ -27,7 +27,7 @@
     },
     "android": {
       "package": "com.trackaexpense",
-      "versionCode": 26111309,
+      "versionCode": 26112210,
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "allowBackup": false,
