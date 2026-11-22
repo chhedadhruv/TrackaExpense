@@ -88,8 +88,6 @@ Never add a provider outside this chain without also placing it here.
 │   ├── Permissions.ts
 │   ├── GoogleSignInConfig.ts
 │   └── AppleSignInConfig.ts
-└── server/
-    └── notification-server.js  ← Express + firebase-admin push relay
 ```
 
 ---
