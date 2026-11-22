@@ -6,28 +6,36 @@
     "version": "1.6.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": ["trackaexpense", "com.dhruvchheda.trackaexpense"],
+    "scheme": [
+      "trackaexpense",
+      "com.dhruvchheda.trackaexpense"
+    ],
     "userInterfaceStyle": "automatic",
     "experiments": {
       "typedRoutes": true
     },
     "ios": {
       "bundleIdentifier": "com.dhruvchheda.trackaexpense",
-      "buildNumber": "26112210",
+      "buildNumber": "26112212",
       "supportsTablet": false,
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
         "aps-environment": "development",
-        "com.apple.developer.applesignin": ["Default"]
+        "com.apple.developer.applesignin": [
+          "Default"
+        ]
       },
       "infoPlist": {
-        "UIBackgroundModes": ["fetch", "remote-notification"],
+        "UIBackgroundModes": [
+          "fetch",
+          "remote-notification"
+        ],
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.trackaexpense",
-      "versionCode": 26112210,
+      "versionCode": 26112212,
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "allowBackup": false,
@@ -42,7 +50,10 @@
               "pathPrefix": "/join"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "adaptiveIcon": {
@@ -87,7 +98,11 @@
           "android": {
             "usesCleartextTraffic": false,
             "kotlinVersion": "2.4.0",
-            "buildArchs": ["armeabi-v7a", "arm64-v8a", "x86_64"],
+            "buildArchs": [
+              "armeabi-v7a",
+              "arm64-v8a",
+              "x86_64"
+            ],
             "enableShrinkResourcesInReleaseBuilds": true,
             "enableMinifyInReleaseBuilds": true
           }
