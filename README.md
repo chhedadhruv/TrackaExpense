@@ -57,6 +57,7 @@ TrackaExpense tracks expenses and income, splits bills with friends and groups, 
 
 - **Money is stored in integer minor units** (`amountMinor`, `balanceMinor`) next to the legacy `amount` and `balance`. Cloud Function triggers derive the new fields, so old app versions keep working. Splits divide in integer minor units so shares always add up to the total.
 - **One query cache**: `DataSync` keeps live Firestore listeners that write into a TanStack Query cache, which is saved to MMKV so a cold start shows the last data, also offline. Screens only read the cache.
+- **Offline**: adding, editing and deleting a transaction are saved on the phone while offline and sync when the connection is back; a banner shows when the phone is offline.
 - **Server-side rules**: settlements, invitations, invite links, push, receipt scanning and user lookup go through callable functions. Budget alerts, recurring transactions, goal alerts and reminders run as triggers or scheduled functions.
 - **Security rules** for Firestore and Storage live in `firebase/` with emulator tests.
 - Project conventions are in [CLAUDE.md](CLAUDE.md), the quality gates in [docs/quality-baseline.md](docs/quality-baseline.md) and open work in [docs/roadmap.md](docs/roadmap.md).
