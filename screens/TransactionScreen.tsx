@@ -1,4 +1,4 @@
-import React, {useState, useMemo} from 'react';
+import React, {useEffect, useState, useMemo} from 'react';
 import {useRouter} from 'expo-router';
 import {View, Text, FlatList, ScrollView, TouchableOpacity} from 'react-native';
 import SearchField from '../src/components/SearchField';
@@ -90,6 +90,18 @@ const TransactionScreen = () => {
   const {currency, formatAmount} = useCurrency();
   const iconFor = useCategoryIcon();
   const [searchQuery, setSearchQuery] = useState('');
+  // One event per search, sent once typing pauses. Only the length of the text is reported.
+  useEffect(() => {
+    const length = searchQuery.trim().length;
+    if (length === 0) {
+      return undefined;
+    }
+    const timer = setTimeout(
+      () => AnalyticsService.logTransactionSearch(length),
+      1000,
+    );
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   // "Paid with" filter: a card id, CASH_FILTER (no card) or null (any). Cards are only loaded and
   // offered while the feature is on and the person has one.
@@ -186,6 +198,7 @@ const TransactionScreen = () => {
         buildTransactionsCsv(toExport, currency.code, cardNames),
         'Export Transactions',
       );
+      AnalyticsService.logDataExported('csv');
     } catch (exportError) {
       reportError(exportError);
       snackbar.error('Failed to export transactions. Please try again.');

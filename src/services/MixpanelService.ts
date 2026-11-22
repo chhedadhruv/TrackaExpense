@@ -1,8 +1,11 @@
 import {Mixpanel} from 'mixpanel-react-native';
 import {MIXPANEL_TOKEN} from '@env';
+import {Platform} from 'react-native';
+import * as Application from 'expo-application';
 import {isServiceEnabled} from '../utils/serviceGate';
+import {isAnalyticsEnabled, saveAnalyticsEnabled} from './AnalyticsPrefs';
 
-type Properties = Record<string, string | number | boolean>;
+export type Properties = Record<string, string | number | boolean>;
 
 let mixpanel: Mixpanel | null = null;
 
@@ -19,11 +22,36 @@ export const initMixpanel = async (): Promise<void> => {
     const instance = new Mixpanel(MIXPANEL_TOKEN, false);
     await instance.init();
     instance.setUseIpAddressForGeolocation(false);
-    instance.registerSuperProperties({app: 'TrackaExpense'});
+    instance.registerSuperProperties({
+      app: 'TrackaExpense',
+      platform: Platform.OS,
+      app_version: Application.nativeApplicationVersion ?? 'unknown',
+      build_number: Application.nativeBuildVersion ?? 'unknown',
+    });
+    if (isAnalyticsEnabled()) {
+      instance.optInTracking();
+    } else {
+      instance.optOutTracking();
+    }
     mixpanel = instance;
   } catch (_) {
     mixpanel = null;
   }
+};
+
+/**
+ * The Profile switch. Saves the choice on the phone and applies it at once. When on, events are
+ * sent; when off, Mixpanel drops them and sends nothing for this person.
+ */
+export const setAnalyticsEnabled = (enabled: boolean): void => {
+  saveAnalyticsEnabled(enabled);
+  try {
+    if (enabled) {
+      mixpanel?.optInTracking();
+    } else {
+      mixpanel?.optOutTracking();
+    }
+  } catch (_) {}
 };
 
 /** Sends one event. Only names from the approved event list may be used. */

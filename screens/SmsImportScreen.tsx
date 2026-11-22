@@ -18,6 +18,7 @@ import {parseSms} from '../src/utils/sms/parse';
 import type {ParsedSms} from '../src/utils/sms/types';
 import {useCards} from '../src/hooks/useCards';
 import {getConfig} from '../src/services/RemoteConfigService';
+import * as AnalyticsService from '../src/services/AnalyticsService';
 import {
   matchCard,
   prefillFor,
@@ -43,8 +44,13 @@ const SmsImportScreen = () => {
   const [checked, setChecked] = useState(false);
 
   const read = () => {
-    setParsed(parseSms({body: text, receivedAt: new Date()}));
+    const result = parseSms({body: text, receivedAt: new Date()});
+    setParsed(result);
     setChecked(true);
+    AnalyticsService.logBankMessageParsed({
+      recognized: result !== null,
+      target: result ? targetFor(result) : 'none',
+    });
   };
 
   const cards = useCards().data;

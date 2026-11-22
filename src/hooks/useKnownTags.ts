@@ -4,7 +4,8 @@ import {useUid} from '../data/hooks';
 import {queryKeys} from '../data/keys';
 import {reportError} from '../services/ErrorReporter';
 import {loadUserTags, recordTagUse} from '../services/TagService';
-import {withRecentTags} from '../utils/tags';
+import {logTagAdded} from '../services/AnalyticsService';
+import {unknownTags, withRecentTags} from '../utils/tags';
 
 const FIVE_MINUTES = 1000 * 60 * 5;
 
@@ -50,6 +51,8 @@ export function useRecordTags(): (
   return useCallback(
     async (selected, known) => {
       await recordTagUse(uid, selected, known);
+      // One event per tag the person has not used before.
+      unknownTags(selected, known).forEach(() => logTagAdded());
       if (selected.length > 0) {
         queryClient.setQueryData<string[]>(queryKeys.tags(uid), old =>
           withRecentTags(old ?? known, selected),

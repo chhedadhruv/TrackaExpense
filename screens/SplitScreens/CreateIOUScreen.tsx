@@ -27,6 +27,7 @@ import {useTheme, useThemedStyles, type ThemeColors} from '../../src/theme';
 import {formatInputAmount} from '../../src/utils/formatters';
 import {transactionMoneyFields} from '../../src/utils/amounts';
 import {snackbar} from '../../src/utils/snackbarStore';
+import * as AnalyticsService from '../../src/services/AnalyticsService';
 import {useAsyncAction} from '../../src/hooks/useAsyncAction';
 
 type Direction = 'iowe' | 'owesme';
@@ -97,6 +98,10 @@ const CreateIOUScreen = () => {
               createdAt: serverTimestamp(),
             };
       await addDoc(collection(getFirestore(), 'ious'), iouData);
+      AnalyticsService.logIouCreated({
+        direction,
+        amount_range: AnalyticsService.getAmountRange(parseFloat(amount)),
+      });
       router.back();
     } catch (_) {
       snackbar.error('Failed to create IOU');

@@ -1,4 +1,4 @@
-import React, {useRef, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {useRouter} from 'expo-router';
 import {
   FlatList,
@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useThemedStyles, type ThemeColors} from '../src/theme';
+import * as AnalyticsService from '../src/services/AnalyticsService';
 import OnboardingArt from '../src/components/illustrations/OnboardingIllustrations';
 import {
   ONBOARDING_PAGES,
@@ -28,7 +29,15 @@ const OnboardingScreen = () => {
   // Leaves room for the title, text and footer on a small phone.
   const artSize = Math.min(300, Math.round(width * 0.78));
 
+  useEffect(() => {
+    AnalyticsService.logOnboardingStarted();
+  }, []);
+
   const finish = () => router.replace('/login');
+  const skip = () => {
+    AnalyticsService.logOnboardingSkipped(index + 1);
+    finish();
+  };
 
   const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     setIndex(Math.round(e.nativeEvent.contentOffset.x / width));
@@ -36,6 +45,7 @@ const OnboardingScreen = () => {
 
   const next = () => {
     if (isLast) {
+      AnalyticsService.logOnboardingCompleted();
       finish();
       return;
     }
@@ -69,7 +79,7 @@ const OnboardingScreen = () => {
       />
       <View style={styles.footer}>
         <TouchableOpacity
-          onPress={finish}
+          onPress={skip}
           hitSlop={12}
           disabled={isLast}
           accessibilityRole="button"

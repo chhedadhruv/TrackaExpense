@@ -190,3 +190,25 @@ export const chooseGoals = (
     array.every(g => ids.has(g.id));
   return sameGoals ? documents : array;
 };
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Days it took to reach the target, when this deposit is the one that completed the goal; null
+ * when the goal was already complete, or is still short of its target. Used for analytics only.
+ * A goal without a creation time (very old data) reports 0 days.
+ */
+export const daysToCompleteGoal = (
+  before: Pick<SavingsGoal, 'current' | 'target' | 'createdAt'>,
+  newCurrent: number,
+  nowMs: number,
+): number | null => {
+  if (before.current >= before.target || newCurrent < before.target) {
+    return null;
+  }
+  const startedMs = before.createdAt?.toMillis?.();
+  if (typeof startedMs !== 'number') {
+    return 0;
+  }
+  return Math.max(0, Math.round((nowMs - startedMs) / DAY_MS));
+};

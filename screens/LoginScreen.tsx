@@ -151,6 +151,7 @@ const LoginScreen = () => {
             balance: 0,
             currency: 'INR',
           });
+          AnalyticsService.logSignUp('google', 'INR');
         }
         await new Promise(resolve => setTimeout(resolve, 500));
       } else {
@@ -216,6 +217,7 @@ const LoginScreen = () => {
             balance: 0,
             currency: 'INR',
           });
+          AnalyticsService.logSignUp('apple', 'INR');
         }
         await new Promise(resolve => setTimeout(resolve, 500));
       } else {

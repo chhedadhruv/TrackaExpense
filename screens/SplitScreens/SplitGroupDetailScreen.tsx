@@ -61,6 +61,7 @@ import {useGroup, useGroupSplits, useMemberDetails} from '../../src/data/split';
 import {suppressNextLock} from '../../src/lock/suppress';
 import {snackbar} from '../../src/utils/snackbarStore';
 import {reportError} from '../../src/services/ErrorReporter';
+import * as AnalyticsService from '../../src/services/AnalyticsService';
 import {
   createGroupInviteLink,
   revokeGroupInviteLinks,
@@ -320,6 +321,7 @@ const SplitGroupDetailScreen = () => {
         actorName,
         email,
       );
+      AnalyticsService.logInviteMember({invite_count: 1, source: 'resend'});
       snackbar.success(`Invitation resent to ${email}`);
     } catch (_) {
       snackbar.error('Failed to resend invitation');
