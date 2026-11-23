@@ -13,7 +13,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.dhruvchheda.trackaexpense",
-      "buildNumber": "26112212",
+      "buildNumber": "26112311",
       "supportsTablet": false,
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
@@ -22,12 +22,13 @@
       },
       "infoPlist": {
         "UIBackgroundModes": ["fetch", "remote-notification"],
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "TrackaExpense does not use your location. This message is required because a notification library included in the app references location services."
       }
     },
     "android": {
       "package": "com.trackaexpense",
-      "versionCode": 26112212,
+      "versionCode": 26112311,
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "allowBackup": false,
@@ -119,6 +120,7 @@
         "expo-image-picker",
         {
           "cameraPermission": "This app uses the camera to capture receipt photos for your transactions.",
+          "microphonePermission": "TrackaExpense does not record audio. This message is required by the photo picker library.",
           "photosPermission": "This app needs access to your photo library to let you choose receipt images."
         }
       ],
