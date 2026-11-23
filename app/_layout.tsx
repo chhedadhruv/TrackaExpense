@@ -47,11 +47,12 @@ const RootLayout = () => {
     initMixpanel();
     initPush(handleNotificationNavigation);
 
-    // Initialize notification service
+    // Initialize notification service. initialize() fetches the FCM token itself, and only when the
+    // notification permission is already granted: on iOS there is no APNs token before that, so
+    // asking for the token on every start failed and was reported to Sentry each time.
     (async () => {
       try {
         await NotificationService.initialize();
-        await NotificationService.getFCMToken();
       } catch (e) {
         reportError(e as Error);
       }
