@@ -5,7 +5,7 @@ Guidance for working in this repository.
 ## 1. Project
 
 - TrackaExpense is a personal finance app: expenses, income, statistics, group splits, IOUs, savings goals, budgets, recurring transactions and credit cards.
-- Platforms: Android (shipped) and iOS (configured, not yet built or tested).
+- Platforms: Android and iOS, both shipped (iOS 1.6.0 is live on the App Store).
 - Backend: one Firebase project, with Cloud Functions in `asia-south1`.
 
 ## 2. Stack
